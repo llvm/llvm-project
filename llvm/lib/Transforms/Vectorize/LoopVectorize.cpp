@@ -8014,7 +8014,10 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
     // Use LogicalAnd as it does not propagate poison, i.e. does not introduce
     // new UB if SrcMask is false and EdgeMask is poison. Using 'and' here
     // introduces undefined behavior.
-    EdgeMask = Builder.createLogicalAnd(SrcMask, EdgeMask);
+    // The bitwise 'And' of SrcMask and EdgeMask introduces new UB if SrcMask
+    // is false and EdgeMask is poison. Avoid that by using 'LogicalAnd'
+    // instead which generates 'select i1 SrcMask, i1 EdgeMask, i1 false'.
+    EdgeMask = Builder.createLogicalAnd(SrcMask, EdgeMask, BI->getDebugLoc());
   }
 
   return EdgeMaskCache[Edge] = EdgeMask;

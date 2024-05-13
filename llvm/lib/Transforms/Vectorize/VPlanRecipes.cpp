@@ -561,8 +561,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0), Part);
     Value *B = State.get(getOperand(1), Part);
-    return Builder.CreateSelect(A, B, ConstantInt::getFalse(A->getType()),
-                                Name);
+    return Builder.CreateLogicalAnd(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
