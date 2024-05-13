@@ -212,14 +212,16 @@ createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
 
   mlir::Type tempTy = converter.genType(*sym);
 
-  if (!converter.isPresentShallowLookup(*sym)) {
-    mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
-        loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
-        /*shapeParams*/ mlir::ValueRange{},
-        llvm::ArrayRef<mlir::NamedAttribute>{
-            fir::getAdaptToByRefAttr(firOpBuilder)});
-    converter.bindSymbol(*sym, temp);
-  }
+  //llvm::errs() << ">>>> will assert for: " << *sym << "\n";
+  assert(converter.isPresentShallowLookup(*sym) && "Expected symbol to be bound.");
+  //if (!converter.isPresentShallowLookup(*sym)) {
+  //  mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
+  //      loc, tempTy, [>pinned=*/true, /*lengthParams=<]mlir::ValueRange{},
+  //      [>shapeParams<] mlir::ValueRange{},
+  //      llvm::ArrayRef<mlir::NamedAttribute>{
+  //          fir::getAdaptToByRefAttr(firOpBuilder)});
+  //  converter.bindSymbol(*sym, temp);
+  //}
 
   firOpBuilder.restoreInsertionPoint(insPt);
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);

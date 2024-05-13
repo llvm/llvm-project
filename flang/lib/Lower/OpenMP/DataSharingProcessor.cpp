@@ -318,17 +318,57 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
     Fortran::lower::pft::Evaluation &eval,
     Fortran::semantics::Symbol::Flag flag,
     llvm::SetVector<const Fortran::semantics::Symbol *>
-        &symbolsInNestedRegions) {
+        &symbolsInNestedRegions, int level) {
+  //llvm::errs() << ">>>> getIf: " << eval.getIf<parser::OpenMPConstruct>()
+  //             << "\n";
   for (Fortran::lower::pft::Evaluation &nestedEval :
        eval.getNestedEvaluations()) {
     if (nestedEval.hasNestedEvaluations()) {
-      if (nestedEval.isConstruct())
+
+      bool isOrderedConstruct = [&]() {
+        //llvm::errs() << ">>>> nested eval: ";
+        //nestedEval.dump();
+        //llvm::errs() << "";
+        if (auto *ompConstruct = nestedEval.getIf<parser::OpenMPConstruct>()) {
+          //llvm::errs() << ">>>> parser::OpenMPConstruct\n";
+          if (auto *ompBlockConstruct =
+                  std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)) {
+
+            //llvm::errs() << ">>>> parser::OpenMPBlockConstruct\n";
+            const auto &beginBlockDirective =
+                std::get<Fortran::parser::OmpBeginBlockDirective>(
+                    ompBlockConstruct->t);
+            const auto origDirective =
+                std::get<Fortran::parser::OmpBlockDirective>(
+                    beginBlockDirective.t)
+                    .v;
+            //if (origDirective == llvm::omp::Directive::OMPD_ordered) {
+            //  llvm::errs() << ">>> ordered\n";
+            //} else {
+            //  llvm::errs() << ">>> not ordered\n";
+            //}
+            return origDirective == llvm::omp::Directive::OMPD_ordered;
+          }
+        }
+        return false;
+      }();
+
+      if (nestedEval.isConstruct()) {
+          //llvm::errs() << ">>>> nestedEval.isConstruct()\n";
         // Recursively look for OpenMP constructs within `nestedEval`'s region
-        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
-      else
-        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
-                                   /*collectSymbols=*/true,
-                                   /*collectHostAssociatedSymbols=*/false);
+        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions, ++level);
+      }
+      else {
+          //llvm::errs() << ">>>> not nestedEval.isConstruct()\n";
+          if (!isOrderedConstruct) {
+              //llvm::errs() << ">>>> will add nested symbols.\n";
+            converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                       /*collectSymbols=*/true,
+                                       /*collectHostAssociatedSymbols=*/false);
+          } else {
+              //llvm::errs() << ">>>> will not add nested symbols.\n";
+          }
+      }
     }
   }
 }
@@ -419,6 +459,11 @@ void DataSharingProcessor::collectSymbols(
 
   for (const auto *sym : allSymbols) {
     assert(curScope && "couldn't find current scope");
+    //llvm::errs() << ">>>> isPrivatizable(*sym): " << isPrivatizable(*sym)
+    //             << ", !symbolsInNestedRegions.contains(sym): "
+    //             << !symbolsInNestedRegions.contains(sym)
+    //             << ", shouldCollectSymbol(sym): " << shouldCollectSymbol(sym)
+    //             << "\n";
     if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
         shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
