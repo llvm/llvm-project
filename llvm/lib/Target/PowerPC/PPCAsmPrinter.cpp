@@ -1157,21 +1157,20 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
-    // If the symbol does not have the toc-data attribute, then we create the
-    // TOC entry on AIX. If the toc-data attribute is used, the TOC entry
-    // contains the data rather than the address of the MOSymbol.
     // Map the global address operand to be a reference to the TOC entry we
     // will synthesize later. 'TOCEntry' is a label used to reference the
     // storage allocated in the TOC which contains the address of 'MOSymbol'.
+    // If the symbol does not have the toc-data attribute, then we create the
+    // TOC entry on AIX. If the toc-data attribute is used, the TOC entry
+    // contains the data rather than the address of the MOSymbol.
     if (![](const MachineOperand &MO) {
           if (!MO.isGlobal())
             return false;
 
-          if (const GlobalVariable *GV =
-                  dyn_cast<GlobalVariable>(MO.getGlobal()))
-            return GV->hasAttribute("toc-data");
-
-          return false;
+          const GlobalVariable *GV = dyn_cast<GlobalVariable>(MO.getGlobal());
+          if (!GV)
+            return false;
+          return GV->hasAttribute("toc-data");
         }(MO)) {
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
     }
