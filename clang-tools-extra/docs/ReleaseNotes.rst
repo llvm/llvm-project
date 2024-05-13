@@ -90,7 +90,9 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- Added the `file` command to dynamically load a list of commands and matchers
+  from an external file, allowing the cost of reading the compilation database
+  and building the AST to be imposed just once for faster prototyping.
 
 Improvements to clang-rename
 ----------------------------
