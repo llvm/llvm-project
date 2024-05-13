@@ -215,10 +215,10 @@ declare <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1>, <vscale x 2
 define <vscale x 2 x i32> @vmerge_vfcvt_rm(<vscale x 2 x i32> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmerge_vfcvt_rm:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
-; CHECK-NEXT:    fsrmi a0, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v8, v9, v0.t
-; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %floor = call <vscale x 2 x float> @llvm.floor.nxv2f32(<vscale x 2 x float> %a)
