@@ -4564,19 +4564,46 @@ define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, 
   ret double %s3
 }
 
+; Confirm the FMF flag is propagated
+define float @sequence_select_with_same_cond_float_and_fmf_flag1(i1 %c1, i1 %c2){
+; CHECK-LABEL: @sequence_select_with_same_cond_float_and_fmf_flag1(
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], float 2.300000e+01, float 4.500000e+01
+; CHECK-NEXT:    [[S2:%.*]] = select fast i1 [[C2:%.*]], float 6.660000e+02, float [[S1]]
+; CHECK-NEXT:    [[S3:%.*]] = select fast i1 [[C1]], float 7.890000e+02, float [[S2]]
+; CHECK-NEXT:    ret float [[S3]]
+;
+  %s1 = select i1 %c1, float 23.0, float 45.0
+  %s2 = select fast i1 %c2, float 666.0, float %s1 ; has fast flag
+  %s3 = select fast i1 %c1, float 789.0, float %s2
+  ret float %s3
+}
+
+define float @sequence_select_with_same_cond_float_and_fmf_flag2(i1 %c1, i1 %c2){
+; CHECK-LABEL: @sequence_select_with_same_cond_float_and_fmf_flag2(
+; CHECK-NEXT:    [[S1:%.*]] = select fast i1 [[C1:%.*]], float 2.300000e+01, float 4.500000e+01
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], float 6.660000e+02, float [[S1]]
+; CHECK-NEXT:    [[S3:%.*]] = select fast i1 [[C1]], float 7.890000e+02, float [[S2]]
+; CHECK-NEXT:    ret float [[S3]]
+;
+  %s1 = select fast i1 %c1, float 23.0, float 45.0
+  %s2 = select i1 %c2, float 666.0, float %s1    ; has no fast flag
+  %s3 = select fast i1 %c1, float 789.0, float %s2
+  ret float %s3
+}
+
 declare void @use32(i32)
 
 define i32 @sequence_select_with_same_cond_extra_use(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_extra_use(
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 23, i32 45
-; CHECK-NEXT:    call void @use32(i32 [[S1]])
 ; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 [[S1]]
+; CHECK-NEXT:    call void @use32(i32 [[S2]])
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
   %s1 = select i1 %c1, i32 23, i32 45
-  call void @use32(i32 %s1)
   %s2 = select i1 %c2, i32 666, i32 %s1
+  call void @use32(i32 %s2)
   %s3 = select i1 %c1, i32 789, i32 %s2
   ret i32 %s3
 }
@@ -4611,4 +4638,19 @@ define i8 @test_replace_freeze_oneuse(i1 %x, i8 %y) {
   %shl.fr = freeze i8 %shl
   %sel = select i1 %x, i8 0, i8 %shl.fr
   ret i8 %sel
+}
+
+define i8 @sequence_select_with_same_cond_multi_arms(i1 %cond0, i1 %cond1, i8 %a, i8 %b) {
+; CHECK-LABEL: @sequence_select_with_same_cond_multi_arms(
+; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[COND0:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i8 [[SEL0]], i8 2
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND1]], i8 [[SEL0]], i8 3
+; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[COND0]], i8 [[SEL1]], i8 [[SEL2]]
+; CHECK-NEXT:    ret i8 [[SEL3]]
+;
+  %sel0 = select i1 %cond0, i8 %a, i8 %b
+  %sel1 = select i1 %cond1, i8 %sel0, i8 2; %sel1 used in multi arms
+  %sel2 = select i1 %cond1, i8 %sel1, i8 3
+  %sel3 = select i1 %cond0, i8 %sel1, i8 %sel2
+  ret i8 %sel3
 }
