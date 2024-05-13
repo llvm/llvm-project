@@ -11,8 +11,7 @@ define signext i32 @foo() #1 {
 ; SMALL-LABEL: foo:
 ; SMALL:       # %bb.0: # %entry
 ; SMALL-NEXT:    la 3, a[TD](2)
-; SMALL-NEXT:    lwz 3, 0(3)
-; SMALL-NEXT:    extsw 3, 3
+; SMALL-NEXT:    lwa 3, 0(3)
 ; SMALL-NEXT:    blr
 entry:
   %0 = load i32, ptr @a, align 4
