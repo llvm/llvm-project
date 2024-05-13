@@ -1,0 +1,379 @@
+# REQUIRES: x86
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 matching.s -o matching.o
+
+## CLASS definitions match sections in linker script order. The sections may be
+## placed in a different order. Classes may derive from one another, and class
+## references may be restricted by INPUT_SECTION_FLAGS.
+
+# RUN: ld.lld -T matching.ld matching.o -o matching
+# RUN: llvm-readobj -x .rodata matching | FileCheck %s --check-prefix=MATCHING
+
+# MATCHING: 02030104
+
+
+## An error is reported when a section class has more than one description.
+
+# RUN: not ld.lld -T already-defined.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ALREADY-DEFINED --implicit-check-not=error:
+
+# ALREADY-DEFINED: error: already-defined.ld:3: section class 'a' already defined
+
+
+## An error is reported when a filename pattern is missing in a section class
+## description.
+
+# RUN: not ld.lld -T missing-filename-pattern.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-FILENAME-PATTERN --implicit-check-not=error:
+
+# MISSING-FILENAME-PATTERN: error: missing-filename-pattern.ld:2: expected filename pattern
+
+
+## An error is reported when the content of section classes is demanded before
+## input sections have been assigned to them.
+
+# RUN: not ld.lld -T used-before-assigned.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=USED-BEFORE-ASSIGNED
+
+# USED-BEFORE-ASSIGNED: error: section class 'a' used before assigned
+
+
+## An error is reported when an input section is bound to a section class but
+## is not referenced by at least one output section.
+
+# RUN: not ld.lld -T unreferenced.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNREFERENCED
+
+# UNREFERENCED: error: section '.rodata.a' assigned to class 'a' but to no output section
+
+
+## An error is reported when one section class references another.
+
+# RUN: not ld.lld -T class-references-class.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CLASS-REFERENCES-CLASS --implicit-check-not=error:
+
+# CLASS-REFERENCES-CLASS: error: class-references-class.ld:3: section class 'b' references class 'a'
+
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 spill.s -o spill.o
+
+
+## An input section in a class spills to a later class ref when the region of
+## its first ref would overflow. The spill uses the alignment of the later ref.
+
+# RUN: ld.lld -T spill.ld spill.o -o spill
+# RUN: llvm-readelf -S spill | FileCheck %s --check-prefix=SPILL
+
+# SPILL:      Name          Type     Address          Off    Size
+# SPILL:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-NEXT: .last_chance  PROGBITS 0000000000000008 001008 000002
+
+
+## A spill off the end still fails the link.
+
+# RUN: not ld.lld -T spill-fail.ld spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=SPILL-FAIL --implicit-check-not=error:
+
+# SPILL-FAIL: error: section '.last_chance' will not fit in region 'b': overflowed by 2 bytes
+
+
+## The above spill still occurs when the LMA would overflow, even though the
+## VMA would fit.
+
+# RUN: ld.lld -T spill-lma.ld spill.o -o spill-lma
+# RUN: llvm-readelf -S spill-lma | FileCheck %s --check-prefix=SPILL-LMA
+
+# SPILL-LMA:      Name          Type     Address          Off    Size
+# SPILL-LMA:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-LMA-NEXT: .last_chance  PROGBITS 0000000000000003 001003 000002
+
+
+## A spill occurs to an additional class ref after the first.
+
+# RUN: ld.lld -T spill-later.ld spill.o -o spill-later
+# RUN: llvm-readelf -S spill-later | FileCheck %s --check-prefix=SPILL-LATER
+
+# SPILL-LATER:      Name            Type     Address          Off    Size
+# SPILL-LATER:      .first_chance   PROGBITS 0000000000000000 001000 000001
+# SPILL-LATER-NEXT: .second_chance  PROGBITS 0000000000000002 001001 000000
+# SPILL-LATER-NEXT: .last_chance    PROGBITS 0000000000000003 001003 000002
+
+
+## A later overflow causes an earlier section to spill.
+
+# RUN: ld.lld -T spill-earlier.ld spill.o -o spill-earlier
+# RUN: llvm-readelf -S spill-earlier | FileCheck %s --check-prefix=SPILL-EARLIER
+
+# SPILL-EARLIER:      Name          Type     Address          Off    Size
+# SPILL-EARLIER:      .first_chance PROGBITS 0000000000000000 001000 000002
+# SPILL-EARLIER-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000001
+
+
+## SHF_MERGEd sections are spilled according to the class refs of the first
+## merged input section (the one giving the resulting section its name).
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 merge.s -o merge.o
+# RUN: ld.lld -T spill-merge.ld merge.o -o spill-merge
+# RUN: llvm-readelf -S spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
+
+# SPILL-MERGE:      Name          Type     Address          Off    Size
+# SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
+# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
+# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
+
+
+## SHF_LINK_ORDER is reordered when spilling changes relative section order.
+
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 link-order.s -o link-order.o
+# RUN: ld.lld -T link-order.ld link-order.o -o link-order
+# RUN: llvm-readobj -x .order link-order | FileCheck %s --check-prefix=LINK-ORDER
+
+# LINK-ORDER: 020301
+
+
+## An error is reported when a section might spill from INSERT.
+
+# RUN: not ld.lld -T from-insert.ld spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=FROM-INSERT
+
+# FROM-INSERT: error: section '.two_byte_section' cannot spill from/to INSERT section '.b'
+
+
+## An error is reported when a section might spill to INSERT.
+
+# RUN: not ld.lld -T to-insert.ld spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=TO-INSERT
+
+# TO-INSERT: error: section '.two_byte_section' cannot spill from/to INSERT section '.b'
+
+
+## An error is reported when a section might spill from /DISCARD/.
+
+# RUN: not ld.lld -T from-discard.ld spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=FROM-DISCARD
+
+# FROM-DISCARD: error: section '.two_byte_section' cannot spill from/to /DISCARD/
+
+
+## An error is reported when a section might spill to /DISCARD/.
+
+# RUN: not ld.lld -T to-discard.ld spill.o 2>&1 |\
+# RUN:   FileCheck %s --check-prefix=TO-DISCARD
+
+# TO-DISCARD: error: section '.two_byte_section' cannot spill from/to /DISCARD/
+
+#--- matching.s
+.section .rodata.a,"a",@progbits
+.byte 1
+
+.section .rodata.b,"a",@progbits
+.byte 2
+
+.section .rodata.c,"ax",@progbits
+.byte 3
+
+.section .rodata.d,"a",@progbits
+.byte 4
+
+#--- matching.ld
+MEMORY {
+ m : ORIGIN = 0, LENGTH = 4
+}
+
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(cd) { *(.rodata.c) *(.rodata.d) }
+  .rodata : {
+    *(.rodata.*)
+    INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS(cd)
+    CLASS(a)
+    CLASS(cd)
+  } >m
+}
+
+#--- already-defined.ld
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(a) { *(.rodata.b) }
+}
+
+#--- missing-filename-pattern.ld
+SECTIONS {
+  CLASS(a) { (.rodata.a) }
+}
+
+#--- used-before-assigned.ld
+SECTIONS {
+  .rodata : { CLASS(a) }
+  CLASS(a) { *(.rodata.a) }
+}
+
+#--- unreferenced.ld
+SECTIONS {
+  CLASS(a) { *(.rodata.*) }
+}
+
+#--- class-references-class.ld
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(b) { CLASS(a) }
+}
+
+#--- spill.s
+.section .one_byte_section,"a",@progbits
+.fill 1
+
+.section .two_byte_section,"a",@progbits
+.fill 2
+
+#--- spill.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 16
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : SUBALIGN(1) { *(.one_byte_section) CLASS(c) } >a
+  .last_chance : SUBALIGN(8) { CLASS (c) } >b
+}
+
+#--- spill-fail.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 2, LENGTH = 0
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : { *(.one_byte_section) CLASS(c) } >a
+  .last_chance : { CLASS(c) } >b
+}
+
+#--- spill-lma.ld
+MEMORY {
+  vma_a : ORIGIN = 0, LENGTH = 3
+  vma_b : ORIGIN = 3, LENGTH = 3
+  lma_a : ORIGIN = 6, LENGTH = 2
+  lma_b : ORIGIN = 8, LENGTH = 2
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : { *(.one_byte_section) CLASS(c) } >vma_a AT>lma_a
+  .last_chance : { CLASS(c) } >vma_b AT>lma_b
+}
+
+#--- spill-later.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 1
+  c : ORIGIN = 3, LENGTH = 2
+}
+
+SECTIONS {
+  CLASS(c) { *(.two_byte_section) }
+  .first_chance : { *(.one_byte_section) CLASS(c) } >a
+  .second_chance : { CLASS(c) } >b
+  .last_chance : { CLASS(c) } >c
+}
+
+#--- spill-earlier.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 2
+  b : ORIGIN = 2, LENGTH = 1
+}
+
+SECTIONS {
+  CLASS(c) { *(.one_byte_section) }
+  .first_chance : { CLASS(c) *(.two_byte_section) } >a
+  .last_chance : { CLASS(c) } >b
+}
+
+#--- merge.s
+.section .a,"aM",@progbits,1
+.byte 0x12, 0x34
+
+.section .b,"aM",@progbits,1
+.byte 0x12
+
+#--- spill-merge.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 1, LENGTH = 2
+  c : ORIGIN = 3, LENGTH = 2
+}
+
+SECTIONS {
+  CLASS(a) { *(.a) }
+  CLASS(b) { *(.b) }
+  .first : { CLASS(a) CLASS(b) } >a
+  .second : { CLASS(a) } >b
+  .third : { CLASS(b) } >c
+}
+
+#--- link-order.s
+.section .a,"a",@progbits
+.fill 1
+
+.section .b,"a",@progbits
+.fill 1
+
+.section .c,"a",@progbits
+.fill 1
+
+.section .link_order.a,"ao",@progbits,.a
+.byte 1
+
+.section .link_order.b,"ao",@progbits,.b
+.byte 2
+
+.section .link_order.c,"ao",@progbits,.c
+.byte 3
+
+#--- link-order.ld
+MEMORY {
+  order : ORIGIN = 0, LENGTH = 3
+  potential_a : ORIGIN = 3, LENGTH = 0
+  bc : ORIGIN = 3, LENGTH = 2
+  actual_a : ORIGIN = 5, LENGTH = 1
+}
+
+SECTIONS {
+  CLASS(a) { *(.a) }
+  .order :  { *(.link_order.*) } > order
+  .potential_a : { CLASS(a) } >potential_a
+  .bc : { *(.b) *(.c) } >bc
+  .actual_a : { CLASS(a) } >actual_a
+}
+
+#--- from-insert.ld
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  .a : { *(.one_byte_section) }
+}
+SECTIONS { .b : { CLASS(class) } } INSERT AFTER .a;
+SECTIONS { .c : { CLASS(class) } }
+
+#--- to-insert.ld
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  .a : { CLASS(class) *(.one_byte_section) }
+}
+SECTIONS { .b : { CLASS(class) } } INSERT AFTER .a;
+
+#--- from-discard.ld
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  /DISCARD/ : { CLASS(class) }
+  .c : { CLASS(class) }
+}
+
+#--- to-discard.ld
+SECTIONS {
+  CLASS(class) { *(.two_byte_section) }
+  .a : { CLASS(class) }
+  /DISCARD/ : { CLASS(class) }
+}
