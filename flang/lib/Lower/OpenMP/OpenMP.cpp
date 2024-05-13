@@ -2352,6 +2352,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   assert(llvm::omp::blockConstructSet.test(origDirective) &&
          "Expected block construct");
+  (void)origDirective;
 
   for (const Clause &clause : clauses) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
