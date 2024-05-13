@@ -1971,8 +1971,6 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_loop:
   case llvm::omp::Directive::OMPD_masked:
-  case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll:
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir) + ")");
     break;
@@ -2029,8 +2027,8 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
                   item);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
-    genTaskwaitOp(converter, symTable, semaCtx, eval, loc, clauses,
-                  queue, item);
+    genTaskwaitOp(converter, symTable, semaCtx, eval, loc, clauses, queue,
+                  item);
     break;
   case llvm::omp::Directive::OMPD_taskyield:
     genTaskyieldOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -2038,6 +2036,10 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_teams:
     genTeamsOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_tile:
+  case llvm::omp::Directive::OMPD_unroll:
+    TODO(loc, "Unhandled loop directive (" +
+                  llvm::omp::getOpenMPDirectiveName(dir) + ")");
   // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     // FIXME: Workshare is not a commonly used OpenMP construct, an
