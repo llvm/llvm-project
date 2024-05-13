@@ -20591,14 +20591,12 @@ static SDValue LowerTruncateVecPack(MVT DstVT, SDValue In, const SDLoc &DL,
   return SDValue();
 }
 
-static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerTruncateVecI1(SDValue Op, const SDLoc &DL,
+                                  SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
-
-  SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
-
   assert(VT.getVectorElementType() == MVT::i1 && "Unexpected vector type.");
 
   // Shift LSB to MSB and use VPMOVB/W2M or TESTD/Q.
@@ -20717,7 +20715,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (VT.getVectorElementType() == MVT::i1)
-    return LowerTruncateVecI1(Op, DAG, Subtarget);
+    return LowerTruncateVecI1(Op, DL, DAG, Subtarget);
 
   // Attempt to truncate with PACKUS/PACKSS even on AVX512 if we'd have to
   // concat from subvectors to use VPTRUNC etc.
