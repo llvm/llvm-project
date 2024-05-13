@@ -5403,6 +5403,52 @@ def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
 def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
+// The following SetCC patterns are used for GlobalISel only
+multiclass SelectSetCC<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
+            (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rn), (v8i8 V64:$Rm)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
+            (v16i8 (!cast<Instruction>(INST # v16i8) (v16i8 V128:$Rn), (v16i8 V128:$Rm)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
+            (v4i16 (!cast<Instruction>(INST # v4i16) (v4i16 V64:$Rn), (v4i16 V64:$Rm)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+            (v8i16 (!cast<Instruction>(INST # v8i16) (v8i16 V128:$Rn), (v8i16 V128:$Rm)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
+            (v2i32 (!cast<Instruction>(INST # v2i32) (v2i32 V64:$Rn), (v2i32 V64:$Rm)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+            (v4i32 (!cast<Instruction>(INST # v4i32) (v4i32 V128:$Rn), (v4i32 V128:$Rm)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), (v2i64 V128:$Rm))),
+            (v2i64 (!cast<Instruction>(INST # v2i64) (v2i64 V128:$Rn), (v2i64 V128:$Rm)))>;
+}
+
+defm : SelectSetCC<seteq, "CMEQ">;
+defm : SelectSetCC<setgt, "CMGT">;
+defm : SelectSetCC<setge, "CMGE">;
+defm : SelectSetCC<setugt, "CMHI">;
+defm : SelectSetCC<setuge, "CMHS">;
+
+multiclass SelectSetCCSwapOperands<PatFrags InFrag, string INST> {
+  def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
+            (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rm), (v8i8 V64:$Rn)))>;
+  def : Pat<(v16i8 (InFrag (v16i8 V128:$Rn), (v16i8 V128:$Rm))),
+            (v16i8 (!cast<Instruction>(INST # v16i8) (v16i8 V128:$Rm), (v16i8 V128:$Rn)))>;
+  def : Pat<(v4i16 (InFrag (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
+            (v4i16 (!cast<Instruction>(INST # v4i16) (v4i16 V64:$Rm), (v4i16 V64:$Rn)))>;
+  def : Pat<(v8i16 (InFrag (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
+            (v8i16 (!cast<Instruction>(INST # v8i16) (v8i16 V128:$Rm), (v8i16 V128:$Rn)))>;
+  def : Pat<(v2i32 (InFrag (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
+            (v2i32 (!cast<Instruction>(INST # v2i32) (v2i32 V64:$Rm), (v2i32 V64:$Rn)))>;
+  def : Pat<(v4i32 (InFrag (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+            (v4i32 (!cast<Instruction>(INST # v4i32) (v4i32 V128:$Rm), (v4i32 V128:$Rn)))>;
+  def : Pat<(v2i64 (InFrag (v2i64 V128:$Rn), (v2i64 V128:$Rm))),
+            (v2i64 (!cast<Instruction>(INST # v2i64) (v2i64 V128:$Rm), (v2i64 V128:$Rn)))>;
+}
+
+defm : SelectSetCCSwapOperands<setlt, "CMGT">;
+defm : SelectSetCCSwapOperands<setle, "CMGE">;
+defm : SelectSetCCSwapOperands<setult, "CMHI">;
+defm : SelectSetCCSwapOperands<setule, "CMHS">;
+
 let Predicates = [HasNEON] in {
 def : InstAlias<"mov{\t$dst.16b, $src.16b|.16b\t$dst, $src}",
                 (ORRv16i8 V128:$dst, V128:$src, V128:$src), 1>;
