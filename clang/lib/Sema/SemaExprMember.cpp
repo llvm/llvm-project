@@ -21,6 +21,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
 using namespace clang;
@@ -1518,9 +1519,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     if (warn) {
       if (ObjCMethodDecl *MD = S.getCurMethodDecl()) {
         ObjCMethodFamily MF = MD->getMethodFamily();
-        warn = (MF != OMF_init && MF != OMF_dealloc &&
-                MF != OMF_finalize &&
-                !S.IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
+        warn = (MF != OMF_init && MF != OMF_dealloc && MF != OMF_finalize &&
+                !S.ObjC().IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
       }
       if (warn)
         S.Diag(MemberLoc, diag::warn_direct_ivar_access) << IV->getDeclName();
@@ -1658,9 +1658,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     }
 
     // Normal property access.
-    return S.HandleExprPropertyRefExpr(OPT, BaseExpr.get(), OpLoc, MemberName,
-                                       MemberLoc, SourceLocation(), QualType(),
-                                       false);
+    return S.ObjC().HandleExprPropertyRefExpr(
+        OPT, BaseExpr.get(), OpLoc, MemberName, MemberLoc, SourceLocation(),
+        QualType(), false);
   }
 
   if (BaseType->isExtVectorBoolType()) {
