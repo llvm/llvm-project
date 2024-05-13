@@ -222,30 +222,30 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
   O << "{";
   switch (Imm) {
   case RISCVZC::RLISTENCODE::RA:
-    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    printRegName(O, RISCV::X1);
     break;
   case RISCVZC::RLISTENCODE::RA_S0:
-    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    printRegName(O, RISCV::X1);
     O << ", ";
-    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    printRegName(O, RISCV::X8);
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S1:
-    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    printRegName(O, RISCV::X1);
     O << ", ";
-    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    printRegName(O, RISCV::X8);
     O << '-';
-    markup(O, Markup::Register) << (ArchRegNames ? "x9" : "s1");
+    printRegName(O, RISCV::X9);
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S2:
-    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    printRegName(O, RISCV::X1);
     O << ", ";
-    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    printRegName(O, RISCV::X8);
     O << '-';
-    markup(O, Markup::Register) << (ArchRegNames ? "x9" : "s2");
     if (ArchRegNames) {
+      printRegName(O, RISCV::X9);
       O << ", ";
-      markup(O, Markup::Register) << "x18";
     }
+    printRegName(O, RISCV::X18);
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S3:
   case RISCVZC::RLISTENCODE::RA_S0_S4:
@@ -255,20 +255,19 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
   case RISCVZC::RLISTENCODE::RA_S0_S8:
   case RISCVZC::RLISTENCODE::RA_S0_S9:
   case RISCVZC::RLISTENCODE::RA_S0_S11:
-    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    printRegName(O, RISCV::X1);
     O << ", ";
-    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    printRegName(O, RISCV::X8);
     O << '-';
     if (ArchRegNames) {
-      markup(O, Markup::Register) << "x9";
+      printRegName(O, RISCV::X9);
       O << ", ";
-      markup(O, Markup::Register) << "x18";
+      printRegName(O, RISCV::X18);
       O << '-';
     }
-    markup(O, Markup::Register) << getRegisterName(
-        RISCV::X19 + (Imm == RISCVZC::RLISTENCODE::RA_S0_S11
-                          ? 8
-                          : Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
+    printRegName(O, RISCV::X19 + (Imm == RISCVZC::RLISTENCODE::RA_S0_S11
+                                      ? 8
+                                      : Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
     break;
   default:
     llvm_unreachable("invalid register list");
