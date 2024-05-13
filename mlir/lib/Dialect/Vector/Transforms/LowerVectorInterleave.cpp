@@ -90,7 +90,7 @@ private:
 /// Is rewritten into:
 ///
 /// ```mlir
-/// vector.shuffle %arg0, %arg1 [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]
+/// vector.shuffle %arg0, %arg1 [0, 7, 1, 8, 2, 9, 3, 10, 4, 11, 5, 12, 6, 13]
 ///   : vector<7xi16>, vector<7xi16>
 /// ```
 class InterleaveToShuffle : public OpRewritePattern<vector::InterleaveOp> {
@@ -104,10 +104,11 @@ public:
     if (sourceType.getRank() != 1 || sourceType.isScalable()) {
       return failure();
     }
-    rewriter.replaceOpWithNewOp<ShuffleOp>(
-        op, op.getLhs(), op.getRhs(),
-        llvm::map_to_vector(llvm::seq<int64_t>(2 * sourceType.getNumElements()),
-                            [](int64_t i) { return i / 2; }));
+    int64_t n = sourceType.getNumElements();
+    auto seq = llvm::seq<int64_t>(2 * n);
+    auto zip = llvm::to_vector(llvm::map_range(
+        seq, [n](int64_t i) { return (i % 2 ? n : 0) + i / 2; }));
+    rewriter.replaceOpWithNewOp<ShuffleOp>(op, op.getLhs(), op.getRhs(), zip);
     return success();
   }
 };
