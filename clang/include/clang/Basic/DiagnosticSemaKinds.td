@@ -12344,8 +12344,4 @@ def warn_acc_deprecated_alias_name
 def err_acc_var_not_pointer_type
     : Error<"expected pointer in '%0' clause, type is %1">;
 def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
-def err_acc_clause_after_device_type
-    : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
-            "compute construct">;
-
 } // end of sema component.
