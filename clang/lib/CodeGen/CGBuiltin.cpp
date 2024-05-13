@@ -18328,7 +18328,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
-void CodeGenFunction::AddAMDGCNFenceAddressSpaceMMRA(llvm::Instruction *Inst,
+void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                                      const CallExpr *E) {
   constexpr const char *Tag = "amdgpu-as";
 
@@ -18346,7 +18346,8 @@ void CodeGenFunction::AddAMDGCNFenceAddressSpaceMMRA(llvm::Instruction *Inst,
               "expected an address space name as a string literal");
   }
 
-  llvm::unique(MMRAs);
+  llvm::sort(MMRAs);
+  MMRAs.erase(llvm::unique(MMRAs), MMRAs.end());
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
@@ -19022,7 +19023,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                             EmitScalarExpr(E->getArg(1)), AO, SSID);
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
     if (E->getNumArgs() > 2)
-      AddAMDGCNFenceAddressSpaceMMRA(Fence, E);
+      AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
     return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:

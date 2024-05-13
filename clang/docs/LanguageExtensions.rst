@@ -4432,7 +4432,8 @@ The address spaces arguments must be string literals with known values, such as:
 * ``"image"``
 
 If one or more address space name are provided, the code generator will attempt
-to emit potentially faster instructions that only fence those address spaces.
+to emit potentially faster instructions that order access to at least those
+address spaces.
 Emitting such instructions may not always be possible and the compiler is free
 to fence more aggressively.
 

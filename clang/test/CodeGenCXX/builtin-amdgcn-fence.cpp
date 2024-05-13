@@ -102,12 +102,12 @@ void test_image() {
 //
 void test_mixed() {
   __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "image", "global");
-  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "image", "local", "global");
+  __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "image", "local", "global", "image", "image");
 }
 //.
 // CHECK: [[META3]] = !{!"amdgpu-as", !"local"}
 // CHECK: [[META4]] = !{!"amdgpu-as", !"global"}
 // CHECK: [[META5]] = !{!"amdgpu-as", !"image"}
-// CHECK: [[META6]] = !{[[META5]], [[META4]]}
-// CHECK: [[META7]] = !{[[META5]], [[META3]], [[META4]]}
+// CHECK: [[META6]] = !{[[META4]], [[META5]]}
+// CHECK: [[META7]] = !{[[META4]], [[META5]], [[META3]]}
 //.

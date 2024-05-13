@@ -18,6 +18,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -691,14 +692,9 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
   std::string Str;
   raw_string_ostream OS(Str);
   OS << "unknown address space '" << AS << "'; expected one of ";
-  bool IsFirst = true;
-  for (const auto &[Name, Val] : ASNames) {
-    if (IsFirst)
-      IsFirst = false;
-    else
-      OS << ", ";
-    OS << '\'' << Name << '\'';
-  }
+  ListSeparator LS;
+  for (const auto &[Name, Val] : ASNames)
+    OS << LS << '\'' << Name << '\'';
   DiagnosticInfoUnsupported BadTag(Fn, Str, MI.getDebugLoc(), DS_Warning);
   Fn.getContext().diagnose(BadTag);
 }
