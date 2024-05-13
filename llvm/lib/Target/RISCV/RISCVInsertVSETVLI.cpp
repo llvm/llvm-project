@@ -439,7 +439,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 class VSETVLIInfo {
   struct AVLDef {
     // Every AVLDef should have a VNInfo.
-    const VNInfo *VNInfo;
+    const VNInfo *ValNo;
     Register DefReg;
   };
   union {
@@ -480,7 +480,7 @@ public:
 
   void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
     assert(VNInfo && AVLReg.isVirtual());
-    AVLRegDef.VNInfo = VNInfo;
+    AVLRegDef.ValNo = VNInfo;
     AVLRegDef.DefReg = AVLReg;
     State = AVLIsReg;
   }
@@ -508,7 +508,7 @@ public:
   }
   const VNInfo *getAVLVNInfo() const {
     assert(hasAVLReg());
-    return AVLRegDef.VNInfo;
+    return AVLRegDef.ValNo;
   }
   // Most AVLIsReg infos will have a single defining MachineInstr, unless it was
   // a PHI node. In that case getAVLVNInfo()->def will point to the block
