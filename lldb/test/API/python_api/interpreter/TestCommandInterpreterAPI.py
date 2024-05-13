@@ -137,7 +137,7 @@ class CommandInterpreterAPICase(TestBase):
 
         # (lldb) version
         self.assertEqual(transcript[0]["command"], "version")
-        self.assertTrue("lldb version" in transcript[0]["output"])
+        self.assertIn("lldb version", transcript[0]["output"])
         self.assertEqual(transcript[0]["error"], "")
 
         # (lldb) an-unknown-command
@@ -151,14 +151,14 @@ class CommandInterpreterAPICase(TestBase):
         # (lldb) breakpoint set -f main.c -l <line>
         self.assertEqual(transcript[2]["command"], "breakpoint set -f main.c -l %d" % self.line)
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
-        self.assertTrue("Breakpoint 1: where = a.out`main " in transcript[2]["output"])
+        self.assertIn("Breakpoint 1: where = a.out`main ", transcript[2]["output"])
         self.assertEqual(transcript[2]["error"], "")
 
         # (lldb) r
         self.assertEqual(transcript[3]["command"], "r")
         # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
-        self.assertTrue("Process" in transcript[3]["output"])
-        self.assertTrue("launched" in transcript[3]["output"])
+        self.assertIn("Process", transcript[3]["output"])
+        self.assertIn("launched", transcript[3]["output"])
         self.assertEqual(transcript[3]["error"], "")
 
         # (lldb) p a
@@ -174,7 +174,7 @@ class CommandInterpreterAPICase(TestBase):
         # Dump result should be valid JSON
         self.assertTrue(statistics_dump is not json.JSONDecodeError)
         # Dump result should contain expected fields
-        self.assertTrue("commands" in statistics_dump)
-        self.assertTrue("memory" in statistics_dump)
-        self.assertTrue("modules" in statistics_dump)
-        self.assertTrue("targets" in statistics_dump)
+        self.assertIn("commands", statistics_dump)
+        self.assertIn("memory", statistics_dump)
+        self.assertIn("modules", statistics_dump)
+        self.assertIn("targets", statistics_dump)
