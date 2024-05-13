@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-interleave-lowering"
 
@@ -78,49 +77,9 @@ private:
   int64_t targetRank = 1;
 };
 
-/// Rewrite vector.interleave op into an equivalent vector.shuffle op, when
-/// applicable: `sourceType` must be 1D and non-scalable.
-///
-/// Example:
-///
-/// ```mlir
-/// vector.interleave %a, %b : vector<7xi16>
-/// ```
-///
-/// Is rewritten into:
-///
-/// ```mlir
-/// vector.shuffle %arg0, %arg1 [0, 7, 1, 8, 2, 9, 3, 10, 4, 11, 5, 12, 6, 13]
-///   : vector<7xi16>, vector<7xi16>
-/// ```
-class InterleaveToShuffle : public OpRewritePattern<vector::InterleaveOp> {
-public:
-  InterleaveToShuffle(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit) {};
-
-  LogicalResult matchAndRewrite(vector::InterleaveOp op,
-                                PatternRewriter &rewriter) const override {
-    VectorType sourceType = op.getSourceVectorType();
-    if (sourceType.getRank() != 1 || sourceType.isScalable()) {
-      return failure();
-    }
-    int64_t n = sourceType.getNumElements();
-    auto seq = llvm::seq<int64_t>(2 * n);
-    auto zip = llvm::to_vector(llvm::map_range(
-        seq, [n](int64_t i) { return (i % 2 ? n : 0) + i / 2; }));
-    rewriter.replaceOpWithNewOp<ShuffleOp>(op, op.getLhs(), op.getRhs(), zip);
-    return success();
-  }
-};
-
 } // namespace
 
 void mlir::vector::populateVectorInterleaveLoweringPatterns(
     RewritePatternSet &patterns, int64_t targetRank, PatternBenefit benefit) {
   patterns.add<UnrollInterleaveOp>(targetRank, patterns.getContext(), benefit);
-}
-
-void mlir::vector::populateVectorInterleaveToShufflePatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<InterleaveToShuffle>(patterns.getContext(), benefit);
 }

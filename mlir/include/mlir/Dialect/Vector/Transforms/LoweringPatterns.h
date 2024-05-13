@@ -273,9 +273,6 @@ void populateVectorInterleaveLoweringPatterns(RewritePatternSet &patterns,
                                               int64_t targetRank = 1,
                                               PatternBenefit benefit = 1);
 
-void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
-                                               PatternBenefit benefit = 1);
-
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H
