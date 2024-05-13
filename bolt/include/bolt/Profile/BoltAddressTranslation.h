@@ -70,7 +70,7 @@ class BinaryFunction;
 class BoltAddressTranslation {
 public:
   // In-memory representation of the address translation table
-  using MapTy = std::multimap<uint32_t, uint32_t>;
+  using MapTy = std::map<uint32_t, uint32_t>;
 
   // List of taken fall-throughs
   using FallthroughListTy = SmallVector<std::pair<uint64_t, uint64_t>, 16>;
@@ -217,7 +217,6 @@ public:
     auto begin() const { return Map.begin(); }
     auto end() const { return Map.end(); }
     auto upper_bound(uint32_t Offset) const { return Map.upper_bound(Offset); }
-    auto size() const { return Map.size(); }
   };
 
   /// Map function output address to its hash and basic blocks hash map.
