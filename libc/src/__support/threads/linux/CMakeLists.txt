@@ -19,7 +19,7 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.optional
-    libc.src.__support.time.linux.timeout_basic
+    libc.src.__support.time.linux.abs_timeout
 )
 
 add_header_library(

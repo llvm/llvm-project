@@ -21,21 +21,22 @@ add_header_library(
 )
 
 add_header_library(
-  timeout_basic
+  abs_timeout
   HDRS
-    timeout_basic.h
+    abs_timeout.h
   DEPENDS
     libc.hdr.types.struct_timespec
     libc.src.__support.time.units
+    libc.src.__support.CPP.expected
 )
 
 add_header_library(
-  timeout
+  monotonicity
   HDRS
-    timeout.h
+    monotonicity.h
   DEPENDS
     .clock_gettime
     .clock_conversion
-    .timeout_basic
-    libc.src.__support.CPP.expected
+    .abs_timeout
+    libc.hdr.time_macros
 )

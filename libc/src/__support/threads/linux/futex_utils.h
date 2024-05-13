@@ -15,7 +15,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include "src/__support/time/linux/timeout_basic.h"
+#include "src/__support/time/linux/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
 

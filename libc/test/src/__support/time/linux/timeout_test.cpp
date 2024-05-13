@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/expected.h"
-#include "src/__support/time/linux/timeout.h"
+#include "src/__support/time/linux/abs_timeout.h"
+#include "src/__support/time/linux/monotonicity.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE {
@@ -39,7 +40,7 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, NoChangeIfClockIsMonotonic) {
   cpp::expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
   ASSERT_TRUE(result.has_value());
-  result->ensure_monotonic();
+  ensure_monotonicity(*result);
   ASSERT_FALSE(result->is_realtime());
   ASSERT_EQ(result->get_timespec().tv_sec, static_cast<time_t>(10000));
   ASSERT_EQ(result->get_timespec().tv_nsec, static_cast<time_t>(0));
@@ -50,7 +51,7 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, ValidAfterConversion) {
   cpp::expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, true);
   ASSERT_TRUE(result.has_value());
-  result->ensure_monotonic();
+  ensure_monotonicity(*result);
   ASSERT_FALSE(result->is_realtime());
   ASSERT_TRUE(
       AbsTimeout::from_timespec(result->get_timespec(), false).has_value());
