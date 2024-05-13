@@ -7,7 +7,7 @@
 ;CHECK-DENSITY: Sample PGO is estimated to optimize better with 3.1x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
 ;CHECK-DENSITY: Minimum profile density for hot functions with top 99.00% total samples: 3.2
 
-;CHECK-DENSITY-CS: Minimum profile density for hot functions with top 99.00% total samples: 128.3
+;CHECK-DENSITY-CS: Minimum profile density for hot functions with top 99.00% total samples: 619.0
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out

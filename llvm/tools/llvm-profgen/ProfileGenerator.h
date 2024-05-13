@@ -121,7 +121,7 @@ protected:
   double calculateDensity(const SampleProfileMap &Profiles,
                           uint64_t HotCntThreshold);
 
-  void showDensitySuggestion(double Density);
+  void showDensitySuggestion(double Density, int DensityCutoffHot);
 
   void collectProfiledFunctions();
 
@@ -362,6 +362,9 @@ private:
   void convertToProfileMap();
 
   void computeSummaryAndThreshold();
+
+  void calculateAndShowDensity(SampleContextTracker &CTracker);
+  double calculateDensity(SampleContextTracker &CTracker);
 
   bool collectFunctionsFromLLVMProfile(
       std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
