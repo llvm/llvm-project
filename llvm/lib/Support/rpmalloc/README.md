@@ -1,7 +1,5 @@
 # rpmalloc - General Purpose Memory Allocator
-This library provides a public domain cross platform lock free thread caching 16-byte aligned memory allocator implemented in C. The latest source code is always available at https://github.com/mjansson/rpmalloc
-
-Created by Mattias Jansson ([@maniccoder](https://twitter.com/maniccoder)) - Discord server for discussions at https://discord.gg/M8BwTQrt6c 
+This library provides a cross platform lock free thread caching 16-byte aligned memory allocator implemented in C.
 
 Platforms currently supported:
 
@@ -54,7 +52,7 @@ __rpmalloc_config__: Get the current runtime configuration of the allocator
 
 Then simply use the __rpmalloc__/__rpfree__ and the other malloc style replacement functions. Remember all allocations are 16-byte aligned, so no need to call the explicit rpmemalign/rpaligned_alloc/rpposix_memalign functions unless you need greater alignment, they are simply wrappers to make it easier to replace in existing code.
 
-If you wish to override the standard library malloc family of functions and have automatic initialization/finalization of process and threads, define __ENABLE_OVERRIDE__ to non-zero which will include the `malloc.c` file in compilation of __rpmalloc.c__. The list of libc entry points replaced may not be complete, use libc replacement only as a convenience for testing the library on an existing code base, not a final solution.
+If you wish to override the standard library malloc family of functions and have automatic initialization/finalization of process and threads, define __ENABLE_OVERRIDE__ to non-zero which will include the `malloc.c` file in compilation of __rpmalloc.c__, and then rebuild the library or your project where you added the rpmalloc source. If you compile rpmalloc as a separate library you must make the linker use the override symbols from the library by referencing at least one symbol. The easiest way is to simply include `rpmalloc.h` in at least one source file and call `rpmalloc_linker_reference` somewhere - it's a dummy empty function. On Windows platforms and C++ overrides you have to `#include <rpnew.h>` in at least one source file and also manually handle the initialize/finalize of the process and all threads. The list of libc entry points replaced may not be complete, use libc/stdc++ replacement only as a convenience for testing the library on an existing code base, not a final solution.
 
 For explicit first class heaps, see the __rpmalloc_heap_*__ API under [first class heaps](#first-class-heaps) section, requiring __RPMALLOC_FIRST_CLASS_HEAPS__ tp be defined to 1.
 
@@ -168,6 +166,54 @@ To support global scope data doing dynamic allocation/deallocation such as C++ o
 
 # License
 
-As part of the LLVM codebase, rpmalloc has be re-licenced under the the Apache License v2.0 with LLVM Exceptions.
-See https://llvm.org/LICENSE.txt for license information.
-SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org>
+
+
+You can also use this software under the MIT license if public domain is
+not recognized in your country
+
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Mattias Jansson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
