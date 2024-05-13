@@ -1435,6 +1435,51 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::simplifyReductionOfShuffle(IntrinsicInst *II) {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
+                            IID != Intrinsic::vector_reduce_fmul) ||
+                           II->hasAllowReassoc();
+
+  if (!CanBeReassociated)
+    return nullptr;
+
+  const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
+                           IID == Intrinsic::vector_reduce_fmul)
+                              ? 1
+                              : 0;
+  Value *Arg = II->getArgOperand(ArgIdx);
+  Value *V;
+
+  if (match(Arg, m_VecReverse(m_Value(V)))) {
+    replaceUse(II->getOperandUse(ArgIdx), V);
+    return II;
+  }
+
+  ArrayRef<int> Mask;
+  if (!isa<FixedVectorType>(Arg->getType()) ||
+      !match(Arg, m_Shuffle(m_Value(V), m_Undef(), m_Mask(Mask))) ||
+      !cast<ShuffleVectorInst>(Arg)->isSingleSource())
+    return nullptr;
+
+  int Sz = Mask.size();
+  SmallBitVector UsedIndices(Sz);
+  for (int Idx : Mask) {
+    if (Idx == PoisonMaskElem || UsedIndices.test(Idx))
+      return nullptr;
+    UsedIndices.set(Idx);
+  }
+
+  // Can remove shuffle iff just shuffled elements, no repeats, undefs, or
+  // other changes.
+  if (UsedIndices.all()) {
+    replaceUse(II->getOperandUse(ArgIdx), V);
+    return II;
+  }
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -3223,14 +3268,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // %res = cmp eq iReduxWidth %val, 11111
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
-    // When doing a logical reduction of a reversed operand the result is
-    // identical to reducing the unreversed operand.
-    if (match(Arg, m_VecReverse(m_Value(Vect)))) {
-      Value *Res = IID == Intrinsic::vector_reduce_or
-                       ? Builder.CreateOrReduce(Vect)
-                       : Builder.CreateAndReduce(Vect);
-      return replaceInstUsesWith(CI, Res);
-    }
+
+    if (Instruction *I = simplifyReductionOfShuffle(II))
+      return I;
+
     if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
       if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
         if (FTy->getElementType() == Builder.getInt1Ty()) {
@@ -3262,12 +3303,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // Trunc(ctpop(bitcast <n x i1> to in)).
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
-      // When doing an integer add reduction of a reversed operand the result
-      // is identical to reducing the unreversed operand.
-      if (match(Arg, m_VecReverse(m_Value(Vect)))) {
-        Value *Res = Builder.CreateAddReduce(Vect);
-        return replaceInstUsesWith(CI, Res);
-      }
+
+      if (Instruction *I = simplifyReductionOfShuffle(II))
+        return I;
+
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
           if (FTy->getElementType() == Builder.getInt1Ty()) {
@@ -3296,12 +3335,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       //   ?ext(vector_reduce_add(<n x i1>))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
-      // When doing a xor reduction of a reversed operand the result is
-      // identical to reducing the unreversed operand.
-      if (match(Arg, m_VecReverse(m_Value(Vect)))) {
-        Value *Res = Builder.CreateXorReduce(Vect);
-        return replaceInstUsesWith(CI, Res);
-      }
+
+      if (Instruction *I = simplifyReductionOfShuffle(II))
+        return I;
+
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
           if (FTy->getElementType() == Builder.getInt1Ty()) {
@@ -3325,12 +3362,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       //   zext(vector_reduce_and(<n x i1>))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
-      // When doing a mul reduction of a reversed operand the result is
-      // identical to reducing the unreversed operand.
-      if (match(Arg, m_VecReverse(m_Value(Vect)))) {
-        Value *Res = Builder.CreateMulReduce(Vect);
-        return replaceInstUsesWith(CI, Res);
-      }
+
+      if (Instruction *I = simplifyReductionOfShuffle(II))
+        return I;
+
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
           if (FTy->getElementType() == Builder.getInt1Ty()) {
@@ -3355,14 +3390,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       //   ?ext(vector_reduce_{and,or}(<n x i1>))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
-      // When doing a min/max reduction of a reversed operand the result is
-      // identical to reducing the unreversed operand.
-      if (match(Arg, m_VecReverse(m_Value(Vect)))) {
-        Value *Res = IID == Intrinsic::vector_reduce_umin
-                         ? Builder.CreateIntMinReduce(Vect, false)
-                         : Builder.CreateIntMaxReduce(Vect, false);
-        return replaceInstUsesWith(CI, Res);
-      }
+
+      if (Instruction *I = simplifyReductionOfShuffle(II))
+        return I;
+
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
           if (FTy->getElementType() == Builder.getInt1Ty()) {
@@ -3398,14 +3429,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       //   zext(vector_reduce_{and,or}(<n x i1>))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
-      // When doing a min/max reduction of a reversed operand the result is
-      // identical to reducing the unreversed operand.
-      if (match(Arg, m_VecReverse(m_Value(Vect)))) {
-        Value *Res = IID == Intrinsic::vector_reduce_smin
-                         ? Builder.CreateIntMinReduce(Vect, true)
-                         : Builder.CreateIntMaxReduce(Vect, true);
-        return replaceInstUsesWith(CI, Res);
-      }
+
+      if (Instruction *I = simplifyReductionOfShuffle(II))
+        return I;
+
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
           if (FTy->getElementType() == Builder.getInt1Ty()) {
@@ -3428,56 +3455,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::vector_reduce_fmul: {
-    bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
-                              IID != Intrinsic::vector_reduce_fmul) ||
-                             II->hasAllowReassoc();
-    const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
-                             IID == Intrinsic::vector_reduce_fmul)
-                                ? 1
-                                : 0;
-    Value *Arg = II->getArgOperand(ArgIdx);
-    Value *V;
-
-    if (!CanBeReassociated)
-      break;
-
-    if (match(Arg, m_VecReverse(m_Value(V)))) {
-      Value *Res;
-      switch (IID) {
-      case Intrinsic::vector_reduce_fadd:
-        Res = Builder.CreateFAddReduce(II->getArgOperand(0), V);
-        break;
-      case Intrinsic::vector_reduce_fmul:
-        Res = Builder.CreateFMulReduce(II->getArgOperand(0), V);
-        break;
-      case Intrinsic::vector_reduce_fmin:
-        Res = Builder.CreateFPMinReduce(V);
-        break;
-      case Intrinsic::vector_reduce_fmax:
-        Res = Builder.CreateFPMaxReduce(V);
-        break;
-      }
-      return replaceInstUsesWith(CI, Res);
-    }
-
-    ArrayRef<int> Mask;
-    if (!isa<FixedVectorType>(Arg->getType()) ||
-        !match(Arg, m_Shuffle(m_Value(V), m_Undef(), m_Mask(Mask))) ||
-        !cast<ShuffleVectorInst>(Arg)->isSingleSource())
-      break;
-    int Sz = Mask.size();
-    SmallBitVector UsedIndices(Sz);
-    for (int Idx : Mask) {
-      if (Idx == PoisonMaskElem || UsedIndices.test(Idx))
-        break;
-      UsedIndices.set(Idx);
-    }
-    // Can remove shuffle iff just shuffled elements, no repeats, undefs, or
-    // other changes.
-    if (UsedIndices.all()) {
-      replaceUse(II->getOperandUse(ArgIdx), V);
+    if (simplifyReductionOfShuffle(II))
       return nullptr;
-    }
     break;
   }
   case Intrinsic::is_fpclass: {

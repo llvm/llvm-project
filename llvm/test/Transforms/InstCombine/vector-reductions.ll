@@ -41,7 +41,7 @@ define float @diff_of_sums_v4f32(float %a0, <4 x float> %v0, float %a1, <4 x flo
 
 define float @reassoc_sum_of_reverse_v4f32(<4 x float> %v0) {
 ; CHECK-LABEL: @reassoc_sum_of_reverse_v4f32(
-; CHECK-NEXT:    [[RED:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V0:%.*]])
+; CHECK-NEXT:    [[RED:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V0:%.*]])
 ; CHECK-NEXT:    ret float [[RED]]
 ;
   %rev = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %v0)
@@ -51,7 +51,7 @@ define float @reassoc_sum_of_reverse_v4f32(<4 x float> %v0) {
 
 define float @reassoc_mul_reduction_of_reverse_nxv4f32(<vscale x 4 x float> %v0) {
 ; CHECK-LABEL: @reassoc_mul_reduction_of_reverse_nxv4f32(
-; CHECK-NEXT:    [[RED:%.*]] = call float @llvm.vector.reduce.fmul.nxv4f32(float 1.000000e+00, <vscale x 4 x float> [[V0:%.*]])
+; CHECK-NEXT:    [[RED:%.*]] = call reassoc float @llvm.vector.reduce.fmul.nxv4f32(float 1.000000e+00, <vscale x 4 x float> [[V0:%.*]])
 ; CHECK-NEXT:    ret float [[RED]]
 ;
   %rev = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %v0)

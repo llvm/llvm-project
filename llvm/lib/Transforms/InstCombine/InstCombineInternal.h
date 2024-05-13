@@ -296,6 +296,12 @@ private:
   Instruction *simplifyMaskedGather(IntrinsicInst &II);
   Instruction *simplifyMaskedScatter(IntrinsicInst &II);
 
+  // Simplify vector.reduce.op(shuffle(x)) to vector.reduce.op(x) if we can
+  // prove the answer is identical, where shuffle could be a shufflevector or
+  // vector.reverse operation. Return the simplified instruction if it can be
+  // simplified or nullptr otherwise.
+  Instruction *simplifyReductionOfShuffle(IntrinsicInst *II);
+
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.
   ///
