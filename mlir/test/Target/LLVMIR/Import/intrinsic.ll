@@ -788,9 +788,9 @@ define void @vector_extract(<vscale x 4 x float> %0) {
 
 ; CHECK-LABEL: llvm.func @vector_deinterleave2
 define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
-  ; llvm.intr.vector.deinterleave2 %{{.*}} : (vector<4xf64>) -> !llvm.struct<(vector<2xf64>, vector<2xf64>)>
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<4xf64>) -> !llvm.struct<(vector<2xf64>, vector<2xf64>)>
   %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
-  ; llvm.intr.vector.deinterleave2 %{{.*}} : (vector<[8]xi32>) -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (!llvm.vec<? x 8 x i32>) -> !llvm.struct<(vec<? x 4 x i32>, vec<? x 4 x i32>)>
   %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
   ret void
 }
