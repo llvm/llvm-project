@@ -62,7 +62,7 @@ class Polynomial_Attr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 def Polynomial_IntPolynomialAttr : Polynomial_Attr<"IntPolynomial", "int_polynomial"> {
-  let summary = "An attribute containing a single-variable polynomial with integer coefficients.";
+  let summary = "an attribute containing a single-variable polynomial with integer coefficients";
   let description = [{
     A polynomial attribute represents a single-variable polynomial with integer
     coefficients, which is used to define the modulus of a `RingAttr`, as well
@@ -109,7 +109,7 @@ def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
 }
 
 def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_polynomial"> {
-  let summary = "An attribute containing a single-variable polynomial with double precision floating point coefficients.";
+  let summary = "an attribute containing a single-variable polynomial with double precision floating point coefficients";
   let description = [{
     A polynomial attribute represents a single-variable polynomial with double
     precision floating point coefficients.
@@ -489,6 +489,25 @@ def Polynomial_AnyPolynomialAttr : AnyAttrOf<[
   Polynomial_FloatPolynomialAttr,
   Polynomial_IntPolynomialAttr
 ]>;
+def Polynomial_PolynomialElementsAttr :
+    ElementsAttrBase<And<[//CPred<"::llvm::isa<::mlir::ElementsAttr>($_self)">,
+                          CPred<[{
+                              isa<::mlir::polynomial::PolynomialType>(
+                                ::llvm::cast<::mlir::ElementsAttr>($_self)
+                                                                    .getShapedType()
+                                                                    .getElementType())
+                              }]>]>,
+                     "an elements attribute containing polynomial attributes"> {
+  let storageType = [{ ::mlir::ElementsAttr }];
+  let returnType = [{ ::mlir::ElementsAttr }];
+  let convertFromStorage = "$_self";
+}
+
+def Polynomial_PolynomialOrElementsAttr : AnyAttrOf<[
+  Polynomial_FloatPolynomialAttr,
+  Polynomial_IntPolynomialAttr,
+  Polynomial_PolynomialElementsAttr,
+]>;
 
 // Not deriving from Polynomial_Op due to need for custom assembly format
 def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure, ConstantLike]> {
@@ -505,8 +524,8 @@ def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure, ConstantLi
     %0 = polynomial.constant #polynomial.float_polynomial<0.5 + 1.3e06 x**2> : !polynomial.polynomial<#float_ring>
     ```
   }];
-  let arguments = (ins Polynomial_AnyPolynomialAttr:$value);
-  let results = (outs Polynomial_PolynomialType:$output);
+  let arguments = (ins Polynomial_PolynomialOrElementsAttr:$value);
+  let results = (outs PolynomialLike:$output);
   let assemblyFormat = "attr-dict `:` type($output)";
   let hasFolder = 1;
 }
