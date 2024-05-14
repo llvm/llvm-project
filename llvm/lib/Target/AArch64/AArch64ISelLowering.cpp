@@ -1868,7 +1868,12 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  return !Subtarget->hasSVEorSME() || VT != MVT::nxv16i1;
+  if (!Subtarget->hasSVEorSME())
+    return true;
+
+  // We can only use the BRKB + CNTP sequence with legal predicate types.
+  return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
+         VT != MVT::nxv2i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
