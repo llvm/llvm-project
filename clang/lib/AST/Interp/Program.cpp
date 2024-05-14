@@ -372,7 +372,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
-            D, ElemTy.getTypePtr(), MDSize, IsConst, IsTemporary);
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
         unsigned ElemSize =
