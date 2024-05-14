@@ -5,6 +5,9 @@ target triple = "aarch64-linux-gnu"
 
 declare void @llvm.trap() #0
 
+; This test checks that we don't assert/crash due to not being able to reach the
+; emergency spill slot by ensuring that we use a BP for streaming functions.
+
 define void @quux() #1 {
 ; CHECK-LABEL: quux:
 ; CHECK:       // %bb.0: // %prelude
