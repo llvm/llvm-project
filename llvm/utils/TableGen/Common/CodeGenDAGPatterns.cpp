@@ -3392,8 +3392,10 @@ static bool HandleUse(TreePattern &I, TreePatternNodePtr Pat,
   Record *Rec;
   if (Pat->isLeaf()) {
     DefInit *DI = dyn_cast<DefInit>(Pat->getLeafValue());
-    if (!DI)
+    if (!DI) {
       I.error("Input $" + Pat->getName() + " must be an identifier!");
+      return false;
+    }
     Rec = DI->getDef();
   } else {
     Rec = Pat->getOperator();
