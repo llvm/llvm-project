@@ -11,6 +11,7 @@
 
 // <utility>
 
+// LWG-3382 NTTP for pair and array:
 // pair<T, U> is a structural type ([temp.param]) if T and U are both structural types.
 
 #include <utility>

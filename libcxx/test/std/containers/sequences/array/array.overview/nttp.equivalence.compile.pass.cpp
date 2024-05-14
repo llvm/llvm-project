@@ -10,6 +10,7 @@
 
 // <array>
 
+// LWG-3382 NTTP for pair and array:
 // Two values a1 and a2 of type array<T, N> are template-argument-equivalent if and only if each pair of corresponding
 // elements in a1 and a2 are template-argument-equivalent.
 

@@ -10,6 +10,7 @@
 
 // <array>
 
+// LWG-3382 NTTP for pair and array:
 // array<T, N> is a structural type ([temp.param]) if T is a structural type.
 
 #include <array>
