@@ -876,7 +876,6 @@ public:
   SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                  int JTI, SelectionDAG &DAG) const override;
 
-
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
