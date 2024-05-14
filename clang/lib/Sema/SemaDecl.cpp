@@ -2373,7 +2373,8 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
 
   ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified;
   if (Context.BuiltinInfo.isImmediate(ID)) {
-    assert(getLangOpts().CPlusPlus20 && "consteval builtins should only be available in C++20 mode");
+    assert(getLangOpts().CPlusPlus20 &&
+           "consteval builtins should only be available in C++20 mode");
     ConstexprKind = ConstexprSpecKind::Consteval;
   }
 
