@@ -2298,9 +2298,12 @@ public:
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
-    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
-      Loc = CtorExpr->getLocation();
-    }
+
+    // This function only handles SpanTwoParamConstructorGadget so far, which
+    // always gives a CXXConstructExpr.
+    const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
+    Loc = CtorExpr->getLocation();
+
     S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&

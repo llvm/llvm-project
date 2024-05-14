@@ -972,9 +972,7 @@ public:
     auto HasUnsafeCtorDecl =
         hasDeclaration(cxxConstructorDecl(hasAttr(attr::UnsafeBufferUsage)));
     // std::span(ptr, size) ctor is handled by SpanTwoParamConstructorGadget.
-    auto HasTwoParamSpanCtorDecl = hasDeclaration(
-        cxxConstructorDecl(hasDeclContext(isInStdNamespace()), hasName("span"),
-                           parameterCountIs(2)));
+    auto HasTwoParamSpanCtorDecl = SpanTwoParamConstructorGadget::matcher();
     return stmt(
         cxxConstructExpr(HasUnsafeCtorDecl, unless(HasTwoParamSpanCtorDecl))
             .bind(OpTag));
