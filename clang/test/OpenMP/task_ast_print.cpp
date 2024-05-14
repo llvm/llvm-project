@@ -209,15 +209,16 @@ int main(int argc, char **argv) {
 extern template int S<int>::TS;
 extern template long S<long>::TS;
 
-int
+// DUMP-LABEL:  FunctionDecl {{.*}} implicit_firstprivate
+void
 implicit_firstprivate() {
 
 #pragma omp parallel num_threads(1)
   {
     int i = 0;
-    // DUMP : OMPTaskDirective
-    // DUMP-NEXT : OMPFirstprivateClause
-    // DUMP-NEXT : DeclRefExpr {{.+}} 'i' {{.+}} refers_to_enclosing_variable_or_capture
+    // DUMP: OMPTaskDirective 
+    // DUMP-NEXT: OMPFirstprivateClause
+    // DUMP-NEXT: DeclRefExpr {{.+}} 'i' {{.+}} refers_to_enclosing_variable_or_capture
     #pragma omp task
     {
 	int j = sizeof(i);
@@ -226,15 +227,16 @@ implicit_firstprivate() {
   }
 }
 
-int
+// DUMP-LABEL:  FunctionDecl {{.*}} no_implicit_firstprivate
+void
 no_implicit_firstprivate() {
 
 #pragma omp parallel num_threads(1)
   {
     int i = 0;
-    // DUMP : OMPTaskDirective
-    // DUMP-NEXT : CapturedStmt
-    // DUMP : DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated refers_to_enclosing_variable_or_capture
+    // DUMP: OMPTaskDirective
+    // DUMP-NEXT: CapturedStmt
+    // DUMP: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated refers_to_enclosing_variable_or_capture
     #pragma omp task
     {
 	int j = sizeof(i);
