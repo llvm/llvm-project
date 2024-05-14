@@ -204,6 +204,10 @@ Changes in existing checks
   eliminating false positives resulting from direct usage of bitwise operators
   within parentheses.
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
+  false positives resulting from use of optionals in unevaluated context.
+
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
