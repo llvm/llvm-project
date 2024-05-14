@@ -8,7 +8,11 @@
 
 class RISCVProfile<string name, list<SubtargetFeature> features>
     : SubtargetFeature<name, "Is" # NAME, "true",
-                       "RISC-V " # name # " profile", features>;
+                       "RISC-V " # name # " profile", features> {
+  // Indicates if the profile is not yet ratified, so should be treated as
+  // experimental.
+  bit Experimental = false;
+}
 
 defvar RVI20U32Features = [Feature32Bit, FeatureStdExtI];
 defvar RVI20U64Features = [Feature64Bit, FeatureStdExtI];
