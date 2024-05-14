@@ -1056,49 +1056,66 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_friend);
 
   TestLexer lexer{Allocator, Buffers};
+  const auto LangOpts = getFormattingLangOpts();
 
   auto Tokens = lexer.lex(
       "const static inline auto restrict int double long constexpr friend");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[0], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[1], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[2], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[3], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[4], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[5], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[6], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[7], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[8], ConfiguredTokens));
-  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[9], ConfiguredTokens));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[0], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[1], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[2], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[3], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[4], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[5], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[6], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[7], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[8], ConfiguredTokens, LangOpts));
+  EXPECT_TRUE(
+      isConfiguredQualifierOrType(Tokens[9], ConfiguredTokens, LangOpts));
 
-  EXPECT_TRUE(isQualifierOrType(Tokens[0]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[1]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[2]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[3]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[4]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[5]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[6]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[7]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[8]));
-  EXPECT_TRUE(isQualifierOrType(Tokens[9]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[0], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[1], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[2], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[3], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[4], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[5], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[6], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[7], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[8], LangOpts));
+  EXPECT_TRUE(isQualifierOrType(Tokens[9], LangOpts));
 
   auto NotTokens = lexer.lex("for while do Foo Bar ");
   ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
-  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[0], ConfiguredTokens));
-  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[1], ConfiguredTokens));
-  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[2], ConfiguredTokens));
-  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[3], ConfiguredTokens));
-  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[4], ConfiguredTokens));
-  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[5], ConfiguredTokens));
+  EXPECT_FALSE(
+      isConfiguredQualifierOrType(NotTokens[0], ConfiguredTokens, LangOpts));
+  EXPECT_FALSE(
+      isConfiguredQualifierOrType(NotTokens[1], ConfiguredTokens, LangOpts));
+  EXPECT_FALSE(
+      isConfiguredQualifierOrType(NotTokens[2], ConfiguredTokens, LangOpts));
+  EXPECT_FALSE(
+      isConfiguredQualifierOrType(NotTokens[3], ConfiguredTokens, LangOpts));
+  EXPECT_FALSE(
+      isConfiguredQualifierOrType(NotTokens[4], ConfiguredTokens, LangOpts));
+  EXPECT_FALSE(
+      isConfiguredQualifierOrType(NotTokens[5], ConfiguredTokens, LangOpts));
 
-  EXPECT_FALSE(isQualifierOrType(NotTokens[0]));
-  EXPECT_FALSE(isQualifierOrType(NotTokens[1]));
-  EXPECT_FALSE(isQualifierOrType(NotTokens[2]));
-  EXPECT_FALSE(isQualifierOrType(NotTokens[3]));
-  EXPECT_FALSE(isQualifierOrType(NotTokens[4]));
-  EXPECT_FALSE(isQualifierOrType(NotTokens[5]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[0], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[1], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[2], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[3], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[4], LangOpts));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[5], LangOpts));
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
