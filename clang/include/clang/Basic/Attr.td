@@ -1073,6 +1073,7 @@ static llvm::StringRef getPrettyEnviromentName(llvm::StringRef Environment) {
              .Case("library", "shader library")
              .Default(Environment);
 }
+
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
              .Case("pixel", llvm::Triple::Pixel)
@@ -4475,6 +4476,26 @@ def HLSLShader : InheritableAttr {
                   "Miss", "Callable", "Mesh", "Amplification"]>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
+  let AdditionalMembers =
+[{static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
+    switch (ShaderType) {
+      case HLSLShaderAttr::Pixel:         return llvm::Triple::EnvironmentType::Pixel;
+      case HLSLShaderAttr::Vertex:        return llvm::Triple::EnvironmentType::Vertex;
+      case HLSLShaderAttr::Geometry:      return llvm::Triple::EnvironmentType::Geometry;
+      case HLSLShaderAttr::Hull:          return llvm::Triple::EnvironmentType::Hull;
+      case HLSLShaderAttr::Domain:        return llvm::Triple::EnvironmentType::Domain;
+      case HLSLShaderAttr::Compute:       return llvm::Triple::EnvironmentType::Compute;
+      case HLSLShaderAttr::RayGeneration: return llvm::Triple::EnvironmentType::RayGeneration;
+      case HLSLShaderAttr::Intersection:  return llvm::Triple::EnvironmentType::Intersection;
+      case HLSLShaderAttr::AnyHit:        return llvm::Triple::EnvironmentType::AnyHit;
+      case HLSLShaderAttr::ClosestHit:    return llvm::Triple::EnvironmentType::ClosestHit;
+      case HLSLShaderAttr::Miss:          return llvm::Triple::EnvironmentType::Miss;
+      case HLSLShaderAttr::Callable:      return llvm::Triple::EnvironmentType::Callable;
+      case HLSLShaderAttr::Mesh:          return llvm::Triple::EnvironmentType::Mesh;
+      case HLSLShaderAttr::Amplification: return llvm::Triple::EnvironmentType::Amplification;
+    }
+  }
+}];
 }
 
 def HLSLResource : InheritableAttr {

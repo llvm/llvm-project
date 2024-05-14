@@ -312,18 +312,54 @@ class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailabi
 
   // Stack of functions to be scaned
   llvm::SmallVector<const FunctionDecl *, 8> DeclsToScan;
-  // Set of functions already scaned
-  llvm::SmallPtrSet<const FunctionDecl *, 8> ScannedDecls;
 
+  // List of functions that were already scanned and in which environment.
+  //
+  // Maps FunctionDecl to a unsigned number that represents a set of shader
+  // environments the function has been scanned for.
+  // Since HLSLShaderAttr::ShaderType enum is generated from Attr.td and is
+  // defined without any assigned values, it is guaranteed to be numbered
+  // sequentially from 0 up and we can use it to 'index' individual bits
+  // in the set.
+  // The N'th bit in the set will be set if the function has been scanned
+  // in shader environment whose ShaderType integer value equals N.
+  // For example, if a function has been scanned in compute and pixel stage
+  // environment, the value will be 0x21 (100001 binary) because
+  // (int)HLSLShaderAttr::ShaderType::Pixel == 1 and
+  // (int)HLSLShaderAttr::ShaderType::Compute == 5.
+  llvm::DenseMap<const FunctionDecl *, unsigned> ScannedDecls;
+
+  // Do not access these directly, use the get/set methods below to make
+  // sure the values are in sync
+  HLSLShaderAttr::ShaderType CurrentShaderType;
+  llvm::Triple::EnvironmentType CurrentShaderTypeAsEnvironment;
+
+  void setCurrentShaderType(HLSLShaderAttr::ShaderType ShaderType) {
+    CurrentShaderType = ShaderType;
+    CurrentShaderTypeAsEnvironment =
+        HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
+  }
+  HLSLShaderAttr::ShaderType getCurrentShaderType() {
+    return CurrentShaderType;
+  }
+  llvm::Triple::EnvironmentType getCurrentShaderTypeAsEnvironment() {
+    return CurrentShaderTypeAsEnvironment;
+  }
+
+  // Scanning methods
   void HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr);
   void CheckDeclAvailability(NamedDecl *D, SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
+  bool WasAlreadyScanned(const FunctionDecl *FD);
+  void AddToScannedFunctions(const FunctionDecl *FD);
 
 public:
   DiagnoseHLSLAvailability(Sema &SemaRef) : SemaRef(SemaRef) {}
 
+  // AST Traversal methods
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);
+  void RunOnFunction(const FunctionDecl *FD);
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl());
@@ -338,10 +374,20 @@ public:
       HandleFunctionOrMethodRef(FD, ME);
     return true;
   }
-
-  // HEKOTA what is this?
-  //bool VisitTypeLoc(TypeLoc Ty);
 };
+
+// Returns true if the function has already been scanned in the current
+// environment
+bool DiagnoseHLSLAvailability::WasAlreadyScanned(const FunctionDecl *FD) {
+  const unsigned &ScannedStages = ScannedDecls.getOrInsertDefault(FD);
+  return (ScannedStages & (1 << getCurrentShaderType()));
+}
+
+// Marks the function as scanned in the current environment
+void DiagnoseHLSLAvailability::AddToScannedFunctions(const FunctionDecl *FD) {
+  unsigned &Set = ScannedDecls.getOrInsertDefault(FD);
+  Set &= 1 << getCurrentShaderType();
+}
 
 void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr) {
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) && "expected DeclRefExpr or MemberExpr");
@@ -349,7 +395,7 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr 
   // has a definition -> add to stack to be scanned
   const FunctionDecl *FDWithBody = nullptr;
   if (FD->hasBody(FDWithBody)) {
-    if (!ScannedDecls.contains(FDWithBody))
+    if (!WasAlreadyScanned(FDWithBody))
       DeclsToScan.push_back(FDWithBody);
     return;
   }
@@ -363,12 +409,23 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(const TranslationUnitDecl *T
   // of functions to be scanned
   for (auto &D : TU->decls()) {
     const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(D);
-    // HEKOTA TODO detect also library exports
-    if (!FD || !FD->hasAttr<HLSLShaderAttr>())
+    if (!FD)
       continue;
 
-    DeclsToScan.push_back(FD);
+    // HEKOTA TODO detect also library exports
+    auto ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+    if (!ShaderAttr)
+      continue;
+
+    setCurrentShaderType(ShaderAttr->getType());
+
+    RunOnFunction(FD);
   }
+}
+
+void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
+  assert(DeclsToScan.empty() && "DeclsToScan should be empty");
+  DeclsToScan.push_back(FD);
 
   while (!DeclsToScan.empty()) {
     // Take one decl from the stack and check it by traversing its AST.
@@ -378,9 +435,10 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(const TranslationUnitDecl *T
     DeclsToScan.pop_back();
 
     // Decl was already scanned
-    if (ScannedDecls.contains(FD))
+    if (WasAlreadyScanned(FD))
       continue;
-    ScannedDecls.insert(FD);
+
+    AddToScannedFunctions(FD);
 
     Stmt *Body = FD->getBody();
     assert(Body && "full definition with body expected here");
@@ -394,13 +452,16 @@ bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(const AvailabilityAt
   if (!IIEnvironment)
     return true;
 
-  auto TargetEnvironment = SemaRef.getASTContext().getTargetInfo().getTriple().getEnvironment();
-  if (TargetEnvironment == llvm::Triple::UnknownEnvironment)
-    return true;
+  assert(getCurrentShaderTypeAsEnvironment() !=
+             llvm::Triple::UnknownEnvironment &&
+         "this should be set to the shader stage context");
 
-  llvm::Triple::EnvironmentType ET =
+  llvm::Triple::EnvironmentType AttrEnv =
       AvailabilityAttr::getEnvironmentType(IIEnvironment->getName());
-  return TargetEnvironment == ET;
+  llvm::Triple::EnvironmentType CurrentEnv =
+      getCurrentShaderTypeAsEnvironment();
+
+  return CurrentEnv == AttrEnv;
 }
 
 const AvailabilityAttr *DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
@@ -435,31 +496,33 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D, SourceRange R
     return;
 
   const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
-  std::string PlatformName(
+  llvm::StringRef PlatformName(
       AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-  std::string TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
-      TI.getTriple().getEnvironmentName()));
-  VersionTuple UseVersion =
-      EnvironmentMatches ? Introduced : TI.getTriple().getOSVersion();
-  bool UseEnvironment =
-      (AA->getEnvironment() != nullptr && !TargetEnvironment.empty());
 
-  SemaRef.Diag(Range.getBegin(), diag::warn_hlsl_availability)
-      << Range << D << PlatformName << UseVersion.getAsString()
-      << UseEnvironment << TargetEnvironment << !EnvironmentMatches;
+  StringRef CurrentShaderTypeStr(
+      HLSLShaderAttr::ConvertShaderTypeToStr(getCurrentShaderType()));
+  llvm::StringRef CurrentEnvStr =
+      AvailabilityAttr::getPrettyEnviromentName(CurrentShaderTypeStr);
 
-  if (EnvironmentMatches)
-    SemaRef.Diag(D->getLocation(),
-                  diag::note_partial_availability_specified_here)
-        << D << PlatformName << Introduced.getAsString()
-        << SemaRef.Context.getTargetInfo()
-                .getPlatformMinVersion()
-                .getAsString()
-        << UseEnvironment << TargetEnvironment;
+  llvm::StringRef AttrEnvStr = AA->getEnvironment()
+                                   ? AvailabilityAttr::getPrettyEnviromentName(
+                                         AA->getEnvironment()->getName())
+                                   : "";
+  bool UseEnvironment = !AttrEnvStr.empty();
 
-  // SemaRef.Diag(Range.getBegin(), diag::note_unguarded_available_silence)
-  //   << Range << D
-  //   << /*__builtin_available*/ 1;
+  if (EnvironmentMatches) {
+    SemaRef.Diag(Range.getBegin(), diag::warn_hlsl_availability)
+        << Range << D << PlatformName << Introduced.getAsString()
+        << UseEnvironment << CurrentEnvStr;
+  } else {
+    SemaRef.Diag(Range.getBegin(), diag::warn_hlsl_availability_unavailable)
+        << Range << D;
+  }
+
+  SemaRef.Diag(D->getLocation(), diag::note_partial_availability_specified_here)
+      << D << PlatformName << Introduced.getAsString()
+      << SemaRef.Context.getTargetInfo().getPlatformMinVersion().getAsString()
+      << UseEnvironment << AttrEnvStr << CurrentEnvStr;
 }
 
 } // namespace
