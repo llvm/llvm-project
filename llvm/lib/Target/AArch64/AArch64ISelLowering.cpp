@@ -27395,9 +27395,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue IncSplat = DAG.getSplatVector(MemVT, DL, Inc);
   SDValue Ops[] = {Chain, PassThru, Mask, Ptr, Index, Scale};
 
-  // Set the MMO to load only, rather than load|store.
-  MachineMemOperand *GMMO = HG->getMemOperand();
-  GMMO->setFlags(MachineMemOperand::MOLoad);
+  MachineMemOperand *MMO = HG->getMemOperand();
+  // Create an MMO for the gather, without load|store flags.
+  MachineMemOperand *GMMO = DAG.getMachineFunction().getMachineMemOperand(
+      MMO->getPointerInfo(), MachineMemOperand::MOLoad, MMO->getSize(),
+      MMO->getAlign(), MMO->getAAInfo());
   ISD::MemIndexType IndexType = HG->getIndexType();
   SDValue Gather =
       DAG.getMaskedGather(DAG.getVTList(MemVT, MVT::Other), MemVT, DL, Ops,
@@ -27412,10 +27414,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue Mul = DAG.getNode(ISD::MUL, DL, MemVT, HistCnt, IncSplat);
   SDValue Add = DAG.getNode(ISD::ADD, DL, MemVT, Gather, Mul);
 
-  // Create a new MMO for the scatter.
+  // Create an MMO for the scatter, without load|store flags.
   MachineMemOperand *SMMO = DAG.getMachineFunction().getMachineMemOperand(
-      GMMO->getPointerInfo(), MachineMemOperand::MOStore, GMMO->getSize(),
-      GMMO->getAlign(), GMMO->getAAInfo());
+      MMO->getPointerInfo(), MachineMemOperand::MOStore, MMO->getSize(),
+      MMO->getAlign(), MMO->getAAInfo());
 
   SDValue ScatterOps[] = {GChain, Add, Mask, Ptr, Index, Scale};
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MemVT, DL,
