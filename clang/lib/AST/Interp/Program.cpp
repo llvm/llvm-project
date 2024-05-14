@@ -144,8 +144,12 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
+  QualType QT = VD->getType();
+  if (const auto *RT = QT->getAs<ReferenceType>())
+    QT = RT->getPointeeType();
+
   Descriptor *Desc;
-  if (std::optional<PrimType> T = Ctx.classify(VD->getType()))
+  if (std::optional<PrimType> T = Ctx.classify(QT))
     Desc = createDescriptor(VD, *T, std::nullopt, true, false);
   else
     Desc = createDescriptor(VD, VD->getType().getTypePtr(), std::nullopt, true,
