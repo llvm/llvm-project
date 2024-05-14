@@ -406,6 +406,36 @@ public:
                                   lldb::StateType state);
   } Notifications;
 
+  class ProcessMemoryIterator {
+  public:
+    ProcessMemoryIterator(lldb::ProcessSP process_sp, lldb::addr_t base)
+        : m_process_sp(process_sp), m_base_addr(base) {
+      lldbassert(process_sp.get() != nullptr);
+    }
+
+    bool IsValid() { return m_is_valid; }
+
+    uint8_t operator[](lldb::addr_t offset) {
+      if (!IsValid())
+        return 0;
+
+      uint8_t retval = 0;
+      Status error;
+      if (0 ==
+          m_process_sp->ReadMemory(m_base_addr + offset, &retval, 1, error)) {
+        m_is_valid = false;
+        return 0;
+      }
+
+      return retval;
+    }
+
+  private:
+    lldb::ProcessSP m_process_sp;
+    lldb::addr_t m_base_addr;
+    bool m_is_valid = true;
+  };
+
   class ProcessEventData : public EventData {
     friend class Process;
 
@@ -1648,6 +1678,26 @@ public:
                                       int64_t fail_value, Status &error);
 
   lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+
+  /// Find a string within a memory region.
+  ///
+  /// This function searches for the string represented by the provided buffer
+  /// within the memory range specified by the low and high addresses. It uses
+  /// a bad character heuristic to optimize the search process.
+  ///
+  /// \param[in] low The starting address of the memory region to be searched.
+  ///
+  /// \param[in] high The ending address of the memory region to be searched.
+  ///
+  /// \param[in] buffer A pointer to the buffer containing the string to be
+  /// searched.
+  ///
+  /// \param[in] buffer_size The size of the buffer in bytes.
+  ///
+  /// \return The address where the string was found or LLDB_INVALID_ADDRESS if
+  /// not found.
+  lldb::addr_t FindInMemory(lldb::addr_t low, lldb::addr_t high,
+                            uint8_t *buffer, size_t buffer_size);
 
   bool WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
                             Status &error);
