@@ -150,6 +150,20 @@ def CIR_Double : CIR_FloatType<"Double", "double"> {
   }];
 }
 
+def CIR_FP16 : CIR_FloatType<"FP16", "f16"> {
+  let summary = "CIR type that represents IEEE-754 binary16 format";
+  let description = [{
+    Floating-point type that represents the IEEE-754 binary16 format.
+  }];
+}
+
+def CIR_BFloat16 : CIR_FloatType<"BF16", "bf16"> {
+  let summary = "CIR type that represents";
+  let description = [{
+    Floating-point type that represents the bfloat16 format.
+  }];
+}
+
 def CIR_FP80 : CIR_FloatType<"FP80", "f80"> {
   let summary = "CIR type that represents x87 80-bit floating-point format";
   let description = [{
@@ -179,7 +193,7 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 
 // Constraints
 
-def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_LongDouble]>;
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_LongDouble]>;
 def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//
@@ -475,7 +489,7 @@ def CIR_StructType : Type<CPred<"$_self.isa<::mlir::cir::StructType>()">,
 def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_BoolType, CIR_ArrayType,
   CIR_VectorType, CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo,
-  CIR_AnyFloat,
+  CIR_AnyFloat, CIR_FP16, CIR_BFloat16
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

@@ -130,6 +130,8 @@ struct UnimplementedFeature {
   static bool shouldEmitLifetimeMarkers() { return false; }
   static bool peepholeProtection() { return false; }
   static bool CGCapturedStmtInfo() { return false; }
+  static bool CGFPOptionsRAII() { return false; }
+  static bool getFPFeaturesInEffect() { return false; }
   static bool cxxABI() { return false; }
   static bool openCL() { return false; }
   static bool CUDA() { return false; }

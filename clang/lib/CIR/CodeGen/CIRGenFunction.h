@@ -1086,6 +1086,9 @@ public:
   mlir::Value buildScalarExpr(const clang::Expr *E);
   mlir::Value buildScalarConstant(const ConstantEmission &Constant, Expr *E);
 
+  mlir::Value buildPromotedScalarExpr(const clang::Expr *E,
+                                      QualType PromotionType);
+
   mlir::Type getCIRType(const clang::QualType &type);
 
   const CaseStmt *foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,

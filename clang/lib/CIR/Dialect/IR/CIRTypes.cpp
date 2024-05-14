@@ -692,6 +692,48 @@ DoubleType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
   return (uint64_t)(getWidth() / 8);
 }
 
+const llvm::fltSemantics &FP16Type::getFloatSemantics() const {
+  return llvm::APFloat::IEEEhalf();
+}
+
+llvm::TypeSize
+FP16Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t FP16Type::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                   mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+uint64_t
+FP16Type::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+const llvm::fltSemantics &BF16Type::getFloatSemantics() const {
+  return llvm::APFloat::BFloat();
+}
+
+llvm::TypeSize
+BF16Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t BF16Type::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                   mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+uint64_t
+BF16Type::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
 const llvm::fltSemantics &FP80Type::getFloatSemantics() const {
   return llvm::APFloat::x87DoubleExtended();
 }

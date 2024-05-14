@@ -34,10 +34,9 @@ struct CIRGenTypeCache {
   mlir::cir::IntType SInt8Ty, SInt16Ty, SInt32Ty, SInt64Ty;
   // usigned char, unsigned, unsigned short, unsigned long
   mlir::cir::IntType UInt8Ty, UInt16Ty, UInt32Ty, UInt64Ty;
-  /// half, bfloat, float, double
-  // mlir::Type HalfTy, BFloatTy;
-  // TODO(cir): perhaps we should abstract long double variations into a custom
-  // cir.long_double type. Said type would also hold the semantics for lowering.
+  /// half, bfloat, float, double, fp80
+  mlir::cir::FP16Type FP16Ty;
+  mlir::cir::BF16Type BFloat16Ty;
   mlir::cir::SingleType FloatTy;
   mlir::cir::DoubleType DoubleTy;
   mlir::cir::FP80Type FP80Ty;
