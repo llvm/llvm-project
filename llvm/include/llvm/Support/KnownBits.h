@@ -360,10 +360,10 @@ public:
   /// Compute knownbits resulting from APIntOps::avgFloorU
   static KnownBits avgFloorU(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute knownbits resulting from APIntOps::avgCelS
+  /// Compute knownbits resulting from APIntOps::avgCeilS
   static KnownBits avgCeilS(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute knownbits resulting from APIntOps::avgCelU
+  /// Compute knownbits resulting from APIntOps::avgCeilU
   static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits resulting from multiplying LHS and RHS.
