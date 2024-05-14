@@ -405,7 +405,7 @@ private:
   void initTaintRules(CheckerContext &C) const;
 
   // TODO: The two separate `CallDescriptionMap`s were introduced when
-  // `CallDescription` was unable to restric matches to the global namespace
+  // `CallDescription` was unable to restrict matches to the global namespace
   // only. This limitation no longer exists, so the following two maps should
   // be unified.
   mutable std::optional<RuleLookupTy> StaticTaintRules;
