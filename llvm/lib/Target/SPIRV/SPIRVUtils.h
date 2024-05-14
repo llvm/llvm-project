@@ -59,7 +59,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
-// Add an OpDecorate instruction by "spirv.Decorations" metadata node
+// Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
 
