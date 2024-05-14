@@ -6,6 +6,7 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 @skipIfWindows
+@skipIf(hostoslist=["windows"])
 class TestPty(GDBRemoteTestBase):
     server_socket_class = PtyServerSocket
 
