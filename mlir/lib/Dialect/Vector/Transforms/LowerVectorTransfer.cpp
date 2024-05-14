@@ -217,11 +217,14 @@ struct TransferWritePermutationLowering
         op.getLoc(), op.getVector(), indices);
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
-    return rewriter
-        .create<vector::TransferWriteOp>(
-            op.getLoc(), newVec, op.getSource(), op.getIndices(),
-            AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr)
-        .getResult();
+    auto newWrite = rewriter.create<vector::TransferWriteOp>(
+        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
+    if (newWrite.hasPureTensorSemantics())
+      return newWrite.getResult();
+    // In memref case, MaskableOpRewritePattern cannot replaceOp with result.
+    rewriter.eraseOp(op);
+    return failure();
   }
 };
 
@@ -300,11 +303,14 @@ struct TransferWriteNonPermutationLowering
       newInBoundsValues.push_back(op.isDimInBounds(i));
     }
     ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
-    return rewriter
-        .create<vector::TransferWriteOp>(
-            op.getLoc(), newVec, op.getSource(), op.getIndices(),
-            AffineMapAttr::get(newMap), newMask, newInBoundsAttr)
-        .getResult();
+    auto newWrite = rewriter.create<vector::TransferWriteOp>(
+        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
+    if (newWrite.hasPureTensorSemantics())
+      return newWrite.getResult();
+    // In memref case, MaskableOpRewritePattern cannot replaceOp with result.
+    rewriter.eraseOp(op);
+    return failure();
   }
 };
 
