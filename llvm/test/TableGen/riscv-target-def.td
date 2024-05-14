@@ -147,7 +147,7 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT: };
 
 // CHECK:      static constexpr RISCVProfile SupportedExperimentalProfiles[] = {
-// CHECK-NEXT:     {"experimental-rvi99u64","rv64i2p1"},
+// CHECK-NEXT:     {"rvi99u64","rv64i2p1"},
 // CHECK-NEXT: };
 
 // CHECK:      #endif // GET_SUPPORTED_PROFILES

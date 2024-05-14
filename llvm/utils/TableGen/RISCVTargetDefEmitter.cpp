@@ -134,7 +134,9 @@ static void printProfileTable(raw_ostream &OS,
     if (Rec->getValueAsBit("Experimental") != Experimental)
       continue;
 
-    OS.indent(4) << "{\"" << Rec->getValueAsString("Name") << "\",\"";
+    StringRef Name = Rec->getValueAsString("Name");
+    Name.consume_front("experimental-");
+    OS.indent(4) << "{\"" << Name << "\",\"";
     printMArch(OS, Rec->getValueAsListOfDefs("Implies"));
     OS << "\"},\n";
   }
