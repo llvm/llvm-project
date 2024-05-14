@@ -2410,10 +2410,8 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
   }
 
   ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified;
-  if (getLangOpts().CPlusPlus && Context.BuiltinInfo.isConstantEvaluated(ID)) {
-    ConstexprKind = ConstexprSpecKind::Constexpr;
-    if (Context.BuiltinInfo.isImmediate(ID))
-      ConstexprKind = ConstexprSpecKind::Consteval;
+  if (getLangOpts().CPlusPlus && Context.BuiltinInfo.isImmediate(ID)) {
+    ConstexprKind = ConstexprSpecKind::Consteval;
   }
 
   FunctionDecl *New = FunctionDecl::Create(
