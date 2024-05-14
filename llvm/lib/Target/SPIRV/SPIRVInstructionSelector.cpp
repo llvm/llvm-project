@@ -495,6 +495,15 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UMULH:
     return selectExtInst(ResVReg, ResType, I, CL::u_mul_hi);
 
+  case TargetOpcode::G_SADDSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::s_add_sat);
+  case TargetOpcode::G_UADDSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::u_add_sat);
+  case TargetOpcode::G_SSUBSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::s_sub_sat);
+  case TargetOpcode::G_USUBSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::u_sub_sat);
+
   case TargetOpcode::G_SEXT:
     return selectExt(ResVReg, ResType, I, true);
   case TargetOpcode::G_ANYEXT:
