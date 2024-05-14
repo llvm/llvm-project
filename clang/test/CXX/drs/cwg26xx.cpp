@@ -49,7 +49,7 @@ void f() {
 #endif
 }
 
-// cwg2630: na
+// cwg2630 is in cwg2630.cpp
 
 namespace cwg2631 { // cwg2631: 16
 #if __cplusplus >= 202002L
