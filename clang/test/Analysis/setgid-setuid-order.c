@@ -18,11 +18,28 @@ gid_t getgid();
 
 
 void correct_order() {
+  // A correct revocation sequence starts here.
   if (setgid(getgid()) == -1)
     return;
   if (setuid(getuid()) == -1)
     return;
+  // No warning for the following setgid statement.
+  // The previous setgid and setuid calls are a correct privilege revocation
+  // sequence. The checker does not care about the following statements (except
+  // if a wrong setuid-setgid sequence follows again).
   if (setgid(getgid()) == -1)
+    return;
+}
+
+void incorrect_after_correct() {
+  if (setgid(getgid()) == -1)
+    return;
+  if (setuid(getuid()) == -1)
+    return;
+  // Incorrect sequence starts here.
+  if (setuid(getuid()) == -1)
+    return;
+  if (setgid(getgid()) == -1) // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
     return;
 }
 
@@ -77,11 +94,13 @@ void setuid_other_between() {
 void setgid_with_getuid() {
   if (setuid(getuid()) == -1)
     return;
+  // add a clang-tidy check for this case?
   if (setgid(getuid()) == -1)
     return;
 }
 
 void setuid_with_getgid() {
+  // add a clang-tidy check for this case?
   if (setuid(getgid()) == -1)
     return;
   if (setgid(getgid()) == -1)
@@ -157,11 +176,22 @@ void setresgid_between() {
     return;
 }
 
-void other_system_function_between() {
+void getgid_getuid_between() {
   if (setuid(getuid()) == -1)
     return;
-  gid_t g = getgid();
+  (void)getgid();
+  (void)getuid();
   if (setgid(getgid()) == -1) // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
+    return;
+}
+
+void stored_getgid_getuid() {
+  // possible future improvement: detect this case
+  uid_t u = getuid();
+  gid_t g = getgid();
+  if (setuid(u) == -1)
+    return;
+  if (setgid(g) == -1) // no warning
     return;
 }
 
@@ -177,9 +207,51 @@ void other_unknown_function_between() {
 
 void setuid_error_case() {
   if (setuid(getuid()) == -1) {
-    setgid(getgid());
+    // No warning if we know that the first setuid call has failed.
+    (void)setgid(getgid());
     return;
   }
-  if (setgid(getgid()) == -1) // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
+  (void)setgid(getgid()); // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
+}
+
+void setuid_success_case() {
+  if (setuid(getuid()) == 0) {
+    if (setgid(getgid()) == 0) { // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
+    }
+  }
+}
+
+void incorrect_order_compare_zero() {
+  if (setuid(getuid()) != 0)
     return;
+  (void)setgid(getgid()); // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
+}
+
+void setuid_error_case_compare_zero() {
+  if (setuid(getuid()) != 0) {
+    // No warning if we know that the first setuid call has failed.
+    (void)setgid(getgid());
+    return;
+  }
+}
+
+void incorrect_order_compare_other() {
+  if (setuid(getuid()) == -2) {
+    // This is a case for improvement:
+    // The checker does not recognize that this is an invalid error check,
+    // but this is really another type of bug not related to this checker.
+    (void)setgid(getgid()); // warning should appear here
+    return;
+  }
+  if (setgid(getgid()) == -2) { // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
+    return;
+  }
+}
+
+const int FAIL = -1;
+
+void incorrect_order_compare_var() {
+  if (setuid(getuid()) == FAIL)
+    return;
+  (void)setgid(getgid()); // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}}
 }
