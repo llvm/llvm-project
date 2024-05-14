@@ -4,9 +4,10 @@
 
 void foo();
 
-void f4() {
-  try {
+void fp_90162() {
+  try { // no-warning: The TryStmt shouldn't be unreachable.
     foo();
   } catch (int) {
+    foo(); // We assume that catch handlers are reachable.
   }
 }
