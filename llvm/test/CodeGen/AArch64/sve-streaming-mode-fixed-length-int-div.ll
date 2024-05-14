@@ -86,8 +86,8 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z1.h, z4.h, z4.h
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
 ; CHECK-NEXT:    splice z1.h, p0, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
@@ -163,18 +163,18 @@ define void @sdiv_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp1 z5.h, z5.h, z5.h
 ; CHECK-NEXT:    sdiv z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uzp1 z7.h, z16.h, z16.h
 ; CHECK-NEXT:    splice z4.h, p0, z4.h, z5.h
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z7.h, z16.h, z16.h
 ; CHECK-NEXT:    uzp1 z1.b, z4.b, z4.b
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
 ; CHECK-NEXT:    splice z7.h, p0, z7.h, z6.h
 ; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    uzp1 z3.b, z7.b, z7.b
 ; CHECK-NEXT:    splice z2.b, p0, z2.b, z0.b
+; CHECK-NEXT:    uzp1 z3.b, z7.b, z7.b
 ; CHECK-NEXT:    splice z3.b, p0, z3.b, z1.b
 ; CHECK-NEXT:    stp q3, q2, [x0]
 ; CHECK-NEXT:    ret
@@ -203,9 +203,9 @@ define <2 x i16> @sdiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 define <4 x i16> @sdiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; CHECK-LABEL: sdiv_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
@@ -272,8 +272,8 @@ define void @sdiv_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uzp1 z1.h, z5.h, z5.h
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z5.h, z5.h
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
 ; CHECK-NEXT:    splice z3.h, p0, z3.h, z1.h
 ; CHECK-NEXT:    stp q3, q0, [x0]
@@ -314,8 +314,8 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @sdiv_v8i32(ptr %a, ptr %b)  {
 ; CHECK-LABEL: sdiv_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    sdivr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -358,8 +358,8 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @sdiv_v4i64(ptr %a, ptr %b)  {
 ; CHECK-LABEL: sdiv_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    sdivr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -453,8 +453,8 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z1.h, z4.h, z4.h
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
 ; CHECK-NEXT:    splice z1.h, p0, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
@@ -530,18 +530,18 @@ define void @udiv_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp1 z5.h, z5.h, z5.h
 ; CHECK-NEXT:    udiv z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uzp1 z7.h, z16.h, z16.h
 ; CHECK-NEXT:    splice z4.h, p0, z4.h, z5.h
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z7.h, z16.h, z16.h
 ; CHECK-NEXT:    uzp1 z1.b, z4.b, z4.b
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
 ; CHECK-NEXT:    splice z7.h, p0, z7.h, z6.h
 ; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    uzp1 z3.b, z7.b, z7.b
 ; CHECK-NEXT:    splice z2.b, p0, z2.b, z0.b
+; CHECK-NEXT:    uzp1 z3.b, z7.b, z7.b
 ; CHECK-NEXT:    splice z3.b, p0, z3.b, z1.b
 ; CHECK-NEXT:    stp q3, q2, [x0]
 ; CHECK-NEXT:    ret
@@ -555,9 +555,9 @@ define void @udiv_v32i8(ptr %a, ptr %b) {
 define <2 x i16> @udiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; CHECK-LABEL: udiv_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
@@ -570,9 +570,9 @@ define <2 x i16> @udiv_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 define <4 x i16> @udiv_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; CHECK-LABEL: udiv_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
@@ -639,8 +639,8 @@ define void @udiv_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uzp1 z1.h, z5.h, z5.h
 ; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z5.h, z5.h
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
 ; CHECK-NEXT:    splice z3.h, p0, z3.h, z1.h
 ; CHECK-NEXT:    stp q3, q0, [x0]
@@ -681,8 +681,8 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @udiv_v8i32(ptr %a, ptr %b)  {
 ; CHECK-LABEL: udiv_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -725,8 +725,8 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @udiv_v4i64(ptr %a, ptr %b)  {
 ; CHECK-LABEL: udiv_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    udivr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -743,21 +743,21 @@ define void @udiv_v4i64(ptr %a, ptr %b)  {
 define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; SVE-LABEL: udiv_constantsplat_v8i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    mov w8, #8969 // =0x2309
-; SVE-NEXT:    movk w8, #22765, lsl #16
 ; SVE-NEXT:    ldp q1, q2, [x0]
+; SVE-NEXT:    movk w8, #22765, lsl #16
+; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    mov z0.s, w8
 ; SVE-NEXT:    movprfx z3, z1
 ; SVE-NEXT:    umulh z3.s, p0/m, z3.s, z0.s
-; SVE-NEXT:    sub z1.s, z1.s, z3.s
 ; SVE-NEXT:    umulh z0.s, p0/m, z0.s, z2.s
-; SVE-NEXT:    lsr z1.s, z1.s, #1
+; SVE-NEXT:    sub z1.s, z1.s, z3.s
 ; SVE-NEXT:    sub z2.s, z2.s, z0.s
-; SVE-NEXT:    add z1.s, z1.s, z3.s
+; SVE-NEXT:    lsr z1.s, z1.s, #1
 ; SVE-NEXT:    lsr z2.s, z2.s, #1
-; SVE-NEXT:    lsr z1.s, z1.s, #6
+; SVE-NEXT:    add z1.s, z1.s, z3.s
 ; SVE-NEXT:    add z0.s, z2.s, z0.s
+; SVE-NEXT:    lsr z1.s, z1.s, #6
 ; SVE-NEXT:    lsr z0.s, z0.s, #6
 ; SVE-NEXT:    stp q1, q0, [x0]
 ; SVE-NEXT:    ret

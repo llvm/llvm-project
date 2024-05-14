@@ -302,100 +302,105 @@ public:
 
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
-      {{{"fopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
-      {{{"fdopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
-      {{{"freopen"}, 3},
+      {{CDM::CLibrary, {"fopen"}, 2},
+       {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{CDM::CLibrary, {"fdopen"}, 2},
+       {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{CDM::CLibrary, {"freopen"}, 3},
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
-      {{{"tmpfile"}, 0}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
-      {{{"fclose"}, 1},
+      {{CDM::CLibrary, {"tmpfile"}, 0},
+       {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{CDM::CLibrary, {"fclose"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
-      {{{"fread"}, 4},
+      {{CDM::CLibrary, {"fread"}, 4},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
-      {{{"fwrite"}, 4},
+      {{CDM::CLibrary, {"fwrite"}, 4},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, false), 3}},
-      {{{"fgetc"}, 1},
+      {{CDM::CLibrary, {"fgetc"}, 1},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, true), 0}},
-      {{{"fgets"}, 3},
+      {{CDM::CLibrary, {"fgets"}, 3},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, false), 2}},
-      {{{"getc"}, 1},
+      {{CDM::CLibrary, {"getc"}, 1},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, true), 0}},
-      {{{"fputc"}, 2},
+      {{CDM::CLibrary, {"fputc"}, 2},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
-      {{{"fputs"}, 2},
+      {{CDM::CLibrary, {"fputs"}, 2},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, false), 1}},
-      {{{"putc"}, 2},
+      {{CDM::CLibrary, {"putc"}, 2},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
-      {{{"fprintf"}},
+      {{CDM::CLibrary, {"fprintf"}},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
-      {{{"vfprintf"}, 3},
+      {{CDM::CLibrary, {"vfprintf"}, 3},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
-      {{{"fscanf"}},
+      {{CDM::CLibrary, {"fscanf"}},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
-      {{{"vfscanf"}, 3},
+      {{CDM::CLibrary, {"vfscanf"}, 3},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
-      {{{"ungetc"}, 2},
+      {{CDM::CLibrary, {"ungetc"}, 2},
        {&StreamChecker::preWrite,
         std::bind(&StreamChecker::evalUngetc, _1, _2, _3, _4), 1}},
-      {{{"getdelim"}, 4},
+      {{CDM::CLibrary, {"getdelim"}, 4},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalGetdelim, _1, _2, _3, _4), 3}},
-      {{{"getline"}, 3},
+      {{CDM::CLibrary, {"getline"}, 3},
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalGetdelim, _1, _2, _3, _4), 2}},
-      {{{"fseek"}, 3},
+      {{CDM::CLibrary, {"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
-      {{{"fseeko"}, 3},
+      {{CDM::CLibrary, {"fseeko"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
-      {{{"ftell"}, 1},
+      {{CDM::CLibrary, {"ftell"}, 1},
        {&StreamChecker::preWrite, &StreamChecker::evalFtell, 0}},
-      {{{"ftello"}, 1},
+      {{CDM::CLibrary, {"ftello"}, 1},
        {&StreamChecker::preWrite, &StreamChecker::evalFtell, 0}},
-      {{{"fflush"}, 1},
+      {{CDM::CLibrary, {"fflush"}, 1},
        {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
-      {{{"rewind"}, 1},
+      {{CDM::CLibrary, {"rewind"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalRewind, 0}},
-      {{{"fgetpos"}, 2},
+      {{CDM::CLibrary, {"fgetpos"}, 2},
        {&StreamChecker::preWrite, &StreamChecker::evalFgetpos, 0}},
-      {{{"fsetpos"}, 2},
+      {{CDM::CLibrary, {"fsetpos"}, 2},
        {&StreamChecker::preDefault, &StreamChecker::evalFsetpos, 0}},
-      {{{"clearerr"}, 1},
+      {{CDM::CLibrary, {"clearerr"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalClearerr, 0}},
-      {{{"feof"}, 1},
+      {{CDM::CLibrary, {"feof"}, 1},
        {&StreamChecker::preDefault,
         std::bind(&StreamChecker::evalFeofFerror, _1, _2, _3, _4, ErrorFEof),
         0}},
-      {{{"ferror"}, 1},
+      {{CDM::CLibrary, {"ferror"}, 1},
        {&StreamChecker::preDefault,
         std::bind(&StreamChecker::evalFeofFerror, _1, _2, _3, _4, ErrorFError),
         0}},
-      {{{"fileno"}, 1},
+      {{CDM::CLibrary, {"fileno"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFileno, 0}},
   };
 
   CallDescriptionMap<FnDescription> FnTestDescriptions = {
-      {{{"StreamTesterChecker_make_feof_stream"}, 1},
+      {{CDM::SimpleFunc, {"StreamTesterChecker_make_feof_stream"}, 1},
        {nullptr,
         std::bind(&StreamChecker::evalSetFeofFerror, _1, _2, _3, _4, ErrorFEof,
                   false),
         0}},
-      {{{"StreamTesterChecker_make_ferror_stream"}, 1},
+      {{CDM::SimpleFunc, {"StreamTesterChecker_make_ferror_stream"}, 1},
        {nullptr,
         std::bind(&StreamChecker::evalSetFeofFerror, _1, _2, _3, _4,
                   ErrorFError, false),
         0}},
-      {{{"StreamTesterChecker_make_ferror_indeterminate_stream"}, 1},
+      {{CDM::SimpleFunc,
+        {"StreamTesterChecker_make_ferror_indeterminate_stream"},
+        1},
        {nullptr,
         std::bind(&StreamChecker::evalSetFeofFerror, _1, _2, _3, _4,
                   ErrorFError, true),
@@ -540,8 +545,6 @@ private:
   const FnDescription *lookupFn(const CallEvent &Call) const {
     // Recognize "global C functions" with only integral or pointer arguments
     // (and matching name) as stream functions.
-    if (!Call.isGlobalCFunction())
-      return nullptr;
     for (auto *P : Call.parameters()) {
       QualType T = P->getType();
       if (!T->isIntegralOrEnumerationType() && !T->isPointerType() &&
@@ -599,7 +602,7 @@ struct StreamOperationEvaluator {
   SValBuilder &SVB;
   const ASTContext &ACtx;
 
-  SymbolRef StreamSym;
+  SymbolRef StreamSym = nullptr;
   const StreamState *SS = nullptr;
   const CallExpr *CE = nullptr;
   StreamErrorState NewES;
@@ -1140,7 +1143,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
       return;
 
     if (auto const *Callee = Call.getCalleeIdentifier();
-        !Callee || !Callee->getName().equals("vfscanf")) {
+        !Callee || Callee->getName() != "vfscanf") {
       SmallVector<unsigned int> EscArgs;
       for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
         EscArgs.push_back(EscArg);

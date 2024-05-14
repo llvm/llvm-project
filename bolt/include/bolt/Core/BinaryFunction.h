@@ -930,6 +930,8 @@ public:
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
 
+  std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
+
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
   /// be different from 0
@@ -1402,7 +1404,8 @@ public:
 
   /// Return true if the function has CFI instructions
   bool hasCFI() const {
-    return !FrameInstructions.empty() || !CIEFrameInstructions.empty();
+    return !FrameInstructions.empty() || !CIEFrameInstructions.empty() ||
+           IsInjected;
   }
 
   /// Return unique number associated with the function.

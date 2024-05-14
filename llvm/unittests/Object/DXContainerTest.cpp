@@ -174,6 +174,51 @@ TEST(DXCFile, ParseEmptyParts) {
   }
 }
 
+// This test verify DXIL part are correctly parsed.
+// This test is based on the binary output constructed from this yaml.
+// --- !dxcontainer
+// Header:
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+//                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+//   Version:
+//     Major:           1
+//     Minor:           0
+//   PartCount:       1
+// Parts:
+//   - Name:            DXIL
+//     Size:            28
+//     Program:
+//       MajorVersion:    6
+//       MinorVersion:    5
+//       ShaderKind:      5
+//       Size:            8
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 5
+//       DXILSize:        4
+//       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+// ...
+TEST(DXCFile, ParseDXILPart) {
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+      0x44, 0x58, 0x49, 0x4c, 0x1c, 0x00, 0x00, 0x00, 0x65, 0x00, 0x05, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x44, 0x58, 0x49, 0x4c, 0x05, 0x01, 0x00, 0x00,
+      0x10, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x42, 0x43, 0xc0, 0xde};
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(getMemoryBuffer<116>(Buffer)));
+  EXPECT_EQ(C.getHeader().PartCount, 1u);
+  const std::optional<object::DXContainer::DXILData> &DXIL = C.getDXIL();
+  EXPECT_TRUE(DXIL.has_value());
+  dxbc::ProgramHeader Header = DXIL->first;
+  EXPECT_EQ(Header.getMajorVersion(), 6u);
+  EXPECT_EQ(Header.getMinorVersion(), 5u);
+  EXPECT_EQ(Header.ShaderKind, 5u);
+  EXPECT_EQ(Header.Size, 8u);
+  EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
+  EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
+}
+
 static Expected<DXContainer>
 generateDXContainer(StringRef Yaml, SmallVectorImpl<char> &BinaryData) {
   DXContainerYAML::Object Obj;
@@ -240,8 +285,8 @@ Parts:
       MinorVersion:    0
       ShaderKind:      14
       Size:            6
-      DXILMajorVersion: 0
-      DXILMinorVersion: 1
+      DXILMajorVersion: 1
+      DXILMinorVersion: 0
       DXILSize:        0
 ...
 )";
@@ -361,8 +406,8 @@ Parts:
 //       MinorVersion:    0
 //       ShaderKind:      14
 //       Size:            6
-//       DXILMajorVersion: 0
-//       DXILMinorVersion: 1
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 0
 //       DXILSize:        0
 //   - Name:            PSV0
 //     Size:            36
@@ -477,7 +522,7 @@ TEST(DXCFile, MaliciousFiles) {
 //
 // --- !dxcontainer
 // Header:
-//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 //                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
 //   Version:
 //     Major:           1
@@ -491,8 +536,8 @@ TEST(DXCFile, MaliciousFiles) {
 //       MinorVersion:    0
 //       ShaderKind:      14
 //       Size:            6
-//       DXILMajorVersion: 0
-//       DXILMinorVersion: 1
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 0
 //       DXILSize:        0
 //   - Name:            PSV0
 //     Size:            100

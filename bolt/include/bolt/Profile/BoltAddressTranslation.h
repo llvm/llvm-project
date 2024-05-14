@@ -119,11 +119,6 @@ public:
   /// True if a given \p Address is a function with translation table entry.
   bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
 
-  /// Returns branch offsets grouped by containing basic block in a given
-  /// function.
-  std::unordered_map<uint32_t, std::vector<uint32_t>>
-  getBFBranches(uint64_t FuncOutputAddress) const;
-
   /// For a given \p Symbol in the output binary and known \p InputOffset
   /// return a corresponding pair of parent BinaryFunction and secondary entry
   /// point in it.
@@ -154,9 +149,9 @@ private:
   /// entries in function address translation map.
   APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
 
-  /// Calculate the number of equal offsets (output = input) in the beginning
-  /// of the function.
-  size_t getNumEqualOffsets(const MapTy &Map) const;
+  /// Calculate the number of equal offsets (output = input - skew) in the
+  /// beginning of the function.
+  size_t getNumEqualOffsets(const MapTy &Map, uint32_t Skew) const;
 
   std::map<uint64_t, MapTy> Maps;
 
@@ -193,7 +188,7 @@ public:
       EntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
     };
 
-    std::unordered_map<uint32_t, EntryTy> Map;
+    std::map<uint32_t, EntryTy> Map;
     const EntryTy &getEntry(uint32_t BBInputOffset) const {
       auto It = Map.find(BBInputOffset);
       assert(It != Map.end());
@@ -218,6 +213,10 @@ public:
     }
 
     size_t getNumBasicBlocks() const { return Map.size(); }
+
+    auto begin() const { return Map.begin(); }
+    auto end() const { return Map.end(); }
+    auto upper_bound(uint32_t Offset) const { return Map.upper_bound(Offset); }
   };
 
   /// Map function output address to its hash and basic blocks hash map.

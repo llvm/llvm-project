@@ -312,6 +312,18 @@ void TestMutationInLambda() {
       l1();
       l2();
     }
+
+    // Check that we don't crash if the lambda has type sugar.
+    const auto l15 = [=](this auto&&) [[clang::annotate_type("foo")]] [[clang::annotate_type("bar")]] {
+        return x;
+    };
+
+    const auto l16 = [=]() [[clang::annotate_type("foo")]] [[clang::annotate_type("bar")]] {
+        return x;
+    };
+
+    l15();
+    l16();
 }
 
 struct Over_Call_Func_Example {

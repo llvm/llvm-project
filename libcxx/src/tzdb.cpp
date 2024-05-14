@@ -15,8 +15,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "include/tzdb/leap_second_private.h"
-#include "include/tzdb/time_zone_link_private.h"
 #include "include/tzdb/time_zone_private.h"
 #include "include/tzdb/types_private.h"
 #include "include/tzdb/tzdb_list_private.h"
@@ -561,7 +559,7 @@ static void __parse_rule(tzdb& __tzdb, __tz::__rules_storage_type& __rules, istr
 
 static void __parse_zone(tzdb& __tzdb, __tz::__rules_storage_type& __rules, istream& __input) {
   chrono::__skip_mandatory_whitespace(__input);
-  auto __p                                      = std::make_unique<time_zone::__impl>(chrono::__parse_string(__input));
+  auto __p = std::make_unique<time_zone::__impl>(chrono::__parse_string(__input), __rules);
   vector<__tz::__continuation>& __continuations = __p->__continuations();
   chrono::__skip_mandatory_whitespace(__input);
 
@@ -582,7 +580,7 @@ static void __parse_link(tzdb& __tzdb, istream& __input) {
   string __name = chrono::__parse_string(__input);
   chrono::__skip_line(__input);
 
-  __tzdb.links.emplace_back(time_zone_link::__constructor_tag{}, std::move(__name), std::move(__target));
+  __tzdb.links.emplace_back(std::__private_constructor_tag{}, std::move(__name), std::move(__target));
 }
 
 static void __parse_tzdata(tzdb& __db, __tz::__rules_storage_type& __rules, istream& __input) {
@@ -649,7 +647,7 @@ static void __parse_leap_seconds(vector<leap_second>& __leap_seconds, istream&& 
     seconds __value{chrono::__parse_integral(__input, false)};
     chrono::__skip_line(__input);
 
-    __leap_seconds.emplace_back(leap_second::__constructor_tag{}, __date, __value);
+    __leap_seconds.emplace_back(std::__private_constructor_tag{}, __date, __value);
   }
 }
 
@@ -734,7 +732,7 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
 //                           Public API
 //===----------------------------------------------------------------------===//
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI tzdb_list& get_tzdb_list() {
+_LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI tzdb_list& get_tzdb_list() {
   static tzdb_list __result{new tzdb_list::__impl()};
   return __result;
 }
@@ -754,7 +752,7 @@ _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI const tzdb& reload_tzdb() {
   return chrono::get_tzdb_list().__implementation().__load();
 }
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI string remote_version() {
+_LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI string remote_version() {
   filesystem::path __root = chrono::__libcpp_tzdb_directory();
   ifstream __tzdata{__root / "tzdata.zi"};
   return chrono::__parse_version(__tzdata);

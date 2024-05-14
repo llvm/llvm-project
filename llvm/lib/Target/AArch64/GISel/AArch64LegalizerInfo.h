@@ -50,6 +50,8 @@ private:
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+  bool legalizeICMP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &MIRBuilder) const;
   bool legalizeFunnelShift(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer,

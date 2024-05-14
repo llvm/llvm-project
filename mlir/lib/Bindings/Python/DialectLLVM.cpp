@@ -19,6 +19,11 @@ using namespace mlir::python;
 using namespace mlir::python::adaptors;
 
 void populateDialectLLVMSubmodule(const pybind11::module &m) {
+
+  //===--------------------------------------------------------------------===//
+  // StructType
+  //===--------------------------------------------------------------------===//
+
   auto llvmStructType =
       mlir_type_subclass(m, "StructType", mlirTypeIsALLVMStructType);
 
@@ -35,8 +40,8 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
         }
         return cls(type);
       },
-      py::arg("cls"), py::arg("elements"), py::kw_only(),
-      py::arg("packed") = false, py::arg("loc") = py::none());
+      "cls"_a, "elements"_a, py::kw_only(), "packed"_a = false,
+      "loc"_a = py::none());
 
   llvmStructType.def_classmethod(
       "get_identified",
@@ -44,8 +49,7 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
         return cls(mlirLLVMStructTypeIdentifiedGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
-      py::arg("cls"), py::arg("name"), py::kw_only(),
-      py::arg("context") = py::none());
+      "cls"_a, "name"_a, py::kw_only(), "context"_a = py::none());
 
   llvmStructType.def_classmethod(
       "get_opaque",
@@ -53,7 +57,7 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
         return cls(mlirLLVMStructTypeOpaqueGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
-      py::arg("cls"), py::arg("name"), py::arg("context") = py::none());
+      "cls"_a, "name"_a, "context"_a = py::none());
 
   llvmStructType.def(
       "set_body",
@@ -65,7 +69,7 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
               "Struct body already set to different content.");
         }
       },
-      py::arg("elements"), py::kw_only(), py::arg("packed") = false);
+      "elements"_a, py::kw_only(), "packed"_a = false);
 
   llvmStructType.def_classmethod(
       "new_identified",
@@ -75,8 +79,8 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
             ctx, mlirStringRefCreate(name.data(), name.length()),
             elements.size(), elements.data(), packed));
       },
-      py::arg("cls"), py::arg("name"), py::arg("elements"), py::kw_only(),
-      py::arg("packed") = false, py::arg("context") = py::none());
+      "cls"_a, "name"_a, "elements"_a, py::kw_only(), "packed"_a = false,
+      "context"_a = py::none());
 
   llvmStructType.def_property_readonly(
       "name", [](MlirType type) -> std::optional<std::string> {
@@ -105,6 +109,29 @@ void populateDialectLLVMSubmodule(const pybind11::module &m) {
 
   llvmStructType.def_property_readonly(
       "opaque", [](MlirType type) { return mlirLLVMStructTypeIsOpaque(type); });
+
+  //===--------------------------------------------------------------------===//
+  // PointerType
+  //===--------------------------------------------------------------------===//
+
+  mlir_type_subclass(m, "PointerType", mlirTypeIsALLVMPointerType)
+      .def_classmethod(
+          "get",
+          [](py::object cls, std::optional<unsigned> addressSpace,
+             MlirContext context) {
+            CollectDiagnosticsToStringScope scope(context);
+            MlirType type = mlirLLVMPointerTypeGet(
+                context, addressSpace.has_value() ? *addressSpace : 0);
+            if (mlirTypeIsNull(type)) {
+              throw py::value_error(scope.takeMessage());
+            }
+            return cls(type);
+          },
+          "cls"_a, "address_space"_a = py::none(), py::kw_only(),
+          "context"_a = py::none())
+      .def_property_readonly("address_space", [](MlirType type) {
+        return mlirLLVMPointerTypeGetAddressSpace(type);
+      });
 }
 
 PYBIND11_MODULE(_mlirDialectsLLVM, m) {

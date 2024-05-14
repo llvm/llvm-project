@@ -219,3 +219,15 @@ func.func @scf_if_eq(%a: index, %b: index, %c : i1) {
   "test.some_use"(%reify1) : (index) -> ()
   return
 }
+
+// -----
+
+func.func @compare_scf_for(%a: index, %b: index, %c: index) {
+  scf.for %iv = %a to %b step %c {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %a) {cmp = "GE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %b) {cmp = "LT"} : (index, index) -> ()
+  }
+  return
+}

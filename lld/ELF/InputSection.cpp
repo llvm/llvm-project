@@ -161,6 +161,7 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   }
   case Regular:
   case Synthetic:
+  case Spill:
     return cast<InputSection>(this)->outSecOff + offset;
   case EHFrame: {
     // Two code paths may reach here. First, clang_rt.crtbegin.o and GCC
@@ -308,6 +309,12 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
   return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
       .str();
 }
+
+PotentialSpillSection::PotentialSpillSection(const InputSectionBase &source,
+                                             InputSectionDescription &isd)
+    : InputSection(source.file, source.flags, source.type, source.addralign, {},
+                   source.name, SectionBase::Spill),
+      isd(&isd) {}
 
 InputSection InputSection::discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
 
@@ -464,7 +471,11 @@ void InputSection::copyRelocations(uint8_t *buf,
         addend += sec->getFile<ELFT>()->mipsGp0;
       }
 
-      if (RelTy::IsRela)
+      if (config->emachine == EM_LOONGARCH && type == R_LARCH_ALIGN)
+        // LoongArch psABI v2.30, the R_LARCH_ALIGN requires symbol index.
+        // If it use the section symbol, the addend should not be changed.
+        p->r_addend = addend;
+      else if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       // For SHF_ALLOC sections relocated by REL, append a relocation to
       // sec->relocations so that relocateAlloc transitively called by
@@ -918,8 +929,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       break;
     }
 
-  for (size_t i = 0, relsSize = rels.size(); i != relsSize; ++i) {
-    const RelTy &rel = rels[i];
+  const InputFile *f = this->file;
+  for (auto it = rels.begin(), end = rels.end(); it != end; ++it) {
+    const RelTy &rel = *it;
     const RelType type = rel.getType(config->isMips64EL);
     const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
@@ -927,23 +939,22 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (!RelTy::IsRela)
       addend += target.getImplicitAddend(bufLoc, type);
 
-    Symbol &sym = this->file->getRelocTargetSym(rel);
+    Symbol &sym = f->getRelocTargetSym(rel);
     RelExpr expr = target.getRelExpr(type, sym, bufLoc);
     if (expr == R_NONE)
       continue;
     auto *ds = dyn_cast<Defined>(&sym);
 
     if (emachine == EM_RISCV && type == R_RISCV_SET_ULEB128) {
-      if (++i < relsSize &&
-          rels[i].getType(/*isMips64EL=*/false) == R_RISCV_SUB_ULEB128 &&
-          rels[i].r_offset == offset) {
+      if (++it != end &&
+          it->getType(/*isMips64EL=*/false) == R_RISCV_SUB_ULEB128 &&
+          it->r_offset == offset) {
         uint64_t val;
         if (!ds && tombstone) {
           val = *tombstone;
         } else {
           val = sym.getVA(addend) -
-                (this->file->getRelocTargetSym(rels[i]).getVA(0) +
-                 getAddend<ELFT>(rels[i]));
+                (f->getRelocTargetSym(*it).getVA(0) + getAddend<ELFT>(*it));
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)
           errorOrWarn(getLocation(offset) + ": ULEB128 value " + Twine(val) +
@@ -1124,7 +1135,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
   for (Relocation &rel : relocs()) {
     // Ignore calls into the split-stack api.
     if (rel.sym->getName().starts_with("__morestack")) {
-      if (rel.sym->getName().equals("__morestack"))
+      if (rel.sym->getName() == "__morestack")
         morestackCalls.push_back(&rel);
       continue;
     }

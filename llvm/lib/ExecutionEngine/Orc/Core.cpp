@@ -187,8 +187,8 @@ AsynchronousSymbolQuery::AsynchronousSymbolQuery(
 
   OutstandingSymbolsCount = Symbols.size();
 
-  for (auto &KV : Symbols)
-    ResolvedSymbols[KV.first] = ExecutorSymbolDef();
+  for (auto &[Name, Flags] : Symbols)
+    ResolvedSymbols[Name] = ExecutorSymbolDef();
 }
 
 void AsynchronousSymbolQuery::notifySymbolMetRequiredState(
@@ -271,8 +271,8 @@ void AsynchronousSymbolQuery::dropSymbol(const SymbolStringPtr &Name) {
 void AsynchronousSymbolQuery::detach() {
   ResolvedSymbols.clear();
   OutstandingSymbolsCount = 0;
-  for (auto &KV : QueryRegistrations)
-    KV.first->detachQueryHelper(*this, KV.second);
+  for (auto &[JD, Syms] : QueryRegistrations)
+    JD->detachQueryHelper(*this, Syms);
   QueryRegistrations.clear();
 }
 
@@ -312,8 +312,8 @@ void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
 MaterializationUnit::Interface
 AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
   SymbolFlagsMap Flags;
-  for (const auto &KV : Symbols)
-    Flags[KV.first] = KV.second.getFlags();
+  for (const auto &[Name, Def] : Symbols)
+    Flags[Name] = Def.getFlags();
   return MaterializationUnit::Interface(std::move(Flags), nullptr);
 }
 
@@ -1002,6 +1002,17 @@ void JITDylib::unlinkMaterializationResponsibility(
   });
 }
 
+void JITDylib::shrinkMaterializationInfoMemory() {
+  // DenseMap::erase never shrinks its storage; use clear to heuristically free
+  // memory since we may have long-lived JDs after linking is done.
+
+  if (UnmaterializedInfos.empty())
+    UnmaterializedInfos.clear();
+
+  if (MaterializingInfos.empty())
+    MaterializingInfos.clear();
+}
+
 void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
                             bool LinkAgainstThisJITDylibFirst) {
   ES.runSessionLocked([&]() {
@@ -1111,6 +1122,8 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
       auto SymI = SymbolMaterializerItrPair.first;
       Symbols.erase(SymI);
     }
+
+    shrinkMaterializationInfoMemory();
 
     return Error::success();
   });
@@ -1312,6 +1325,8 @@ JITDylib::removeTracker(ResourceTracker &RT) {
 
     Symbols.erase(I);
   }
+
+  shrinkMaterializationInfoMemory();
 
   return Result;
 }
@@ -2675,6 +2690,8 @@ void ExecutionSession::OL_completeLookup(
             return true;
           });
 
+      JD.shrinkMaterializationInfoMemory();
+
       // Handle failure.
       if (Err) {
 
@@ -3118,6 +3135,8 @@ void ExecutionSession::IL_makeEDUReady(
 
     JD.MaterializingInfos.erase(MII);
   }
+
+  JD.shrinkMaterializationInfoMemory();
 }
 
 void ExecutionSession::IL_makeEDUEmitted(
@@ -3632,6 +3651,8 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
           ExtractFailedQueries(DepMI);
           DepJD.MaterializingInfos.erase(SymbolStringPtr(DepName));
         }
+
+        DepJD.shrinkMaterializationInfoMemory();
       }
 
       MI.DependantEDUs.clear();
@@ -3644,6 +3665,8 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
            "Can not delete MaterializingInfo with queries pending");
     JD.MaterializingInfos.erase(Name);
   }
+
+  JD.shrinkMaterializationInfoMemory();
 
 #ifdef EXPENSIVE_CHECKS
   verifySessionState("exiting ExecutionSession::IL_failSymbols");

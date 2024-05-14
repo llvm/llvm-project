@@ -62,11 +62,8 @@ if (NOT CMAKE_CROSSCOMPILING)
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
-    add_custom_command(OUTPUT ${base}.f18.mod
-      DEPENDS ${base}.mod
-      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    list(APPEND MODULE_FILES ${base}.mod)
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
   endforeach()
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
@@ -95,17 +92,6 @@ if (NOT CMAKE_CROSSCOMPILING)
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
-
-# This flang shell script will only work in a POSIX shell.
-if (NOT WIN32)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc.in
-    ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc
-    @ONLY
-  )
-  add_custom_target(flang-to-external-fc ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc)
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc DESTINATION "${CMAKE_INSTALL_BINDIR}")
-endif()
 
 # TODO Move this to a more suitable location
 # Copy the generated omp_lib.h header file, if OpenMP support has been configured.
