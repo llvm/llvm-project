@@ -1150,7 +1150,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
       }
 
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-
       break;
     }
 
