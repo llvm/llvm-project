@@ -1,16 +1,16 @@
 ;; When EXPENSIVE_CHECKS are enabled, the machine verifier appears between each
 ;; pass. Ignore it with 'grep -v'.
-; RUN: llc --mtriple=loongarch32 -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
-; RUN: llc --mtriple=loongarch32 -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
-; RUN: llc --mtriple=loongarch32 -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch32 -mattr=+d -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
-; RUN: llc --mtriple=loongarch64 -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
-; RUN: llc --mtriple=loongarch64 -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
-; RUN: llc --mtriple=loongarch64 -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
+; RUN: llc --mtriple=loongarch64 -mattr=+d -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
 
 ; REQUIRES: asserts
