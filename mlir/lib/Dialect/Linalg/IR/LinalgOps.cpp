@@ -1147,7 +1147,51 @@ void GenericOp::getEffects(
                         getDpsInits());
 }
 
-LogicalResult GenericOp::verify() { return success(); }
+static LogicalResult commonOpVerifier(LinalgOp linalgOp) {
+  llvm::DenseMap<AffineExpr, int64_t> affineExprToSize;
+
+  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
+    if (linalgOp.isScalar(&opOperand))
+      continue;
+
+    auto sourceMap = linalgOp.getMatchingIndexingMap(&opOperand);
+
+    Value source = opOperand.get();
+    if (auto sourceType = llvm::cast<ShapedType>(source.getType())) {
+      auto sourceShape = sourceType.getShape();
+      bool isInputOperand = linalgOp.isDpsInput(&opOperand);
+
+      for (unsigned i = 0; i < sourceShape.size(); i++) {
+        int64_t dimShape = sourceShape[i];
+        if (auto affineDimExpr =
+                dyn_cast<AffineDimExpr>(sourceMap.getResult(i))) {
+          if (isInputOperand) {
+            if (!affineExprToSize.contains(affineDimExpr) &&
+                !sourceType.isDynamicDim(i))
+              // For input operands populate affineExprToSize to hold onto the
+              // shape for an affineDimExpr if the shape isn't populated
+              // already. For dynamic shape overwrite the shape content (if
+              // needed), this accounts for broadcasting where one input can
+              // have fixed shape but the others can have dynamic shape for the
+              // same dimension
+              affineExprToSize.try_emplace(affineDimExpr, dimShape);
+          } else if (affineExprToSize.contains(affineDimExpr)
+                          && affineExprToSize[affineDimExpr] != dimShape)
+            // If shape for a affineDimExpr is already known from the input
+            // operand's map ensure that the shapes match across the output
+            // operands.
+            return linalgOp->emitError("Mis-match in dimension shape ")
+                   << affineDimExpr.getPosition() << " inferred from the maps.";
+        }
+      }
+    }
+  }
+  return success();
+}
+
+LogicalResult GenericOp::verify() {
+  return commonOpVerifier(*this);
+}
 
 namespace {
 
@@ -2345,12 +2389,6 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
   LogicalResult matchAndRewrite(LinalgOp linalgOp,
                                 PatternRewriter &rewriter) const override {
     if (!linalgOp.hasPureTensorSemantics())
-      return failure();
-
-    // Maps must be projected permutations.
-    if (llvm::any_of(linalgOp.getIndexingMapsArray(), [](AffineMap map) {
-          return !map.isProjectedPermutation();
-        }))
       return failure();
 
     // Maps affine dim expressions to the static size of that dimension.
