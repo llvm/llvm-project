@@ -297,13 +297,18 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
 
 namespace {
 
-/// HEKOTA TODO: UDPATE
-/// This class implements HLSL availability diagnostics
+/// This class implements HLSL availability diagnostics for default
+/// and relaxed mode
 ///
-/// This is done by traversing all CallExpr nodes that are reachable from exported functions (either library exports or entry functions).
-/// If the callee of an CallExpr is in HLSL namespace and has availability annotation that signifies that the API is unavailable 
-/// for the target shader model and stage, the compiler emits an error in default or strict diagnostic mode (-fhlsl-strict-diagnostics)
-/// or a warning in relaxed mode (-Wno-error=hlsl-availability).
+/// The goal of this diagnostic is to emit an error or warning when an
+/// unavailable API is found in a code that is reachable from the shader
+/// entry function or from an exported function (when compiling shader
+/// library).
+///
+/// This is done by traversing the AST of all shader entry point functions
+/// and of all exported functions, and any functions that are refrenced
+/// from this AST. In other words, any function that are reachable from
+/// the entry points.
 class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailability> {
   // HEKOTAS this is probably not needed
   // typedef RecursiveASTVisitor<DiagnoseHLSLAvailability> Base;
@@ -331,24 +336,30 @@ class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailabi
 
   // Do not access these directly, use the get/set methods below to make
   // sure the values are in sync
-  HLSLShaderAttr::ShaderType CurrentShaderType;
-  llvm::Triple::EnvironmentType CurrentShaderTypeAsEnvironment;
+  llvm::Triple::EnvironmentType CurrentShaderEnvironment;
+  unsigned CurrentShaderStageBit;
 
-  void setCurrentShaderType(HLSLShaderAttr::ShaderType ShaderType) {
-    CurrentShaderType = ShaderType;
-    CurrentShaderTypeAsEnvironment =
-        HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
+  void SetShaderStageContext(HLSLShaderAttr::ShaderType ShaderType) {
+    CurrentShaderEnvironment = HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
+    CurrentShaderStageBit = (1 << ShaderType);
   }
-  HLSLShaderAttr::ShaderType getCurrentShaderType() {
-    return CurrentShaderType;
+  void SetUnknownShaderStageContext() {
+    CurrentShaderEnvironment =
+        llvm::Triple::EnvironmentType::UnknownEnvironment;
+    CurrentShaderStageBit = (1 << 31);
   }
-  llvm::Triple::EnvironmentType getCurrentShaderTypeAsEnvironment() {
-    return CurrentShaderTypeAsEnvironment;
+  llvm::Triple::EnvironmentType GetCurrentShaderEnvironment() {
+    return CurrentShaderEnvironment;
+  }
+  bool InUnknownShaderStageContext() {
+    return CurrentShaderEnvironment ==
+           llvm::Triple::EnvironmentType::UnknownEnvironment;
   }
 
   // Scanning methods
   void HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr);
-  void CheckDeclAvailability(NamedDecl *D, SourceRange Range);
+  void CheckDeclAvailability(NamedDecl *D, const AvailabilityAttr *AA,
+                             SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
   bool WasAlreadyScanned(const FunctionDecl *FD);
@@ -357,7 +368,7 @@ class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailabi
 public:
   DiagnoseHLSLAvailability(Sema &SemaRef) : SemaRef(SemaRef) {}
 
-  // AST Traversal methods
+  // AST traversal methods
   void RunOnTranslationUnit(const TranslationUnitDecl *TU);
   void RunOnFunction(const FunctionDecl *FD);
 
@@ -377,16 +388,16 @@ public:
 };
 
 // Returns true if the function has already been scanned in the current
-// environment
+// shader environment
 bool DiagnoseHLSLAvailability::WasAlreadyScanned(const FunctionDecl *FD) {
   const unsigned &ScannedStages = ScannedDecls.getOrInsertDefault(FD);
-  return (ScannedStages & (1 << getCurrentShaderType()));
+  return ScannedStages & CurrentShaderStageBit;
 }
 
-// Marks the function as scanned in the current environment
+// Marks the function as scanned in the current shader environment
 void DiagnoseHLSLAvailability::AddToScannedFunctions(const FunctionDecl *FD) {
-  unsigned &Set = ScannedDecls.getOrInsertDefault(FD);
-  Set &= 1 << getCurrentShaderType();
+  unsigned &ScannedStages = ScannedDecls.getOrInsertDefault(FD);
+  ScannedStages |= CurrentShaderStageBit;
 }
 
 void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr) {
@@ -400,26 +411,38 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr 
     return;
   }
 
-  // no definition -> diagnose availability
-  CheckDeclAvailability(FD, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+  // no body -> diagnose availability
+  const AvailabilityAttr *AA = FindAvailabilityAttr(FD);
+  if (AA)
+    CheckDeclAvailability(
+        FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
 }
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(const TranslationUnitDecl *TU) {
-  // Add all shader entry functions and library exports to the stack
-  // of functions to be scanned
+  // Iterate over all shader entry functions and library exports, and for those
+  // that have a body (definiton), run diag scan on each, setting appropriate
+  // shader environment context based on whether it is a shader entry function
+  // or an exported function.
   for (auto &D : TU->decls()) {
     const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(D);
-    if (!FD)
+    if (!FD || !FD->isThisDeclarationADefinition())
       continue;
 
-    // HEKOTA TODO detect also library exports
+    // shader entry point
     auto ShaderAttr = FD->getAttr<HLSLShaderAttr>();
-    if (!ShaderAttr)
+    if (ShaderAttr) {
+      SetShaderStageContext(ShaderAttr->getType());
+      RunOnFunction(FD);
       continue;
-
-    setCurrentShaderType(ShaderAttr->getType());
-
-    RunOnFunction(FD);
+    }
+    // exported library function with definition
+    // FIXME: tracking issue #92073
+#if 0
+    if (FD->getFormalLinkage() == Linkage::External) {
+      SetUnknownShaderStageContext();
+      RunOnFunction(FD);
+    }
+#endif
   }
 }
 
@@ -452,14 +475,12 @@ bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(const AvailabilityAt
   if (!IIEnvironment)
     return true;
 
-  assert(getCurrentShaderTypeAsEnvironment() !=
-             llvm::Triple::UnknownEnvironment &&
-         "this should be set to the shader stage context");
+  llvm::Triple::EnvironmentType CurrentEnv = GetCurrentShaderEnvironment();
+  if (CurrentEnv == llvm::Triple::UnknownEnvironment)
+    return false;
 
   llvm::Triple::EnvironmentType AttrEnv =
       AvailabilityAttr::getEnvironmentType(IIEnvironment->getName());
-  llvm::Triple::EnvironmentType CurrentEnv =
-      getCurrentShaderTypeAsEnvironment();
 
   return CurrentEnv == AttrEnv;
 }
@@ -486,8 +507,11 @@ const AvailabilityAttr *DiagnoseHLSLAvailability::FindAvailabilityAttr(const Dec
   return PartialMatch;
 }
 
-void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D, SourceRange Range) {
-  const AvailabilityAttr *AA = FindAvailabilityAttr(D);
+// Check availability against target shader model version and current shader
+// stage and emit diagnostic
+void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
+                                                     const AvailabilityAttr *AA,
+                                                     SourceRange Range) {
   bool EnvironmentMatches = HasMatchingEnvironmentOrNone(AA);
   VersionTuple Introduced = AA->getIntroduced();
   VersionTuple TargetVersion = SemaRef.Context.getTargetInfo().getPlatformMinVersion();
@@ -495,14 +519,19 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D, SourceRange R
   if (TargetVersion >= Introduced && EnvironmentMatches)
     return;
 
+  // Do not diagnose shade-stage-specific availability when the shader stage
+  // context is unknown
+  if (InUnknownShaderStageContext() && AA->getEnvironment() != nullptr) {
+    return;
+  }
+
+  // Emit diagnostic message
   const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
   llvm::StringRef PlatformName(
       AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
 
-  StringRef CurrentShaderTypeStr(
-      HLSLShaderAttr::ConvertShaderTypeToStr(getCurrentShaderType()));
-  llvm::StringRef CurrentEnvStr =
-      AvailabilityAttr::getPrettyEnviromentName(CurrentShaderTypeStr);
+  llvm::StringRef CurrentEnvStr = AvailabilityAttr::getPrettyEnviromentName(
+      AvailabilityAttr::getEnvironmentString(GetCurrentShaderEnvironment()));
 
   llvm::StringRef AttrEnvStr = AA->getEnvironment()
                                    ? AvailabilityAttr::getPrettyEnviromentName(

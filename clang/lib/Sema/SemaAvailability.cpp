@@ -228,8 +228,8 @@ shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
     ForceAvailabilityFromVersion = VersionTuple(/*Major=*/10, /*Minor=*/13);
     break;
   case llvm::Triple::ShaderModel:
-    // Always enable availability diagnostics for shader models.
-    // HEKOTA TODO
+    // FIXME: This will be updated when HLSL strict diagnostic mode
+    // is implemented (issue #90096)
     return false;
   default:
     // New targets should always warn about availability.

@@ -91,6 +91,12 @@ class MyClass
   }
 };
 
+// Shader entry point without body
+[shader("compute")]
+[numthreads(4,1,1)]
+float main();
+
+// Shader entry point with body
 [shader("compute")]
 [numthreads(4,1,1)]
 float main() {

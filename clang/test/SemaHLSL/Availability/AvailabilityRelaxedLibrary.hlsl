@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
-// RUN: -fsyntax-only -verify %s
+// RUN: -fsyntax-only -Wno-error=hlsl-availability -verify %s
 
 __attribute__((availability(shadermodel, introduced = 6.5)))
 float fx(float);  // #fx
@@ -91,6 +91,12 @@ class MyClass
   }
 };
 
+// Shader entry point without body
+[shader("compute")]
+[numthreads(4,1,1)]
+float main();
+
+// Shader entry point with body
 [shader("compute")]
 [numthreads(4,1,1)]
 float main() {

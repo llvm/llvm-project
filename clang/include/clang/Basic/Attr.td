@@ -1068,12 +1068,37 @@ static llvm::StringRef getPrettyEnviromentName(llvm::StringRef Environment) {
              .Case("hull", "hull shader")
              .Case("domain", "domain shader")
              .Case("compute", "compute shader")
+             .Case("raygeneration", "ray generation shader")
+             .Case("intersection", "intersection shader")
+             .Case("anyhit", "anyhit shader")
+             .Case("closesthit", "closesthit shader")
+             .Case("miss", "miss shader")
+             .Case("callable", "callable shader")
              .Case("mesh", "mesh shader")
              .Case("amplification", "amplification shader")
              .Case("library", "shader library")
              .Default(Environment);
 }
-
+static llvm::StringRef getEnvironmentString(llvm::Triple::EnvironmentType EnvironmentType) {
+  switch (EnvironmentType) {
+    case llvm::Triple::EnvironmentType::Pixel: return "pixel";
+    case llvm::Triple::EnvironmentType::Vertex: return "vertex";
+    case llvm::Triple::EnvironmentType::Geometry: return "geometry";
+    case llvm::Triple::EnvironmentType::Hull: return "hull";
+    case llvm::Triple::EnvironmentType::Domain: return "domain";
+    case llvm::Triple::EnvironmentType::Compute: return "compute";
+    case llvm::Triple::EnvironmentType::RayGeneration: return "ray generation";
+    case llvm::Triple::EnvironmentType::Intersection: return "intersection";
+    case llvm::Triple::EnvironmentType::AnyHit: return "any hit";
+    case llvm::Triple::EnvironmentType::ClosestHit: return "closest hit";
+    case llvm::Triple::EnvironmentType::Miss: return "miss";
+    case llvm::Triple::EnvironmentType::Callable: return "callable";
+    case llvm::Triple::EnvironmentType::Mesh: return "mesh";
+    case llvm::Triple::EnvironmentType::Amplification: return "amplification";
+    case llvm::Triple::EnvironmentType::Library: return "library";
+    default: return "";
+  }
+}
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
              .Case("pixel", llvm::Triple::Pixel)
@@ -1082,6 +1107,12 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("hull", llvm::Triple::Hull)
              .Case("domain", llvm::Triple::Domain)
              .Case("compute", llvm::Triple::Compute)
+             .Case("raygeneration", llvm::Triple::RayGeneration)
+             .Case("intersection", llvm::Triple::Intersection)
+             .Case("anyhit", llvm::Triple::AnyHit)
+             .Case("closesthit", llvm::Triple::ClosestHit)
+             .Case("miss", llvm::Triple::Miss)
+             .Case("callable", llvm::Triple::Callable)
              .Case("mesh", llvm::Triple::Mesh)
              .Case("amplification", llvm::Triple::Amplification)
              .Case("library", llvm::Triple::Library)
