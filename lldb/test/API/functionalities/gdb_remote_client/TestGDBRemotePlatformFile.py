@@ -148,6 +148,7 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
         )
 
     @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     def test_file_permissions(self):
         """Test 'platform get-permissions'"""
 
@@ -168,6 +169,7 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
         )
 
     @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     def test_file_permissions_fallback(self):
         """Test 'platform get-permissions' fallback to fstat"""
 
