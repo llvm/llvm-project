@@ -5608,8 +5608,7 @@ public:
                                 SourceLocation RPLoc);
 
   // #embed
-  ExprResult ActOnEmbedExpr(SourceLocation BuiltinLoc,
-                            SourceLocation BinaryDataLoc, SourceLocation RPLoc,
+  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
                             StringLiteral *Filename, StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.

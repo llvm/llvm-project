@@ -1325,9 +1325,7 @@ void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
 
 void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
-  E->ParentContext = readDeclAs<DeclContext>();
-  E->BuiltinLoc = readSourceLocation();
-  E->RParenLoc = readSourceLocation();
+  E->EmbedKeywordLoc = readSourceLocation();
   EmbedDataStorage *Data = new (Record.getContext()) EmbedDataStorage;
   Data->Filename = cast<StringLiteral>(Record.readSubStmt());
   Data->BinaryData = cast<StringLiteral>(Record.readSubStmt());

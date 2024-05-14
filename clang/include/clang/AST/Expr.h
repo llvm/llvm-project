@@ -4799,16 +4799,16 @@ private:
   friend class ASTStmtReader;
 };
 
-/// Stores data related to single #embed directive.
+/// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
   StringLiteral *Filename;
   StringLiteral *BinaryData;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
 
-/// Represents a reference to #emded data. By default references the whole
-/// range. Otherwise epresents a subrange of data imported by #embed directive.
-/// Needed to handle nested initializer lists with #embed directives.
+/// Represents a reference to #emded data. By default, this references the whole
+/// range. Otherwise it represents a subrange of data imported by #embed
+/// directive. Needed to handle nested initializer lists with #embed directives.
 /// Example:
 ///  struct S {
 ///    int x, y;
@@ -4822,6 +4822,7 @@ struct EmbedDataStorage {
 ///  struct T t[] = {
 ///  #embed "data" // data contains 10 elements;
 ///  };
+///
 /// The resulting semantic form of initializer list will contain (EE stands
 /// for EmbedExpr):
 ///  { {EE(first two data elements), {EE(3rd element), EE(4th element) }},
@@ -4829,10 +4830,9 @@ struct EmbedDataStorage {
 ///  { {EE(9th and 10th element), { zeroinitializer }}}
 ///
 /// EmbedExpr inside of a semantic initializer list and referencing more than
-///  element can only appear for arrays of scalars.
+/// one element can only appear for arrays of scalars.
 class EmbedExpr final : public Expr {
-  SourceLocation BuiltinLoc, RParenLoc;
-  DeclContext *ParentContext;
+  SourceLocation EmbedKeywordLoc;
   IntegerLiteral *FakeChildNode = nullptr;
   const ASTContext *Ctx = nullptr;
   EmbedDataStorage *Data;
@@ -4840,17 +4840,13 @@ class EmbedExpr final : public Expr {
   unsigned NumOfElements;
 
 public:
-  EmbedExpr(const ASTContext &Ctx, SourceLocation BLoc,
-            SourceLocation RParenLoc, DeclContext *ParentContext,
+  EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
             EmbedDataStorage *Data, unsigned Begin, unsigned NumOfElements);
   explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
 
-  const DeclContext *getParentContext() const { return ParentContext; }
-  DeclContext *getParentContext() { return ParentContext; }
-
-  SourceLocation getLocation() const { return BuiltinLoc; }
-  SourceLocation getBeginLoc() const { return BuiltinLoc; }
-  SourceLocation getEndLoc() const { return RParenLoc; }
+  SourceLocation getLocation() const { return EmbedKeywordLoc; }
+  SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
+  SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
   StringLiteral *getFilenameStringLiteral() const { return Data->Filename; }
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
@@ -4941,11 +4937,12 @@ public:
     return ChildElementIter<true>(const_cast<EmbedExpr *>(this));
   }
 
-  template <typename Foo, typename... Targs>
-  bool doForEachDataElement(Foo F, unsigned &StartingIndexInArray,
-                            Targs... Fargs) const {
+  template <typename Call, typename... Targs>
+  bool doForEachDataElement(Call &&C, unsigned &StartingIndexInArray,
+                            Targs &&...Fargs) const {
     for (auto It : underlying_data_elements()) {
-      if (!F(const_cast<IntegerLiteral *>(It), StartingIndexInArray, Fargs...))
+      if (!std::invoke(std::forward<Call>(C), const_cast<IntegerLiteral *>(It),
+                       StartingIndexInArray, std::forward<Targs>(Fargs)...))
         return false;
       StartingIndexInArray++;
     }

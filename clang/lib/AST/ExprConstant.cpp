@@ -11264,9 +11264,8 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     NumEltsToInit = NumElts;
   } else {
     for (auto *Init : Args) {
-      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts()))
         NumEltsToInit += EmbedS->getDataElementCount() - 1;
-      }
     }
     if (NumEltsToInit > NumElts)
       NumEltsToInit = NumElts;
@@ -11289,8 +11288,6 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Initializing element : " << ArrayIndex << ".\n");
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,
@@ -11318,7 +11315,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     } else {
       if (!Eval(Init, ArrayIndex))
         return false;
-      ArrayIndex++;
+      ++ArrayIndex;
     }
   }
 

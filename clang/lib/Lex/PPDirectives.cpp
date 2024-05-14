@@ -21,7 +21,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -50,7 +49,6 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <cstring>
 #include <new>
 #include <optional>

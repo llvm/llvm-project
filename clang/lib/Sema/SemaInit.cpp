@@ -528,9 +528,9 @@ class InitListChecker {
       }
     }
 
-    Result = new (SemaRef.Context) EmbedExpr(
-        SemaRef.Context, Embed->getBeginLoc(), Embed->getEndLoc(),
-        Embed->getParentContext(), Embed->getData(), CurEmbedIndex, ElsCount);
+    Result = new (SemaRef.Context)
+        EmbedExpr(SemaRef.Context, Embed->getLocation(), Embed->getData(),
+                  CurEmbedIndex, ElsCount);
     CurEmbedIndex += ElsCount;
     if (CurEmbedIndex >= Embed->getDataElementCount()) {
       CurEmbed = nullptr;

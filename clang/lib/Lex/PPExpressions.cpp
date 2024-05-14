@@ -923,8 +923,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    const bool IsNonZero = ResVal.Val != 0;
-    const SourceRange ValRange = ResVal.getRange();
+    bool IsNonZero = ResVal.Val != 0;
+    SourceRange ValRange = ResVal.getRange();
     return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds,
             ValRange};
   }
@@ -939,7 +939,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    const SourceRange ValRange = ResVal.getRange();
+    SourceRange ValRange = ResVal.getRange();
     return {std::nullopt, false, DT.IncludedUndefinedIds, ValRange};
   }
 
@@ -956,8 +956,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
   // Restore 'DisableMacroExpansion'.
   DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-  const bool IsNonZero = ResVal.Val != 0;
-  const SourceRange ValRange = ResVal.getRange();
+  bool IsNonZero = ResVal.Val != 0;
+  SourceRange ValRange = ResVal.getRange();
   return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds, ValRange};
 }
 

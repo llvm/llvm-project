@@ -1274,7 +1274,7 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
   auto It = E->begin();
-  return this->Visit(*It);
+  return this->visit(*It);
 }
 
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,

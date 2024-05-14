@@ -2373,16 +2373,15 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   llvm_unreachable("unhandled case");
 }
 
-EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation BLoc,
-                     SourceLocation RParenLoc, DeclContext *ParentContext,
+EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
                      EmbedDataStorage *Data, unsigned Begin,
                      unsigned NumOfElements)
     : Expr(EmbedExprClass, Ctx.UnsignedCharTy, VK_PRValue, OK_Ordinary),
-      BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext),
-      Ctx(&Ctx), Data(Data), Begin(Begin), NumOfElements(NumOfElements) {
+      EmbedKeywordLoc(Loc), Ctx(&Ctx), Data(Data), Begin(Begin),
+      NumOfElements(NumOfElements) {
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
-      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), BLoc);
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,

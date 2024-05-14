@@ -16734,15 +16734,15 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
       SourceLocExpr(Context, Kind, ResultTy, BuiltinLoc, RPLoc, ParentContext);
 }
 
-ExprResult Sema::ActOnEmbedExpr(SourceLocation BuiltinLoc,
-                                SourceLocation BinaryDataLoc,
-                                SourceLocation RPLoc, StringLiteral *Filename,
+ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                                StringLiteral *Filename,
                                 StringLiteral *BinaryData) {
   EmbedDataStorage *Data = new (Context) EmbedDataStorage;
   Data->Filename = Filename;
   Data->BinaryData = BinaryData;
-  return new (Context) EmbedExpr(Context, BuiltinLoc, RPLoc, CurContext, Data,
-                                 0, Data->getDataElementCount());
+  return new (Context)
+      EmbedExpr(Context, EmbedKeywordLoc, Data, /*NumOfElements=*/0,
+                Data->getDataElementCount());
 }
 
 static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
