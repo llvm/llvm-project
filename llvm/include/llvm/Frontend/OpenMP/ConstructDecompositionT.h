@@ -930,7 +930,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
       // Apply clause without modifier.
       leaf.clauses.push_back(unmodified);
     }
-    applied = true;
+    // The modifier must be applied to some construct.
+    applied = effectiveApplied;
   }
 
   if (!applied)
