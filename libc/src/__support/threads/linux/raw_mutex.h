@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE {
 namespace internal {
 // Lock is a simple timable lock for internal usage.
 // This is separated from Mutex because this one does not need to consider
-// rubustness and reentrancy. Also, this one has spin optimization for shorter
+// robustness and reentrancy. Also, this one has spin optimization for shorter
 // critical sections.
 class RawMutex {
 protected:
