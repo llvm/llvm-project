@@ -209,6 +209,10 @@ what to add to your calendar invite.
      - `ics <https://calendar.google.com/calendar/ical/02582507bac79d186900712566ec3fc69b33ac24d7de0a8c76c7b19976f190c0%40group.calendar.google.com/private-6e35506dbfe13812e92e9aa8cd5d761d/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
+   * - Vectorizer Improvement Working Group
+     - Every 3rd Thursday of the month
+     - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
 
 Past online sync-ups
 ^^^^^^^^^^^^^^^^^^^^
@@ -342,7 +346,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - English
   * - Maksim Levental and Jeremy Kun
     - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
-    - Every two weeks, Fridays at 3:00pm US Pacific, for 90 minutes.
+    - Every two weeks, Wednesdays at 2:00pm US Pacific, for 90 minutes.
     - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
     - English
   * - Rotating hosts

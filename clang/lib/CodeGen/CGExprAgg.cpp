@@ -1760,7 +1760,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
       for (const auto *Field : record->fields())
         assert(
             (Field->isUnnamedBitField() || Field->isAnonymousStructOrUnion()) &&
-            "Only unnamed bitfields or ananymous class allowed");
+            "Only unnamed bitfields or anonymous class allowed");
 #endif
       return;
     }

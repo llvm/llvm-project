@@ -126,6 +126,113 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::NoCreate:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Present:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Attach:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::DevicePtr:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Async:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::Set:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::Wait:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Wait:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -148,6 +255,33 @@ bool checkAlreadyHasClauseOfKind(
   return false;
 }
 
+/// Implement check from OpenACC3.3: section 2.5.4:
+/// Only the async, wait, num_gangs, num_workers, and vector_length clauses may
+/// follow a device_type clause.
+bool checkValidAfterDeviceType(
+    SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
+    const SemaOpenACC::OpenACCParsedClause &NewClause) {
+  // This is only a requirement on compute constructs so far, so this is fine
+  // otherwise.
+  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()))
+    return false;
+  switch (NewClause.getClauseKind()) {
+  case OpenACCClauseKind::Async:
+  case OpenACCClauseKind::Wait:
+  case OpenACCClauseKind::NumGangs:
+  case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::VectorLength:
+  case OpenACCClauseKind::DType:
+  case OpenACCClauseKind::DeviceType:
+    return false;
+  default:
+    S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
+        << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind();
+    S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
+    return true;
+  }
+}
+
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -164,6 +298,17 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
         << Clause.getDirectiveKind() << Clause.getClauseKind();
     return nullptr;
+  }
+
+  if (const auto *DevTypeClause =
+          llvm::find_if(ExistingClauses,
+                        [&](const OpenACCClause *C) {
+                          return isa<OpenACCDeviceTypeClause>(C);
+                        });
+      DevTypeClause != ExistingClauses.end()) {
+    if (checkValidAfterDeviceType(
+            *this, *cast<OpenACCDeviceTypeClause>(*DevTypeClause), Clause))
+      return nullptr;
   }
 
   switch (Clause.getClauseKind()) {
@@ -326,6 +471,27 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getIntExprs()[0], Clause.getEndLoc());
   }
+  case OpenACCClauseKind::Async: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getNumIntExprs() < 2 &&
+           "Invalid number of expressions for Async");
+
+    return OpenACCAsyncClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr,
+        Clause.getEndLoc());
+  }
   case OpenACCClauseKind::Private: {
     // Restrictions only properly implemented on 'compute' constructs, and
     // 'compute' constructs are the only construct that can do anything with
@@ -355,6 +521,190 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return OpenACCFirstPrivateClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::NoCreate: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCNoCreateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Present: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCPresentClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCopy:
+  case OpenACCClauseKind::PCopy:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::Copy;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::Copy: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCopyClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCopyIn:
+  case OpenACCClauseKind::PCopyIn:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::CopyIn;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::CopyIn: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCopyInClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.isReadOnly(), Clause.getVarList(),
+        Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCopyOut:
+  case OpenACCClauseKind::PCopyOut:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::CopyOut;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::CopyOut: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCopyOutClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.isZero(), Clause.getVarList(),
+        Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCreate:
+  case OpenACCClauseKind::PCreate:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::Create;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::Create: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCreateClause::Create(getASTContext(), Clause.getClauseKind(),
+                                       Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(), Clause.isZero(),
+                                       Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Attach: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, but we
+    // still have to make sure it is a pointer type.
+    llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
+                                      Clause.getVarList().end()};
+    VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+      return CheckVarIsPointerType(OpenACCClauseKind::Attach, E);
+    }), VarList.end());
+    Clause.setVarListDetails(VarList,
+                             /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    return OpenACCAttachClause::Create(getASTContext(), Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(),
+                                       Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, but we
+    // still have to make sure it is a pointer type.
+    llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
+                                      Clause.getVarList().end()};
+    VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+      return CheckVarIsPointerType(OpenACCClauseKind::DevicePtr, E);
+    }), VarList.end());
+    Clause.setVarListDetails(VarList,
+                             /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    return OpenACCDevicePtrClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Wait: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    return OpenACCWaitClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getDevNumExpr(), Clause.getQueuesLoc(), Clause.getQueueIdExprs(),
+        Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::DType:
+  case OpenACCClauseKind::DeviceType: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
+    // a source for the list of valid architectures, we need to warn on unknown
+    // identifiers here.
+
+    return OpenACCDeviceTypeClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.getDeviceTypeArchitectures(),
+        Clause.getEndLoc());
   }
   default:
     break;
@@ -482,6 +832,36 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   // TODO OpenACC: Do we want to perform usual unary conversions here? When
   // doing codegen we might find that is necessary, but skip it for now.
   return IntExpr;
+}
+
+bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
+                                        Expr *VarExpr) {
+  // We already know that VarExpr is a proper reference to a variable, so we
+  // should be able to just take the type of the expression to get the type of
+  // the referenced variable.
+
+  // We've already seen an error, don't diagnose anything else.
+  if (!VarExpr || VarExpr->containsErrors())
+    return false;
+
+  if (isa<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()) ||
+      VarExpr->hasPlaceholderType(BuiltinType::ArraySection)) {
+    Diag(VarExpr->getExprLoc(), diag::err_array_section_use) << /*OpenACC=*/0;
+    Diag(VarExpr->getExprLoc(), diag::note_acc_expected_pointer_var);
+    return true;
+  }
+
+  QualType Ty = VarExpr->getType();
+  Ty = Ty.getNonReferenceType().getUnqualifiedType();
+
+  // Nothing we can do if this is a dependent type.
+  if (Ty->isDependentType())
+    return false;
+
+  if (!Ty->isPointerType())
+    return Diag(VarExpr->getExprLoc(), diag::err_acc_var_not_pointer_type)
+           << ClauseKind << Ty;
+  return false;
 }
 
 ExprResult SemaOpenACC::ActOnVar(Expr *VarExpr) {

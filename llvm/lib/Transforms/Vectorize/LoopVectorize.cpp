@@ -8377,10 +8377,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       VPValue *Mask = getBlockInMask(I->getParent());
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
-      auto *SafeRHS =
-         new VPInstruction(Instruction::Select, {Mask, Ops[1], One},
-                           I->getDebugLoc());
-      VPBB->appendRecipe(SafeRHS);
+      auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()));
     }
@@ -8841,8 +8838,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       VPValue *StrideVPV = Plan->getLiveIn(U);
       if (!StrideVPV)
         continue;
-      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(
-          U->getType(), ScevStride->getAPInt().getSExtValue()));
+      unsigned BW = U->getType()->getScalarSizeInBits();
+      APInt C = isa<SExtInst>(U) ? ScevStride->getAPInt().sext(BW)
+                                 : ScevStride->getAPInt().zext(BW);
+      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(U->getType(), C));
       StrideVPV->replaceAllUsesWith(CI);
     }
   }
@@ -9427,6 +9426,8 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 }
 
+/// Use all-true mask for reverse rather than actual mask, as it avoids a
+/// dependence w/o affecting the result.
 static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
                                      Value *EVL, const Twine &Name) {
   VectorType *ValTy = cast<VectorType>(Operand->getType());
@@ -9474,11 +9475,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
-  if (isReverse()) {
-    // Use cheap all-true mask for reverse rather than actual mask, it does not
-    // affect the result.
+  if (isReverse())
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
-  }
   State.set(this, Res, 0);
 }
 
@@ -9537,11 +9535,8 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  if (isReverse()) {
-    // Use cheap all-true mask for reverse rather than actual mask, it does not
-    // affect the result.
+  if (isReverse())
     StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
-  }
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask, 0);

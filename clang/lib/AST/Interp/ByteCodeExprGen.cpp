@@ -2039,7 +2039,7 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       if (!this->visit(Init))
         return false;
 
-      if (!this->emitSetField(*T, F.Offset, E))
+      if (!this->emitInitField(*T, F.Offset, E))
         return false;
     } else {
       if (!this->emitDupPtr(E))
@@ -2173,7 +2173,9 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   if (T->isArrayType()) {
     const ConstantArrayType *CAT =
         Ctx.getASTContext().getAsConstantArrayType(E->getType());
-    assert(CAT);
+    if (!CAT)
+      return false;
+
     size_t NumElems = CAT->getZExtSize();
     const Function *Func = getFunction(E->getConstructor());
     if (!Func || !Func->isConstexpr())
@@ -2875,7 +2877,8 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
     return this->emitRetValue(E) && RootScope.destroyLocals();
   }
 
-  return RootScope.destroyLocals();
+  RootScope.destroyLocals();
+  return false;
 }
 
 /// Toplevel visitDecl().
