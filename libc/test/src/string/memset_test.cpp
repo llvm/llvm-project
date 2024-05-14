@@ -56,7 +56,6 @@ TEST(LlvmLibcMemsetTest, CheckAccess) {
   }
 }
 
-#endif // defined(LIBC_TARGET_OS_IS_LINUX) &&
-       // !defined(LIBC_FULL_BUILD)
+#endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
 } // namespace LIBC_NAMESPACE

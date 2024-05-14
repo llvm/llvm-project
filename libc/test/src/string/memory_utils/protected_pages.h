@@ -16,7 +16,7 @@
 #include "src/__support/macros/properties/os.h" // LIBC_TARGET_OS_IS_LINUX
 #if defined(LIBC_FULL_BUILD) || !defined(LIBC_TARGET_OS_IS_LINUX)
 #error "Protected pages requires mmap and cannot be used in full build mode."
-#endif // LIBC_TARGET_OS_IS_LINUX
+#endif // defined(LIBC_FULL_BUILD) || !defined(LIBC_TARGET_OS_IS_LINUX)
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include <stddef.h>                          // size_t

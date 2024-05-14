@@ -13,7 +13,7 @@
 
 #if !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 #include "memory_utils/protected_pages.h"
-#endif // LIBC_TARGET_OS_IS_LINUX
+#endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
 namespace LIBC_NAMESPACE {
 
@@ -69,7 +69,6 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
   }
 }
 
-#endif // defined(LIBC_TARGET_OS_IS_LINUX) &&
-       // !defined(LIBC_FULL_BUILD)
+#endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
 } // namespace LIBC_NAMESPACE
