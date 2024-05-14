@@ -1646,22 +1646,19 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
 
     // Check if the pointer with the same offset is found.
     int64_t Offset = *Diff;
-    auto Res = Offsets.emplace(Offset, Cnt);
-    if (!Res.second)
+    auto [It, IsInserted] = Offsets.emplace(Offset, Cnt++);
+    if (!IsInserted)
       return false;
     // Consecutive order if the inserted element is the last one.
-    IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-    ++Cnt;
+    IsConsecutive = IsConsecutive && std::next(It) == Offsets.end();
   }
   SortedIndices.clear();
+  Cnt = 0;
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
     SortedIndices.resize(VL.size());
-    Cnt = 0;
-    for (const std::pair<int64_t, int> &Pair : Offsets) {
-      SortedIndices[Cnt] = Pair.second;
-      ++Cnt;
-    }
+    for (const auto &[_, Off] : Offsets)
+      SortedIndices[Cnt++] = Off;
   }
   return true;
 }
@@ -2656,7 +2653,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                                SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
     auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
-    recordAnalysis("CantIdentifyArrayBounds", I) 
+    recordAnalysis("CantIdentifyArrayBounds", I)
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
