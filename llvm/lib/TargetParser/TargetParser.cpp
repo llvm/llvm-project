@@ -360,6 +360,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["dot9-insts"] = true;
       Features["dot10-insts"] = true;
       Features["dot11-insts"] = true;
+      Features["dot12-insts"] = true;
       Features["dl-insts"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
@@ -391,6 +392,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["dot8-insts"] = true;
       Features["dot9-insts"] = true;
       Features["dot10-insts"] = true;
+      Features["dot12-insts"] = true;
       Features["dl-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
@@ -460,6 +462,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["permlane16-swap"] = true;
       Features["permlane32-swap"] = true;
       Features["ashr-pk-insts"] = true;
+      Features["dot12-insts"] = true;
       Features["gfx950-insts"] = true;
       [[fallthrough]];
     case GK_GFX942:

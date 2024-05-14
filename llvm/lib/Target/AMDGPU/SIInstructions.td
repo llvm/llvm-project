@@ -1913,6 +1913,7 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -1922,6 +1923,13 @@ def : GCNPat <
 >;
 }
 
+let SubtargetPredicate = HasBF16PackedInsts in {
+def : GCNPat <
+  (v2bf16 (AMDGPUclamp (VOP3PMods v2bf16:$src0, i32:$src0_modifiers))),
+  (V_PK_MAX_NUM_BF16 $src0_modifiers, $src0,
+                     $src0_modifiers, $src0, DSTCLAMP.ENABLE)
+>;
+} // End SubtargetPredicate = HasBF16PackedInsts
 
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/
@@ -3200,7 +3208,7 @@ def : GCNPat <
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
-foreach vecTy = [v2i16, v2f16] in {
+foreach vecTy = [v2i16, v2f16, v2bf16] in {
 
 defvar Ty = vecTy.ElementType;
 
@@ -3246,7 +3254,7 @@ def : GCNPat <
 >;
 
 
-foreach vecTy = [v2i16, v2f16] in {
+foreach vecTy = [v2i16, v2f16, v2bf16] in {
 
 defvar Ty = vecTy.ElementType;
 defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);

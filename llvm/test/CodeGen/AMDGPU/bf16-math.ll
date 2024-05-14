@@ -257,6 +257,60 @@ define amdgpu_ps void @v_test_max_v2bf16_vl(<2 x bfloat> %a, ptr addrspace(1) %o
   ret void
 }
 
+define amdgpu_ps bfloat @test_clamp_bf16(bfloat %src) {
+; GCN-LABEL: test_clamp_bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; GCN-NEXT:    ; return to shader part epilog
+  %max = call bfloat @llvm.maxnum.bf16(bfloat %src, bfloat 0.0)
+  %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
+  ret bfloat %clamp
+}
+
+define amdgpu_ps bfloat @test_clamp_bf16_s(bfloat inreg %src) {
+; GCN-LABEL: test_clamp_bf16_s:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_max_num_bf16 v0, s0, s0 clamp
+; GCN-NEXT:    ; return to shader part epilog
+  %max = call bfloat @llvm.maxnum.bf16(bfloat %src, bfloat 0.0)
+  %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
+  ret bfloat %clamp
+}
+
+define amdgpu_ps float @test_clamp_v2bf16(<2 x bfloat> %src) {
+; GCN-LABEL: test_clamp_v2bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; GCN-NEXT:    ; return to shader part epilog
+  %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %src, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
+  %clamp = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %max, <2 x bfloat> <bfloat 1.0, bfloat 1.0>)
+  %ret = bitcast <2 x bfloat> %clamp to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_clamp_v2bf16_s(<2 x bfloat> inreg %src) {
+; GCN-LABEL: test_clamp_v2bf16_s:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_max_num_bf16 v0, s0, s0 clamp
+; GCN-NEXT:    ; return to shader part epilog
+  %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %src, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
+  %clamp = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %max, <2 x bfloat> <bfloat 1.0, bfloat 1.0>)
+  %ret = bitcast <2 x bfloat> %clamp to float
+  ret float %ret
+}
+
+define amdgpu_ps float @test_clamp_v2bf16_folding(<2 x bfloat> %src0, <2 x bfloat> %src1) {
+; GCN-LABEL: test_clamp_v2bf16_folding:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_mul_bf16 v0, v0, v1 clamp
+; GCN-NEXT:    ; return to shader part epilog
+  %mul = fmul <2 x bfloat> %src0, %src1
+  %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %mul, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
+  %clamp = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %max, <2 x bfloat> <bfloat 1.0, bfloat 1.0>)
+  %ret = bitcast <2 x bfloat> %clamp to float
+  ret float %ret
+}
+
 define amdgpu_ps void @v_test_fma_v2bf16_vvv(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, ptr addrspace(1) %out) {
 ; GCN-LABEL: v_test_fma_v2bf16_vvv:
 ; GCN:       ; %bb.0:
@@ -396,6 +450,8 @@ define amdgpu_ps void @llvm_exp2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
   ret void
 }
 
+declare bfloat @llvm.minnum.bf16(bfloat, bfloat)
+declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
 declare <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
 declare <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
 declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
