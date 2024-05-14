@@ -76,8 +76,15 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // We have at most 2 registers used by one rule at a time, so we should only have 2 registers MDInfos.
 
-// CHECK:      struct MatchInfosTy {
-// CHECK-NEXT:   Register MDInfo0, MDInfo1;
+// CHECK:      struct MatchDataRule2 : MatchDataBase {
+// CHECK-NEXT:   static constexpr unsigned ID = 2;
+// CHECK-NEXT:   Register   r0;
+// CHECK-NEXT:   Register   r1;
+// CHECK-NEXT: };
+
+// CHECK:      struct MatchDataRule3 : MatchDataBase {
+// CHECK-NEXT:   static constexpr unsigned ID = 3;
+// CHECK-NEXT:   Register   r0;
 // CHECK-NEXT: };
 
 // Check predicates
@@ -96,13 +103,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   B.setInstrAndDebugLoc(I);
 // CHECK-NEXT:   State.MIs.clear();
 // CHECK-NEXT:   State.MIs.push_back(&I);
-// CHECK-NEXT:   MatchInfos = MatchInfosTy();
-// CHECK-EMPTY:
-// CHECK-NEXT:   if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), *ST.getInstrInfo(), MRI, *MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures, /*CoverageInfo*/ nullptr))
-// CHECK-NEXT:     return true;
-// CHECK-NEXT:   }
-// CHECK-EMPTY:
-// CHECK-NEXT:   return false;
+// CHECK-NEXT:   const bool Result = executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), *ST.getInstrInfo(), MRI, *MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures, /*CoverageInfo*/ nullptr);
+// CHECK-NEXT:   resetMatchData();
+// CHECK-NEXT:   return Result;
 // CHECK-NEXT: }
 
 // Check apply
@@ -120,7 +123,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner1:{
 // CHECK-NEXT:     Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);
-// CHECK-NEXT:     APPLY MatchInfos.MDInfo0, MatchInfos.MDInfo1
+// CHECK-NEXT:     APPLY getOrCreateMatchData<MatchDataRule2>().r0, getOrCreateMatchData<MatchDataRule2>().r1
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner2:{

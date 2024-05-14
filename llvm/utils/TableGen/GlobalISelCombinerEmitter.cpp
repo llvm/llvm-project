@@ -35,7 +35,6 @@
 #include "Common/GlobalISel/CombinerUtils.h"
 #include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
-#include "Common/GlobalISel/MatchDataInfo.h"
 #include "Common/GlobalISel/PatternParser.h"
 #include "Common/GlobalISel/Patterns.h"
 #include "Common/SubtargetFeatureInfo.h"
@@ -605,6 +604,56 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
   return TECs;
 }
 
+//===- MatchData Handling -------------------------------------------------===//
+//
+/// Parsing
+///   Record all MatchData definitions seen.
+///
+///   Once all defs have been parsed, handleRuleMatchDataDefs is used to create
+///   a new MatchDataStruct (if at least one MatchDataDef exists) and add it to
+///   AllMatchDataStructDecls for emission later.
+///
+/// Layout
+///   Each rule that has at least one MatchData will create a struct (See
+///   getMatchDataStructTypeName) that derives from Combiner::MatchDataBase
+///   and containing each MatchData definition. Fields in that struct are
+///   named after the MatchData symbols.
+///
+/// Access/Code Expansion
+///   Combiner::getOrCreateMatchData is used to fetch (and lazily allocate)
+///   MatchDatas as they're needed.
+struct MatchDataDef {
+  MatchDataDef(StringRef Symbol, StringRef Type) : Symbol(Symbol), Type(Type) {}
+
+  StringRef Symbol;
+  StringRef Type;
+};
+
+struct MatchDataStruct {
+  std::string TypeName;
+  unsigned ID;
+  std::vector<MatchDataDef> Fields;
+};
+
+static std::vector<std::unique_ptr<MatchDataStruct>> AllMatchDataStructs;
+
+/// If \p Defs has at least one item, prepare a new MatchDataStruct to contain
+/// this rule's MatchData defs. If \p Defs is empty, return nullptr.
+static const MatchDataStruct *
+handleRuleMatchDataDefs(ArrayRef<MatchDataDef> Defs, unsigned RuleID) {
+  if (Defs.empty())
+    return nullptr;
+
+  auto MDS = std::make_unique<MatchDataStruct>();
+  MDS->TypeName = "MatchDataRule" + std::to_string(RuleID);
+  MDS->ID = RuleID;
+  for (const auto &Def : Defs)
+    MDS->Fields.push_back(Def);
+  auto *Ptr = MDS.get();
+  AllMatchDataStructs.push_back(std::move(MDS));
+  return Ptr;
+}
+
 //===- CombineRuleBuilder -------------------------------------------------===//
 
 /// Parses combine rule and builds a small intermediate representation to tie
@@ -777,8 +826,8 @@ private:
   Pattern *MatchRoot = nullptr;
   SmallDenseSet<InstructionPattern *, 2> ApplyRoots;
 
-  SmallVector<MatchDataInfo, 2> MatchDatas;
   SmallVector<PatternAlternatives, 1> PermutationsToEmit;
+  const MatchDataStruct *RuleMatchData = nullptr;
 };
 
 bool CombineRuleBuilder::parseAll() {
@@ -842,13 +891,12 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
   OS << "(CombineRule name:" << RuleDef.getName() << " id:" << RuleID
      << " root:" << RootName << '\n';
 
-  if (!MatchDatas.empty()) {
-    OS << "  (MatchDatas\n";
-    for (const auto &MD : MatchDatas) {
-      OS << "    ";
-      MD.print(OS);
-      OS << '\n';
-    }
+  if (RuleMatchData) {
+    OS << "  (MatchData typename:" << RuleMatchData->TypeName
+       << " id:" << RuleMatchData->ID << "\n";
+    for (const auto &MD : RuleMatchData->Fields)
+      OS << "    (MatchDataDef symbol:" << MD.Symbol << " type:" << MD.Type
+         << ")\n";
     OS << "  )\n";
   }
 
@@ -1007,8 +1055,13 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
 
 void CombineRuleBuilder::declareAllMatchDatasExpansions(
     CodeExpansions &CE) const {
-  for (const auto &MD : MatchDatas)
-    CE.declare(MD.getPatternSymbol(), MD.getQualifiedVariableName());
+  if (!RuleMatchData)
+    return;
+
+  const std::string BaseAccessor =
+      "getOrCreateMatchData<" + RuleMatchData->TypeName + ">().";
+  for (const auto &MD : RuleMatchData->Fields)
+    CE.declare(MD.Symbol, (BaseAccessor + MD.Symbol).str());
 }
 
 void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
@@ -1429,6 +1482,7 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
     return false;
   }
 
+  SmallVector<MatchDataDef, 2> MatchDatas;
   SmallVector<StringRef> Roots;
   for (unsigned I = 0, E = Def.getNumArgs(); I < E; ++I) {
     if (isSpecificDef(*Def.getArg(I), "root")) {
@@ -1463,9 +1517,7 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
   }
 
   RootName = Roots.front();
-
-  // Assign variables to all MatchDatas.
-  AssignMatchDataVariables(MatchDatas);
+  RuleMatchData = handleRuleMatchDataDefs(MatchDatas, RuleID);
   return true;
 }
 
@@ -2371,15 +2423,12 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
-     << "  " << MatchDataInfo::StructName << " = "
-     << MatchDataInfo::StructTypeName << "();\n\n"
-     << "  if (executeMatchTable(*this, State, ExecInfo, B"
+     << "  const bool Result = executeMatchTable(*this, State, ExecInfo, B"
      << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
         "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
-     << ", /*CoverageInfo*/ nullptr)) {\n"
-     << "    return true;\n"
-     << "  }\n\n"
-     << "  return false;\n"
+     << ", /*CoverageInfo*/ nullptr);\n"
+     << "  resetMatchData();\n"
+     << "  return Result;\n"
      << "}\n\n";
 }
 
@@ -2472,14 +2521,13 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
 
 void GICombinerEmitter::emitAdditionalTemporariesDecl(raw_ostream &OS,
                                                       StringRef Indent) {
-  OS << Indent << "struct " << MatchDataInfo::StructTypeName << " {\n";
-  for (const auto &[Type, VarNames] : AllMatchDataVars) {
-    assert(!VarNames.empty() && "Cannot have no vars for this type!");
-    OS << Indent << "  " << Type << " " << join(VarNames, ", ") << ";\n";
+  for (const auto &MDS : AllMatchDataStructs) {
+    OS << Indent << "struct " << MDS->TypeName << " : MatchDataBase {\n"
+       << Indent << "  static constexpr unsigned ID = " << MDS->ID << ";\n";
+    for (const auto &Field : MDS->Fields)
+      OS << Indent << "  " << Field.Type << " " << Field.Symbol << ";\n";
+    OS << Indent << "};\n\n";
   }
-  OS << Indent << "};\n"
-     << Indent << "mutable " << MatchDataInfo::StructTypeName << " "
-     << MatchDataInfo::StructName << ";\n\n";
 }
 
 GICombinerEmitter::GICombinerEmitter(RecordKeeper &RK,

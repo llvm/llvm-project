@@ -60,6 +60,56 @@ public:
 
   bool combineMachineInstrs();
 
+  /// Base class for all dynamic MatchDatas definitions, used for type erasure
+  /// purposes.
+  ///
+  /// As derived classes may have non-trivial destructors, we need to be able to
+  /// call the destructor through the unique_ptr of the base class.
+  ///
+  /// There are two ways to achieve this.
+  ///   - (Easiest) Make MatchDataBase have a virtual destructor.
+  ///   - Use a custom deleter
+  ///
+  /// We use solution number 2, that way we don't have a vtable in all MatchData
+  /// objects (making them more compact), and we can have trivially destructible
+  /// MatchDatas, which avoids useless virtual function calls and allows the
+  /// compiler/libraries to use faster code (as it knows no destructor needs to
+  /// be called).
+  ///
+  /// This is really a micro-optimization, but MatchData used to be a
+  /// performance issue so better safe than sorry.
+  struct MatchDataBase {};
+
+  /// If a MatchData instance is active, cast it to Ty and return it.
+  /// Otherwise, create a new MatchData instance of type Ty and return it.
+  template <typename Ty> Ty &getOrCreateMatchData() const {
+    static_assert(std::is_base_of_v<MatchDataBase, Ty>,
+                  "Type must derive from MatchDataBase to be allocatable!");
+    // Allocate if we have no MatchData active, or if the MatchData that's
+    // active is not the one that we want.
+    if (!MatchData || Ty::ID != MatchDataID) {
+      MatchDataID = Ty::ID;
+      MatchData = std::unique_ptr<Ty, MatchDataDeleter>(
+          new Ty(), [](MatchDataBase *MD) { delete static_cast<Ty *>(MD); });
+    }
+    return *static_cast<Ty *>(MatchData.get());
+  }
+
+  /// Deallocates the currently active MatchData instance.
+  ///
+  /// TODO: Can we get away with never actually calling this? The MatchData
+  /// instance would then just be deleted by getOrCreateMatchData or when the
+  /// Combiner class is deallocated. I'm just a bit scared it'd cause issues
+  /// with captured values in some of the lambdas used as MatchInfo.
+  void resetMatchData() const { MatchData.reset(); }
+
+private:
+  using MatchDataDeleter = void (*)(MatchDataBase *);
+
+  mutable std::unique_ptr<MatchDataBase, MatchDataDeleter> MatchData = {
+      nullptr, [](auto *) {}};
+  mutable unsigned MatchDataID = unsigned(-1);
+
 protected:
   CombinerInfo &CInfo;
   GISelChangeObserver &Observer;

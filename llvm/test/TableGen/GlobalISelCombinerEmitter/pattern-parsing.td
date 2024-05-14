@@ -64,8 +64,8 @@ def InstTest0 : GICombineRule<
   (apply [{ APPLY }])>;
 
 // CHECK:      (CombineRule name:InstTest1 id:3 root:d
-// CHECK-NEXT:   (MatchDatas
-// CHECK-NEXT:      (MatchDataInfo pattern_symbol:r0 type:'Register' var_name:MDInfo0)
+// CHECK-NEXT:   (MatchData typename:MatchDataRule3 id:3
+// CHECK-NEXT:     (MatchDataDef symbol:r0 type:Register)
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (MatchPats
 // CHECK-NEXT:     <match_root>d:(CodeGenInstructionPattern COPY operands:[<def>$a, i32:$b])
@@ -89,8 +89,8 @@ def InstTest1 : GICombineRule<
   (apply [{ APPLY }])>;
 
 // CHECK:      (CombineRule name:InstTest2 id:4 root:d
-// CHECK-NEXT:   (MatchDatas
-// CHECK-NEXT:     (MatchDataInfo pattern_symbol:r0 type:'Register' var_name:MDInfo0)
+// CHECK-NEXT:   (MatchData typename:MatchDataRule4 id:4
+// CHECK-NEXT:     (MatchDataDef symbol:r0 type:Register)
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (MatchPats
 // CHECK-NEXT:     <match_root>__InstTest2_match_0:(CodeGenInstructionPattern COPY operands:[<def>$d, (i32 0):$x])
