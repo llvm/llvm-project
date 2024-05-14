@@ -63,25 +63,26 @@ void B<int>::g() requires true;
 
 } // namespace cwg2847
 
-namespace cwg2857 { // cwg2857: 2.7
+namespace cwg2857 { // cwg2857: no
 struct A {};
-struct B {
-  int operator+(A);
-};
 template <typename>
 struct D;
+namespace N {
+  struct B {};
+  void adl_only(A*, D<int>*); // #cwg2857-adl_only
+}
 
 void f(A* a, D<int>* d) {
-  *d + *a;
-  // expected-error@-1 {{invalid operands to binary expression ('D<int>' and 'A')}}
+  adl_only(a, d);
+  // expected-error@-1 {{use of undeclared identifier 'adl_only'; did you mean 'N::adl_only'?}}
+  //   expected-note@#cwg2857-adl_only {{'N::adl_only' declared here}}
 }
 
 template <typename>
-struct D : B {};
-
-void g(A* a, D<int>* d) {
-  *d + *a;
-}
+struct D : N::B {
+  // FIXME: ADL shouldn't associate it's base B and N since D is not complete here
+  decltype(adl_only((A*) nullptr, (D*) nullptr)) f;
+};
 } // namespace cwg2857
 
 namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
