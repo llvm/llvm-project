@@ -1229,6 +1229,13 @@ public:
   /// C++11 [class]p7, specifically using the C++11 rules without any DRs.
   bool isCXX11StandardLayout() const { return data().IsCXX11StandardLayout; }
 
+  /// If this is a standard-layout class or union, any and all data members will
+  /// be declared in the same type.
+  ///
+  /// This retrieves the type if this class has any data members,
+  /// or the current class if there is no class with fields.
+  const CXXRecordDecl *getStandardLayoutBaseWithFields() const;
+
   /// Determine whether this class, or any of its class subobjects,
   /// contains a mutable field.
   bool hasMutableFields() const { return data().HasMutableFields; }
