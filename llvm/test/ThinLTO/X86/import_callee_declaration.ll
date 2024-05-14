@@ -51,6 +51,7 @@
 ; LIB-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
 ; LIB-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (name: "large_func", summaries: {{.*}}) ; guid = 2418497564662708935
 ; LIB-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (name: "large_indirect_callee", summaries: {{.*}}) ; guid = 14343440786664691134
+; LIB-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (name: "large_indirect_callee_alias", summaries: {{.*}}, aliasee: [[LARGEINDIRECT]]
 ;
 ; Secondly disassemble main's combined summary and verify the import type of
 ; these two GUIDs are declaration.
@@ -82,13 +83,13 @@
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
 
-; IMPORTDUMP: Not importing function 11825436545918268459 callee from lib.cc
-; IMPORTDUMP: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
-; IMPORTDUMP: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
-; IMPORTDUMP: Is importing function definition 6976996067367342685 small_func from lib.cc
-; IMPORTDUMP: Is importing function declaration 2418497564662708935 large_func from lib.cc
-; IMPORTDUMP: Not importing global 7680325410415171624 calleeAddrs from lib.cc
-; IMPORTDUMP: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
+; IMPORTDUMP-DAG: Not importing function 11825436545918268459 callee from lib.cc
+; IMPORTDUMP-DAG: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
+; IMPORTDUMP-DAG: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
+; IMPORTDUMP-DAG: Is importing function definition 6976996067367342685 small_func from lib.cc
+; IMPORTDUMP-DAG: Is importing function declaration 2418497564662708935 large_func from lib.cc
+; IMPORTDUMP-DAG: Not importing global 7680325410415171624 calleeAddrs from lib.cc
+; IMPORTDUMP-DAG: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
 
 ; RUN: llvm-dis in-process.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 
