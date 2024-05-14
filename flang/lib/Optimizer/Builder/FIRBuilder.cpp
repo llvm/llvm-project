@@ -322,18 +322,18 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
+    bool isTarget, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
   llvm::SmallVector<mlir::NamedAttribute> attrs;
-  if (cudaAttr) {
+  if (dataAttr) {
     auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
                                             module.getContext());
     attrs.push_back(mlir::NamedAttribute(
-        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+        fir::GlobalOp::getDataAttrAttrName(globalOpName), dataAttr));
   }
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
                                     linkage, attrs);
@@ -346,7 +346,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();

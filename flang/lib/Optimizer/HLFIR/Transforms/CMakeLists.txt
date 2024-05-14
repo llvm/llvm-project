@@ -12,10 +12,12 @@ add_flang_library(HLFIRTransforms
 
   DEPENDS
   FIRDialect
+  CUFAttrs
   HLFIROpsIncGen
   ${dialect_libs}
 
   LINK_LIBS
+  CUFAttrs
   FIRAnalysis
   FIRDialect
   FIRBuilder
