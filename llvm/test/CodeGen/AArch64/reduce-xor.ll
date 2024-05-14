@@ -511,10 +511,9 @@ define i64 @test_redxor_v2i64(<2 x i64> %a) {
 ;
 ; GISEL-LABEL: test_redxor_v2i64:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov d1, v0.d[1]
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov x9, d1
-; GISEL-NEXT:    eor x0, x8, x9
+; GISEL-NEXT:    mov x8, v0.d[1]
+; GISEL-NEXT:    fmov x9, d0
+; GISEL-NEXT:    eor x0, x9, x8
 ; GISEL-NEXT:    ret
   %xor_result = call i64 @llvm.vector.reduce.xor.v2i64(<2 x i64> %a)
   ret i64 %xor_result
@@ -532,10 +531,9 @@ define i64 @test_redxor_v4i64(<4 x i64> %a) {
 ; GISEL-LABEL: test_redxor_v4i64:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    eor v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    mov d1, v0.d[1]
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov x9, d1
-; GISEL-NEXT:    eor x0, x8, x9
+; GISEL-NEXT:    mov x8, v0.d[1]
+; GISEL-NEXT:    fmov x9, d0
+; GISEL-NEXT:    eor x0, x9, x8
 ; GISEL-NEXT:    ret
   %xor_result = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> %a)
   ret i64 %xor_result

@@ -1576,8 +1576,7 @@ define <8 x i16> @test_dup_v2i64_v8i16(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: test_dup_v2i64_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
 ; CHECK-GI-NEXT:    dup v0.8h, w8
 ; CHECK-GI-NEXT:    ret
 entry:

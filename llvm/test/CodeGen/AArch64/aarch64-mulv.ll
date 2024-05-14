@@ -434,20 +434,12 @@ entry:
 }
 
 define i64 @mulv_v2i64(<2 x i64> %a) {
-; CHECK-SD-LABEL: mulv_v2i64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, v0.d[1]
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    mul x0, x9, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mulv_v2i64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mul x0, x8, x9
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mulv_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mul x0, x9, x8
+; CHECK-NEXT:    ret
 entry:
   %arg1 = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> %a)
   ret i64 %arg1
@@ -493,14 +485,12 @@ define i64 @mulv_v4i64(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: mulv_v4i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    mov d3, v1.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    fmov x10, d3
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mul x9, x9, x10
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    mov x9, v1.d[1]
+; CHECK-GI-NEXT:    mul x8, x10, x8
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    mul x9, x10, x9
 ; CHECK-GI-NEXT:    mul x0, x8, x9
 ; CHECK-GI-NEXT:    ret
 entry:
