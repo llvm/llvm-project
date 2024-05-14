@@ -250,6 +250,9 @@ Status ProcessElfCore::DoLoadCore() {
     }
   }
 
+  // Try to find gnu build id before we load the executable.
+  UpdateBuildIdForNTFileEntries();
+
   // Core files are useless without the main executable. See if we can locate
   // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
@@ -258,6 +261,7 @@ Status ProcessElfCore::DoLoadCore() {
     if (!m_nt_file_entries.empty()) {
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
+      exe_module_spec.GetUUID() = m_nt_file_entries[0].uuid;
       exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
@@ -269,6 +273,14 @@ Status ProcessElfCore::DoLoadCore() {
     }
   }
   return error;
+}
+
+void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
+  if (!m_nt_file_entries.empty()) {
+    for (NT_FILE_Entry &entry : m_nt_file_entries) {
+      entry.uuid = FindBuidIdInCoreMemory(entry.start);
+    }
+  }
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
@@ -573,7 +585,6 @@ llvm::Expected<std::vector<CoreNote>>
 ProcessElfCore::parseSegment(const DataExtractor &segment) {
   lldb::offset_t offset = 0;
   std::vector<CoreNote> result;
-
   while (offset < segment.GetByteSize()) {
     ELFNote note = ELFNote();
     if (!note.Parse(segment, &offset))
@@ -981,6 +992,67 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
         "Don't know how to parse core file. Unsupported OS.",
         llvm::inconvertibleErrorCode());
   }
+}
+
+UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
+  UUID invalid_uuid;
+  const uint32_t addr_size = GetAddressByteSize();
+  const size_t elf_header_size = addr_size == 4 ? sizeof(llvm::ELF::Elf32_Ehdr)
+                                                : sizeof(llvm::ELF::Elf64_Ehdr);
+
+  // 80 bytes buffer is larger enough for the ELF header or program headers
+  unsigned char buf[80];
+  Status error;
+  size_t byte_read = ReadMemory(address, buf, elf_header_size, error);
+  if (byte_read != elf_header_size || !elf::ELFHeader::MagicBytesMatch(buf))
+    return invalid_uuid;
+  assert(sizeof(buf) >= elf_header_size);
+  DataExtractor elf_header_data(buf, elf_header_size, GetByteOrder(),
+                                addr_size);
+  lldb::offset_t offset = 0;
+
+  elf::ELFHeader elf_header;
+  elf_header.Parse(elf_header_data, &offset);
+
+  const lldb::addr_t ph_addr = address + elf_header.e_phoff;
+
+  for (unsigned int i = 0; i < elf_header.e_phnum; ++i) {
+    byte_read = ReadMemory(ph_addr + i * elf_header.e_phentsize, buf,
+                           elf_header.e_phentsize, error);
+    if (byte_read != elf_header.e_phentsize)
+      break;
+    assert(sizeof(buf) >= elf_header.e_phentsize);
+    DataExtractor program_header_data(buf, elf_header.e_phentsize,
+                                      GetByteOrder(), addr_size);
+    offset = 0;
+    elf::ELFProgramHeader program_header;
+    program_header.Parse(program_header_data, &offset);
+    if (program_header.p_type != llvm::ELF::PT_NOTE)
+      continue;
+
+    std::vector<uint8_t> note_bytes;
+    note_bytes.resize(program_header.p_memsz);
+
+    byte_read = ReadMemory(program_header.p_vaddr, note_bytes.data(),
+                           program_header.p_memsz, error);
+    if (byte_read != program_header.p_memsz)
+      continue;
+    assert(sizeof(buf) >= program_header.p_memsz);
+    DataExtractor segment_data(note_bytes.data(), note_bytes.size(),
+                               GetByteOrder(), addr_size);
+    auto notes_or_error = parseSegment(segment_data);
+    if (!notes_or_error)
+      return invalid_uuid;
+    for (const CoreNote &note : *notes_or_error) {
+      if (note.info.n_namesz == 4 &&
+          note.info.n_type == llvm::ELF::NT_GNU_BUILD_ID) {
+        if ("GNU" == note.info.n_name)
+          return UUID(llvm::ArrayRef<uint8_t>(
+              note.data.GetDataStart(), note.info.n_descsz /*byte size*/));
+      }
+    }
+  }
+  return invalid_uuid;
 }
 
 uint32_t ProcessElfCore::GetNumThreadContexts() {
