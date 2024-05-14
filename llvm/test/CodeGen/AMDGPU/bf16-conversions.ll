@@ -61,7 +61,8 @@ define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_s(<2 x float> inreg %src) {
 ; GFX-940-NEXT:    s_add_i32 s5, s2, 0x7fff
 ; GFX-940-NEXT:    v_cmp_u_f32_e64 s[2:3], s1, s1
 ; GFX-940-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX-940-NEXT:    s_cselect_b32 s2, s4, s5
+; GFX-940-NEXT:    s_cselect_b32 s1, s4, s5
+; GFX-940-NEXT:    s_lshr_b32 s2, s1, 16
 ; GFX-940-NEXT:    s_bfe_u32 s1, s0, 0x10010
 ; GFX-940-NEXT:    s_add_i32 s1, s1, s0
 ; GFX-940-NEXT:    s_or_b32 s3, s0, 0x400000
@@ -69,7 +70,8 @@ define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_s(<2 x float> inreg %src) {
 ; GFX-940-NEXT:    v_cmp_u_f32_e64 s[0:1], s0, s0
 ; GFX-940-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX-940-NEXT:    s_cselect_b32 s0, s3, s4
-; GFX-940-NEXT:    s_pack_hh_b32_b16 s0, s0, s2
+; GFX-940-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX-940-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX-940-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX-940-NEXT:    ; return to shader part epilog
 ;

@@ -72,7 +72,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   bool HasVectorCSR =
-      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall;
+      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall &&
+      Subtarget.hasVInstructions();
 
   switch (Subtarget.getTargetABI()) {
   default:
@@ -615,8 +616,16 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
     unsigned CalleeSavedSize = 0;
     for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R;
          ++R) {
-      if (!Subtarget.isRegisterReservedByUser(Reg))
-        CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+      if (Subtarget.isRegisterReservedByUser(Reg))
+        continue;
+
+      if (RISCV::GPRRegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::GPRRegClass);
+      else if (RISCV::FPR64RegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::FPR64RegClass);
+      else if (RISCV::FPR32RegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::FPR32RegClass);
+      // Ignore vector registers.
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
