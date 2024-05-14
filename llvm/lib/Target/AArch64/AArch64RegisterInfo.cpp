@@ -553,8 +553,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
       return true;
 
     auto &ST = MF.getSubtarget<AArch64Subtarget>();
-    if (ST.hasSVE() ||
-        (ST.hasSME() && ST.hasStreamingInterfaceOrBody(MF.getFunction()))) {
+    if (ST.hasSVE() || ST.isStreaming()) {
       const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
