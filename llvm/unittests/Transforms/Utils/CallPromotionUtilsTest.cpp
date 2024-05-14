@@ -446,11 +446,6 @@ declare void @_ZN5Base35func3Ev(ptr)
   CallInst *CI = dyn_cast<CallInst>(&*std::next(F->front().rbegin()));
   ASSERT_TRUE(CI && CI->isIndirectCall());
 
-  LoadInst *FuncPtr = dyn_cast<LoadInst>(CI->getCalledOperand());
-
-  GetElementPtrInst *GEP =
-      dyn_cast<GetElementPtrInst>(FuncPtr->getPointerOperand());
-
   // Create the constant and the branch weights
   SmallVector<Constant *, 3> VTableAddressPoints;
 
