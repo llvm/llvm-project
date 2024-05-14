@@ -33,10 +33,10 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
     std::vector<tok::TokenKind> &Qualifiers);
 
 // Is the Token a simple or qualifier type
-bool isQualifierOrType(const FormatToken *Tok, bool IsCpp = true);
+bool isQualifierOrType(const FormatToken *Tok, const LangOptions &LangOpts);
 bool isConfiguredQualifierOrType(const FormatToken *Tok,
                                  const std::vector<tok::TokenKind> &Qualifiers,
-                                 bool IsCpp = true);
+                                 const LangOptions &LangOpts);
 
 // Is the Token likely a Macro
 bool isPossibleMacro(const FormatToken *Tok);
