@@ -217,6 +217,63 @@ fail:
   ret i32 -1
 }
 
+; Same as previous case, with commuted icmp.
+; FIXME: The load should get hoisted here as well.
+define i32 @test3_commuted(ptr noalias nocapture readonly %a) nounwind uwtable {
+; CHECK-LABEL: define i32 @test3_commuted(
+; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[FAIL:%.*]], label [[PREHEADER:%.*]]
+; CHECK:       preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[INC:%.*]], [[CONTINUE:%.*]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[ADD:%.*]], [[CONTINUE]] ]
+; CHECK-NEXT:    [[R_CHK:%.*]] = icmp uge i32 [[LEN]], [[IV]]
+; CHECK-NEXT:    br i1 [[R_CHK]], label [[CONTINUE]], label [[FAIL_LOOPEXIT:%.*]]
+; CHECK:       continue:
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I1]], [[ACC]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[CONTINUE]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
+; CHECK:       fail.loopexit:
+; CHECK-NEXT:    br label [[FAIL]]
+; CHECK:       fail:
+; CHECK-NEXT:    call void @f()
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %len = load i32, ptr %a, align 4, !range !{i32 0, i32 512}
+  %is.zero = icmp eq i32 %len, 0
+  br i1 %is.zero, label %fail, label %preheader
+preheader:
+  br label %for.body
+for.body:
+  %iv = phi i32 [ 0, %preheader ], [ %inc, %continue ]
+  %acc = phi i32 [ 0, %preheader ], [ %add, %continue ]
+  %r.chk = icmp uge i32 %len, %iv
+  br i1 %r.chk, label %continue, label %fail
+continue:
+  %i1 = load i32, ptr %a, align 4
+  %add = add nsw i32 %i1, %acc
+  %inc = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %inc, 1000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret i32 %add
+
+fail:
+  call void @f()
+  ret i32 -1
+}
+
 ; requires fact length is non-zero
 define i32 @test4(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test4(
