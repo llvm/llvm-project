@@ -182,8 +182,8 @@
   _LIBUNWIND_HIGHEST_DWARF_REGISTER_LOONGARCH
 #elif defined(__wasm__)
 // Unused
-# define _LIBUNWIND_CONTEXT_SIZE 0
-# define _LIBUNWIND_CURSOR_SIZE 0
+#define _LIBUNWIND_CONTEXT_SIZE 0
+#define _LIBUNWIND_CURSOR_SIZE 0
 # else
 #  error "Unsupported architecture."
 # endif
