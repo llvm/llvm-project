@@ -7,7 +7,6 @@ from lldbgdbserverutils import *
 import xml.etree.ElementTree as ET
 
 
-@skipIfWindows
 @skipIf(hostoslist=["windows"])
 class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def setUp(self):
