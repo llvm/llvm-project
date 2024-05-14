@@ -492,6 +492,25 @@ public:
     llvm_unreachable("unsupported binary function");
   }
 
+  // Build the ternary functions defined by OpDSL.
+  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1,
+                       Value arg2) {
+    bool headBool =
+        isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
+    bool tailFloatingPoint =
+        isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
+    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg1);
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPointToEnd(&block);
+    switch (ternaryFn) {
+    case TernaryFn::select:
+      if (!headBool && !(tailFloatingPoint || tailInteger))
+        llvm_unreachable("unsupported non numeric type");
+      return builder.create<arith::SelectOp>(arg0.getLoc(), arg0, arg1, arg2);
+    }
+    llvm_unreachable("unsupported ternary function");
+  }
+
   // Build the type functions defined by OpDSL.
   Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
     switch (typeFn) {
