@@ -205,7 +205,7 @@ public:
 
   void print(raw_ostream &os) const;
 
-  void dump() const { print(llvm::errs()); }
+  void dump() const;
 
   /// The block for which this graph is created to perform fusion.
   Block &block;

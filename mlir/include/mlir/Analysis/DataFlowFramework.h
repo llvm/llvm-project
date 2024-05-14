@@ -334,7 +334,7 @@ public:
 
   /// Print the contents of the analysis state.
   virtual void print(raw_ostream &os) const = 0;
-  LLVM_DUMP_METHOD void dump() const;
+  void dump() const;
 
   /// Add a dependency to this analysis state on a program point and an
   /// analysis. If this state is updated, the analysis will be invoked on the

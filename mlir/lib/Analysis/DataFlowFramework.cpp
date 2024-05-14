@@ -51,7 +51,9 @@ void AnalysisState::addDependency(ProgramPoint dependent,
   });
 }
 
-void AnalysisState::dump() const { print(llvm::errs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void AnalysisState::dump() const { print(llvm::errs()); }
+#endif
 
 //===----------------------------------------------------------------------===//
 // ProgramPoint

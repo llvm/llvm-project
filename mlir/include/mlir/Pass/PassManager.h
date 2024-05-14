@@ -148,7 +148,7 @@ public:
   void printAsTextualPipeline(raw_ostream &os) const;
 
   /// Raw dump of the pass manager to llvm::errs().
-  void dump();
+  void dump() const;
 
   /// Merge the pass statistics of this class into 'other'.
   void mergeStatisticsInto(OpPassManager &other);

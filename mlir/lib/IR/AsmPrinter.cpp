@@ -59,7 +59,10 @@ using namespace mlir::detail;
 
 void OperationName::print(raw_ostream &os) const { os << getStringRef(); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void OperationName::dump() const { print(llvm::errs()); }
+#endif
 
 //===--------------------------------------------------------------------===//
 // AsmParser
@@ -3761,10 +3764,13 @@ void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
                                        : AttrTypeElision::Never);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void Attribute::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
   if (!*this) {
@@ -3810,20 +3816,25 @@ void Type::print(raw_ostream &os, AsmState &state) const {
   AsmPrinter::Impl(os, state.getImpl()).printType(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void Type::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
 
+LLVM_DUMP_METHOD
 void AffineMap::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
 
+LLVM_DUMP_METHOD
 void IntegerSet::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineExpr::print(raw_ostream &os) const {
   if (!expr) {
@@ -3834,10 +3845,13 @@ void AffineExpr::print(raw_ostream &os) const {
   AsmPrinter::Impl(os, state.getImpl()).printAffineExpr(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void AffineExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineMap::print(raw_ostream &os) const {
   if (!map) {
@@ -3882,10 +3896,13 @@ void Value::print(raw_ostream &os, AsmState &state) const {
      << "' at index: " << arg.getArgNumber();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void Value::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void Value::printAsOperand(raw_ostream &os, AsmState &state) const {
   // TODO: This doesn't necessarily capture all potential cases.
@@ -3945,10 +3962,12 @@ void Operation::print(raw_ostream &os, AsmState &state) {
   }
 }
 
-void Operation::dump() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void Operation::dump() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Block::print(raw_ostream &os) {
   Operation *parentOp = getParentOp();
@@ -3967,7 +3986,10 @@ void Block::print(raw_ostream &os, AsmState &state) {
   OperationPrinter(os, state.getImpl()).print(this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void Block::dump() { print(llvm::errs()); }
+#endif
 
 /// Print out the name of the block without printing its body.
 void Block::printAsOperand(raw_ostream &os, bool printType) {

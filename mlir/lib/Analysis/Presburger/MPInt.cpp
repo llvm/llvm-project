@@ -29,7 +29,9 @@ llvm::raw_ostream &MPInt::print(llvm::raw_ostream &os) const {
   return os << valLarge;
 }
 
-void MPInt::dump() const { print(llvm::errs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MPInt::dump() const { print(llvm::errs()); }
+#endif
 
 llvm::raw_ostream &mlir::presburger::operator<<(llvm::raw_ostream &os,
                                                 const MPInt &x) {

@@ -67,6 +67,10 @@ void MultiAffineFunction::print(raw_ostream &os) const {
   output.print(os);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MultiAffineFunction::dump() const { print(llvm::errs()); }
+#endif
+
 SmallVector<MPInt, 8>
 MultiAffineFunction::valueAt(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumDomainVars() + getNumSymbolVars() &&
@@ -309,7 +313,10 @@ void PWMAFunction::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void PWMAFunction::dump() const { print(llvm::errs()); }
+#endif
 
 PWMAFunction PWMAFunction::unionFunction(
     const PWMAFunction &func,

@@ -92,7 +92,7 @@ private:
 public:
   // Pretty-printing and diagnostic methods.
   void print(llvm::raw_ostream &os) const;
-  LLVM_DUMP_METHOD void dump() const;
+  void dump() const;
 
   /// Static quantity determining the number of bits to target in an individual
   /// copy. Assumes that smaller increments of 64, 32, 16, 8 are also valid

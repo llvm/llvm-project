@@ -259,6 +259,21 @@ void Operation::insertOperands(unsigned index, ValueRange operands) {
   assert(operands.empty() && "inserting operands without an operand storage");
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD Operation::operand_range Operation::debug_getOperands() {
+  return getOperands();
+}
+LLVM_DUMP_METHOD Operation::result_range Operation::debug_getResults() {
+  return getResults();
+}
+LLVM_DUMP_METHOD SuccessorRange Operation::debug_getSuccessors() {
+  return getSuccessors();
+}
+LLVM_DUMP_METHOD MutableArrayRef<Region> Operation::debug_getRegions() {
+  return getRegions();
+}
+#endif
+
 //===----------------------------------------------------------------------===//
 // Diagnostics
 //===----------------------------------------------------------------------===//
@@ -776,6 +791,11 @@ void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
     p.printGenericOp(op);
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
+void OpState::dump() const { llvm::errs() << *this << "\n"; }
+#endif
 
 /// Print an operation name, eliding the dialect prefix if necessary and doesn't
 /// lead to ambiguities.

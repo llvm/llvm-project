@@ -253,8 +253,10 @@ bool Liveness::isDeadAfter(Value value, Operation *operation) const {
   return endOperation == operation || endOperation->isBeforeInBlock(operation);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Dumps the liveness information in a human readable format.
-void Liveness::dump() const { print(llvm::errs()); }
+LLVM_DUMP_METHOD void Liveness::dump() const { print(llvm::errs()); }
+#endif
 
 /// Dumps the liveness information to the given stream.
 void Liveness::print(raw_ostream &os) const {

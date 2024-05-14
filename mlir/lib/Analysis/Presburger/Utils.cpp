@@ -516,7 +516,10 @@ void DivisionRepr::print(raw_ostream &os) const {
   os << "\n";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void DivisionRepr::dump() const { print(llvm::errs()); }
+#endif
 
 SmallVector<MPInt, 8> presburger::getMPIntVec(ArrayRef<int64_t> range) {
   SmallVector<MPInt, 8> result(range.size());

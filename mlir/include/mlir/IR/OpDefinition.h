@@ -119,7 +119,7 @@ public:
   }
 
   /// Dump this operation.
-  void dump() { state->dump(); }
+  void dump() const;
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }
@@ -269,7 +269,7 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 
 public:
-  void dump() const { llvm::errs() << *this << "\n"; }
+  void dump() const;
 
   MLIRContext *getContext() const {
     return is<Attribute>() ? get<Attribute>().getContext()

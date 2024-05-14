@@ -15,6 +15,21 @@
 using namespace mlir;
 using namespace mlir::detail;
 
+//===----------------------------------------------------------------------===//
+// ValueImpl
+//===----------------------------------------------------------------------===//
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD Type ValueImpl::debug_getType() const { return getType(); }
+LLVM_DUMP_METHOD ValueImpl::Kind ValueImpl::debug_getKind() const {
+  return getKind();
+}
+#endif
+
+//===----------------------------------------------------------------------===//
+// Value
+//===----------------------------------------------------------------------===//
+
 /// If this value is the result of an Operation, return the operation that
 /// defines it.
 Operation *Value::getDefiningOp() const {

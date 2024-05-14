@@ -99,7 +99,7 @@ public:
 
   /// Print the location.
   void print(raw_ostream &os) const { impl.print(os); }
-  void dump() const { impl.dump(); }
+  void dump() const;
 
   friend ::llvm::hash_code hash_value(Location arg);
 

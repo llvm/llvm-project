@@ -1055,7 +1055,10 @@ void PresburgerRelation::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void PresburgerRelation::dump() const { print(llvm::errs()); }
+#endif
 
 PresburgerSet PresburgerSet::getUniverse(const PresburgerSpace &space) {
   PresburgerSet result(space);
