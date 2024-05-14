@@ -2927,16 +2927,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     const LLT ValTy = MRI.getType(ValReg);
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
 
-#ifndef NDEBUG
     if (ValTy.isScalableVector()) {
         assert(STI.hasSVE() 
              && "Load/Store register operand is scalable vector "
                 "while SVE is not supported by the target");
-        // assert(RB.getID() == AArch64::SVRRegBankID 
-        //        && "Load/Store register operand is scalable vector "
-        //           "while its register bank is not SVR");
     }
-#endif
     
     // The code below doesn't support truncating stores, so we need to split it
     // again.
