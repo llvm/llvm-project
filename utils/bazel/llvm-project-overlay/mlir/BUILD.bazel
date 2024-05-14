@@ -2092,6 +2092,20 @@ gentbl_cc_library(
     deps = [":ArmSMETdFiles"],
 )
 
+cc_library(
+    name = "ArmSMEOpInterfaces",
+    hdrs = [
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArmSMEOpInterfacesIncGen",
+        ":IR",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "ArmSMEIntrinsicOpsIncGen",
     tbl_outs = [
@@ -2137,9 +2151,11 @@ cc_library(
         ":ArmSMEEnums",
         ":ArmSMEIncGen",
         ":ArmSMEIntrinsicOpsIncGen",
+        ":ArmSMEOpInterfaces",
         ":ArmSMEOpInterfacesIncGen",
         ":ArmSMEOpsIncGen",
         ":BytecodeOpInterface",
+	":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -2156,6 +2172,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+	":Analysis",
         ":ArithUtils",
         ":ArmSMEDialect",
         ":ArmSMETransformsPassIncGen",
@@ -2163,6 +2180,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":FuncTransforms",
+	":FunctionInterfaces",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -2200,6 +2218,7 @@ cc_library(
         ":ArmSMETransforms",
         ":ConversionPassIncGen",
         ":FuncDialect",
+	":FunctionInterfaces",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
