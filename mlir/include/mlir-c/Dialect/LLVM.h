@@ -238,7 +238,10 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name,
     MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits, unsigned dwarfAddressSpace, MlirAttribute extraData);
+    uint64_t offsetInBits, int64_t dwarfAddressSpace, MlirAttribute extraData);
+
+/// Constant to represent std::nullopt for dwarfAddressSpace to omit the field.
+#define MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL -1
 
 /// Gets the base type from a LLVM DIDerivedType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
