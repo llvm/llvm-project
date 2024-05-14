@@ -311,6 +311,25 @@ llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr 
 
 // -----
 
+// CHECK: @module_global = external global i64, !dbg {{.*}}
+// CHECK: !llvm.module.flags = !{{{.*}}}
+// CHECK: !llvm.dbg.cu = !{{{.*}}}
+// CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "test.f90", directory: "existence")
+// CHECK-DAG: ![[TYPE:.*]] = !DIBasicType(name: "integer", size: 64, encoding: DW_ATE_signed)
+// CHECK-DAG: ![[SCOPE:.*]] = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: ![[FILE]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: ![[GVALS:.*]])
+// CHECK-DAG: ![[SCOPE1:.*]] = !DIModule(scope: ![[SCOPE]], name: "module2", file: ![[FILE]], line: 120)
+// CHECK-DAG: ![[GVAR:.*]] = distinct !DIGlobalVariable(name: "module_global", linkageName: "module_global", scope: ![[SCOPE1]], file: ![[FILE]], line: 121, type: ![[TYPE]], isLocal: false, isDefinition: true)
+// CHECK-DAG: ![[GEXPR:.*]] = !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
+// CHECK-DAG: ![[GVALS]] = !{![[GEXPR]]}
+
+#di_file = #llvm.di_file<"test.f90" in "existence">
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+#di_module = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "module2", configMacros = "", includePath = "", apinotes = "", line = 120, isDecl = false >
+llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_module, name = "module_global", linkageName = "module_global", file = #di_file, line = 121, type = #di_basic_type, isLocalToUnit = false, isDefined = true>, expr = <>>} : i64
+
+// -----
+
 // Nameless and scopeless global constant.
 
 // CHECK-LABEL: @.str.1 = external constant [10 x i8]
