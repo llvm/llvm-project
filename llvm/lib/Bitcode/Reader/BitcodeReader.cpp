@@ -4319,7 +4319,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
+        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);

@@ -226,8 +226,7 @@ public:
       return *this;
 
     // If at base, point to an array of base types.
-    if (asBlockPointer().Base == 0 ||
-        asBlockPointer().Base == sizeof(InlineDescriptor))
+    if (isRoot())
       return Pointer(asBlockPointer().Pointee, RootPtrMark, 0);
 
     // Step into the containing array, if inside one.
@@ -306,10 +305,8 @@ public:
   const Descriptor *getFieldDesc() const {
     if (isIntegralPointer())
       return asIntPointer().Desc;
-    if (isBlockPointer() &&
-        (asBlockPointer().Base == 0 ||
-         asBlockPointer().Base == sizeof(InlineDescriptor) ||
-         asBlockPointer().Base == RootPtrMark))
+
+    if (isRoot())
       return getDeclDesc();
     return getInlineDesc()->Desc;
   }
@@ -390,8 +387,7 @@ public:
     // If this points inside a dummy block, return true.
     // FIXME: This might change in the future. If it does, we need
     // to set the proper Ctor/Dtor functions for dummy Descriptors.
-    if (asBlockPointer().Base != 0 &&
-        asBlockPointer().Base != sizeof(InlineDescriptor) && isDummy())
+    if (!isRoot() && isDummy())
       return true;
     return getFieldDesc()->isUnknownSizeArray();
   }
@@ -403,9 +399,11 @@ public:
   }
   /// Pointer points directly to a block.
   bool isRoot() const {
-    return (asBlockPointer().Base == 0 ||
-            asBlockPointer().Base == RootPtrMark) &&
-           Offset == 0;
+    if (isZero() || isIntegralPointer())
+      return true;
+    return (asBlockPointer().Base ==
+                asBlockPointer().Pointee->getDescriptor()->getMetadataSize() ||
+            asBlockPointer().Base == 0);
   }
   /// If this pointer has an InlineDescriptor we can use to initialize.
   bool canBeInitialized() const {
@@ -487,9 +485,7 @@ public:
   bool isActive() const {
     if (!isBlockPointer())
       return true;
-    return asBlockPointer().Base == 0 ||
-           asBlockPointer().Base == sizeof(InlineDescriptor) ||
-           getInlineDesc()->IsActive;
+    return isRoot() || getInlineDesc()->IsActive;
   }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
@@ -508,10 +504,7 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return (asBlockPointer().Base == 0 ||
-            asBlockPointer().Base == sizeof(InlineDescriptor))
-               ? getDeclDesc()->IsConst
-               : getInlineDesc()->IsConst;
+    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   /// Returns the declaration ID.
@@ -567,6 +560,9 @@ public:
 
     if (!asBlockPointer().Pointee)
       return false;
+    if (isDummy())
+      return false;
+
     return isElementPastEnd() || getSize() == getOffset();
   }
 

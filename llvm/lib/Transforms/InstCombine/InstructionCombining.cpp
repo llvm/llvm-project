@@ -808,9 +808,12 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
   Constant *BitWidthC = ConstantInt::get(Ty, Ty->getScalarSizeInBits());
   // Need extra check for icmp. Note if this check is true, it generally means
   // the icmp will simplify to true/false.
-  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality() &&
-      !ConstantExpr::getICmp(ICmpInst::ICMP_UGT, C, BitWidthC)->isZeroValue())
-    return nullptr;
+  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality()) {
+    Constant *Cmp =
+        ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, C, BitWidthC, DL);
+    if (!Cmp || !Cmp->isZeroValue())
+      return nullptr;
+  }
 
   // Check we can invert `(not x)` for free.
   bool Consumes = false;

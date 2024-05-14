@@ -28,6 +28,7 @@ include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 
@@ -3165,6 +3166,17 @@ def TestOpOptionallyImplementingInterface
     : TEST_Op<"op_optionally_implementing_interface",
         [TestOptionallyImplementedOpInterface]> {
   let arguments = (ins BoolAttr:$implementsInterface);
+}
+
+//===----------------------------------------------------------------------===//
+// Test Mem2Reg & SROA
+//===----------------------------------------------------------------------===//
+
+def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
+    [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>,
+     DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]> {
+  let results = (outs Variadic<MemRefOf<[I32]>>:$results);
+  let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TEST_OPS
