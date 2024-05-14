@@ -115,6 +115,16 @@ public:
   /// Emit a value that corresponds to null for the given type.
   mlir::Value buildNullValue(QualType Ty, mlir::Location loc);
 
+  mlir::Value buildPromotedValue(mlir::Value result, QualType PromotionType) {
+    return Builder.createFloatingCast(result, ConvertType(PromotionType));
+  }
+
+  mlir::Value buildUnPromotedValue(mlir::Value result, QualType ExprType) {
+    return Builder.createFloatingCast(result, ConvertType(ExprType));
+  }
+
+  mlir::Value buildPromoted(const Expr *E, QualType PromotionType);
+
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
@@ -478,14 +488,45 @@ public:
     } else if (type->isVectorType()) {
       llvm_unreachable("no vector inc/dec yet");
     } else if (type->isRealFloatingType()) {
-      auto isFloatOrDouble = type->isSpecificBuiltinType(BuiltinType::Float) ||
-                             type->isSpecificBuiltinType(BuiltinType::Double);
-      assert(isFloatOrDouble && "Non-float/double NYI");
+      // TODO(cir): CGFPOptionsRAII
+      assert(!UnimplementedFeature::CGFPOptionsRAII());
 
-      // Create the inc/dec operation.
-      auto kind =
-          (isInc ? mlir::cir::UnaryOpKind::Inc : mlir::cir::UnaryOpKind::Dec);
-      value = buildUnaryOp(E, kind, input);
+      if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+        llvm_unreachable("__fp16 type NYI");
+
+      if (value.getType().isa<mlir::cir::SingleType, mlir::cir::DoubleType>()) {
+        // Create the inc/dec operation.
+        // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
+        auto kind =
+            (isInc ? mlir::cir::UnaryOpKind::Inc : mlir::cir::UnaryOpKind::Dec);
+        value = buildUnaryOp(E, kind, input);
+      } else {
+        // Remaining types are Half, Bfloat16, LongDouble, __ibm128 or
+        // __float128. Convert from float.
+
+        llvm::APFloat F(static_cast<float>(amount));
+        bool ignored;
+        const llvm::fltSemantics *FS;
+        // Don't use getFloatTypeSemantics because Half isn't
+        // necessarily represented using the "half" LLVM type.
+        if (value.getType().isa<mlir::cir::LongDoubleType>())
+          FS = &CGF.getTarget().getLongDoubleFormat();
+        else if (value.getType().isa<mlir::cir::FP16Type>())
+          FS = &CGF.getTarget().getHalfFormat();
+        else if (value.getType().isa<mlir::cir::BF16Type>())
+          FS = &CGF.getTarget().getBFloat16Format();
+        else
+          llvm_unreachable("fp128 / ppc_fp128 NYI");
+        F.convert(*FS, llvm::APFloat::rmTowardZero, &ignored);
+
+        auto loc = CGF.getLoc(E->getExprLoc());
+        auto amt = Builder.getConstant(
+            loc, mlir::cir::FPAttr::get(value.getType(), F));
+        value = Builder.createBinop(value, mlir::cir::BinOpKind::Add, amt);
+      }
+
+      if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+        llvm_unreachable("NYI");
 
     } else if (type->isFixedPointType()) {
       llvm_unreachable("no fixed point inc/dec yet");
@@ -549,13 +590,14 @@ public:
       return Visit(E->getSubExpr()); // the actual value should be unused
     return buildLoadOfLValue(E);
   }
-  mlir::Value VisitUnaryPlus(const UnaryOperator *E) {
-    // NOTE(cir): QualType function parameter still not used, so don´t replicate
-    // it here yet.
-    QualType promotionTy = getPromotionType(E->getSubExpr()->getType());
+  mlir::Value VisitUnaryPlus(const UnaryOperator *E,
+                             QualType PromotionType = QualType()) {
+    QualType promotionTy = PromotionType.isNull()
+                               ? getPromotionType(E->getSubExpr()->getType())
+                               : PromotionType;
     auto result = VisitPlus(E, promotionTy);
     if (result && !promotionTy.isNull())
-      assert(0 && "not implemented yet");
+      result = buildUnPromotedValue(result, E->getType());
     return buildUnaryOp(E, mlir::cir::UnaryOpKind::Plus, result);
   }
 
@@ -563,7 +605,7 @@ public:
     // This differs from gcc, though, most likely due to a bug in gcc.
     TestAndClearIgnoreResultAssign();
     if (!PromotionType.isNull())
-      assert(0 && "scalar promotion not implemented yet");
+      return CGF.buildPromotedScalarExpr(E->getSubExpr(), PromotionType);
     return Visit(E->getSubExpr());
   }
 
@@ -573,14 +615,14 @@ public:
     QualType promotionTy = getPromotionType(E->getSubExpr()->getType());
     auto result = VisitMinus(E, promotionTy);
     if (result && !promotionTy.isNull())
-      assert(0 && "not implemented yet");
+      result = buildUnPromotedValue(result, E->getType());
     return buildUnaryOp(E, mlir::cir::UnaryOpKind::Minus, result);
   }
 
   mlir::Value VisitMinus(const UnaryOperator *E, QualType PromotionType) {
     TestAndClearIgnoreResultAssign();
     if (!PromotionType.isNull())
-      assert(0 && "scalar promotion not implemented yet");
+      return CGF.buildPromotedScalarExpr(E->getSubExpr(), PromotionType);
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
@@ -752,18 +794,23 @@ public:
                               QualType DstType, mlir::Type SrcTy,
                               mlir::Type DstTy, ScalarConversionOpts Opts);
 
-  BinOpInfo buildBinOps(const BinaryOperator *E) {
+  BinOpInfo buildBinOps(const BinaryOperator *E,
+                        QualType PromotionType = QualType()) {
     BinOpInfo Result;
-    Result.LHS = Visit(E->getLHS());
-    Result.RHS = Visit(E->getRHS());
-    Result.FullType = E->getType();
-    Result.CompType = E->getType();
-    if (auto VecType = dyn_cast_or_null<VectorType>(E->getType())) {
+    Result.LHS = CGF.buildPromotedScalarExpr(E->getLHS(), PromotionType);
+    Result.RHS = CGF.buildPromotedScalarExpr(E->getRHS(), PromotionType);
+    if (!PromotionType.isNull())
+      Result.FullType = PromotionType;
+    else
+      Result.FullType = E->getType();
+    Result.CompType = Result.FullType;
+    if (const auto *VecType = dyn_cast_or_null<VectorType>(Result.FullType)) {
       Result.CompType = VecType->getElementType();
     }
     Result.Opcode = E->getOpcode();
     Result.Loc = E->getSourceRange();
     // TODO: Result.FPFeatures
+    assert(!UnimplementedFeature::getFPFeaturesInEffect());
     Result.E = E;
     return Result;
   }
@@ -793,15 +840,22 @@ public:
     if (auto *CT = Ty->getAs<ComplexType>()) {
       llvm_unreachable("NYI");
     }
-    if (Ty.UseExcessPrecision(CGF.getContext()))
-      llvm_unreachable("NYI");
+    if (Ty.UseExcessPrecision(CGF.getContext())) {
+      if (auto *VT = Ty->getAs<VectorType>())
+        llvm_unreachable("NYI");
+      return CGF.getContext().FloatTy;
+    }
     return QualType();
   }
 
   // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
   mlir::Value VisitBin##OP(const BinaryOperator *E) {                          \
-    return build##OP(buildBinOps(E));                                          \
+    QualType promotionTy = getPromotionType(E->getType());                     \
+    auto result = build##OP(buildBinOps(E, promotionTy));                      \
+    if (result && !promotionTy.isNull())                                       \
+      result = buildUnPromotedValue(result, E->getType());                     \
+    return result;                                                             \
   }                                                                            \
   mlir::Value VisitBin##OP##Assign(const CompoundAssignOperator *E) {          \
     return buildCompoundAssign(E, &ScalarExprEmitter::build##OP);              \
@@ -1050,6 +1104,13 @@ mlir::Value CIRGenFunction::buildScalarExpr(const Expr *E) {
   assert(E && hasScalarEvaluationKind(E->getType()) &&
          "Invalid scalar expression to emit");
 
+  return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(E));
+}
+
+mlir::Value CIRGenFunction::buildPromotedScalarExpr(const Expr *E,
+                                                    QualType PromotionType) {
+  if (!PromotionType.isNull())
+    return ScalarExprEmitter(*this, builder).buildPromoted(E, PromotionType);
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(E));
 }
 
@@ -1885,8 +1946,20 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
 
   // Emit the RHS first.  __block variables need to have the rhs evaluated
   // first, plus this should improve codegen a little.
-  OpInfo.RHS = Visit(E->getRHS());
-  OpInfo.FullType = E->getComputationResultType();
+
+  QualType PromotionTypeCR = getPromotionType(E->getComputationResultType());
+  if (PromotionTypeCR.isNull())
+    PromotionTypeCR = E->getComputationResultType();
+
+  QualType PromotionTypeLHS = getPromotionType(E->getComputationLHSType());
+  QualType PromotionTypeRHS = getPromotionType(E->getRHS()->getType());
+
+  if (!PromotionTypeRHS.isNull())
+    OpInfo.RHS = CGF.buildPromotedScalarExpr(E->getRHS(), PromotionTypeRHS);
+  else
+    OpInfo.RHS = Visit(E->getRHS());
+
+  OpInfo.FullType = PromotionTypeCR;
   OpInfo.CompType = OpInfo.FullType;
   if (auto VecType = dyn_cast_or_null<VectorType>(OpInfo.FullType)) {
     OpInfo.CompType = VecType->getElementType();
@@ -1908,16 +1981,20 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
   CIRGenFunction::SourceLocRAIIObject sourceloc{
       CGF, CGF.getLoc(E->getSourceRange())};
   SourceLocation Loc = E->getExprLoc();
-  OpInfo.LHS =
-      buildScalarConversion(OpInfo.LHS, LHSTy, E->getComputationLHSType(), Loc);
+  if (!PromotionTypeLHS.isNull())
+    OpInfo.LHS = buildScalarConversion(OpInfo.LHS, LHSTy, PromotionTypeLHS,
+                                       E->getExprLoc());
+  else
+    OpInfo.LHS = buildScalarConversion(OpInfo.LHS, LHSTy,
+                                       E->getComputationLHSType(), Loc);
 
   // Expand the binary operator.
   Result = (this->*Func)(OpInfo);
 
   // Convert the result back to the LHS type,
   // potentially with Implicit Conversion sanitizer check.
-  Result = buildScalarConversion(Result, E->getComputationResultType(), LHSTy,
-                                 Loc, ScalarConversionOpts(CGF.SanOpts));
+  Result = buildScalarConversion(Result, PromotionTypeCR, LHSTy, Loc,
+                                 ScalarConversionOpts(CGF.SanOpts));
 
   // Store the result value into the LHS lvalue. Bit-fields are handled
   // specially because the result is altered by the store, i.e., [C99 6.5.16p1]
@@ -1936,6 +2013,44 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
 
 mlir::Value ScalarExprEmitter::buildNullValue(QualType Ty, mlir::Location loc) {
   return CGF.buildFromMemory(CGF.CGM.buildNullConstant(Ty, loc), Ty);
+}
+
+mlir::Value ScalarExprEmitter::buildPromoted(const Expr *E,
+                                             QualType PromotionType) {
+  E = E->IgnoreParens();
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    switch (BO->getOpcode()) {
+#define HANDLE_BINOP(OP)                                                       \
+  case BO_##OP:                                                                \
+    return build##OP(buildBinOps(BO, PromotionType));
+      HANDLE_BINOP(Add)
+      HANDLE_BINOP(Sub)
+      HANDLE_BINOP(Mul)
+      HANDLE_BINOP(Div)
+#undef HANDLE_BINOP
+    default:
+      break;
+    }
+  } else if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+    switch (UO->getOpcode()) {
+    case UO_Imag:
+    case UO_Real:
+      llvm_unreachable("NYI");
+    case UO_Minus:
+      return VisitMinus(UO, PromotionType);
+    case UO_Plus:
+      return VisitPlus(UO, PromotionType);
+    default:
+      break;
+    }
+  }
+  auto result = Visit(const_cast<Expr *>(E));
+  if (result) {
+    if (!PromotionType.isNull())
+      return buildPromotedValue(result, PromotionType);
+    return buildUnPromotedValue(result, E->getType());
+  }
+  return result;
 }
 
 mlir::Value ScalarExprEmitter::buildCompoundAssign(

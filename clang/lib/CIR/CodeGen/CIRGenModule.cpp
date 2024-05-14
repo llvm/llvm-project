@@ -131,13 +131,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   // Initialize CIR pointer types cache.
   VoidPtrTy = ::mlir::cir::PointerType::get(builder.getContext(), VoidTy);
 
-  // TODO: HalfTy
-  // TODO: BFloatTy
+  FP16Ty = ::mlir::cir::FP16Type::get(builder.getContext());
+  BFloat16Ty = ::mlir::cir::BF16Type::get(builder.getContext());
   FloatTy = ::mlir::cir::SingleType::get(builder.getContext());
   DoubleTy = ::mlir::cir::DoubleType::get(builder.getContext());
   FP80Ty = ::mlir::cir::FP80Type::get(builder.getContext());
-  // TODO(cir): perhaps we should abstract long double variations into a custom
-  // cir.long_double type. Said type would also hold the semantics for lowering.
 
   // TODO: PointerWidthInBits
   PointerAlignInBytes =
