@@ -19,7 +19,7 @@ struct S {
     // new and delete are implicitly static
     void *operator new(this unsigned long); // expected-error{{an explicit object parameter cannot appear in a static function}}
     void operator delete(this void*); // expected-error{{an explicit object parameter cannot appear in a static function}}
-
+    
     void g(this auto) const; // expected-error{{explicit object member function cannot have 'const' qualifier}}
     void h(this auto) &; // expected-error{{explicit object member function cannot have '&' qualifier}}
     void i(this auto) &&; // expected-error{{explicit object member function cannot have '&&' qualifier}}
@@ -198,7 +198,9 @@ void func(int i) {
 void TestMutationInLambda() {
     [i = 0](this auto &&){ i++; }();
     [i = 0](this auto){ i++; }();
-    [i = 0](this const auto&){ i++; }(); // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+    [i = 0](this const auto&){ i++; }();
+    // expected-error@-1 {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+    // expected-note@-2 {{in instantiation of}}
 
     int x;
     const auto l1 = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
