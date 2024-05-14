@@ -16,7 +16,6 @@ add_subdirectory(common)
 function(add_target_library target_name lib_name)
   add_llvm_library(${target_name} STATIC
     LINK_COMPONENTS
-      ${LLVM_TARGETS_TO_BUILD}
       AggressiveInstCombine
       Analysis
       BinaryFormat
