@@ -138,7 +138,7 @@ define void @basic_type() !dbg !3 {
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
 ; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
 ; CHECK: #[[PTR3:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]], dwarfAddressSpace = 3>
-; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]], #[[PTR3>
+; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]], #[[PTR3]]>
 
 define void @derived_type() !dbg !3 {
   ret void
@@ -155,7 +155,7 @@ define void @derived_type() !dbg !3 {
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
 !8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
-!9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, DWARFAddressSpace: 3)
+!9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, dwarfAddressSpace: 3)
 
 ; // -----
 
