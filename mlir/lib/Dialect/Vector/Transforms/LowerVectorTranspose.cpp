@@ -403,7 +403,23 @@ private:
 ///   vector.shape_cast %0 : vector<4x1xi32> to vector<1x4xi32>
 ///
 /// Source with leading unit dim (inverse) is also replaced. Unit dim must
-/// be fixed. Non-unit can be scalable.
+/// be fixed. Non-unit dim can be scalable.
+///
+/// TODO: This pattern was introduced specifically to help lower scalable
+/// vectors. In hindsight, a more specialised canonicalization (for shape_cast's
+/// to cancel out) would be preferable:
+///
+///  BEFORE:
+///     %0 = some_op
+///     %1 = vector.shape_cast %0 : vector<[4]xf32> to vector<[4]x1xf32>
+///     %2 = vector.transpose %1 [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
+///  AFTER:
+///     %0 = some_op
+///     %1 = vector.shape_cast %0 : vector<[4]xf32> to vector<1x[4]xf32>
+///
+/// Given the context above, we may want to consider (re-)moving this pattern
+/// at some later time. I am leaving it for now in case there are other users
+/// that I am not aware of.
 class Transpose2DWithUnitDimToShapeCast
     : public OpRewritePattern<vector::TransposeOp> {
 public:
