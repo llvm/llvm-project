@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstddef>
 #include <cstdlib>
 
 #include <memory>
 #include <mutex>
-#include <tuple>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -212,9 +210,6 @@ Status ProcessElfCore::DoLoadCore() {
     }
   }
 
-  // We need to update uuid after address range is populated.
-  UpdateBuildIdForNTFileEntries();
-
   if (!ranges_are_sorted) {
     m_core_aranges.Sort();
     m_core_range_infos.Sort();
@@ -263,7 +258,6 @@ Status ProcessElfCore::DoLoadCore() {
     if (!m_nt_file_entries.empty()) {
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetUUID() = m_nt_file_entries[0].uuid;
       exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
@@ -275,16 +269,6 @@ Status ProcessElfCore::DoLoadCore() {
     }
   }
   return error;
-}
-
-void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
-  if (!m_nt_file_entries.empty()) {
-    for (NT_FILE_Entry &entry : m_nt_file_entries) {
-      std::optional<UUID> uuid = FindBuildId(entry);
-      if (uuid)
-        entry.uuid = uuid.value();
-    }
-  }
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
@@ -997,40 +981,6 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
         "Don't know how to parse core file. Unsupported OS.",
         llvm::inconvertibleErrorCode());
   }
-}
-
-bool ProcessElfCore::IsElf(const NT_FILE_Entry entry) {
-  size_t size = strlen(llvm::ELF::ElfMagic);
-  uint8_t buf[size];
-  Status error;
-  size_t byte_read = ReadMemory(entry.start, buf, size, error);
-  if (byte_read == size)
-    return memcmp(llvm::ELF::ElfMagic, buf, size) == 0;
-  else
-    return false;
-}
-
-std::optional<UUID> ProcessElfCore::FindBuildId(const NT_FILE_Entry entry) {
-  if (!IsElf(entry))
-    return std::nullopt;
-  // Build ID is stored in the ELF file as a section named ".note.gnu.build-id"
-  uint8_t gnu_build_id_bytes[8] = {0x03, 0x00, 0x00, 0x00,
-                                   0x47, 0x4e, 0x55, 0x00};
-  lldb::addr_t gnu_build_id_addr =
-      FindInMemory(entry.start, entry.end, gnu_build_id_bytes, 8);
-  if (gnu_build_id_addr == LLDB_INVALID_ADDRESS)
-    return std::nullopt;
-  uint8_t buf[36];
-  Status error;
-  size_t byte_read = ReadMemory(gnu_build_id_addr - 8, buf, 36, error);
-  // .note.gnu.build-id starts with 04 00 00 00 {id_byte_size} 00 00 00 03 00 00
-  // 00 47 4e 55 00
-  if (byte_read == 36) {
-    if (buf[0] == 0x04) {
-      return UUID(llvm::ArrayRef<uint8_t>(buf + 16, buf[4] /*byte size*/));
-    }
-  }
-  return std::nullopt;
 }
 
 uint32_t ProcessElfCore::GetNumThreadContexts() {
