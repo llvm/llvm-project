@@ -77,6 +77,7 @@ enum TypeKind {
 
 enum CastKind {
   CastKindSignExt = 0,
+  CastKindZeroExt = 1,
 };
 
 // A predicate used in a numeric comparison.
@@ -843,13 +844,29 @@ private:
 
   void serialiseCastKind(enum CastKind Cast) { OutStreamer.emitInt8(Cast); }
 
-  /// Serialise a cast-like insruction.
+  /// Serialise a cast-like instruction.
   void serialiseSExtInst(SExtInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeCast);
     // cast_kind:
     serialiseCastKind(CastKindSignExt);
+    // val:
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
+    // dest_type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
+  /// Serialise a cast-like instruction.
+  void serialiseZExtInst(ZExtInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                         unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCodeCast);
+    // cast_kind:
+    serialiseCastKind(CastKindZeroExt);
     // val:
     serialiseOperand(I, FLCtxt, I->getOperand(0));
     // dest_type_idx:
@@ -925,6 +942,7 @@ private:
     INST_SERIALISE(I, LoadInst, serialiseLoadInst);
     INST_SERIALISE(I, PHINode, serialisePhiInst);
     INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
+    INST_SERIALISE(I, ZExtInst, serialiseZExtInst);
     INST_SERIALISE(I, SExtInst, serialiseSExtInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
     INST_SERIALISE(I, SwitchInst, serialiseSwitchInst);
