@@ -680,7 +680,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-static std::array<std::pair<StringLiteral, SIAtomicAddrSpace>, 3> ASNames = {{
+static const StringMap<SIAtomicAddrSpace> ASNames = {{
     {"global", SIAtomicAddrSpace::GLOBAL},
     {"local", SIAtomicAddrSpace::LDS},
     {"image", SIAtomicAddrSpace::SCRATCH},
@@ -715,11 +715,7 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
     if (Prefix != FenceASPrefix)
       continue;
 
-    auto It = find_if(ASNames, [Suffix = Suffix](auto &Pair) {
-      return Pair.first == Suffix;
-    });
-
-    if (It != ASNames.end())
+    if (auto It = ASNames.find(Suffix); It != ASNames.end())
       Result |= It->second;
     else
       diagnoseUnknownMMRAASName(MI, Suffix);
