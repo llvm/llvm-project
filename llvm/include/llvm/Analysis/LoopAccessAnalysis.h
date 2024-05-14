@@ -540,7 +540,7 @@ private:
   /// Try to create add a new (pointer-difference, access size) pair to
   /// DiffCheck for checking groups \p CGI and \p CGJ. If pointer-difference
   /// checks cannot be used for the groups, set CanUseDiffCheck to false.
-  void tryToCreateDiffCheck(const RuntimeCheckingPtrGroup &CGI,
+  bool tryToCreateDiffCheck(const RuntimeCheckingPtrGroup &CGI,
                             const RuntimeCheckingPtrGroup &CGJ);
 
   MemoryDepChecker &DC;
