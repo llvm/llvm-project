@@ -256,10 +256,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CONSTANT: {
-    auto CstVal = getIConstantVRegVal(R, MRI);
-    if (!CstVal)
-      break;
-    Known = KnownBits::makeConstant(*CstVal);
+    Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
   }
   case TargetOpcode::G_FRAME_INDEX: {
