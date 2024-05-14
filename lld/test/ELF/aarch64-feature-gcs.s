@@ -12,7 +12,7 @@
 # RUN: llvm-readelf -n gcs | FileCheck --check-prefix GCS %s
 # RUN: ld.lld func1-gcs.o func3-gcs.o --shared -o gcs.so
 # RUN: llvm-readelf -n gcs.so | FileCheck --check-prefix GCS %s
-# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o force-gcs -z gcs
+# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o force-gcs -z gcs=always
 # RUN: llvm-readelf -n force-gcs | FileCheck --allow-empty --check-prefix GCS %s
 # RUN: ld.lld func2-gcs.o func3.o --shared -o force-gcs.so -z gcs=always
 # RUN: llvm-readelf -n force-gcs.so | FileCheck --allow-empty --check-prefix GCS %s

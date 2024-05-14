@@ -576,9 +576,6 @@ static GcsPolicy getZGcs(opt::InputArgList &args) {
         ret = GcsPolicy::Never;
       else if (kv.second == "always")
         ret = GcsPolicy::Always;
-      else if (StringRef(arg->getValue()) == "gcs")
-        // -z gcs is the same as -z gcs=always
-        ret = GcsPolicy::Always;
       else
         error("unknown -z gcs= value: " + kv.second);
     }
