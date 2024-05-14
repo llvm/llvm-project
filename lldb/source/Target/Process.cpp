@@ -3191,33 +3191,6 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   return Status();
 }
 
-lldb::addr_t Process::FindInMemory(lldb::addr_t low, lldb::addr_t high,
-                                   uint8_t *buffer, size_t buffer_size) {
-  const size_t region_size = high - low;
-
-  if (region_size < buffer_size)
-    return LLDB_INVALID_ADDRESS;
-
-  std::vector<size_t> bad_char_heuristic(256, buffer_size);
-  ProcessMemoryIterator iterator(shared_from_this(), low);
-
-  for (size_t idx = 0; idx < buffer_size - 1; idx++) {
-    decltype(bad_char_heuristic)::size_type bcu_idx = buffer[idx];
-    bad_char_heuristic[bcu_idx] = buffer_size - idx - 1;
-  }
-  for (size_t s = 0; s <= (region_size - buffer_size);) {
-    int64_t j = buffer_size - 1;
-    while (j >= 0 && buffer[j] == iterator[s + j])
-      j--;
-    if (j < 0)
-      return low + s;
-    else
-      s += bad_char_heuristic[iterator[s + buffer_size - 1]];
-  }
-
-  return LLDB_INVALID_ADDRESS;
-}
-
 Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
   Status error;
 
