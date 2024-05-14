@@ -307,11 +307,11 @@ def DestructurableAllocationOpInterface
         original slot is no longer being refered to and could be deleted.
         This will only be called for slots declared by this operation.
 
-        Must return a new destructurable allocation op if this operation
-        produced multiple destructurable slots, nullopt otherwise.
+        Must return a new destructurable allocation op if this hook creates
+        a new destructurable op, nullopt otherwise. 
       }],
       "::std::optional<::mlir::DestructurableAllocationOpInterface>",
-        "handleDestructuringComplete",
+      "handleDestructuringComplete",
       (ins "const ::mlir::DestructurableMemorySlot &":$slot,
            "::mlir::OpBuilder &":$builder)
     >,
