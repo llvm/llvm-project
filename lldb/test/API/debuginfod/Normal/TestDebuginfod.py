@@ -22,6 +22,7 @@ class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_no_symbols(self):
         """
         Validate behavior with no symbols or symbol locator.
@@ -30,6 +31,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_default(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -39,6 +41,7 @@ class DebugInfodTests(TestBase):
         self.try_breakpoint(True)
 
     @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_symbols(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -48,6 +51,7 @@ class DebugInfodTests(TestBase):
         self.try_breakpoint(True)
 
     @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_executable(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -57,6 +61,7 @@ class DebugInfodTests(TestBase):
         self.try_breakpoint(True)
 
     @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_okd_symbols(self):
         """
         Test behavior with the 'only-keep-debug' symbols available from Debuginfod.
