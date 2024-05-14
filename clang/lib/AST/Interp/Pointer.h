@@ -384,11 +384,6 @@ public:
   bool isUnknownSizeArray() const {
     if (!isBlockPointer())
       return false;
-    // If this points inside a dummy block, return true.
-    // FIXME: This might change in the future. If it does, we need
-    // to set the proper Ctor/Dtor functions for dummy Descriptors.
-    if (!isRoot() && isDummy())
-      return true;
     return getFieldDesc()->isUnknownSizeArray();
   }
   /// Checks if the pointer points to an array.
@@ -559,8 +554,6 @@ public:
       return false;
 
     if (!asBlockPointer().Pointee)
-      return false;
-    if (isDummy())
       return false;
 
     return isElementPastEnd() || getSize() == getOffset();
