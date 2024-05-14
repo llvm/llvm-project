@@ -70,12 +70,12 @@ def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
                   Requires<[In64BitMode]>;
 
 // FRED Instructions
-let hasSideEffects = 1, Defs = [ESP, EFLAGS] in {
+let hasSideEffects = 1, Defs = [RSP, EFLAGS] in {
   def ERETS: I<0x01, MRM_CA, (outs), (ins), "erets",
               []>, TB, XD, Requires<[In64BitMode]>;
   def ERETU: I<0x01, MRM_CA, (outs), (ins), "eretu",
               []>, TB, XS, Requires<[In64BitMode]>;
-} // hasSideEffects = 1
+} // hasSideEffects = 1, Defs = [RSP, EFLAGS]
 } // SchedRW
 
 def : Pat<(debugtrap),
