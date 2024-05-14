@@ -260,6 +260,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "elf32_sparc";
   case llvm::Triple::sparcv9:
     return "elf64_sparc";
+  case llvm::Triple::inarch:
+    return "elf32_inarch";
   case llvm::Triple::loongarch32:
     return "elf32loongarch";
   case llvm::Triple::loongarch64:
