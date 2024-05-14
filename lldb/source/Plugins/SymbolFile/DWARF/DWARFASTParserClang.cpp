@@ -2306,11 +2306,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
 
   if (!die)
     return false;
-  ParsedDWARFTypeAttributes attrs(die);
-  bool is_forward_declaration = IsForwardDeclaration(
-      die, attrs, SymbolFileDWARF::GetLanguage(*die.GetCU()));
-  if (is_forward_declaration)
-    return false;
 
   const dw_tag_t tag = die.Tag();
 
