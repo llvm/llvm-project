@@ -224,11 +224,13 @@ struct Config {
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
-  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
+  llvm::SmallVector<
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
       compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
+  bool debugNames;
   bool demangle = true;
   bool dependentLibraries;
   bool disableVerify;
@@ -236,6 +238,7 @@ struct Config {
   bool emitLLVM;
   bool emitRelocs;
   bool enableNewDtags;
+  bool enableNonContiguousRegions;
   bool executeOnly;
   bool exportDynamic;
   bool fixCortexA53Errata843419;

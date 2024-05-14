@@ -41,26 +41,25 @@ enum class CudaVersion {
   CUDA_121,
   CUDA_122,
   CUDA_123,
+  CUDA_124,
   FULLY_SUPPORTED = CUDA_123,
   PARTIALLY_SUPPORTED =
-      CUDA_123, // Partially supported. Proceed with a warning.
+      CUDA_124, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
-// We have a name conflict with sys/mac.h on AIX
-#ifdef SM_32
-#undef SM_32
-#endif
 enum class CudaArch {
   UNUSED,
   UNKNOWN,
+  // TODO: Deprecate and remove GPU architectures older than sm_52.
   SM_20,
   SM_21,
   SM_30,
-  SM_32,
+  // This has a name conflict with sys/mac.h on AIX, rename it as a workaround.
+  SM_32_,
   SM_35,
   SM_37,
   SM_50,

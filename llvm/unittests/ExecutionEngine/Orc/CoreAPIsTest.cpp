@@ -1005,11 +1005,11 @@ TEST_F(CoreAPIsStandardTest, RedefineBoundWeakSymbol) {
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
-  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+  DispatchOverride = [&](std::unique_ptr<Task> T) {
     if (ExpectNoMoreMaterialization && isa<MaterializationTask>(*T))
       ADD_FAILURE() << "Unexpected materialization";
     T->run();
-  });
+  };
 
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
@@ -1130,6 +1130,71 @@ TEST_F(CoreAPIsStandardTest, SimpleAsynchronousGeneratorTest) {
   G.takeLookup().LS.continueLookup(Error::success());
 
   EXPECT_TRUE(LookupCompleted);
+}
+
+TEST_F(CoreAPIsStandardTest, ErrorFromSuspendedAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  bool LookupCompleted = false;
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        LookupCompleted = true;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_FALSE(LookupCompleted);
+
+  G.takeLookup().LS.continueLookup(
+      make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  EXPECT_TRUE(LookupCompleted);
+}
+
+TEST_F(CoreAPIsStandardTest, ErrorFromAutoSuspendedAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  std::atomic_size_t LookupsCompleted = 0;
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        ++LookupsCompleted;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_EQ(LookupsCompleted, 0U);
+
+  // Suspend the first lookup.
+  auto LS1 = std::move(G.takeLookup().LS);
+
+  // Start a second lookup that should be auto-suspended.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        ++LookupsCompleted;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_EQ(LookupsCompleted, 0U);
+
+  // Unsuspend the first lookup.
+  LS1.continueLookup(make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  // Unsuspend the second.
+  G.takeLookup().LS.continueLookup(
+      make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  EXPECT_EQ(LookupsCompleted, 2U);
 }
 
 TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
@@ -1403,7 +1468,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 
   std::mutex WorkThreadsMutex;
   std::vector<std::thread> WorkThreads;
-  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+  DispatchOverride = [&](std::unique_ptr<Task> T) {
     std::promise<void> WaitP;
     std::lock_guard<std::mutex> Lock(WorkThreadsMutex);
     WorkThreads.push_back(
@@ -1412,7 +1477,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
           T->run();
         }));
     WaitP.set_value();
-  });
+  };
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 

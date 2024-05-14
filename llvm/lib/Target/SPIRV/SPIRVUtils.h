@@ -59,6 +59,10 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction by "spirv.Decorations" metadata node.
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD);
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
@@ -100,7 +104,7 @@ bool isSpecialOpaqueType(const Type *Ty);
 bool isEntryPoint(const Function &F);
 
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
-Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
@@ -147,6 +151,13 @@ inline Type *reconstructFunctionType(Function *F) {
   for (unsigned i = 0; i < F->arg_size(); ++i)
     ArgTys.push_back(F->getArg(i)->getType());
   return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
+}
+
+inline Type *toTypedPointer(Type *Ty, LLVMContext &Ctx) {
+  return isUntypedPointerTy(Ty)
+             ? TypedPointerType::get(IntegerType::getInt8Ty(Ctx),
+                                     getPointerAddressSpace(Ty))
+             : Ty;
 }
 
 } // namespace llvm

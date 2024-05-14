@@ -111,8 +111,10 @@ add_header_library(
 add_unittest_framework_library(
   LibcFPTestHelpers
   SRCS
+    FEnvSafeTest.cpp
     RoundingModeUtils.cpp
   HDRS
+    FEnvSafeTest.h
     FPMatcher.h
     RoundingModeUtils.h
   DEPENDS
@@ -135,6 +137,7 @@ add_unittest_framework_library(
     LibcTest
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.hdr.types.fenv_t
 )
 
 add_unittest_framework_library(

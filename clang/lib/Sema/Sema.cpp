@@ -45,7 +45,9 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -202,7 +204,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
+      ObjCPtr(std::make_unique<SemaObjC>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
+      OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
@@ -222,21 +226,16 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
       ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context),
-      NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
-      StringWithUTF8StringMethod(nullptr),
-      ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
-      ArrayWithObjectsMethod(nullptr), NSDictionaryDecl(nullptr),
-      DictionaryWithObjectsMethod(nullptr), CodeCompleter(CodeCompleter),
-      VarDataSharingAttributesStack(nullptr) {
+      CodeCompleter(CodeCompleter) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
-    NSNumberLiteralMethods[I] = nullptr;
+    ObjC().NSNumberLiteralMethods[I] = nullptr;
 
   if (getLangOpts().ObjC)
-    NSAPIObj.reset(new NSAPI(Context));
+    ObjC().NSAPIObj.reset(new NSAPI(Context));
 
   if (getLangOpts().CPlusPlus)
     FieldCollector.reset(new CXXFieldCollector());
@@ -252,7 +251,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       nullptr, ExpressionEvaluationContextRecord::EK_Other);
 
   // Initialization of data sharing attributes stack for OpenMP
-  InitDataSharingAttributesStack();
+  OpenMP().InitDataSharingAttributesStack();
 
   std::unique_ptr<sema::SemaPPCallbacks> Callbacks =
       std::make_unique<sema::SemaPPCallbacks>();
@@ -501,7 +500,7 @@ Sema::~Sema() {
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);
 
   // Destroys data sharing attributes stack for OpenMP
-  DestroyDataSharingAttributesStack();
+  OpenMP().DestroyDataSharingAttributesStack();
 
   // Detach from the PP callback handler which outlives Sema since it's owned
   // by the preprocessor.
@@ -1128,7 +1127,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // Complete translation units and modules define vtables and perform implicit
   // instantiations. PCH files do not.
   if (TUKind != TU_Prefix) {
-    DiagnoseUseOfUnimplementedSelectors();
+    ObjC().DiagnoseUseOfUnimplementedSelectors();
 
     ActOnEndOfTranslationUnitFragment(
         !ModuleScopes.empty() && ModuleScopes.back().Module->Kind ==
@@ -1159,7 +1158,7 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   DiagnoseUnterminatedPragmaAlignPack();
   DiagnoseUnterminatedPragmaAttribute();
-  DiagnoseUnterminatedOpenMPDeclareTarget();
+  OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
@@ -1747,7 +1746,7 @@ public:
     // Finalize analysis of OpenMP-specific constructs.
     if (Caller && S.LangOpts.OpenMP && UsePath.size() == 1 &&
         (ShouldEmitRootNode || InOMPDeviceContext))
-      S.finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
+      S.OpenMP().finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
     if (Caller)
       S.CUDA().DeviceKnownEmittedFns[FD] = {Caller, Loc};
     // Always emit deferred diagnostics for the direct users. This does not
@@ -1899,8 +1898,8 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
   if (LangOpts.OpenMP)
     return LangOpts.OpenMPIsTargetDevice
-               ? diagIfOpenMPDeviceCode(Loc, DiagID, FD)
-               : diagIfOpenMPHostCode(Loc, DiagID, FD);
+               ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
+               : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
   if (getLangOpts().CUDA)
     return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
                                       : CUDA().DiagIfHostCode(Loc, DiagID);
@@ -2131,7 +2130,7 @@ void Sema::PushFunctionScope() {
     FunctionScopes.push_back(new FunctionScopeInfo(getDiagnostics()));
   }
   if (LangOpts.OpenMP)
-    pushOpenMPFunctionRegion();
+    OpenMP().pushOpenMPFunctionRegion();
 }
 
 void Sema::PushBlockScope(Scope *BlockScope, BlockDecl *Block) {
@@ -2251,7 +2250,7 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
                                PoppedFunctionScopeDeleter(this));
 
   if (LangOpts.OpenMP)
-    popOpenMPFunctionRegion(Scope.get());
+    OpenMP().popOpenMPFunctionRegion(Scope.get());
 
   // Issue any analysis-based warnings.
   if (WP && D)
@@ -2687,7 +2686,9 @@ void Sema::PushCapturedRegionScope(Scope *S, CapturedDecl *CD, RecordDecl *RD,
                                    unsigned OpenMPCaptureLevel) {
   auto *CSI = new CapturedRegionScopeInfo(
       getDiagnostics(), S, CD, RD, CD->getContextParam(), K,
-      (getLangOpts().OpenMP && K == CR_OpenMP) ? getOpenMPNestingLevel() : 0,
+      (getLangOpts().OpenMP && K == CR_OpenMP)
+          ? OpenMP().getOpenMPNestingLevel()
+          : 0,
       OpenMPCaptureLevel);
   CSI->ReturnType = Context.VoidTy;
   FunctionScopes.push_back(CSI);

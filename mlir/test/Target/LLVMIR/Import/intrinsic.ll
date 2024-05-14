@@ -597,7 +597,7 @@ define void @ushl_sat_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
 }
 
 ; CHECK-LABEL: llvm.func @va_intrinsics_test
-define void @va_intrinsics_test(ptr %0, ptr %1) {
+define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
 ; CHECK: llvm.intr.vastart %{{.*}}
   call void @llvm.va_start.p0(ptr %0)
 ; CHECK: llvm.intr.vacopy %{{.*}} to %{{.*}}
@@ -783,6 +783,15 @@ define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
 define void @vector_extract(<vscale x 4 x float> %0) {
   ; llvm.intr.vector.extract %{{.*}}[0] : vector<4xf32> from !llvm.vec<? x 4 x  f32>
   %2 = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> %0, i64 0);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_deinterleave2
+define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<4xf64>) -> !llvm.struct<(vector<2xf64>, vector<2xf64>)>
+  %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (!llvm.vec<? x 8 x i32>) -> !llvm.struct<(vec<? x 4 x i32>, vec<? x 4 x i32>)>
+  %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
   ret void
 }
 
