@@ -114,11 +114,12 @@ using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 // SubtargetFeature which may represent either an actual extension or some
 // internal LLVM property.
 struct ExtensionInfo {
-  StringRef Name;              // Human readable name, e.g. "profile".
-  ArchExtKind ID;              // Corresponding to the ArchExtKind, this
-                               // extensions representation in the bitfield.
-  StringRef Feature;           // -mattr enable string, e.g. "+spe"
-  StringRef NegFeature;        // -mattr disable string, e.g. "-spe"
+  StringRef Name;                 // Human readable name, e.g. "profile".
+  std::optional<StringRef> Alias; // An alias for this extension, if one exists.
+  ArchExtKind ID;                 // Corresponding to the ArchExtKind, this
+                                  // extensions representation in the bitfield.
+  StringRef Feature;              // -mattr enable string, e.g. "+spe"
+  StringRef NegFeature;           // -mattr disable string, e.g. "-spe"
   CPUFeatures CPUFeature;      // Function Multi Versioning (FMV) bitfield value
                                // set in __aarch64_cpu_features
   StringRef DependentFeatures; // FMV enabled features string,
@@ -674,8 +675,6 @@ struct Alias {
 inline constexpr Alias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
                                        {"grace", "neoverse-v2"}};
 
-inline constexpr Alias ExtAliases[] = {{"rdma", "rdm"}};
-
 const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
 
 bool getExtensionFeatures(
@@ -684,7 +683,6 @@ bool getExtensionFeatures(
 
 StringRef getArchExtFeature(StringRef ArchExt);
 StringRef resolveCPUAlias(StringRef CPU);
-StringRef resolveExtAlias(StringRef ArchExt);
 
 // Information by Name
 const ArchInfo *getArchForCpu(StringRef CPU);
