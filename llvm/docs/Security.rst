@@ -55,6 +55,7 @@ username for an individual isn't available, the brackets will be empty.
 * Serge Guelton (Mozilla) [@serge-sans-paille]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
 * Tim Penge (Sony) []
+* Tulio Magno Quites Machado Filho (Red Hat) [@tuliom]
 * Will Huhn (Intel) [@wphuhn-intel]
 
 Criteria
