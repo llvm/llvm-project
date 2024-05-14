@@ -39,6 +39,7 @@ end subroutine omp_parallel_sections
 subroutine omp_parallel_sections_allocate(x, y)
   use omp_lib
   integer, intent(inout) :: x, y
+  !CHECK: omp.parallel
   !CHECK: %[[allocator_1:.*]] = arith.constant 4 : i64
   !CHECK: omp.sections allocate(%[[allocator_1]] : i64 -> %{{.*}} : !fir.ref<i32>) {
   !$omp parallel sections allocate(omp_high_bw_mem_alloc: x) private(x, y)
