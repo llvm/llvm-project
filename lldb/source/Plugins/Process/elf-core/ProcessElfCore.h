@@ -117,8 +117,6 @@ private:
     lldb::addr_t end;
     lldb::addr_t file_ofs;
     std::string path;
-    lldb_private::UUID
-        uuid; // extracted from .note.gnu.build-id section from core file
   };
 
   // For ProcessElfCore only
@@ -159,15 +157,6 @@ private:
 
   // Returns number of thread contexts stored in the core file
   uint32_t GetNumThreadContexts();
-
-  // Populate gnu uuid for each NT_FILE entry
-  void UpdateBuildIdForNTFileEntries();
-
-  // Returns the UUID of a given NT_FILE entry
-  std::optional<lldb_private::UUID> FindBuildId(const NT_FILE_Entry entry);
-
-  // Returns true if the given NT_FILE entry is an ELF file
-  bool IsElf(const NT_FILE_Entry entry);
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t
