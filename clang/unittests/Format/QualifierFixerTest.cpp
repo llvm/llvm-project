@@ -1059,66 +1059,44 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
       "const static inline auto restrict int double long constexpr friend");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[0], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[1], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[2], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[3], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[4], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[5], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[6], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[7], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[8], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[9], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[0], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[1], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[2], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[3], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[4], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[5], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[6], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[7], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[8], ConfiguredTokens));
+  EXPECT_TRUE(isConfiguredQualifierOrType(Tokens[9], ConfiguredTokens));
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[0]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[1]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[2]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[3]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[4]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[5]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[6]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[7]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[8]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[0]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[1]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[2]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[3]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[4]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[5]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[6]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[7]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[8]));
+  EXPECT_TRUE(isQualifierOrType(Tokens[9]));
 
   auto NotTokens = annotate("for while do Foo Bar ");
   ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[0], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[1], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[2], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[3], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[4], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[5], ConfiguredTokens));
+  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[0], ConfiguredTokens));
+  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[1], ConfiguredTokens));
+  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[2], ConfiguredTokens));
+  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[3], ConfiguredTokens));
+  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[4], ConfiguredTokens));
+  EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[5], ConfiguredTokens));
 
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[0]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[1]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[2]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[3]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[4]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[5]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[0]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[1]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[2]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[3]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[4]));
+  EXPECT_FALSE(isQualifierOrType(NotTokens[5]));
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
@@ -1126,10 +1104,10 @@ TEST_F(QualifierFixerTest, IsMacro) {
   auto Tokens = annotate("INT INTPR Foo int");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[0]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[1]));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[2]));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[3]));
+  EXPECT_TRUE(isPossibleMacro(Tokens[0]));
+  EXPECT_TRUE(isPossibleMacro(Tokens[1]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[3]));
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {

@@ -614,22 +614,21 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
   }
 }
 
-bool LeftRightQualifierAlignmentFixer::isQualifierOrType(const FormatToken *Tok,
-                                                         bool IsCpp) {
+bool isQualifierOrType(const FormatToken *Tok, bool IsCpp) {
   return Tok &&
          (Tok->isTypeName(IsCpp) || Tok->is(tok::kw_auto) || isQualifier(Tok));
 }
 
-bool LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-    const FormatToken *Tok, const std::vector<tok::TokenKind> &Qualifiers,
-    bool IsCpp) {
+bool isConfiguredQualifierOrType(const FormatToken *Tok,
+                                 const std::vector<tok::TokenKind> &Qualifiers,
+                                 bool IsCpp) {
   return Tok && (Tok->isTypeName(IsCpp) || Tok->is(tok::kw_auto) ||
                  isConfiguredQualifier(Tok, Qualifiers));
 }
 
 // If a token is an identifier and it's upper case, it could
 // be a macro and hence we need to be able to ignore it.
-bool LeftRightQualifierAlignmentFixer::isPossibleMacro(const FormatToken *Tok) {
+bool isPossibleMacro(const FormatToken *Tok) {
   if (!Tok)
     return false;
   if (Tok->isNot(tok::identifier))
