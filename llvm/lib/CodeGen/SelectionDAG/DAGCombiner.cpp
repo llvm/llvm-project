@@ -12140,10 +12140,16 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
   for (unsigned i = 0; i != Elts; ++i) {
     SDValue N1Elt = N1.getOperand(i);
     SDValue N2Elt = N2.getOperand(i);
-    if (N1Elt.isUndef() || N2Elt.isUndef())
+    if (N1Elt.isUndef() || N2Elt.isUndef()) {
+      AllAddOne = false;
+      AllSubOne = false;
       continue;
-    if (N1Elt.getValueType() != N2Elt.getValueType())
+    }
+    if (N1Elt.getValueType() != N2Elt.getValueType()) {
+      AllAddOne = false;
+      AllSubOne = false;
       continue;
+    }
 
     const APInt &C1 = N1Elt->getAsAPIntVal();
     const APInt &C2 = N2Elt->getAsAPIntVal();
@@ -12152,6 +12158,8 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
     if (C1 != C2 - 1)
       AllSubOne = false;
   }
+  assert(!(AllAddOne && AllSubOne) &&
+         "Y=X+1 and Y=X-1 cannot be true for any given X and Y.");
 
   // Further simplifications for the extra-special cases where the constants are
   // all 0 or all -1 should be implemented as folds of these patterns.
