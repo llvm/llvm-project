@@ -1030,10 +1030,21 @@ LogicalResult ModuleTranslation::convertGlobals() {
       llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
       var->addDebugInfo(diGlobalExpr);
 
+      // There is no `globals` field in DICompileUnitAttr which can be directly
+      // assigned to DICompileUnit. We have to build the list by looking at the
+      // dbgExpr of all the GlobalOps. The scope of the variable is used to get
+      // the DICompileUnit in which to add it. But for the languages that
+      // support modules, the scope hierarchy can be
+      // variable -> module -> compile unit
+      // If a variable scope points to the module then we use the scope of the
+      // module to get the compile unit.
+      llvm::DIScope *scope = diGlobalVar->getScope();
+      if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+        scope = mod->getScope();
+
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
-              dyn_cast_if_present<llvm::DICompileUnit>(
-                  diGlobalVar->getScope())) {
+              dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
         // Update the compile unit with this incoming global variable expression
         // during the finalizing step later.
         allGVars[compileUnit].push_back(diGlobalExpr);
