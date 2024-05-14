@@ -844,7 +844,7 @@ void LoadOp::getEffects(
 static bool isTypeCompatibleWithAtomicOp(Type type,
                                          const DataLayout &dataLayout) {
   if (!isa<IntegerType, LLVMPointerType>(type))
-    if (!isa<FloatType>(type) || !isCompatibleFloatingPointType(type))
+    if (!isCompatibleFloatingPointType(type))
       return false;
 
   llvm::TypeSize bitWidth = dataLayout.getTypeSizeInBits(type);
