@@ -463,7 +463,7 @@ static_assert(!__is_nothrow_constructible(D4, int), "");
 #endif
 } // namespace cwg1350
 
-namespace cwg1352 { // 3.0
+namespace cwg1352 { // cwg1352: 3.0
 struct A {
 #if __cplusplus >= 201103L
   int a = sizeof(A);
