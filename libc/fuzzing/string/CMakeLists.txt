@@ -26,22 +26,6 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
-  memcpy_fuzz
-  SRCS
-    memcpy_fuzz.cpp
-  DEPENDS
-    libc.src.string.memcpy
-)
-
-add_libc_fuzzer(
-  memset_fuzz
-  SRCS
-    memset_fuzz.cpp
-  DEPENDS
-    libc.src.string.memset
-)
-
-add_libc_fuzzer(
   memcmp_fuzz
   SRCS
     memcmp_fuzz.cpp
