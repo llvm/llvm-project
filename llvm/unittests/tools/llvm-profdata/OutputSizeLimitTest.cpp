@@ -65,10 +65,6 @@ public:
     return Var##OrErr;                                                         \
   Var = std::move(Var##OrErr.get())
 
-#define RETURN_IF_ERROR(Value)                                                 \
-  if (auto E = Value)                                                          \
-  return std::move(E)
-
 /// The main testing routine. After rewriting profiles with size limit, check
 /// the following:
 /// 1. The file size of the new profile is within the size limit.

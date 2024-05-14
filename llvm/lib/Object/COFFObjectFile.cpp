@@ -1789,13 +1789,6 @@ Error BaseRelocRef::getRVA(uint32_t &Result) const {
   return Error::success();
 }
 
-#define RETURN_IF_ERROR(Expr)                                                  \
-  do {                                                                         \
-    Error E = (Expr);                                                          \
-    if (E)                                                                     \
-      return std::move(E);                                                     \
-  } while (0)
-
 Expected<ArrayRef<UTF16>>
 ResourceSectionRef::getDirStringAtOffset(uint32_t Offset) {
   BinaryStreamReader Reader = BinaryStreamReader(BBS);

@@ -1420,6 +1420,32 @@ inline Error unwrap(LLVMErrorRef ErrRef) {
       reinterpret_cast<ErrorInfoBase *>(ErrRef)));
 }
 
+/// Common scenarios macros for handling Error or Expect<T> returns
+/// Forward Error.
+#ifndef RETURN_IF_ERROR
+#define RETURN_IF_ERROR(Expr)                                                  \
+  if (auto Err = (Expr))                                                       \
+    return Err;
+#endif
+
+/// Assign Var as Expect<T>, and forward the Error. The user decides how to
+/// consume the contained value - move it, or take a reference.
+#ifndef ASSIGN_OR_RETURN
+#define ASSIGN_OR_RETURN(Var, Expr)                                            \
+  auto Var = (Expr);                                                           \
+  if (!Var)                                                                    \
+    return Var.takeError();
+#endif
+
+/// Forward the Error. Otherwise move the contained value to Var.
+#ifndef TAKE_OR_RETURN
+#define TAKE_OR_RETURN(Var, Expr)                                              \
+  auto Var##OrErr = (Expr);                                                    \
+  if (!Var##OrErr)                                                             \
+    return Var##OrErr.takeError();                                             \
+  auto Var = std::move(*Var##OrErr);
+#endif
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_ERROR_H
