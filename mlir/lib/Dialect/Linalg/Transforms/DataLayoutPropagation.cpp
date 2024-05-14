@@ -730,6 +730,43 @@ private:
   ControlPropagationFn controlFn;
 };
 
+/// Propagate a tensor.pack operation up through a linalg.fill. The idea is to
+/// avoid packing a fill op and create a 'packed' fill instead.
+class BubbleUpPackOpThroughFillOp final
+    : public OpRewritePattern<tensor::PackOp> {
+public:
+  BubbleUpPackOpThroughFillOp(MLIRContext *context, ControlPropagationFn fun)
+      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
+
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    Value source = packOp.getSource();
+    auto fillOp = source.getDefiningOp<linalg::FillOp>();
+    if (!fillOp)
+      return failure();
+
+    // User controlled propagation function.
+    if (!controlFn(fillOp))
+      return failure();
+
+    if (!fillOp.getResult(0).hasOneUse())
+      return failure();
+
+    // Fill destination must be an empty tensor.
+    // Otherwise, packing cannot be removed.
+    if (!fillOp.getOutputs()[0].getDefiningOp<tensor::EmptyOp>())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<linalg::FillOp>(packOp, fillOp.getInputs(),
+                                                packOp.getDest());
+
+    return success();
+  }
+
+private:
+  ControlPropagationFn controlFn;
+};
+
 /// Push down unpack op through expand shape op when the packed dims can be
 /// projected to the dims after expanding. This is possible when the inner tile
 /// sizes can divide the projected dims.
@@ -1074,9 +1111,9 @@ private:
 void mlir::linalg::populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation) {
-  patterns
-      .insert<BubbleUpPackOpThroughGenericOpPattern, BubbleUpPackThroughPadOp,
-              BubbleUpPackOpThroughReshapeOp, PushDownUnPackOpThroughGenericOp,
-              PushDownUnPackThroughPadOp, PushDownUnPackOpThroughReshapeOp>(
-          patterns.getContext(), controlPackUnPackPropagation);
+  patterns.insert<BubbleUpPackOpThroughGenericOpPattern,
+                  BubbleUpPackThroughPadOp, BubbleUpPackOpThroughReshapeOp,
+                  BubbleUpPackOpThroughFillOp, PushDownUnPackOpThroughGenericOp,
+                  PushDownUnPackThroughPadOp, PushDownUnPackOpThroughReshapeOp>(
+      patterns.getContext(), controlPackUnPackPropagation);
 }

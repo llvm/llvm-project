@@ -1071,3 +1071,57 @@ func.func @no_push_down_unpack_through_non_divisible_expand(%5: tensor<384x32x8x
 // CHECK:         %[[UNPACK:.+]] = tensor.unpack %[[ARG0]]
 // CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[UNPACK]] {{\[}}[0, 1], [2]] output_shape [256, 12, 256] : tensor<3072x256xf32> into tensor<256x12x256xf32>
 // CHECK:         return %[[EXPANDED]] : tensor<256x12x256xf32>
+
+// -----
+
+func.func @bubble_up_pack_through_fill(%arg0: f32) -> tensor<4x2x56x56x32xf32> {
+  %empty_fill = tensor.empty() : tensor<4x56x56x64xf32>
+  %fill = linalg.fill ins(%arg0 : f32) outs(%empty_fill : tensor<4x56x56x64xf32>) -> tensor<4x56x56x64xf32>
+  %empty_pack = tensor.empty() : tensor<4x2x56x56x32xf32>
+  %pack = tensor.pack %fill outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32] into %empty_pack : tensor<4x56x56x64xf32> -> tensor<4x2x56x56x32xf32>
+  return %pack : tensor<4x2x56x56x32xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_up_pack_through_fill(
+// CHECK-SAME:     %[[ARG0:.+]]: f32
+// CHECK:         %[[EMPTY_PACKED:.+]] = tensor.empty() : tensor<4x2x56x56x32xf32>
+// CHECK:         %[[FILL_PACKED:.+]] = linalg.fill
+// CHECK-SAME:      ins(%[[ARG0]] : f32)
+// CHECK-SAME:      outs(%[[EMPTY_PACKED]] : tensor<4x2x56x56x32xf32>)
+// CHECK:         return %[[FILL_PACKED]]
+
+// -----
+
+func.func @bubble_up_pack_into_arg_through_fill(%arg0: f32, %arg1: tensor<4x2x56x56x32xf32>) -> tensor<4x2x56x56x32xf32> {
+  %empty_fill = tensor.empty() : tensor<4x56x56x64xf32>
+  %fill = linalg.fill ins(%arg0 : f32) outs(%empty_fill : tensor<4x56x56x64xf32>) -> tensor<4x56x56x64xf32>
+  %pack = tensor.pack %fill outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32] into %arg1 : tensor<4x56x56x64xf32> -> tensor<4x2x56x56x32xf32>
+  return %pack : tensor<4x2x56x56x32xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_up_pack_into_arg_through_fill(
+// CHECK-SAME:     %[[ARG0:.+]]: f32
+// CHECK-SAME:     %[[ARG1:.+]]: tensor<4x2x56x56x32xf32>
+// CHECK:         %[[FILL_PACKED_ARG:.+]] = linalg.fill
+// CHECK-SAME:      ins(%[[ARG0]] : f32)
+// CHECK-SAME:      outs(%[[ARG1]] : tensor<4x2x56x56x32xf32>)
+// CHECK:         return %[[FILL_PACKED_ARG]]
+
+// -----
+
+func.func @no_bubble_up_pack_through_fill_into_arg(%arg0: f32, %arg1: tensor<4x56x56x64xf32>) -> tensor<4x2x56x56x32xf32> {
+  %fill = linalg.fill ins(%arg0 : f32) outs(%arg1 : tensor<4x56x56x64xf32>) -> tensor<4x56x56x64xf32>
+  %empty_pack = tensor.empty() : tensor<4x2x56x56x32xf32>
+  %pack = tensor.pack %fill outer_dims_perm = [0, 3, 1, 2] inner_dims_pos = [3] inner_tiles = [32] into %empty_pack : tensor<4x56x56x64xf32> -> tensor<4x2x56x56x32xf32>
+  return %pack : tensor<4x2x56x56x32xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_up_pack_through_fill_into_arg(
+// CHECK-SAME:     %[[ARG0:.+]]: f32
+// CHECK-SAME:     %[[ARG1:.+]]: tensor<4x56x56x64xf32>
+// CHECK:         %[[FILL_ARG:.+]] = linalg.fill
+// CHECK-SAME:      ins(%[[ARG0]] : f32)
+// CHECK-SAME:      outs(%[[ARG1]] : tensor<4x56x56x64xf32>)
+// CHECK:         %[[EMPTY_PACK:.+]] = tensor.empty() : tensor<4x2x56x56x32xf32>
+// CHECK:         %[[PACK:.+]] = tensor.pack %[[FILL_ARG]]{{.*}}into %[[EMPTY_PACK]]
+// CHECK:         return %[[PACK]]
