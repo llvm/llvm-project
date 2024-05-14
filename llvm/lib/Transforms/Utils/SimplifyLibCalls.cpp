@@ -2386,12 +2386,11 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   // exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < IntSize
   Value *Op = CI->getArgOperand(0);
   if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
-      hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
+      (UseIntrinsic ||
+       hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl))) {
     if (Value *Exp = getIntToFPVal(Op, B, TLI->getIntSize())) {
       Constant *One = ConstantFP::get(Ty, 1.0);
 
-      // TODO: Emitting the intrinsic should not depend on whether the libcall
-      // is available.
       if (UseIntrinsic) {
         return copyFlags(*CI, B.CreateIntrinsic(Intrinsic::ldexp,
                                                 {Ty, Exp->getType()},
