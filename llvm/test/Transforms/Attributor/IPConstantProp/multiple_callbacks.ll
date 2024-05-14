@@ -130,8 +130,13 @@ declare !callback !3 void @broker(ptr, ptr, ptr, i32, i32)
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1, !2, !3}
-; CHECK: [[META1:![0-9]+]] = !{i64 0, i64 3, i1 false}
-; CHECK: [[META2:![0-9]+]] = !{i64 2, i64 3, i1 false}
-; CHECK: [[META3:![0-9]+]] = !{i64 1, i64 4, i1 false}
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 0, i64 3, i1 false}
+; TUNIT: [[META2]] = !{i64 2, i64 3, i1 false}
+; TUNIT: [[META3]] = !{i64 1, i64 4, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 0, i64 3, i1 false}
+; CGSCC: [[META2]] = !{i64 2, i64 3, i1 false}
+; CGSCC: [[META3]] = !{i64 1, i64 4, i1 false}
 ;.

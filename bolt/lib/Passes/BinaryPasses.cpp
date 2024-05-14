@@ -715,6 +715,9 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
           Pred->removeSuccessor(&BB);
           Pred->eraseInstruction(Pred->findInstruction(Branch));
           Pred->addTailCallInstruction(SuccSym);
+          MCInst *TailCall = Pred->getLastNonPseudoInstr();
+          assert(TailCall);
+          MIB->setOffset(*TailCall, BB.getOffset());
         } else {
           return false;
         }
@@ -910,6 +913,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
       CTCAnnotation = CTCTakenFreq;
+      // Preserve Offset annotation, used in BAT.
+      // Instr is a direct tail call instruction that was created when CTCs are
+      // first expanded, and has the original CTC offset set.
+      if (std::optional<uint32_t> Offset = MIB->getOffset(*Instr))
+        MIB->setOffset(*CondBranch, *Offset);
 
       // Remove the unused successor which may be eliminated later
       // if there are no other users.

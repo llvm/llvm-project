@@ -69,6 +69,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- The tweak for turning unscoped into scoped enums now removes redundant prefixes
+  from the enum values.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -87,7 +90,9 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- Added the `file` command to dynamically load a list of commands and matchers
+  from an external file, allowing the cost of reading the compilation database
+  and building the AST to be imposed just once for faster prototyping.
 
 Improvements to clang-rename
 ----------------------------
@@ -133,6 +138,12 @@ New checks
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
 
+- New :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check.
+
+  Detects variables and functions that can be marked as static or moved into
+  an anonymous namespace to enforce internal linkage.
+
 - New :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
 
@@ -145,11 +156,14 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
-- New :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` check.
+- New :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check.
 
-  Detects variables and functions that can be marked as static or moved into
-  an anonymous namespace to enforce internal linkage.
+  Converts calls to ``absl::StrFormat``, or other functions via
+  configuration options, to C++20's ``std::format``, or another function
+  via a configuration option, modifying the format string appropriately and
+  removing now-unnecessary calls to ``std::string::c_str()`` and
+  ``std::string::data()``.
 
 - New :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check.
@@ -172,12 +186,21 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-int09-c <clang-tidy/checks/cert/int09-c>` to
+  :doc:`readability-enum-initial-value <clang-tidy/checks/readability/enum-initial-value>`
+  was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-assert-side-effect
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
+
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
+  where source is already a ``void``` pointer, making middle ``void`` pointer
+  casts bug-free.
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
@@ -195,6 +218,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
   within parentheses.
+
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
+  false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
@@ -252,6 +279,10 @@ Changes in existing checks
 
 - Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
   check performance through optimizations.
+
+- Improved :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  check by ignoring false positives involving positive integer literals behind
+  implicit casts when `IgnorePositiveIntegerLiterals` is enabled.
 
 - Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
   check by ignoring other functions with same prefixes as the target specific
@@ -319,9 +350,17 @@ Changes in existing checks
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
   fix-its.
 
+- Improved :doc:`readability-const-return-type
+  <clang-tidy/checks/readability/const-return-type>` check to eliminate false
+  positives when returning types with const not at the top level.
+
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
+
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check to ignore
+  `if consteval` statements, for which the `else` branch must not be removed.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
@@ -338,10 +377,24 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
   emit warnings for static data member with an in-class initializer.
 
+- Improved :doc:`readability-static-accessed-through-instance
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
+  support calls to overloaded operators as base expression and provide fixes to
+  expressions with side-effects.
+
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
+  warning for macro when IgnoreMacro option is enabled.
+
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
   check by resolving fix-it overlaps in template code by disregarding implicit
   instances.
+
+- Improved :doc:`readability-string-compare
+  <clang-tidy/checks/readability/string-compare>` check to also detect
+  usages of ``std::string_view::compare``. Added a `StringLikeClasses` option
+  to detect usages of ``compare`` method in custom string-like classes.
 
 Removed checks
 ^^^^^^^^^^^^^^

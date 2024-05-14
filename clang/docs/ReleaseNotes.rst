@@ -48,6 +48,13 @@ C++ Specific Potentially Breaking Changes
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
   This error can be disabled via `-Wno-strict-primary-template-shadow` for compatibility with previous versions of clang.
 
+- The behavior controlled by the `-frelaxed-template-template-args` flag is now
+  on by default, and the flag is deprecated. Until the flag is finally removed,
+  it's negative spelling can be used to obtain compatibility with previous
+  versions of clang.
+
+- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -69,6 +76,9 @@ ABI Changes in This Version
   returning a class in a register. This affects some uses of std::pair.
   (#GH86384).
 
+- Fixed Microsoft calling convention when returning classes that have a deleted
+  copy assignment operator. Such a class should be returned indirectly.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -85,6 +95,25 @@ Clang Frontend Potentially Breaking Changes
   of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
   which may break existing uses with ``-Werror``.
 
+- The normalization of 3 element target triples where ``-none-`` is the middle
+  element has changed. For example, ``armv7m-none-eabi`` previously normalized
+  to ``armv7m-none-unknown-eabi``, with ``none`` for the vendor and ``unknown``
+  for the operating system. It now normalizes to ``armv7m-unknown-none-eabi``,
+  which has ``unknown`` vendor and ``none`` operating system.
+
+  The affected triples are primarily for bare metal Arm where it is intended
+  that ``none`` means that there is no operating system. As opposed to an unknown
+  type of operating system.
+
+  This change my cause clang to not find libraries, or libraries to be built at
+  different file system locations. This can be fixed by changing your builds to
+  use the new normalized triple. However, we recommend instead getting the
+  normalized triple from clang itself, as this will make your builds more
+  robust in case of future changes::
+
+    $ clang --target=<your target triple> -print-target-triple
+    <the normalized target triple>
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -94,6 +123,17 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- C++17 support is now completed, with the enablement of the
+  relaxed temlate template argument matching rules introduced in P0522,
+  which was retroactively applied as a defect report.
+  While the implementation already existed since Clang 4, it was turned off by
+  default, and was controlled with the `-frelaxed-template-template-args` flag.
+  In this release, we implement provisional wording for a core defect on
+  P0522 (CWG2398), which avoids the most serious compatibility issues caused
+  by it, allowing us to enable it by default in this release.
+  The flag is now deprecated, and will be removed in the next release, but can
+  still be used to turn it off and regain compatibility with previous versions
+  (#GH36505).
 - Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
 
 C++17 Feature Support
@@ -142,6 +182,9 @@ C++23 Feature Support
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
+- Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
+  `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -152,6 +195,9 @@ C++2c Feature Support
 - Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
 - Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
+
+- Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -172,6 +218,9 @@ Resolutions to C++ Defect Reports
 
 - Clang now diagnoses declarative nested-name-specifiers with pack-index-specifiers.
   (`CWG2858: Declarative nested-name-specifiers and pack-index-specifiers <https://cplusplus.github.io/CWG/issues/2858.html>`_).
+
+- P0522 implementation is enabled by default in all language versions, and
+  provisional wording for CWG2398 is implemented.
 
 C Language Changes
 ------------------
@@ -260,6 +309,11 @@ New Compiler Flags
   allow late parsing certain attributes in specific contexts where they would
   not normally be late parsed.
 
+- ``-fseparate-named-sections`` uses separate unique sections for global
+  symbols in named special sections (i.e. symbols annotated with
+  ``__attribute__((section(...)))``. This enables linker GC to collect unused
+  symbols without having to use a per-symbol section.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -293,6 +347,10 @@ Modified Compiler Flags
 
 - Carved out ``-Wformat`` warning about scoped enums into a subwarning and
   make it controlled by ``-Wformat-pedantic``. Fixes #GH88595.
+
+- Trivial infinite loops (i.e loops with a constant controlling expresion
+  evaluating to ``true`` and an empty body such as ``while(1);``)
+  are considered infinite, even when the ``-ffinite-loop`` flag is set.
 
 Removed Compiler Flags
 -------------------------
@@ -502,6 +560,9 @@ Bug Fixes in This Version
   The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
   Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
+- Clang will no longer emit a duplicate -Wunused-value warning for an expression
+  `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -630,6 +691,25 @@ Bug Fixes to C++ Support
 - Fix a bug on template partial specialization with issue on deduction of nontype template parameter
   whose type is `decltype(auto)`. Fixes (#GH68885).
 - Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
+- Fix an assertion failure when parsing an invalid members of an anonymous class. (#GH85447)
+- Fixed a misuse of ``UnresolvedLookupExpr`` for ill-formed templated expressions. Fixes (#GH48673), (#GH63243)
+  and (#GH88832).
+- Clang now defers all substitution into the exception specification of a function template specialization
+  until the noexcept-specifier is instantiated.
+- Fix a crash when an implicitly declared ``operator==`` function with a trailing requires-clause has its
+  constraints compared to that of another declaration.
+- Fix a bug where explicit specializations of member functions/function templates would have substitution
+  performed incorrectly when checking constraints. Fixes (#GH90349).
+- Clang now allows constrained member functions to be explicitly specialized for an implicit instantiation
+  of a class template.
+- Fix a C++23 bug in implementation of P2564R3 which evaluates immediate invocations in place
+  within initializers for variables that are usable in constant expressions or are constant
+  initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
+  expression.
+- Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
+- Correctly treat the compound statement of an ``if consteval`` as an immediate context. Fixes (#GH91509).
+- When partial ordering alias templates against template template parameters,
+  allow pack expansions when the alias has a fixed-size parameter list. Fixes (#GH62529).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -729,6 +809,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.4
 
 AIX Support
 ^^^^^^^^^^^
@@ -781,6 +862,9 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
+- Handles Java ``switch`` expressions.
+- Adds ``AllowShortCaseExpressionOnASingleLine`` option.
+- Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 
 libclang
 --------

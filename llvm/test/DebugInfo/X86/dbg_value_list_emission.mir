@@ -91,7 +91,7 @@ body:             |
     ; CHECK:      DW_TAG_variable
     ; CHECK-NEXT:   (DW_OP_breg0 RAX+5, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_breg5 RDI+17, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_plus, DW_OP_stack_value)
     ; CHECK-NEXT:   DW_AT_name ("localg")
-    
+
     ; (8) Check that a single $noreg location invalidates the entire entry.
     DBG_VALUE_LIST !30, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $eax, $noreg, debug-location !15
     ; CHECK-NOT:   DW_AT_name ("localh")

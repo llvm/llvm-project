@@ -301,6 +301,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
+   :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
@@ -396,8 +397,10 @@ Clang-Tidy Checks
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
+Check aliases
+-------------
 
-.. csv-table:: Aliases..
+.. csv-table::
    :header: "Name", "Redirect", "Offers fixes"
 
    :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
@@ -414,6 +417,7 @@ Clang-Tidy Checks
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
+   :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,

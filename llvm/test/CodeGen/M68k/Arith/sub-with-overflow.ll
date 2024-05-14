@@ -18,7 +18,7 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.2: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
+; CHECK-NEXT:    jsr printf
 ; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -26,7 +26,7 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
+; CHECK-NEXT:    jsr printf
 ; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -55,7 +55,7 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.2: ; %carry
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
+; CHECK-NEXT:    jsr printf
 ; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -63,7 +63,7 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
+; CHECK-NEXT:    jsr printf
 ; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts

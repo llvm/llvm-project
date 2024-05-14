@@ -841,6 +841,7 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
     case VPRecipeBase::VPDerivedIVSC:
+    case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionSC:
@@ -1757,7 +1758,8 @@ public:
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   /// Returns true if the induction is canonical, i.e. starting at 0 and
-  /// incremented by UF * VF (= the original IV is incremented by 1).
+  /// incremented by UF * VF (= the original IV is incremented by 1) and has the
+  /// same type as the canonical induction.
   bool isCanonical() const;
 
   /// Returns the scalar type of the induction.
@@ -2413,8 +2415,8 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L->getIngredient(),
-                            {L->getAddr(), EVL}, L->isConsecutive(), false,
-                            L->getDebugLoc()),
+                            {L->getAddr(), EVL}, L->isConsecutive(),
+                            L->isReverse(), L->getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2490,7 +2492,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S->getIngredient(),
                             {S->getAddr(), S->getStoredValue(), EVL},
-                            S->isConsecutive(), false, S->getDebugLoc()) {
+                            S->isConsecutive(), S->isReverse(),
+                            S->getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -2708,12 +2711,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
-        ->getScalarType();
-  }
 };
 
 /// A recipe for converting the input value \p IV value to the corresponding

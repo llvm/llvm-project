@@ -46,32 +46,28 @@
 ^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1), aliasee: ^14)))
 
 ; Test all types of TypeIdInfo on function summaries.
-^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 4, typeIdInfo: (typeTests: (^26, ^28)))))
-^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^29, offset: 16))))))
-^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^27, offset: 16))))))
-^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: ((vFuncId: (^29, offset: 16), args: (42)), (vFuncId: (^29, offset: 24)))))))
-^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: ((vFuncId: (^30, offset: 16), args: (42)))))))
+^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 4, typeIdInfo: (typeTests: (^25, ^27)))))
+^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^28, offset: 16))))))
+^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^26, offset: 16))))))
+^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: ((vFuncId: (^28, offset: 16), args: (42)), (vFuncId: (^28, offset: 24)))))))
+^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: ((vFuncId: (^29, offset: 16), args: (42)))))))
 
 ; Function summary with an import type of declaration
 ^24 = gv: (guid: 23, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, importType: declaration), insts: 5)))
 
-; GUID that are 64-bit
-
-^25 = gv: (guid: 9123456789101112131, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, importType: definition), insts: 1)))
-
 ; Test TypeId summaries:
 
-^26 = typeid: (name: "_ZTS1C", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0)))
+^25 = typeid: (name: "_ZTS1C", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0)))
 ; Test TypeId with other optional fields (alignLog2/sizeM1/bitMask/inlineBits)
-^27 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4)))
+^26 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4)))
 ; Test the AllOnes resolution, and all kinds of WholeProgramDevirtResolution
 ; types, including all optional resolution by argument kinds.
-^28 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp)))))))
+^27 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp)))))))
 ; Test the other kinds of type test resoultions
-^29 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0)))
-^30 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0)))
-^31 = flags: 8
-^32 = blockcount: 1888
+^28 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0)))
+^29 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0)))
+^30 = flags: 8
+^31 = blockcount: 1888
 
 ; Make sure we get back from llvm-dis essentially what we put in via llvm-as.
 ; CHECK: ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
@@ -95,20 +91,19 @@
 ; CHECK: ^16 = gv: (guid: 15, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 1, funcFlags: (readNone: 1, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 1, noUnwind: 1, mayThrow: 1, hasUnknownCall: 1, mustBeUnreachable: 0))))
 ; CHECK: ^17 = gv: (guid: 16, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 1, funcFlags: (readNone: 0, readOnly: 1, noRecurse: 0, returnDoesNotAlias: 1, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 1), calls: ((callee: ^15)))))
 ; CHECK: ^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), aliasee: ^14)))
-; CHECK: ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 4, typeIdInfo: (typeTests: (^26, ^28)))))
-; CHECK: ^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^29, offset: 16))))))
-; CHECK: ^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^27, offset: 16))))))
-; CHECK: ^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: ((vFuncId: (^29, offset: 16), args: (42)), (vFuncId: (^29, offset: 24)))))))
-; CHECK: ^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: ((vFuncId: (^30, offset: 16), args: (42)))))))
+; CHECK: ^19 = gv: (guid: 18, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 4, typeIdInfo: (typeTests: (^25, ^27)))))
+; CHECK: ^20 = gv: (guid: 19, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (^28, offset: 16))))))
+; CHECK: ^21 = gv: (guid: 20, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (^26, offset: 16))))))
+; CHECK: ^22 = gv: (guid: 21, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 15, typeIdInfo: (typeTestAssumeConstVCalls: ((vFuncId: (^28, offset: 16), args: (42)), (vFuncId: (^28, offset: 24)))))))
+; CHECK: ^23 = gv: (guid: 22, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 5, typeIdInfo: (typeCheckedLoadConstVCalls: ((vFuncId: (^29, offset: 16), args: (42)))))))
 ; CHECK: ^24 = gv: (guid: 23, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: declaration), insts: 5)))
-; CHECK: ^25 = gv: (guid: 9123456789101112131, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), insts: 1)))
-; CHECK: ^26 = typeid: (name: "_ZTS1C", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0))) ; guid = 1884921850105019584
-; CHECK: ^27 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4))) ; guid = 6203814149063363976
-; CHECK: ^28 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp))))))) ; guid = 7004155349499253778
-; CHECK: ^29 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0))) ; guid = 9614786172484273522
-; CHECK: ^30 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0))) ; guid = 17437243864166745132
-; CHECK: ^31 = flags: 8
-; CHECK: ^32 = blockcount: 1888
+; CHECK: ^25 = typeid: (name: "_ZTS1C", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0))) ; guid = 1884921850105019584
+; CHECK: ^26 = typeid: (name: "_ZTS1B", summary: (typeTestRes: (kind: inline, sizeM1BitWidth: 0, alignLog2: 1, sizeM1: 2, bitMask: 3, inlineBits: 4))) ; guid = 6203814149063363976
+; CHECK: ^27 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp))))))) ; guid = 7004155349499253778
+; CHECK: ^28 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0))) ; guid = 9614786172484273522
+; CHECK: ^29 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0))) ; guid = 17437243864166745132
+; CHECK: ^30 = flags: 8
+; CHECK: ^31 = blockcount: 1888
 
 ; Make sure parsing of a non-summary entry containing a ":" does not fail
 ; after summary parsing, which handles colons differently.

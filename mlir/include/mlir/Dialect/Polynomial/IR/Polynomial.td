@@ -79,7 +79,7 @@ def Polynomial_PolynomialAttr : Polynomial_Attr<"Polynomial", "polynomial"> {
     #poly = #polynomial.polynomial<x**1024 + 1>
     ```
   }];
-  let parameters = (ins "Polynomial":$polynomial);
+  let parameters = (ins "::mlir::polynomial::Polynomial":$polynomial);
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -122,10 +122,19 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
 
   let parameters = (ins
     "Type": $coefficientType,
-    OptionalParameter<"IntegerAttr">: $coefficientModulus,
-    OptionalParameter<"PolynomialAttr">: $polynomialModulus
+    OptionalParameter<"::mlir::IntegerAttr">: $coefficientModulus,
+    OptionalParameter<"::mlir::polynomial::PolynomialAttr">: $polynomialModulus,
+    OptionalParameter<"::mlir::IntegerAttr">: $primitiveRoot
   );
 
+  let builders = [
+    AttrBuilder<
+        (ins "::mlir::Type":$coefficientTy,
+             "::mlir::IntegerAttr":$coefficientModulusAttr,
+             "::mlir::polynomial::PolynomialAttr":$polynomialModulusAttr), [{
+      return $_get($_ctxt, coefficientTy, coefficientModulusAttr, polynomialModulusAttr, nullptr);
+    }]>
+  ];
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -414,6 +423,47 @@ def Polynomial_ConstantOp : Polynomial_Op<"constant", [Pure]> {
   let arguments = (ins Polynomial_PolynomialAttr:$input);
   let results = (outs Polynomial_PolynomialType:$output);
   let assemblyFormat = "$input attr-dict `:` type($output)";
+}
+
+def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {
+  let summary = "Computes point-value tensor representation of a polynomial.";
+  let description = [{
+    `polynomial.ntt` computes the forward integer Number Theoretic Transform
+    (NTT) on the input polynomial. It returns a tensor containing a point-value
+    representation of the input polynomial. The output tensor has shape equal
+    to the degree of the ring's `polynomialModulus`. The polynomial's RingAttr
+    is embedded as the encoding attribute of the output tensor.
+
+    Given an input polynomial `F(x)` over a ring whose `polynomialModulus` has
+    degree `n`, and a primitive `n`-th root of unity `omega_n`, the output is
+    the list of $n$ evaluations
+
+      `f[k] = F(omega[n]^k) ; k = {0, ..., n-1}`
+
+    The choice of primitive root is determined by subsequent lowerings.
+  }];
+  let arguments = (ins Polynomial_PolynomialType:$input);
+  let results = (outs RankedTensorOf<[AnyInteger]>:$output);
+  let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let hasVerifier = 1;
+}
+
+def Polynomial_INTTOp : Polynomial_Op<"intt", [Pure]> {
+  let summary = "Computes the reverse integer Number Theoretic Transform (NTT).";
+  let description = [{
+    `polynomial.intt` computes the reverse integer Number Theoretic Transform
+    (INTT) on the input tensor. This is the inverse operation of the
+    `polynomial.ntt` operation.
+
+    The input tensor is interpreted as a point-value representation of the
+    output polynomial at powers of a primitive `n`-th root of unity (see
+    `polynomial.ntt`). The ring of the polynomial is taken from the required
+    encoding attribute of the tensor.
+  }];
+  let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
+  let results = (outs Polynomial_PolynomialType:$output);
+  let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let hasVerifier = 1;
 }
 
 #endif // POLYNOMIAL_OPS
