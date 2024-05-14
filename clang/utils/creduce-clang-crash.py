@@ -468,6 +468,9 @@ def main():
     crash_script = check_file(args.crash_script[0])
     file_to_reduce = check_file(args.file_to_reduce[0])
 
+    if "--n" not in creduce_flags:
+        creduce_flags += ["--n", str(max(4, multiprocessing.cpu_count() // 2))]
+
     r = Reduce(crash_script, file_to_reduce, creduce_flags)
 
     r.simplify_clang_args()
