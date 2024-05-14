@@ -21,7 +21,7 @@
 // Returns mmap page size.
 size_t GetPageSize() { return sysconf(_SC_PAGESIZE); }
 
-// Represents a page of memory which access can be configured throught the
+// Represents a page of memory whose access can be configured throught the
 // 'WithAccess' function. Accessing data above or below this page will trap as
 // it is sandwiched between two pages with no read / write access.
 struct Page {
@@ -33,9 +33,10 @@ struct Page {
     return page_ptr;
   }
   // Returns a pointer to a buffer that can be accessed up to size. Accessing
-  // data at ptr[size] will fault.
+  // data at ptr[size] will trap.
   uint8_t *top(size_t size) const { return page_ptr + page_size - size; }
 
+  // protection is one of PROT_READ / PROT_WRITE.
   Page &WithAccess(int protection) {
     if (mprotect(page_ptr, page_size, protection) != 0)
       __builtin_trap();
@@ -47,14 +48,15 @@ struct Page {
 };
 
 // Allocates 5 consecutive pages that will trap if accessed.
-// +-----------------+
-// | page 0 (FAULT)  |
-// | page 1 (CUSTOM) |
-// | page 2 (FAULT)  |
-// | page 3 (CUSTOM) |
-// | page 4 (FAULT)  |
-// +-----------------+
-// The pages 1 and 3 can be retrieved as with 'GetPageA' / 'GetPageB' and their
+// | page layout | access | page name |
+// |-------------|--------|:---------:|
+// | 1           | trap   |           |
+// | 2           | custom |     A     |
+// | 3           | trap   |           |
+// | 4           | custom |     B     |
+// | 5           | trap   |           |
+//
+// The pages A and B can be retrieved as with 'GetPageA' / 'GetPageB' and their
 // accesses can be customized through the 'WithAccess' function.
 struct ProtectedPages {
   static constexpr size_t PAGES = 5;
