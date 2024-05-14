@@ -232,6 +232,87 @@ define void @test_call_void_func_a2i1() {
   ret void
 }
 
+define void @void_func_v2i1(<2 x i1> %arg0) {
+; GFX9-LABEL: name: void_func_v2i1
+; GFX9: bb.1 (%ir-block.0):
+; GFX9-NEXT:    liveins: $vgpr0, $vgpr1
+; GFX9-NEXT: {{  $}}
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+; GFX9-NEXT:    [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+; GFX9-NEXT:    [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+; GFX9-NEXT:    [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+; GFX9-NEXT:    [[BUILDVEC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+; GFX9-NEXT:    [[TRUNC2:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILDVEC]](<2 x s16>)
+; GFX9-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
+; GFX9-NEXT:    G_STORE [[TRUNC2]](<2 x s1>), [[DEF]](p1) :: (store (<2 x s1>) into `ptr addrspace(1) undef`, addrspace 1)
+; GFX9-NEXT:    SI_RETURN
+;
+; GFX11-LABEL: name: void_func_v2i1
+; GFX11: bb.1 (%ir-block.0):
+; GFX11-NEXT:    liveins: $vgpr0, $vgpr1
+; GFX11-NEXT: {{  $}}
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+; GFX11-NEXT:    [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+; GFX11-NEXT:    [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+; GFX11-NEXT:    [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+; GFX11-NEXT:    [[BUILDVEC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+; GFX11-NEXT:    [[TRUNC2:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILDVEC]](<2 x s16>)
+; GFX11-NEXT:    [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF  
+; GFX11-NEXT:    G_STORE [[TRUNC2]](<2 x s1>), [[DEF]](p1) :: (store (<2 x s1>) into `ptr addrspace(1) undef`, addrspace 1)
+; GFX11-NEXT:    SI_RETURN
+  store <2 x i1> %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define void @test_call_void_func_v2i1(ptr addrspace(1) %in) {
+; GFX9-LABEL: name: test_call_void_func_v2i1
+; GFX9: bb.1 (%ir-block.0):
+; GFX9-NEXT:    liveins: $vgpr0, $vgpr1
+; GFX9-NEXT: {{  $}}
+; GFX9-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+; GFX9-NEXT:    [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+; GFX9-NEXT:    [[MERGE:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+; GFX9-NEXT:    [[LOAD:%[0-9]+]]:_(<2 x s1>) = G_LOAD [[MERGE]](p1) :: (load (<2 x s1>) from %ir.in, addrspace 1)
+; GFX9-NEXT:    ADJCALLSTACKUP 0, 0, implicit-def $scc
+; GFX9-NEXT:    [[GLOBAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @[[CALLEE:void_func_v2i1]]
+; GFX9-NEXT:    [[UNMERGE:%[0-9]+]]:_(s1), [[UNMERGE1:%[0-9]+]]:_(s1) = G_UNMERGE_VALUES [[LOAD]](<2 x s1>)
+; GFX9-NEXT:    [[EXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UNMERGE]](s1)
+; GFX9-NEXT:    [[EXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UNMERGE1]](s1)
+; GFX9-NEXT:    [[EXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[EXT]](s16)
+; GFX9-NEXT:    $vgpr0 = COPY [[EXT2]](s32)
+; GFX9-NEXT:    [[EXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[EXT1]](s16)
+; GFX9-NEXT:    $vgpr1 = COPY [[EXT3]](s32)
+; GFX9-NEXT:    [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX9-NEXT:    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]](<4 x s32>)
+; GFX9-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @[[CALLEE]], csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX9-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+; GFX9-NEXT:    SI_RETURN
+;
+; GFX11-LABEL: name: test_call_void_func_v2i1
+; GFX11: bb.1 (%ir-block.0):
+; GFX11-NEXT:    liveins: $vgpr0, $vgpr1
+; GFX11-NEXT: {{  $}}
+; GFX11-NEXT:    [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+; GFX11-NEXT:    [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+; GFX11-NEXT:    [[MERGE:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+; GFX11-NEXT:    [[LOAD:%[0-9]+]]:_(<2 x s1>) = G_LOAD [[MERGE]](p1) :: (load (<2 x s1>) from %ir.in, addrspace 1)
+; GFX11-NEXT:    ADJCALLSTACKUP 0, 0, implicit-def $scc
+; GFX11-NEXT:    [[GLOBAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @[[CALLEE:void_func_v2i1]]
+; GFX11-NEXT:    [[UNMERGE:%[0-9]+]]:_(s1), [[UNMERGE1:%[0-9]+]]:_(s1) = G_UNMERGE_VALUES [[LOAD]](<2 x s1>)
+; GFX11-NEXT:    [[EXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UNMERGE]](s1)
+; GFX11-NEXT:    [[EXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[UNMERGE1]](s1)
+; GFX11-NEXT:    [[EXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[EXT]](s16)
+; GFX11-NEXT:    $vgpr0 = COPY [[EXT2]](s32)
+; GFX11-NEXT:    [[EXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[EXT1]](s16)
+; GFX11-NEXT:    $vgpr1 = COPY [[EXT3]](s32)
+; GFX11-NEXT:    $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GLOBAL]](p0), @[[CALLEE]], csr_amdgpu, implicit $vgpr0, implicit $vgpr1
+; GFX11-NEXT:    ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+; GFX11-NEXT:    SI_RETURN
+  %a = load <2 x i1>, ptr addrspace(1) %in
+  call void @void_func_v2i1(<2 x i1> %a)
+  ret void
+}
+
 define void @void_func_i1_i1(i1 %arg0, i1 %arg1) {
 ; GFX9-LABEL: name: void_func_i1_i1
 ; GFX9: bb.1 (%ir-block.0):

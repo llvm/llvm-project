@@ -317,8 +317,12 @@ bool AMDGPUCallLowering::canLowerReturn(MachineFunction &MF,
   return checkReturn(CCInfo, Outs, TLI.CCAssignFnForReturn(CallConv, IsVarArg));
 }
 
-/// Special handling for i1 return val: based on determineAndHandleAssignments()
-bool AMDGPUCallLowering::determineAndHandleAssignmentsForI1Return(
+/// Replace CallLowering::determineAndHandleAssignments() because we need to
+/// reserve ScratchRSrcReg when necessary.
+/// TODO: Investigate if reserving ScratchRSrcReg can be moved to calling conv
+/// functions. If so, then this function is not needed anymore -- we can just
+/// use CallLowering::determineAndHandleAssignments() as before.
+bool AMDGPUCallLowering::determineAndHandleAssignmentsLocal(
     ValueHandler &Handler, ValueAssigner &Assigner,
     SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
     CallingConv::ID CallConv, bool IsVarArg) const {
@@ -405,12 +409,8 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
   OutgoingValueAssigner Assigner(AssignFn);
   AMDGPUOutgoingValueHandler RetHandler(B, *MRI, Ret);
 
-  if (SplitEVTs.size() == 1 && SplitEVTs[0] == MVT::i1)
-    return determineAndHandleAssignmentsForI1Return(
-        RetHandler, Assigner, SplitRetInfos, B, CC, F.isVarArg());
-  else
-    return determineAndHandleAssignments(RetHandler, Assigner, SplitRetInfos, B,
-                                         CC, F.isVarArg());
+  return determineAndHandleAssignmentsLocal(RetHandler, Assigner, SplitRetInfos,
+                                            B, CC, F.isVarArg());
 }
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
@@ -1575,16 +1575,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                                       Info.IsVarArg);
     IncomingValueAssigner Assigner(RetAssignFn);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB);
-    if (Info.OrigRet.Ty->isIntegerTy(1)) {
-      if (!determineAndHandleAssignmentsForI1Return(Handler, Assigner, InArgs,
-                                                    MIRBuilder, Info.CallConv,
-                                                    Info.IsVarArg))
-        return false;
-    } else {
-      if (!determineAndHandleAssignments(Handler, Assigner, InArgs, MIRBuilder,
-                                         Info.CallConv, Info.IsVarArg))
-        return false;
-    }
+    if (!determineAndHandleAssignmentsLocal(Handler, Assigner, InArgs,
+                                            MIRBuilder, Info.CallConv,
+                                            Info.IsVarArg))
+      return false;
   }
 
   uint64_t CalleePopBytes = NumBytes;

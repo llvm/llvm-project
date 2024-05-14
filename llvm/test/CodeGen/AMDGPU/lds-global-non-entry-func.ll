@@ -466,7 +466,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-SDAG-NEXT:  .LBB4_2: ; %ret
 ; GFX8-SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -489,7 +488,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GISEL-NEXT:  .LBB4_2: ; %ret
 ; GFX8-GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -509,7 +507,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:  .LBB4_2: ; %ret
 ; GFX9-SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -529,7 +526,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:  .LBB4_2: ; %ret
 ; GFX9-GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -550,7 +546,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:  .LBB4_3: ; %ret
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -573,7 +568,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:  .LBB4_3: ; %ret
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
