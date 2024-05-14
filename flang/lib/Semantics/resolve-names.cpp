@@ -1839,9 +1839,11 @@ bool AttrsVisitor::Pre(const parser::Pass &x) {
 bool AttrsVisitor::IsDuplicateAttr(Attr attrName) {
   CHECK(attrs_);
   if (attrs_->test(attrName)) {
-    Say(currStmtSource().value(),
-        "Attribute '%s' cannot be used more than once"_warn_en_US,
-        AttrToString(attrName));
+    if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say(currStmtSource().value(),
+          "Attribute '%s' cannot be used more than once"_warn_en_US,
+          AttrToString(attrName));
+    }
     return true;
   }
   return false;
@@ -3603,9 +3605,11 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   ResolveSpecificsInGeneric(generic, true);
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
-    Say(proc->name().begin() > generic.name().begin() ? proc->name()
-                                                      : generic.name(),
-        "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US);
+    if (context().ShouldWarn(common::UsageWarning::HomonymousSpecific)) {
+      Say(proc->name().begin() > generic.name().begin() ? proc->name()
+                                                        : generic.name(),
+          "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US);
+    }
   }
   auto &specifics{details.specificProcs()};
   if (specifics.empty()) {
@@ -3619,14 +3623,17 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   bool isBoth{false};
   for (const Symbol &specific : specifics) {
     if (isFunction != specific.test(Symbol::Flag::Function)) { // C1514
-      auto &msg{Say(generic.name(),
-          "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
-      if (isFunction) {
-        msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
-        msg.Attach(specific.name(), "Subroutine declaration"_en_US);
-      } else {
-        msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
-        msg.Attach(specific.name(), "Function declaration"_en_US);
+      if (context().ShouldWarn(
+              common::LanguageFeature::SubroutineAndFunctionSpecifics)) {
+        auto &msg{Say(generic.name(),
+            "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
+        if (isFunction) {
+          msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
+          msg.Attach(specific.name(), "Subroutine declaration"_en_US);
+        } else {
+          msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
+          msg.Attach(specific.name(), "Function declaration"_en_US);
+        }
       }
       isFunction = false;
       isBoth = true;
@@ -3767,9 +3774,12 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
             (*current == common::CUDASubprogramAttrs::HostDevice &&
                 (attr == common::CUDASubprogramAttrs::Host ||
                     attr == common::CUDASubprogramAttrs::Device))) {
-          Say(currStmtSource().value(),
-              "ATTRIBUTES(%s) appears more than once"_warn_en_US,
-              common::EnumToString(attr));
+          if (context().ShouldWarn(
+                  common::LanguageFeature::RedundantAttribute)) {
+            Say(currStmtSource().value(),
+                "ATTRIBUTES(%s) appears more than once"_warn_en_US,
+                common::EnumToString(attr));
+          }
         } else if ((attr == common::CUDASubprogramAttrs::Host ||
                        attr == common::CUDASubprogramAttrs::Device) &&
             (*current == common::CUDASubprogramAttrs::Host ||
@@ -3951,11 +3961,13 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   }
   // C1560.
   if (info.resultName && !distinctResultName) {
-    Say(info.resultName->source,
-        "The function name should not appear in RESULT; references to '%s' "
-        "inside the function will be considered as references to the "
-        "result only"_warn_en_US,
-        name.source);
+    if (context().ShouldWarn(common::UsageWarning::HomonymousResult)) {
+      Say(info.resultName->source,
+          "The function name should not appear in RESULT; references to '%s' "
+          "inside the function will be considered as references to the "
+          "result only"_warn_en_US,
+          name.source);
+    }
     // RESULT name was ignored above, the only side effect from doing so will be
     // the inability to make recursive calls. The related parser::Name is still
     // resolved to the created function result symbol because every parser::Name
@@ -4036,27 +4048,10 @@ void SubprogramVisitor::CreateEntry(
       attrs = extant->attrs();
     }
   }
-  bool badResultName{false};
   std::optional<SourceName> distinctResultName;
   if (suffix && suffix->resultName &&
       suffix->resultName->source != entryName.source) {
     distinctResultName = suffix->resultName->source;
-    const parser::Name &resultName{*suffix->resultName};
-    if (resultName.source == subprogram.name()) { // C1574
-      Say2(resultName.source,
-          "RESULT(%s) may not have the same name as the function"_err_en_US,
-          subprogram, "Containing function"_en_US);
-      badResultName = true;
-    } else if (const Symbol * extant{FindSymbol(outer, resultName)}) { // C1574
-      if (const auto *details{extant->detailsIf<SubprogramDetails>()}) {
-        if (details->entryScope() == &currScope()) {
-          Say2(resultName.source,
-              "RESULT(%s) may not have the same name as an ENTRY in the function"_err_en_US,
-              extant->name(), "Conflicting ENTRY"_en_US);
-          badResultName = true;
-        }
-      }
-    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -4092,17 +4087,24 @@ void SubprogramVisitor::CreateEntry(
     EntityDetails resultDetails;
     resultDetails.set_funcResult(true);
     if (distinctResultName) {
-      if (!badResultName) {
-        // RESULT(x) can be the same explicitly-named RESULT(x) as
-        // the enclosing function or another ENTRY.
-        if (auto iter{currScope().find(suffix->resultName->source)};
-            iter != currScope().end()) {
-          result = &*iter->second;
-        }
-        if (!result) {
-          result = &MakeSymbol(
-              *distinctResultName, Attrs{}, std::move(resultDetails));
-        }
+      // An explicit RESULT() can also be an explicit RESULT()
+      // of the function or another ENTRY.
+      if (auto iter{currScope().find(suffix->resultName->source)};
+          iter != currScope().end()) {
+        result = &*iter->second;
+      }
+      if (!result) {
+        result =
+            &MakeSymbol(*distinctResultName, Attrs{}, std::move(resultDetails));
+      } else if (!result->has<EntityDetails>()) {
+        Say(*distinctResultName,
+            "ENTRY cannot have RESULT(%s) that is not a variable"_err_en_US,
+            *distinctResultName)
+            .Attach(result->name(), "Existing declaration of '%s'"_en_US,
+                result->name());
+        result = nullptr;
+      }
+      if (result) {
         Resolve(*suffix->resultName, *result);
       }
     } else {
@@ -4112,8 +4114,7 @@ void SubprogramVisitor::CreateEntry(
       entryDetails.set_result(*result);
     }
   }
-  if (subpFlag == Symbol::Flag::Subroutine ||
-      (distinctResultName && !badResultName)) {
+  if (subpFlag == Symbol::Flag::Subroutine || distinctResultName) {
     Symbol &assoc{MakeSymbol(entryName.source)};
     assoc.set_details(HostAssocDetails{*entrySymbol});
     assoc.set(Symbol::Flag::Subroutine);
@@ -4369,8 +4370,10 @@ bool SubprogramVisitor::HandlePreviousCalls(
       if (symbol.attrs().test(Attr::EXTERNAL) &&
           !symbol.implicitAttrs().test(Attr::EXTERNAL)) {
         // Warn if external statement previously declared.
-        Say(name,
-            "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+        if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+          Say(name,
+              "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+        }
       } else if (symbol.test(other)) {
         Say2(name,
             subpFlag == Symbol::Flag::Function
@@ -4820,8 +4823,11 @@ bool DeclarationVisitor::Pre(const parser::ExternalStmt &x) {
       if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
         if (details->isInterface()) {
           // Warn if interface previously declared.
-          Say(name,
-              "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+          if (context().ShouldWarn(
+                  common::LanguageFeature::RedundantAttribute)) {
+            Say(name,
+                "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
+          }
         }
       } else {
         SayWithDecl(
@@ -4866,12 +4872,15 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
     if (symbol.GetType()) {
       // These warnings are worded so that they should make sense in either
       // order.
-      Say(symbol.name(),
-          "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
-          symbol.name())
-          .Attach(name.source,
-              "INTRINSIC statement for explicitly-typed '%s'"_en_US,
-              name.source);
+      if (context().ShouldWarn(
+              common::UsageWarning::IgnoredIntrinsicFunctionType)) {
+        Say(symbol.name(),
+            "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
+            symbol.name())
+            .Attach(name.source,
+                "INTRINSIC statement for explicitly-typed '%s'"_en_US,
+                name.source);
+      }
     }
     if (!symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine)) {
@@ -4937,9 +4946,11 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     }
   } else if (symbol && symbol->has<UseDetails>()) {
     if (symbol->GetUltimate().attrs().test(attr)) {
-      Say(currStmtSource().value(),
-          "Use-associated '%s' already has '%s' attribute"_warn_en_US,
-          name.source, EnumToString(attr));
+      if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+        Say(currStmtSource().value(),
+            "Use-associated '%s' already has '%s' attribute"_warn_en_US,
+            name.source, EnumToString(attr));
+      }
     } else {
       Say(currStmtSource().value(),
           "Cannot change %s attribute on use-associated '%s'"_err_en_US,
@@ -5070,8 +5081,10 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
           context().SetError(symbol);
         }
       } else if (MustBeScalar(symbol)) {
-        Say(name,
-            "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US);
+        if (context().ShouldWarn(common::UsageWarning::PreviousScalarUse)) {
+          Say(name,
+              "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US);
+        }
       } else if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
         Say(name, "'%s' was initialized earlier as a scalar"_err_en_US);
       } else {
@@ -5449,8 +5462,10 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     details.set_sequence(true);
     if (componentDefs.empty()) {
       // F'2023 C745 - not enforced by any compiler
-      Say(stmt.source,
-          "A sequence type should have at least one component"_warn_en_US);
+      if (context().ShouldWarn(common::LanguageFeature::EmptySequenceType)) {
+        Say(stmt.source,
+            "A sequence type should have at least one component"_warn_en_US);
+      }
     }
     if (!details.paramNames().empty()) { // C740
       Say(stmt.source,
@@ -5524,8 +5539,7 @@ void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
       SetType(name, *type);
       if (auto &init{
               std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{EvaluateNonPointerInitializer(
-                *symbol, *init, init->thing.thing.thing.value().source)}) {
+        if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
           if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
             symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
           }
@@ -5554,13 +5568,17 @@ bool DeclarationVisitor::Pre(const parser::PrivateStmt &) {
   } else if (!derivedTypeInfo_.privateComps) {
     derivedTypeInfo_.privateComps = true;
   } else { // C738
-    Say("PRIVATE should not appear more than once in derived type components"_warn_en_US);
+    if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say("PRIVATE should not appear more than once in derived type components"_warn_en_US);
+    }
   }
   return false;
 }
 bool DeclarationVisitor::Pre(const parser::SequenceStmt &) {
   if (derivedTypeInfo_.sequence) { // C738
-    Say("SEQUENCE should not appear more than once in derived type components"_warn_en_US);
+    if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say("SEQUENCE should not appear more than once in derived type components"_warn_en_US);
+    }
   }
   derivedTypeInfo_.sequence = true;
   return false;
@@ -6084,7 +6102,9 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
     }
     if (const auto *pointeeType{pointee->GetType()}) {
       if (const auto *derived{pointeeType->AsDerived()}) {
-        if (!IsSequenceOrBindCType(derived)) {
+        if (!IsSequenceOrBindCType(derived) &&
+            context().ShouldWarn(
+                common::LanguageFeature::NonSequenceCrayPointee)) {
           Say(pointeeName,
               "Type of Cray pointee '%s' is a derived type that is neither SEQUENCE nor BIND(C)"_warn_en_US);
         }
@@ -6232,9 +6252,11 @@ void DeclarationVisitor::CheckSaveStmts() {
       // error was reported
     } else if (specPartState_.saveInfo.saveAll) {
       // C889 - note that pgi, ifort, xlf do not enforce this constraint
-      Say2(name,
-          "Explicit SAVE of '%s' is redundant due to global SAVE statement"_warn_en_US,
-          *specPartState_.saveInfo.saveAll, "Global SAVE statement"_en_US);
+      if (context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+        Say2(name,
+            "Explicit SAVE of '%s' is redundant due to global SAVE statement"_warn_en_US,
+            *specPartState_.saveInfo.saveAll, "Global SAVE statement"_en_US);
+      }
     } else if (!IsSaved(*symbol)) {
       SetExplicitAttr(*symbol, Attr::SAVE);
     }
@@ -6276,7 +6298,8 @@ Attrs DeclarationVisitor::HandleSaveName(const SourceName &name, Attrs attrs) {
 void DeclarationVisitor::AddSaveName(
     std::set<SourceName> &set, const SourceName &name) {
   auto pair{set.insert(name)};
-  if (!pair.second) {
+  if (!pair.second &&
+      context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
     Say2(name, "SAVE attribute was already specified on '%s'"_warn_en_US,
         *pair.first, "Previous specification of SAVE attribute"_en_US);
   }
@@ -6521,6 +6544,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       return nullptr;
     }
     name.symbol = nullptr;
+    // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
@@ -6539,9 +6563,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
   } else {
     ApplyImplicitRules(symbol);
   }
-  Symbol *result{Resolve(name, &symbol)};
-  AnalyzeExpr(context(), doVar); // enforce INTEGER type
-  return result;
+  return Resolve(name, &symbol);
 }
 
 // Set the type of an entity or report an error.
@@ -6728,8 +6750,11 @@ bool DeclarationVisitor::OkToAddComponent(
               " '%s'"_err_en_US;
       } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
-        msg = "Component '%s' is inaccessibly declared in or as a "
-              "parent of this derived type"_warn_en_US;
+        if (context().ShouldWarn(
+                common::UsageWarning::RedeclaredInaccessibleComponent)) {
+          msg =
+              "Component '%s' is inaccessibly declared in or as a parent of this derived type"_warn_en_US;
+        }
       } else if (prev->test(Symbol::Flag::ParentComp)) {
         msg = "'%s' is a parent type of this type and so cannot be"
               " a component"_err_en_US;
@@ -6861,8 +6886,10 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::LocalInit &x) {
 bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
   for (const auto &name : x.v) {
     if (!FindSymbol(name)) {
-      Say(name,
-          "Variable '%s' with SHARED locality implicitly declared"_warn_en_US);
+      if (context().ShouldWarn(common::UsageWarning::ImplicitShared)) {
+        Say(name,
+            "Variable '%s' with SHARED locality implicitly declared"_warn_en_US);
+      }
     }
     Symbol &prev{FindOrDeclareEnclosingEntity(name)};
     if (PassesSharedLocalityChecks(name, prev)) {
@@ -8324,12 +8351,16 @@ Symbol &ModuleVisitor::SetAccess(
   Attrs &attrs{symbol->attrs()};
   if (attrs.HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
     // PUBLIC/PRIVATE already set: make it a fatal error if it changed
-    Attr prev = attrs.test(Attr::PUBLIC) ? Attr::PUBLIC : Attr::PRIVATE;
-    Say(name,
-        WithSeverity(
-            "The accessibility of '%s' has already been specified as %s"_warn_en_US,
-            attr != prev ? parser::Severity::Error : parser::Severity::Warning),
-        MakeOpName(name), EnumToString(prev));
+    Attr prev{attrs.test(Attr::PUBLIC) ? Attr::PUBLIC : Attr::PRIVATE};
+    if (attr != prev ||
+        context().ShouldWarn(common::LanguageFeature::RedundantAttribute)) {
+      Say(name,
+          WithSeverity(
+              "The accessibility of '%s' has already been specified as %s"_warn_en_US,
+              attr != prev ? parser::Severity::Error
+                           : parser::Severity::Warning),
+          MakeOpName(name), EnumToString(prev));
+    }
   } else {
     attrs.set(attr);
   }
@@ -8888,7 +8919,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
         }
       }
     }
-  } else {
+  } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US);
   }
 }

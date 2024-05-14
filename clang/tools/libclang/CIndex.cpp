@@ -2782,6 +2782,11 @@ class OpenACCClauseEnqueue : public OpenACCClauseVisitor<OpenACCClauseEnqueue> {
 public:
   OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
 
+  void VisitVarList(const OpenACCClauseWithVarList &C) {
+    for (Expr *Var : C.getVarList())
+      Visitor.AddStmt(Var);
+  }
+
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
 #include "clang/Basic/OpenACCClauses.def"
@@ -2807,6 +2812,53 @@ void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   for (Expr *IE : C.getIntExprs())
     Visitor.AddStmt(IE);
 }
+
+void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
+  if (const Expr *DevNumExpr = C.getDevNumExpr())
+    Visitor.AddStmt(DevNumExpr);
+  for (Expr *QE : C.getQueueIdExprs())
+    Visitor.AddStmt(QE);
+}
+void OpenACCClauseEnqueue::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

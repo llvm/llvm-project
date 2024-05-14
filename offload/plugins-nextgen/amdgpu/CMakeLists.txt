@@ -12,13 +12,6 @@
 ##===----------------------------------------------------------------------===##
 
 ################################################################################
-set(LIBOMPTARGET_BUILD_AMDGPU_PLUGIN TRUE CACHE BOOL
-  "Whether to build AMDGPU plugin")
-if (NOT LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
-  libomptarget_say("Not building AMDGPU NextGen offloading plugin: LIBOMPTARGET_BUILD_AMDGPU_PLUGIN is false")
-  return()
-endif()
-
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 
@@ -57,8 +50,3 @@ else()
   libomptarget_say("Not generating AMDGPU tests, no supported devices detected."
                    " Use 'LIBOMPTARGET_FORCE_AMDGPU_TESTS' to override.")
 endif()
-
-# Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.amdgpu PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")

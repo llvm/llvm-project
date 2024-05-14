@@ -26,13 +26,7 @@ public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
   RISCVISAInfo &operator=(const RISCVISAInfo &) = delete;
 
-  /// OrderedExtensionMap is std::map, it's specialized to keep entries
-  /// in canonical order of extension.
-  typedef std::map<std::string, RISCVISAUtils::ExtensionVersion,
-                   RISCVISAUtils::ExtensionComparator>
-      OrderedExtensionMap;
-
-  RISCVISAInfo(unsigned XLen, OrderedExtensionMap &Exts)
+  RISCVISAInfo(unsigned XLen, RISCVISAUtils::OrderedExtensionMap &Exts)
       : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0), Exts(Exts) {}
 
   /// Parse RISC-V ISA info from arch string.
@@ -59,7 +53,9 @@ public:
   std::vector<std::string> toFeatures(bool AddAllExtensions = false,
                                       bool IgnoreUnknown = true) const;
 
-  const OrderedExtensionMap &getExtensions() const { return Exts; }
+  const RISCVISAUtils::OrderedExtensionMap &getExtensions() const {
+    return Exts;
+  }
 
   unsigned getXLen() const { return XLen; }
   unsigned getFLen() const { return FLen; }
@@ -82,25 +78,24 @@ public:
   static std::string getTargetFeatureForExtension(StringRef Ext);
 
 private:
-  RISCVISAInfo(unsigned XLen)
-      : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0) {}
+  RISCVISAInfo(unsigned XLen) : XLen(XLen) {}
 
   unsigned XLen;
-  unsigned FLen;
-  unsigned MinVLen;
-  unsigned MaxELen, MaxELenFp;
+  unsigned FLen = 0;
+  unsigned MinVLen = 0;
+  unsigned MaxELen = 0, MaxELenFp = 0;
 
-  OrderedExtensionMap Exts;
+  RISCVISAUtils::OrderedExtensionMap Exts;
 
-  void addExtension(StringRef ExtName, RISCVISAUtils::ExtensionVersion Version);
+  bool addExtension(StringRef ExtName, RISCVISAUtils::ExtensionVersion Version);
 
   Error checkDependency();
 
   void updateImplication();
   void updateCombination();
-  void updateFLen();
-  void updateMinVLen();
-  void updateMaxELen();
+
+  /// Update FLen, MinVLen, MaxELen, and MaxELenFp.
+  void updateImpliedLengths();
 };
 
 } // namespace llvm

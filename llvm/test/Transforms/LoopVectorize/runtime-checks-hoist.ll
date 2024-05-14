@@ -1328,13 +1328,11 @@ define void @unknown_inner_stride(ptr nocapture noundef %dst, ptr nocapture noun
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP15:%.*]] = mul nsw i64 [[TMP14]], [[TMP0]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add nsw i64 [[TMP15]], [[TMP11]]
+; CHECK-NEXT:    [[TMP16:%.*]] = add nsw i64 [[TMP14]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP18]], align 4, !alias.scope [[META60:![0-9]+]]
-; CHECK-NEXT:    [[TMP19:%.*]] = mul nsw i64 [[TMP14]], [[TMP1]]
-; CHECK-NEXT:    [[TMP20:%.*]] = add nsw i64 [[TMP19]], [[TMP12]]
+; CHECK-NEXT:    [[TMP20:%.*]] = add nsw i64 [[TMP14]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4, !alias.scope [[META63:![0-9]+]], !noalias [[META60]]

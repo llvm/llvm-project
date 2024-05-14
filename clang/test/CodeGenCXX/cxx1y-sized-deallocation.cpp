@@ -1,12 +1,12 @@
 // Check that delete exprs call the sized deallocation function if
-// -fsized-deallocation is passed in C++11 or std >= C++14.
+// -fsized-deallocation is passed in both C++11 and C++14.
 // RUN: %clang_cc1 -std=c++11 -fsized-deallocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -fsized-deallocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
 
-// Check that we don't used sized deallocation with -fno-sized-deallocation or without C++14.
+// Check that we don't used sized deallocation without -fsized-deallocation and
+// C++14.
 // RUN: %clang_cc1 -std=c++11 %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNSIZED
-// RUN: %clang_cc1 -std=c++14 %s -emit-llvm -triple x86_64-linux-gnu -fno-sized-deallocation -o - \
-// RUN:     | FileCheck %s --check-prefix=CHECK-UNSIZED
+// RUN: %clang_cc1 -std=c++14 %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNSIZED
 
 // CHECK-UNSIZED-NOT: _ZdlPvm
 // CHECK-UNSIZED-NOT: _ZdaPvm
