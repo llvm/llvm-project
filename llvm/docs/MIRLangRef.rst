@@ -540,6 +540,9 @@ Register Flags
 The table below shows all of the possible register flags along with the
 corresponding internal ``llvm::RegState`` representation:
 
+..
+   Keep this in sync with MachineInstrBuilder.h
+
 .. list-table::
    :header-rows: 1
 
