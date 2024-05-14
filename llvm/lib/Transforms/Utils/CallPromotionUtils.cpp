@@ -221,6 +221,7 @@ static Value *getOrs(const SmallVector<Value *, 2> &ICmps,
 /// Is replace by the following:
 ///
 ///   orig_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -250,6 +251,7 @@ static Value *getOrs(const SmallVector<Value *, 2> &ICmps,
 /// Is replace by the following:
 ///
 ///   orig_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -284,6 +286,7 @@ static Value *getOrs(const SmallVector<Value *, 2> &ICmps,
 /// Is replaced by the following:
 ///
 ///   cond_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %orig_bb
 ///
 ///   then_bb:
@@ -390,7 +393,7 @@ static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
   return *NewInst;
 }
 
-// Predicate and clone the given call site usingc condition `CB.callee ==
+// Predicate and clone the given call site using condition `CB.callee ==
 // Callee`. See the comment `versionCallSiteWithCond` for the transformation.
 CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
                                 MDNode *BranchWeights) {
@@ -535,7 +538,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", &CB);
+      auto *Cast =
+          CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
