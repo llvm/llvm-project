@@ -78,6 +78,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -4264,9 +4265,9 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 /// Move the given method to the back of the global list of methods.
 static void moveMethodToBackOfGlobalList(Sema &S, ObjCMethodDecl *Method) {
   // Find the entry for this selector in the method pool.
-  Sema::GlobalMethodPool::iterator Known
-    = S.MethodPool.find(Method->getSelector());
-  if (Known == S.MethodPool.end())
+  SemaObjC::GlobalMethodPool::iterator Known =
+      S.ObjC().MethodPool.find(Method->getSelector());
+  if (Known == S.ObjC().MethodPool.end())
     return;
 
   // Retrieve the appropriate method list.
@@ -8599,7 +8600,7 @@ namespace serialization {
 static void addMethodsToPool(Sema &S, ArrayRef<ObjCMethodDecl *> Methods,
                              ObjCMethodList &List) {
   for (ObjCMethodDecl *M : llvm::reverse(Methods))
-    S.addMethodToGlobalList(&List, M);
+    S.ObjC().addMethodToGlobalList(&List, M);
 }
 
 void ASTReader::ReadMethodPool(Selector Sel) {
@@ -8624,8 +8625,10 @@ void ASTReader::ReadMethodPool(Selector Sel) {
     return;
 
   Sema &S = *getSema();
-  Sema::GlobalMethodPool::iterator Pos =
-      S.MethodPool.insert(std::make_pair(Sel, Sema::GlobalMethodPool::Lists()))
+  SemaObjC::GlobalMethodPool::iterator Pos =
+      S.ObjC()
+          .MethodPool
+          .insert(std::make_pair(Sel, SemaObjC::GlobalMethodPool::Lists()))
           .first;
 
   Pos->second.first.setBits(Visitor.getInstanceBits());
