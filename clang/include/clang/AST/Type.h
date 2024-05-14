@@ -8044,10 +8044,7 @@ inline bool Type::isUndeducedType() const {
 /// Determines whether this is a type for which one can define
 /// an overloaded operator.
 inline bool Type::isOverloadableType() const {
-  if (!CanonicalType->isDependentType())
-    return isRecordType() || isEnumeralType();
-  return !isArrayType() && !isFunctionType() && !isAnyPointerType() &&
-         !isMemberPointerType();
+  return isDependentType() || isRecordType() || isEnumeralType();
 }
 
 /// Determines whether this type is written as a typedef-name.
