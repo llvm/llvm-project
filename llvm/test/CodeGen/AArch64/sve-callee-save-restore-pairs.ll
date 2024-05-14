@@ -291,50 +291,9 @@ define void @fhalf(<vscale x 8 x half> %v) {
   ret void
 }
 
-;; Do NOT save P8 and NOT group any Z8 and Z10 register
-define void @test_clobbers_2_z_regs_(<vscale x 16 x i8> %v) {
-; NOPAIR-LABEL: test_clobbers_2_z_regs_:
-; NOPAIR:       // %bb.0:
-; NOPAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; NOPAIR-NEXT:    addvl sp, sp, #-2
-; NOPAIR-NEXT:    str z10, [sp] // 16-byte Folded Spill
-; NOPAIR-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; NOPAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
-; NOPAIR-NEXT:    .cfi_offset w29, -16
-; NOPAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; NOPAIR-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 16 * VG
-; NOPAIR-NEXT:    //APP
-; NOPAIR-NEXT:    //NO_APP
-; NOPAIR-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
-; NOPAIR-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
-; NOPAIR-NEXT:    addvl sp, sp, #2
-; NOPAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; NOPAIR-NEXT:    ret
-;
-; PAIR-LABEL: test_clobbers_2_z_regs_:
-; PAIR:       // %bb.0:
-; PAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; PAIR-NEXT:    addvl sp, sp, #-2
-; PAIR-NEXT:    str z10, [sp] // 16-byte Folded Spill
-; PAIR-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
-; PAIR-NEXT:    .cfi_offset w29, -16
-; PAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; PAIR-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 16 * VG
-; PAIR-NEXT:    //APP
-; PAIR-NEXT:    //NO_APP
-; PAIR-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
-; PAIR-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
-; PAIR-NEXT:    addvl sp, sp, #2
-; PAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; PAIR-NEXT:    ret
-  call void asm sideeffect "", "~{z8},~{z10}"()
-  ret void
-}
-
 ;; Do NOT group Z10
 ;; DO group Z8 and Z9 and save P8
-define aarch64_sve_vector_pcs void @test_clobbers_z_p_regs(<vscale x 16 x i8> %v) {
+define aarch64_sve_vector_pcs void @test_clobbers_z_p_regs() {
 ; NOPAIR-LABEL: test_clobbers_z_p_regs:
 ; NOPAIR:       // %bb.0:
 ; NOPAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -392,7 +351,7 @@ define aarch64_sve_vector_pcs void @test_clobbers_z_p_regs(<vscale x 16 x i8> %v
 
 ;; Do NOT group Z10
 ;; DO group Z8 and Z9 and use P9
-define void @test_clobbers_z_p_regs2(<vscale x 16 x i8> %v) {
+define aarch64_sve_vector_pcs  void @test_clobbers_z_p_regs2() {
 ; NOPAIR-LABEL: test_clobbers_z_p_regs2:
 ; NOPAIR:       // %bb.0:
 ; NOPAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -447,12 +406,9 @@ define void @test_clobbers_z_p_regs2(<vscale x 16 x i8> %v) {
 }
 
 
-;; DO NOT group Z8 and Z9 and
-;; DO NOT save P8
-;; It does not belong to the allowed calling conventions
-;; NOPAIR and PAIR should have the same assembly
-define  void @test_clobbers_z_p_regs_negative(<vscale x 16 x i8> %v) {
-; NOPAIR-LABEL: test_clobbers_z_p_regs_negative:
+;; Test order of PRegs and ZRegs when there is no PReg being clobbered
+define aarch64_sve_vector_pcs  void @test_clobbers_z_regs() {
+; NOPAIR-LABEL: test_clobbers_z_regs:
 ; NOPAIR:       // %bb.0:
 ; NOPAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; NOPAIR-NEXT:    addvl sp, sp, #-2
@@ -470,23 +426,131 @@ define  void @test_clobbers_z_p_regs_negative(<vscale x 16 x i8> %v) {
 ; NOPAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NOPAIR-NEXT:    ret
 ;
-; PAIR-LABEL: test_clobbers_z_p_regs_negative:
+; PAIR-LABEL: test_clobbers_z_regs:
 ; PAIR:       // %bb.0:
 ; PAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; PAIR-NEXT:    addvl sp, sp, #-2
-; PAIR-NEXT:    str z9, [sp] // 16-byte Folded Spill
-; PAIR-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; PAIR-NEXT:    addvl sp, sp, #-3
+; PAIR-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    ptrue pn8.b
+; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; PAIR-NEXT:    .cfi_offset w29, -16
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; PAIR-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
 ; PAIR-NEXT:    //APP
 ; PAIR-NEXT:    //NO_APP
-; PAIR-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
+; PAIR-NEXT:    ptrue pn8.b
+; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; PAIR-NEXT:    addvl sp, sp, #3
+; PAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; PAIR-NEXT:    ret
+  call void asm sideeffect "", "~{z8},~{z9}"()
+  ret void
+}
+
+;; DO NOT group Z8 and Z9 and
+;; DO NOT save P8
+;; It does not belong to the allowed calling conventions
+;; NOPAIR and PAIR should have the same assembly
+define  void @test_clobbers_z_regs_negative() {
+; NOPAIR-LABEL: test_clobbers_z_regs_negative:
+; NOPAIR:       // %bb.0:
+; NOPAIR-NEXT:    stp d9, d8, [sp, #-16]! // 16-byte Folded Spill
+; NOPAIR-NEXT:    .cfi_def_cfa_offset 16
+; NOPAIR-NEXT:    .cfi_offset b8, -8
+; NOPAIR-NEXT:    .cfi_offset b9, -16
+; NOPAIR-NEXT:    //APP
+; NOPAIR-NEXT:    //NO_APP
+; NOPAIR-NEXT:    ldp d9, d8, [sp], #16 // 16-byte Folded Reload
+; NOPAIR-NEXT:    ret
+;
+; PAIR-LABEL: test_clobbers_z_regs_negative:
+; PAIR:       // %bb.0:
+; PAIR-NEXT:    stp d9, d8, [sp, #-16]! // 16-byte Folded Spill
+; PAIR-NEXT:    .cfi_def_cfa_offset 16
+; PAIR-NEXT:    .cfi_offset b8, -8
+; PAIR-NEXT:    .cfi_offset b9, -16
+; PAIR-NEXT:    //APP
+; PAIR-NEXT:    //NO_APP
+; PAIR-NEXT:    ldp d9, d8, [sp], #16 // 16-byte Folded Reload
+; PAIR-NEXT:    ret
+  call void asm sideeffect "", "~{z8},~{z9}"()
+  ret void
+}
+
+;; Do NOT save P8 and NOT group any Z8 and Z10 register
+define aarch64_sve_vector_pcs void @test_clobbers_2_z_regs_negative() {
+; NOPAIR-LABEL: test_clobbers_2_z_regs_negative:
+; NOPAIR:       // %bb.0:
+; NOPAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NOPAIR-NEXT:    addvl sp, sp, #-2
+; NOPAIR-NEXT:    str z10, [sp] // 16-byte Folded Spill
+; NOPAIR-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
+; NOPAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; NOPAIR-NEXT:    .cfi_offset w29, -16
+; NOPAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; NOPAIR-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 16 * VG
+; NOPAIR-NEXT:    //APP
+; NOPAIR-NEXT:    //NO_APP
+; NOPAIR-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
+; NOPAIR-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
+; NOPAIR-NEXT:    addvl sp, sp, #2
+; NOPAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NOPAIR-NEXT:    ret
+;
+; PAIR-LABEL: test_clobbers_2_z_regs_negative:
+; PAIR:       // %bb.0:
+; PAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; PAIR-NEXT:    addvl sp, sp, #-2
+; PAIR-NEXT:    str z10, [sp] // 16-byte Folded Spill
+; PAIR-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; PAIR-NEXT:    .cfi_offset w29, -16
+; PAIR-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; PAIR-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 16 * VG
+; PAIR-NEXT:    //APP
+; PAIR-NEXT:    //NO_APP
+; PAIR-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
 ; PAIR-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    addvl sp, sp, #2
 ; PAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; PAIR-NEXT:    ret
-  call void asm sideeffect "", "~{z8},~{z9}"()
+  call void asm sideeffect "", "~{z8},~{z10}"()
+  ret void
+}
+
+
+;; NOTHING TO DO HERE
+;; There is no ZReg pairs to save
+define aarch64_sve_vector_pcs  void @test_clobbers_p_reg_negative() {
+; NOPAIR-LABEL: test_clobbers_p_reg_negative:
+; NOPAIR:       // %bb.0:
+; NOPAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NOPAIR-NEXT:    addvl sp, sp, #-1
+; NOPAIR-NEXT:    str p10, [sp, #7, mul vl] // 2-byte Folded Spill
+; NOPAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; NOPAIR-NEXT:    .cfi_offset w29, -16
+; NOPAIR-NEXT:    //APP
+; NOPAIR-NEXT:    //NO_APP
+; NOPAIR-NEXT:    ldr p10, [sp, #7, mul vl] // 2-byte Folded Reload
+; NOPAIR-NEXT:    addvl sp, sp, #1
+; NOPAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NOPAIR-NEXT:    ret
+;
+; PAIR-LABEL: test_clobbers_p_reg_negative:
+; PAIR:       // %bb.0:
+; PAIR-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; PAIR-NEXT:    addvl sp, sp, #-1
+; PAIR-NEXT:    str p10, [sp, #7, mul vl] // 2-byte Folded Spill
+; PAIR-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; PAIR-NEXT:    .cfi_offset w29, -16
+; PAIR-NEXT:    //APP
+; PAIR-NEXT:    //NO_APP
+; PAIR-NEXT:    ldr p10, [sp, #7, mul vl] // 2-byte Folded Reload
+; PAIR-NEXT:    addvl sp, sp, #1
+; PAIR-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; PAIR-NEXT:    ret
+ call void asm sideeffect "", "~{p10}"()
   ret void
 }

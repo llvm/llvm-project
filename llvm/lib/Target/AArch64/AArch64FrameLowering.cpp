@@ -2784,15 +2784,6 @@ struct RegPairInfo {
 
 } // end anonymous namespace
 
-void verify(SmallVectorImpl<RegPairInfo> &RegPairs) {
-  auto IsPPR = [](const RegPairInfo &c) { return c.Reg1 == RegPairInfo::PPR; };
-  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
-  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
-  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
-  assert(!(PPRBegin < ZPRBegin) &&
-         "Expected callee save predicate to be handled first");
-}
-
 unsigned findFreePredicateReg(BitVector &SavedRegs) {
   for (unsigned PReg = AArch64::P8; PReg <= AArch64::P15; ++PReg) {
     if (SavedRegs.test(PReg)) {
@@ -3096,7 +3087,22 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
-      verify(RegPairs);
+      auto verifyPRegZRegSavingOrder =
+          [](SmallVectorImpl<RegPairInfo> &RegPairs) {
+            auto IsPPR = [](const RegPairInfo &c) {
+              return c.Reg1 == RegPairInfo::PPR;
+            };
+            auto PPRBegin =
+                std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+            auto IsZPR = [](const RegPairInfo &c) {
+              return c.Type == RegPairInfo::ZPR;
+            };
+            auto ZPRBegin =
+                std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+            assert(!(PPRBegin < ZPRBegin) &&
+                   "Expected callee save predicate to be handled first");
+          };
+      verifyPRegZRegSavingOrder(RegPairs);
 #endif
       if (!PTrueCreated) {
         PTrueCreated = true;
