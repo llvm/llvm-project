@@ -297,8 +297,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
                                                    1, 0, 8, di_type));
   // CHECK: #llvm.di_derived_type<{{.*}}>
   // CHECK-NOT: dwarfAddressSpace
-  mlirAttributeDump(
-      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0, -1, di_type));
+  mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0,
+                                                 -1, di_type));
 
   // CHECK: #llvm.di_derived_type<{{.*}} dwarfAddressSpace = 3{{.*}}>
   mlirAttributeDump(
