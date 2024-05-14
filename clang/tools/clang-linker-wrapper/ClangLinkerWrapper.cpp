@@ -1195,7 +1195,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
   // Initialize the images with any overriding inputs.
   if (Args.hasArg(OPT_override_image))
     if (Error Err = handleOverrideImages(Args, Images))
-      return Err;
+      return std::move(Err);
 
   auto Err = parallelForEachError(LinkerInputFiles, [&](auto &Input) -> Error {
     llvm::TimeTraceScope TimeScope("Link device input");
