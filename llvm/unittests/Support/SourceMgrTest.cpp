@@ -532,3 +532,14 @@ TEST_F(SourceMgrTest, FixitForTab) {
             Output);
 }
 
+TEST_F(SourceMgrTest, PrintWithoutLoc) {
+  raw_string_ostream OS(Output);
+  auto Diag =
+      llvm::SMDiagnostic("file.in", llvm::SourceMgr::DK_Error, "message");
+  Diag.print(nullptr, OS);
+  OS.flush();
+  EXPECT_EQ("file.in: error: message\n", Output);
+  Output.clear();
+  Diag.print(nullptr, OS, false, false, false);
+  EXPECT_EQ("message\n", Output);
+}
