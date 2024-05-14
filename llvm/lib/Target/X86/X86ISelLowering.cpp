@@ -56741,6 +56741,7 @@ static SDValue combineFP16_TO_FP(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI,
                                 const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   bool IsStrict = N->isStrictFPOpcode();
@@ -56749,8 +56750,8 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
 
   SDLoc dl(N);
   if (SrcVT.getScalarType() == MVT::bf16) {
-    if (!IsStrict && Src.getOpcode() == ISD::FP_ROUND &&
-        Src.getOperand(0).getValueType() == VT)
+    if (DCI.isAfterLegalizeDAG() && Src.getOpcode() == ISD::FP_ROUND &&
+        !IsStrict && Src.getOperand(0).getValueType() == VT)
       return Src.getOperand(0);
 
     if (!SrcVT.isVector())
@@ -57168,7 +57169,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
   case ISD::STRICT_FP_EXTEND:
-  case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, Subtarget);
+  case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, DCI, Subtarget);
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:       return combineFP_ROUND(N, DAG, Subtarget);
   case X86ISD::VBROADCAST_LOAD:
