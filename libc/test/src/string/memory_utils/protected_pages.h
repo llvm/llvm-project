@@ -61,11 +61,11 @@ struct Page {
 // Allocates 5 consecutive pages that will trap if accessed.
 // | page layout | access | page name |
 // |-------------|--------|:---------:|
-// | 1           | trap   |           |
-// | 2           | custom |     A     |
-// | 3           | trap   |           |
-// | 4           | custom |     B     |
-// | 5           | trap   |           |
+// | 0           | trap   |           |
+// | 1           | custom |     A     |
+// | 2           | trap   |           |
+// | 3           | custom |     B     |
+// | 4           | trap   |           |
 //
 // The pages A and B can be retrieved as with 'GetPageA' / 'GetPageB' and their
 // accesses can be customized through the 'WithAccess' function.
