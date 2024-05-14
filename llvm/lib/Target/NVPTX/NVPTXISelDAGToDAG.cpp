@@ -2357,10 +2357,10 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
         default:
           break;
         case MVT::i32:
-          Opcode = NVPTX::StoreParamI8TruncI32;
+          Opcode = NVPTX::StoreParamI8TruncI32_r;
           break;
         case MVT::i64:
-          Opcode = NVPTX::StoreParamI8TruncI64;
+          Opcode = NVPTX::StoreParamI8TruncI64_r;
           break;
         }
       }

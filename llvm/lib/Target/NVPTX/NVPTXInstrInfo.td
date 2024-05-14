@@ -2637,18 +2637,15 @@ class LoadParamRegInst<NVPTXRegClass regclass, string opstr> :
                 [(set regclass:$dst, (LoadParam (i32 0), (i32 imm:$b)))]>;
 
 let mayStore = true in {
-  class StoreParamInstReg<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, i32imm:$a, i32imm:$b),
-                  "st.param" # opstr # " \t[param$a+$b], $val;",
-                  []>;
 
-  multiclass StoreParamInst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
-    def _r: StoreParamInstReg<regclass, opstr>;
-
-    def _i:
-          NVPTXInst<(outs), (ins IMMType:$val, i32imm:$a, i32imm:$b),
-                    "st.param" # opstr # " \t[param$a+$b], $val;",
-                    []>;
+  multiclass StoreParamInst<NVPTXRegClass regclass, Operand IMMType, string opstr, bit support_imm = true> {
+    foreach op = [IMMType, regclass] in
+      if !or(support_imm, !isa<NVPTXRegClass>(op)) then
+        def _ # !if(!isa<NVPTXRegClass>(op), "r", "i")
+          : NVPTXInst<(outs),
+                      (ins op:$val, i32imm:$a, i32imm:$b),
+                      "st.param" # opstr # " \t[param$a+$b], $val;",
+                      []>;
   }
 
   multiclass StoreParamV2Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
@@ -2764,8 +2761,8 @@ defm StoreParamI32    : StoreParamInst<Int32Regs, i32imm, ".b32">;
 defm StoreParamI16    : StoreParamInst<Int16Regs, i16imm, ".b16">;
 defm StoreParamI8     : StoreParamInst<Int16Regs, i8imm,  ".b8">;
 
-def StoreParamI8TruncI32 : StoreParamInstReg<Int32Regs, ".b8">;
-def StoreParamI8TruncI64 : StoreParamInstReg<Int64Regs, ".b8">;
+defm StoreParamI8TruncI32 : StoreParamInst<Int32Regs, i8imm, ".b8", /* support_imm */ false>;
+defm StoreParamI8TruncI64 : StoreParamInst<Int64Regs, i8imm, ".b8", /* support_imm */ false>;
 
 defm StoreParamV2I64  : StoreParamV2Inst<Int64Regs, i64imm, ".b64">;
 defm StoreParamV2I32  : StoreParamV2Inst<Int32Regs, i32imm, ".b32">;
