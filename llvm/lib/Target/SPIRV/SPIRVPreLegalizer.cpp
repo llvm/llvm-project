@@ -519,6 +519,22 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
   }
 }
 
+static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
+  SmallVector<MachineInstr *, 10> ToErase;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
+        continue;
+      MIB.setInsertPt(*MI.getParent(), MI);
+      buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
+                              MI.getOperand(2).getMetadata());
+      ToErase.push_back(&MI);
+    }
+  }
+  for (MachineInstr *MI : ToErase)
+    MI->eraseFromParent();
+}
+
 // Find basic blocks of the switch and replace registers in spv_switch() by its
 // MBB equivalent.
 static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -639,6 +655,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   processSwitches(MF, GR, MIB);
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
+  insertSpirvDecorations(MF, MIB);
 
   return true;
 }

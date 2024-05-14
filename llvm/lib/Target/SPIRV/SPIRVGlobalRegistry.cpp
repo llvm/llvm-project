@@ -691,6 +691,13 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::BuiltIn,
                     {static_cast<uint32_t>(BuiltInId)});
 
+  // If it's a global variable with "spirv.Decorations" metadata node
+  // recognize it as a SPIR-V friendly LLVM IR and parse "spirv.Decorations"
+  // arguments.
+  MDNode *GVarMD = nullptr;
+  if (GVar && (GVarMD = GVar->getMetadata("spirv.Decorations")) != nullptr)
+    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD);
+
   return Reg;
 }
 
