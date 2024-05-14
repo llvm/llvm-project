@@ -756,3 +756,13 @@ func.func private @callee(%arg0: memref<?xindex, 4>) {
   }
   return
 }
+
+// CHECK-LABEL: func @test_i8_bounds
+// CHECK: test.reflect_bounds {smax = 127 : i8, smin = -128 : i8, umax = -1 : i8, umin = 0 : i8}
+func.func @test_i8_bounds() -> i8 {
+  %cst1 = arith.constant 1 : i8
+  %0 = test.with_bounds { umin = 0 : i8, umax = 255 : i8, smin = -128 : i8, smax = 127 : i8 } : i8
+  %1 = arith.addi %0, %cst1 : i8
+  %2 = test.reflect_bounds %1 : i8
+  return %2: i8
+}
