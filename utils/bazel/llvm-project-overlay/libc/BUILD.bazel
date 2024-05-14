@@ -130,6 +130,11 @@ libc_support_library(
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
+    name = "types_clockid_t",
+    hdrs = ["hdr/types/clockid_t.h"],
+)
+
+libc_support_library(
     name = "types_fenv_t",
     hdrs = ["hdr/types/fenv_t.h"],
 )
@@ -1154,6 +1159,7 @@ libc_support_library(
     name = "__support_time",
     hdrs = glob(["src/__support/time/*.h"]),
     deps = [
+        ":__support_common",
         ":hdr_time_macros",
         ":types_time_t",
     ],
@@ -1167,8 +1173,14 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":__support_common",
+        ":__support_cpp_expected",
+        ":__support_error_or",
+        ":__support_libc_assert",
         ":__support_time",
         ":hdr_time_macros",
+        ":types_clockid_t",
+        ":types_struct_timespec",
     ],
 )
 
