@@ -67,28 +67,12 @@
 # RELR-NEXT: 0000000000030480  0000000200000244 R_AARCH64_AUTH_ABS64   0000000000000000 bar2 + 0
 # RELR-EMPTY:
 # RELR-NEXT: Relocation section '.relr.auth.dyn' at offset 0x[[ADDR2]] contains 5 entries:
-# RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
-# RELR-NEXT: 0000000000030440  0000000000000403 R_AARCH64_RELATIVE
-# RELR-NEXT: 0000000000030448  0000000000000403 R_AARCH64_RELATIVE
-# RELR-NEXT: 0000000000030450  0000000000000403 R_AARCH64_RELATIVE
-# RELR-NEXT: 0000000000030458  0000000000000403 R_AARCH64_RELATIVE
-# RELR-NEXT: 0000000000030492  0000000000000403 R_AARCH64_RELATIVE
-
-# RUN: llvm-readobj -r --raw-relr main.pie | \
-# RUN:   FileCheck --match-full-lines --check-prefix=RAW-RELR %s
-
-## SHT_RELR section contains address/bitmap entries
-## encoding the offsets for relative relocation.
-
-# RAW-RELR:          Section ({{.+}}) .relr.auth.dyn {
-# RAW-RELR-NEXT:     0x30440
-# RAW-RELR-NEXT:     0xF
-## 0xF = 0b111100..00
-##         lsb    hsb
-## Bits 1..3 are set, we have relocs at 0x30440 and the next 3 places: 0x30448, 0x3450, 0x30458
-# RAW-RELR-NEXT:     0x30492
-## A single reloc at ^^^^^^^
-# RAW-RELR-NEXT:     }
+# RELR-NEXT: Index: Entry Address Symbolic Address
+# RELR-NEXT: 0000: 0000000000030440 0000000000030440 $d.0
+# RELR-NEXT: 0001: 000000000000000f 0000000000030448 $d.0 + 0x8
+# RELR-NEXT:  0000000000030450 $d.0 + 0x10
+# RELR-NEXT:  0000000000030458 $d.0 + 0x18
+# RELR-NEXT: 0002: 0000000000030492 0000000000030492 $d.0 + 0x52
 
 # HEX:      Hex dump of section '.test':
 # HEX-NEXT: 0x00030440 01000000 2a000020 42040300 2b000000
@@ -181,7 +165,7 @@
 # EMPTY-RELR-NEXT: 0000000000030320  0000000000000411 R_AARCH64_AUTH_RELATIVE           8003031f
 # EMPTY-RELR-EMPTY:
 # EMPTY-RELR-NEXT: Relocation section '.relr.auth.dyn' at offset {{.*}} contains 0 entries:
-# EMPTY-RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# EMPTY-RELR-NEXT: Index: Entry Address Symbolic Address
 
 .section .test, "aw"
 .p2align 3
@@ -214,8 +198,8 @@
 # EMPTY-RELA-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
 # EMPTY-RELA-EMPTY:
 # EMPTY-RELA-NEXT: Relocation section '.relr.auth.dyn' at offset {{.*}} contains 1 entries:
-# EMPTY-RELA-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
-# EMPTY-RELA-NEXT: 0000000000030310  0000000000000403 R_AARCH64_RELATIVE
+# EMPTY-RELA-NEXT: Index: Entry Address Symbolic Address
+# EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d.0
 
 .section .test, "aw"
 .p2align 3
