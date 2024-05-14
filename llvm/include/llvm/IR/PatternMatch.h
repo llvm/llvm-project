@@ -1904,7 +1904,7 @@ template <typename Op_t> struct ElementWiseBitCast_match {
   ElementWiseBitCast_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    auto *I = dyn_cast<BitCastInst>(V);
+    BitCastInst *I = dyn_cast<BitCastInst>(V);
     if (!I)
       return false;
     Type *SrcType = I->getSrcTy();

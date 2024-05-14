@@ -1118,42 +1118,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
       break;
     }
 
-    const Value *V;
-    // Handle bitcast from floating point to integer.
-    if (match(I, m_ElementWiseBitCast(m_Value(V))) &&
-        V->getType()->isFPOrFPVectorTy()) {
-      Type *FPType = V->getType()->getScalarType();
-      KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
-      FPClassTest FPClasses = Result.KnownFPClasses;
-
-      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
-        Known.Zero.setAllBits();
-        Known.One.setAllBits();
-
-        if (FPClasses & fcInf)
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
-
-        if (FPClasses & fcZero)
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APInt::getZero(FPType->getScalarSizeInBits())));
-      }
-
-      if (Result.SignBit) {
-        if (*Result.SignBit)
-          Known.makeNegative();
-        else
-          Known.makeNonNegative();
-      } else {
-        Known.Zero.clearSignBit();
-        Known.One.clearSignBit();
-      }
-
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-
-      break;
-    }
-
     // Handle cast from vector integer type to scalar or vector integer.
     auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcTy);
     if (!SrcVecTy || !SrcVecTy->getElementType()->isIntegerTy() ||
