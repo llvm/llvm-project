@@ -450,6 +450,18 @@ private:
 
   void serialiseAllocaInst(AllocaInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                            unsigned &InstIdx) {
+    // We don't yet support:
+    //  - the `inalloca` keyword.
+    //  - non-zero address spaces.
+    //  - dynamic alloca (because stackmaps can't handle them).
+    //  - allocating an array with more than SIZE_MAX elements.
+    if ((I->isUsedWithInAlloca()) || (I->getAddressSpace() != 0) ||
+        (!isa<Constant>(I->getArraySize())) ||
+        cast<ConstantInt>(I->getArraySize())->getValue().ugt(SIZE_MAX)) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodeAlloca);
 
@@ -458,8 +470,11 @@ private:
 
     // number of objects to allocate
     ConstantInt *CI = cast<ConstantInt>(I->getArraySize());
-    // XXX guard cast
+    static_assert(sizeof(size_t) <= sizeof(uint64_t));
     OutStreamer.emitSizeT(CI->getZExtValue());
+
+    // align:
+    OutStreamer.emitInt64(I->getAlign().value());
 
     FLCtxt.updateVLMap(I, InstIdx);
     InstIdx++;
