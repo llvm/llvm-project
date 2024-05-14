@@ -201,6 +201,18 @@ private:
   unsigned v { 0 };
 };
 
+class ObjectWithMutatingDestructor {
+public:
+  ObjectWithMutatingDestructor() : n(0) { }
+  ObjectWithMutatingDestructor(int n) : n(n) { }
+  ~ObjectWithMutatingDestructor() { n.someMethod(); }
+
+  unsigned value() const { return n.value(); }
+
+private:
+  Number n;
+};
+
 class RefCounted {
 public:
   void ref() const;
@@ -378,6 +390,7 @@ public:
   ComplexNumber nonTrivial17() { return complex << 2; }
   ComplexNumber nonTrivial18() { return +complex; }
   ComplexNumber* nonTrivial19() { return new ComplexNumber(complex); }
+  unsigned nonTrivial20() { return ObjectWithMutatingDestructor { 7 }.value(); }
 
   static unsigned s_v;
   unsigned v { 0 };
@@ -509,6 +522,8 @@ public:
     getFieldTrivial().nonTrivial18();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial19();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial20();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
