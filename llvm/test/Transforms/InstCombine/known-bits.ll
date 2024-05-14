@@ -1506,7 +1506,27 @@ define i32 @test_inf_zero_only(float nofpclass(nan norm sub) %x) {
   ret i32 %and
 }
 
+; Make sure that the signbit is cleared.
+define i32 @test_ninf_only(double %x) {
+; CHECK-LABEL: @test_ninf_only(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %cmp = fcmp oeq double %x, 0xFFF0000000000000
+  br i1 %cmp, label %if.then, label %if.else
 
+if.then:
+  %cast = bitcast double %x to i64
+  %trunc = trunc i64 %cast to i32
+  ret i32 %trunc
+
+if.else:
+  ret i32 0
+}
 
 define i1 @test_simplify_icmp(i32 %x) {
 ; CHECK-LABEL: @test_simplify_icmp(
