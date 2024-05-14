@@ -1569,9 +1569,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     APSInt NewIndex =
         (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-        << NewIndex
-        << /*array*/ static_cast<int>(!Ptr.inArray())
-        << static_cast<unsigned>(MaxIndex);
+        << NewIndex << /*array*/ static_cast<int>(!Ptr.inArray()) << MaxIndex;
     Invalid = true;
   };
 
@@ -1598,7 +1596,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     }
   }
 
-  if (Invalid && !Ptr.isDummy() && S.getLangOpts().CPlusPlus)
+  if (Invalid && S.getLangOpts().CPlusPlus)
     return false;
 
   // Offset is valid - compute it on unsigned.
@@ -2109,6 +2107,9 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
+
+  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
+    return false;
 
   if (!Ptr.isUnknownSizeArray() || Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));

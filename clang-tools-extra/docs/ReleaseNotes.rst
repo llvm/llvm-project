@@ -115,6 +115,9 @@ Improvements to clang-tidy
 - Fixed `--verify-config` option not properly parsing checks when using the
   literal operator in the `.clang-tidy` config.
 
+- Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
+  to exclude headers from analysis via a RegEx.
+
 New checks
 ^^^^^^^^^^
 
@@ -149,6 +152,15 @@ New checks
 
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
+
+- New :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check.
+
+  Converts calls to ``absl::StrFormat``, or other functions via
+  configuration options, to C++20's ``std::format``, or another function
+  via a configuration option, modifying the format string appropriately and
+  removing now-unnecessary calls to ``std::string::c_str()`` and
+  ``std::string::data()``.
 
 - New :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check.
@@ -203,6 +215,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
   within parentheses.
+
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
+  false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
@@ -338,6 +354,10 @@ Changes in existing checks
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
+
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check to ignore
+  `if consteval` statements, for which the `else` branch must not be removed.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`

@@ -1,4 +1,4 @@
-; RUN: opt --mtriple=loongarch64 -S --passes='require<profile-summary>,function(codegenprepare)' %s | FileCheck %s
+; RUN: opt --mtriple=loongarch64 -mattr=+d -S --passes='require<profile-summary>,function(codegenprepare)' %s | FileCheck %s
 
 ; Check that we have deterministic output
 define void @test(ptr %sp, ptr %t, i32 %n) {

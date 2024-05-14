@@ -12987,10 +12987,9 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
-  SDValue NA0 =
-      DAG.getNode(ISD::SHL, DL, VT, NL, DAG.getConstant(Diff, DL, VT));
-  SDValue NA1 = DAG.getNode(ISD::ADD, DL, VT, NA0, NS);
-  return DAG.getNode(ISD::SHL, DL, VT, NA1, DAG.getConstant(Bits, DL, VT));
+  SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL,
+                              DAG.getConstant(Diff, DL, VT), NS);
+  return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
 // Combine a constant select operand into its use:
@@ -13226,14 +13225,17 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
                      N0.getOperand(0));
 }
 
-static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performADDCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
   if (SDValue V = combineAddOfBooleanXor(N, DAG))
     return V;
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;
-  if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
-    return V;
+  if (!DCI.isBeforeLegalize() && !DCI.isCalledByLegalizer())
+    if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
+      return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
@@ -16230,7 +16232,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
       return V;
-    return performADDCombine(N, DAG, Subtarget);
+    return performADDCombine(N, DCI, Subtarget);
   }
   case ISD::SUB: {
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
@@ -20065,6 +20067,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SWAP_CSR)
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
+  NODE_NAME_CASE(SW_GUARDED_BRIND)
   NODE_NAME_CASE(SF_VC_XV_SE)
   NODE_NAME_CASE(SF_VC_IV_SE)
   NODE_NAME_CASE(SF_VC_VV_SE)
@@ -21656,6 +21659,20 @@ void RVVArgDispatcher::compute() {
 MCPhysReg RVVArgDispatcher::getNextPhysReg() {
   assert(CurIdx < AllocatedPhysRegs.size() && "Index out of range");
   return AllocatedPhysRegs[CurIdx++];
+}
+
+SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
+                                                    SDValue Value, SDValue Addr,
+                                                    int JTI,
+                                                    SelectionDAG &DAG) const {
+  if (Subtarget.hasStdExtZicfilp()) {
+    // When Zicfilp enabled, we need to use software guarded branch for jump
+    // table branch.
+    SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
+    return DAG.getNode(RISCVISD::SW_GUARDED_BRIND, dl, MVT::Other, JTInfo,
+                       Addr);
+  }
+  return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
 
 namespace llvm::RISCVVIntrinsicsTable {

@@ -158,6 +158,7 @@ protected:
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
   bool HasDot11Insts = false;
+  bool HasDot12Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
@@ -837,6 +838,10 @@ public:
 
   bool hasDot11Insts() const {
     return HasDot11Insts;
+  }
+
+  bool hasDot12Insts() const {
+    return HasDot12Insts;
   }
 
   bool hasMAIInsts() const {
