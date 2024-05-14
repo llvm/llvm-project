@@ -46,7 +46,7 @@ QuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
 
   bool isSigned =
       (flags & QuantizationFlags::Signed) == QuantizationFlags::Signed;
-  // u64 is not yet supproted because its full range cannot be represented
+  // u64 is not yet supported because its full range cannot be represented
   // by the type of `storageTypeMax`, making it difficult to verify the
   // storage type.
   if (!isSigned && integralWidth == 64)
