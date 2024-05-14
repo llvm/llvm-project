@@ -3099,7 +3099,8 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       // The 'auto' appears in the decl-specifiers; we've not finished forming
       // TypeSourceInfo for it yet.
       TemplateIdAnnotation *TemplateId = D.getDeclSpec().getRepAsTemplateId();
-      TemplateArgumentListInfo TemplateArgsInfo;
+      TemplateArgumentListInfo TemplateArgsInfo(TemplateId->LAngleLoc,
+                                                TemplateId->RAngleLoc);
       bool Invalid = false;
       if (TemplateId->LAngleLoc.isValid()) {
         ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
