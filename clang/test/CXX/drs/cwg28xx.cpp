@@ -6,10 +6,6 @@
 // RUN: %clang_cc1 -std=c++23 -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
-#if __cplusplus < 202002L
-// expected-no-diagnostics
-#endif
-
 namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
@@ -66,6 +62,27 @@ void B<int>::g() requires true;
 #endif
 
 } // namespace cwg2847
+
+namespace cwg2857 { // cwg2857: 2.7
+struct A {};
+struct B {
+  int operator+(A);
+};
+template <typename>
+struct D;
+
+void f(A* a, D<int>* d) {
+  *d + *a;
+  // expected-error@-1 {{invalid operands to binary expression ('D<int>' and 'A')}}
+}
+
+template <typename>
+struct D : B {};
+
+void g(A* a, D<int>* d) {
+  *d + *a;
+}
+} // namespace cwg2857
 
 namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
 
