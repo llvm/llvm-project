@@ -565,7 +565,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
