@@ -137,6 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::HeaderMask:
     case VPInstruction::PtrAdd:
       return false;
     default:
@@ -688,6 +689,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::HeaderMask:
+    O << "header-mask";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
@@ -1896,13 +1900,12 @@ void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getOperand(0), 0, /*IsScalar*/ true);
-  Type *STy = CanonicalIV->getType();
+  Value *Start = State.get(getOperand(0), 0, /*IsScalar*/ true);
+  Type *STy = Start->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
-  Value *VStart = VF.isScalar()
-                      ? CanonicalIV
-                      : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
+  Value *VStart =
+      VF.isScalar() ? Start : Builder.CreateVectorSplat(VF, Start, "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
     Value *VStep = createStepForVF(Builder, STy, VF, Part);
     if (VF.isVector()) {
@@ -1910,8 +1913,8 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
       VStep =
           Builder.CreateAdd(VStep, Builder.CreateStepVector(VStep->getType()));
     }
-    Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
-    State.set(this, CanonicalVectorIV, Part);
+    Value *Res = Builder.CreateAdd(VStart, VStep, "vec.iv");
+    State.set(this, Res, Part);
   }
 }
 

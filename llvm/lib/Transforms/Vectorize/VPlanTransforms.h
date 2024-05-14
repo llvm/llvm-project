@@ -105,6 +105,10 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   static void addExplicitVectorLength(VPlan &Plan);
+
+  /// Lower abstract VPInstruction recipes to a concrete sequence of recipes for
+  /// which code can be generated.
+  static void lowerRecipes(VPlan &Plan);
 };
 
 } // namespace llvm

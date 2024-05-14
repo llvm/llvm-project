@@ -8044,21 +8044,14 @@ void VPRecipeBuilder::createHeaderMask() {
     return;
   }
 
-  // Introduce the early-exit compare IV <= BTC to form header block mask.
-  // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
-  // constructing the desired canonical IV in the header block as its first
-  // non-phi instructions.
-
+  // Introduce an abstract header-mask VPInstruction. This will be lowered later
+  // depending on target preference.
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   auto NewInsertionPoint = HeaderVPBB->getFirstNonPhi();
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
-  HeaderVPBB->insert(IV, NewInsertionPoint);
-
   VPBuilder::InsertPointGuard Guard(Builder);
   Builder.setInsertPoint(HeaderVPBB, NewInsertionPoint);
-  VPValue *BlockMask = nullptr;
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
+  VPValue *BlockMask =
+      Builder.createNaryOp(VPInstruction::HeaderMask, {Plan.getCanonicalIV()});
   BlockMaskCache[Header] = BlockMask;
 }
 
@@ -8559,9 +8552,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::truncateToMinimalBitwidths(
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
-      // TODO: try to put it close to addActiveLaneMask().
+      // TODO: The three passes that lower the header mask (addActiveLaneMask,
+      // addExplicitVectorLength, lowerRecipes) should arguably be applied
+      // together, depending on tail folding style, inside
+      // VPlanTransforms::optimize().
       if (CM.foldTailWithEVL())
         VPlanTransforms::addExplicitVectorLength(*Plan);
+      VPlanTransforms::lowerRecipes(*Plan);
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
