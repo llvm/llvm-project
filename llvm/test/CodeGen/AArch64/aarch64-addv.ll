@@ -94,20 +94,19 @@ define i32 @oversized_ADDV_256(ptr noalias nocapture readonly %arg1, ptr noalias
 ;
 ; GISEL-LABEL: oversized_ADDV_256:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    ldr d1, [x0]
-; GISEL-NEXT:    ldr d2, [x1]
-; GISEL-NEXT:    movi v0.2d, #0000000000000000
+; GISEL-NEXT:    ldr d0, [x0]
+; GISEL-NEXT:    ldr d1, [x1]
+; GISEL-NEXT:    ushll v0.8h, v0.8b, #0
 ; GISEL-NEXT:    ushll v1.8h, v1.8b, #0
-; GISEL-NEXT:    ushll v2.8h, v2.8b, #0
-; GISEL-NEXT:    usubl v3.4s, v1.4h, v2.4h
-; GISEL-NEXT:    usubl2 v1.4s, v1.8h, v2.8h
-; GISEL-NEXT:    cmgt v2.4s, v0.4s, v3.4s
-; GISEL-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; GISEL-NEXT:    neg v4.4s, v3.4s
-; GISEL-NEXT:    neg v5.4s, v1.4s
-; GISEL-NEXT:    bsl v2.16b, v4.16b, v3.16b
-; GISEL-NEXT:    bsl v0.16b, v5.16b, v1.16b
-; GISEL-NEXT:    add v0.4s, v2.4s, v0.4s
+; GISEL-NEXT:    usubl v2.4s, v0.4h, v1.4h
+; GISEL-NEXT:    usubl2 v0.4s, v0.8h, v1.8h
+; GISEL-NEXT:    cmlt v1.4s, v2.4s, #0
+; GISEL-NEXT:    cmlt v3.4s, v0.4s, #0
+; GISEL-NEXT:    neg v4.4s, v2.4s
+; GISEL-NEXT:    neg v5.4s, v0.4s
+; GISEL-NEXT:    bsl v1.16b, v4.16b, v2.16b
+; GISEL-NEXT:    bit v0.16b, v5.16b, v3.16b
+; GISEL-NEXT:    add v0.4s, v1.4s, v0.4s
 ; GISEL-NEXT:    addv s0, v0.4s
 ; GISEL-NEXT:    fmov w0, s0
 ; GISEL-NEXT:    ret
