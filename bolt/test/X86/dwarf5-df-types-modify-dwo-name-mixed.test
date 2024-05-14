@@ -14,8 +14,8 @@
 ; RUN: llvm-dwarfdump --debug-str-offsets helper.dwo.dwo >> log.txt
 ; RUN: cat log.txt | FileCheck -check-prefix=BOLT %s
 
-;; This test overall tests a mix of DWARF5 TUs where one has DW_AT_comp_dir/DW_AT_dwo_name, and another one doesn't.
-;; Tests that BOLT correctly updates DW_AT_dwo_name for TU Untis.
+;; Test is a mix of DWARF5 TUs where one has DW_AT_comp_dir/DW_AT_dwo_name, and another one doesn't.
+;; Tests that BOLT correctly updates DW_AT_dwo_name for TUs.
 
 ; BOLT: DW_TAG_skeleton_unit
 ; BOLT: DW_AT_comp_dir  (".")

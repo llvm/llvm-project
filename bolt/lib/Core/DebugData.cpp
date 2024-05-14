@@ -875,7 +875,8 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
     Val = AttrVal->V.getAsSectionOffset();
   } else {
     if (!Unit.isDWOUnit())
-      BC.errs() << "DW_AT_str_offsets_base Value not present.\n";
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+                   "DW_AT_str_offsets_base Value not present\n";
     Val = 0;
   }
   DIE &Die = *DIEBldr.getUnitDIEbyUnit(Unit);
