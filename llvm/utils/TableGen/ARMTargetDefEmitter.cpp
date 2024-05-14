@@ -115,6 +115,13 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   // Emit architecture information
   OS << "#ifdef EMIT_ARCHITECTURES\n";
 
+  // Return the C++ name of the of an ArchInfo object
+  auto ArchInfoName = [](int Major, int Minor, StringRef Profile) {
+    return Minor == 0 ? "ARMV" + std::to_string(Major) + Profile.upper()
+                      : "ARMV" + std::to_string(Major) + "_" +
+                            std::to_string(Minor) + Profile.upper();
+  };
+
   auto Architectures = RK.getAllDerivedDefinitionsIfDefined("Architecture64");
   std::vector<std::string> CppSpellings;
   for (const Record *Rec : Architectures) {
@@ -129,10 +136,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
                           ProfileLower + "'");
 
     // Name of the object in C++
-    const std::string CppSpelling =
-        Minor == 0 ? "ARMV" + std::to_string(Major) + ProfileUpper.c_str()
-                   : "ARMV" + std::to_string(Major) + "_" +
-                         std::to_string(Minor) + ProfileUpper.c_str();
+    const std::string CppSpelling = ArchInfoName(Major, Minor, ProfileUpper);
     OS << "inline constexpr ArchInfo " << CppSpelling << " = {\n";
     CppSpellings.push_back(CppSpelling);
 
@@ -172,6 +176,35 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   OS << "#undef EMIT_ARCHITECTURES\n"
      << "#endif // EMIT_ARCHITECTURES\n"
+     << "\n";
+
+  // Emit CPU information
+  OS << "#ifdef EMIT_CPU_INFO\n"
+     << "inline constexpr CpuInfo CpuInfos[] = {\n";
+
+  for (const Record *Rec :
+       RK.getAllDerivedDefinitionsIfDefined("AArch64Processor")) {
+    auto Name = Rec->getValueAsString("Name");
+    auto Arch = Rec->getValueAsDef("Arch");
+    auto Major = Arch->getValueAsInt("Major");
+    auto Minor = Arch->getValueAsInt("Minor");
+    auto Profile = Arch->getValueAsString("Profile");
+    auto ArchInfo = ArchInfoName(Major, Minor, Profile);
+
+    OS << "  {\n"
+       << "    \"" << Name << "\",\n"
+       << "    " << ArchInfo << ",\n"
+       << "    AArch64::ExtensionBitset({\n";
+    for (auto E : Rec->getValueAsListOfDefs("DefaultExts"))
+      OS << "      AArch64::"
+         << E->getValueAsString("ArchExtKindSpelling").upper() << ",\n";
+    OS << "    })\n"
+       << "  },\n";
+  }
+  OS << "};\n";
+
+  OS << "#undef EMIT_CPU_INFO\n"
+     << "#endif // EMIT_CPU_INFO\n"
      << "\n";
 }
 
