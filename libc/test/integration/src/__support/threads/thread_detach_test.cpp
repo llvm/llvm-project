@@ -10,7 +10,7 @@
 #include "src/__support/threads/thread.h"
 #include "test/IntegrationTest/test.h"
 
-LIBC_NAMESPACE::Mutex mutex(false, false, false);
+LIBC_NAMESPACE::Mutex mutex(false, false, false, false);
 
 int func(void *) {
   mutex.lock();

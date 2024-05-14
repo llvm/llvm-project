@@ -54,7 +54,7 @@ class Dir {
   Dir(const Dir &) = delete;
 
   explicit Dir(int fdesc)
-      : fd(fdesc), readptr(0), fillsize(0), mutex(false, false, false) {}
+      : fd(fdesc), readptr(0), fillsize(0), mutex(false, false, false, false) {}
   ~Dir() = default;
 
   Dir &operator=(const Dir &) = delete;

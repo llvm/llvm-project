@@ -40,5 +40,15 @@
       "value": true,
       "doc": "Enable -fstack-protector-strong to defend against stack smashing attack."
     }
+  },
+  "pthread": {
+    "LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY": {
+      "value": true,
+      "doc": "Automatically adjust timeout to CLOCK_MONOTONIC."
+    },
+    "LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT": {
+      "value": 100,
+      "doc": "Default number of spins before blocking if a mutex is contented."
+    }
   }
 }
