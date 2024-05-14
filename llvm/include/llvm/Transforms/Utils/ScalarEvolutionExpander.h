@@ -124,6 +124,11 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// "expanded" form.
   bool LSRMode;
 
+  /// When true, rewrite any divisors of UDiv expressions that may be 0 to
+  /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
+  /// freeze it first.
+  bool SafeUDivMode = false;
+
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
 
@@ -300,6 +305,9 @@ public:
   /// location and their operands are defined at this location.
   bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint) const;
 
+  static bool isSafeToExpand(const SCEV *S, bool CanonicalMode,
+                             ScalarEvolution &SE);
+
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   Value *expandCodeFor(const SCEV *SH, Type *Ty, BasicBlock::iterator I);
@@ -417,6 +425,11 @@ public:
   /// MustDominate. Skips instructions inserted by the expander.
   BasicBlock::iterator findInsertPointAfter(Instruction *I,
                                             Instruction *MustDominate) const;
+
+  static const SCEV *rewriteExpressionToRemoveUB(const SCEV *BTC, Loop *L,
+                                                 ScalarEvolution &SE);
+
+  void setSafeUDivMode() { SafeUDivMode = true; }
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }

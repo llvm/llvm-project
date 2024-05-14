@@ -665,6 +665,12 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
   }
 
   Value *RHS = expand(S->getRHS());
+  if (SafeUDivMode && !SE.isKnownNonZero(S->getRHS())) {
+    if (!isa<SCEVConstant>(S->getRHS()))
+      RHS = Builder.CreateFreeze(RHS);
+    RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
+                                  {RHS, ConstantInt::get(RHS->getType(), 1)});
+  }
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
@@ -1358,11 +1364,13 @@ Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
 Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
+  SafeUDivMode = true;
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    SafeUDivMode = i != 0;
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -2315,10 +2323,15 @@ struct SCEVFindUnsafe {
 };
 } // namespace
 
-bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
+bool SCEVExpander::isSafeToExpand(const SCEV *S, bool CanonicalMode,
+                                  ScalarEvolution &SE) {
   SCEVFindUnsafe Search(SE, CanonicalMode);
   visitAll(S, Search);
   return !Search.IsUnsafe;
+}
+
+bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
+  return isSafeToExpand(S, CanonicalMode, SE);
 }
 
 bool SCEVExpander::isSafeToExpandAt(const SCEV *S,

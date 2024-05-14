@@ -4304,12 +4304,19 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   }
 
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
+    bool MayBeUB = SCEVExprContains(Ops[i], [](const SCEV *S) {
+      auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
+      return UDiv && !isa<SCEVConstant>(UDiv->getOperand(1));
+    });
+
+    if (MayBeUB)
+      continue;
     // We can replace %x umin_seq %y with %x umin %y if either:
     //  * %y being poison implies %x is also poison.
     //  * %x cannot be the saturating value (e.g. zero for umin).
     if (::impliesPoison(Ops[i], Ops[i - 1]) ||
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, Ops[i - 1],
-                                        SaturationPoint)) {
+        (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, Ops[i - 1],
+                                         SaturationPoint))) {
       SmallVector<const SCEV *> SeqOps = {Ops[i - 1], Ops[i]};
       Ops[i - 1] = getMinMaxExpr(
           SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(Kind),
