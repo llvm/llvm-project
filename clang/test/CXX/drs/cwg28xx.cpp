@@ -78,11 +78,13 @@ void f(A* a, D<int>* d) {
   //   expected-note@#cwg2857-adl_only {{'N::adl_only' declared here}}
 }
 
+#if __cplusplus >= 201103L
 template <typename>
 struct D : N::B {
   // FIXME: ADL shouldn't associate it's base B and N since D is not complete here
   decltype(adl_only((A*) nullptr, (D*) nullptr)) f;
 };
+#endif
 } // namespace cwg2857
 
 namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
