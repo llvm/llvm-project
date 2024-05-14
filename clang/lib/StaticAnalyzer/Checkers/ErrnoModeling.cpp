@@ -100,7 +100,7 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
   ASTContext &ACtx = C.getASTContext();
   ProgramStateRef State = C.getState();
 
-  const MemRegion *ErrnoR;
+  const MemRegion *ErrnoR = nullptr;
 
   if (ErrnoDecl) {
     // There is an external 'errno' variable, so we can simply use the memory
@@ -133,6 +133,7 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
         ACtx.IntTy, SVB.makeZeroArrayIndex(),
         RMgr.getSymbolicRegion(Sym, GlobalSystemSpace), C.getASTContext());
   }
+  assert(ErrnoR);
   State = State->set<ErrnoRegion>(ErrnoR);
   State =
       errno_modeling::setErrnoValue(State, C, 0, errno_modeling::Irrelevant);
