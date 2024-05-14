@@ -266,7 +266,7 @@
 // RUN: %clang -target mips-linux-gnu -mno-msa -mmsa -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-MSA %s
-// MIPS-MSA: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mfpxx" "-mmsa"
+// MIPS-MSA: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-mno-shared" "-call_nonpic" "-EB" "-mmsa"
 //
 // RUN: %clang -target mips-linux-gnu -mmsa -mno-msa -### \
 // RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
