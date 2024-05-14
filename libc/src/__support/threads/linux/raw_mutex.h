@@ -107,7 +107,7 @@ public:
     if (prev == CONTENTED)
       wake(is_pshared);
     // Detect invalid unlock operation.
-    return prev == LOCKED;
+    return prev != UNLOCKED;
   }
 };
 } // namespace internal
