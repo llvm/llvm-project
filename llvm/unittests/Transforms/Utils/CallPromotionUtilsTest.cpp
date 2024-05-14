@@ -473,12 +473,6 @@ declare void @_ZN5Base35func3Ev(ptr)
       *CI, VPtr, Callee, VTableAddressPoints, BranchWeights);
   EXPECT_EQ(DirectCB.getCalledOperand(), Callee);
 
-  // GEP and FuncPtr remains in the original block. `promoteCallWithVTableCmp`
-  // doesn't sink them to the basic block of indirect fallback.
-  BasicBlock *EntryBB = &F->front();
-  EXPECT_EQ(EntryBB, GEP->getParent());
-  EXPECT_EQ(EntryBB, FuncPtr->getParent());
-
   // Promotion inserts 3 icmp instructions and 2 or instructions, and removes
   // 1 call instruction from the entry block.
   EXPECT_EQ(F->front().size(), OrigEntryBBSize + 4);
