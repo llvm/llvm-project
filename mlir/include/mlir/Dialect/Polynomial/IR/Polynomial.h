@@ -11,10 +11,13 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 
@@ -27,98 +30,202 @@ namespace polynomial {
 /// would want to specify 128-bit polynomials statically in the source code.
 constexpr unsigned apintBitWidth = 64;
 
-/// A class representing a monomial of a single-variable polynomial with integer
-/// coefficients.
-class Monomial {
+template <typename CoefficientType>
+class MonomialBase {
 public:
-  Monomial(int64_t coeff, uint64_t expo)
-      : coefficient(apintBitWidth, coeff), exponent(apintBitWidth, expo) {}
-
-  Monomial(const APInt &coeff, const APInt &expo)
+  MonomialBase(const CoefficientType &coeff, const APInt &expo)
       : coefficient(coeff), exponent(expo) {}
+  virtual ~MonomialBase() = default;
 
-  Monomial() : coefficient(apintBitWidth, 0), exponent(apintBitWidth, 0) {}
+  const CoefficientType &getCoefficient() const { return coefficient; }
+  CoefficientType &getMutableCoefficient() { return coefficient; }
+  const APInt &getExponent() const { return exponent; }
+  void setCoefficient(const CoefficientType &coeff) { coefficient = coeff; }
+  void setExponent(const APInt &exp) { exponent = exp; }
 
-  bool operator==(const Monomial &other) const {
+  bool operator==(const MonomialBase &other) const {
     return other.coefficient == coefficient && other.exponent == exponent;
   }
-  bool operator!=(const Monomial &other) const {
+  bool operator!=(const MonomialBase &other) const {
     return other.coefficient != coefficient || other.exponent != exponent;
   }
 
   /// Monomials are ordered by exponent.
-  bool operator<(const Monomial &other) const {
+  bool operator<(const MonomialBase &other) const {
     return (exponent.ult(other.exponent));
   }
 
-  friend ::llvm::hash_code hash_value(const Monomial &arg);
+  virtual bool isMonic() const = 0;
+  virtual void
+  coefficientToString(llvm::SmallString<16> &coeffString) const = 0;
 
-public:
-  APInt coefficient;
+  template <typename T>
+  friend ::llvm::hash_code hash_value(const MonomialBase<T> &arg);
 
-  // Always unsigned
+protected:
+  CoefficientType coefficient;
   APInt exponent;
 };
 
-/// A single-variable polynomial with integer coefficients.
-///
-/// Eg: x^1024 + x + 1
-///
-/// The symbols used as the polynomial's indeterminate don't matter, so long as
-/// it is used consistently throughout the polynomial.
-class Polynomial {
+/// A class representing a monomial of a single-variable polynomial with integer
+/// coefficients.
+class IntMonomial : public MonomialBase<APInt> {
 public:
-  Polynomial() = delete;
+  IntMonomial(int64_t coeff, uint64_t expo)
+      : MonomialBase(APInt(apintBitWidth, coeff), APInt(apintBitWidth, expo)) {}
 
-  explicit Polynomial(ArrayRef<Monomial> terms) : terms(terms){};
+  IntMonomial()
+      : MonomialBase(APInt(apintBitWidth, 0), APInt(apintBitWidth, 0)) {}
 
-  // Returns a Polynomial from a list of monomials.
-  // Fails if two monomials have the same exponent.
-  static FailureOr<Polynomial> fromMonomials(ArrayRef<Monomial> monomials);
+  ~IntMonomial() = default;
 
-  /// Returns a polynomial with coefficients given by `coeffs`. The value
-  /// coeffs[i] is converted to a monomial with exponent i.
-  static Polynomial fromCoefficients(ArrayRef<int64_t> coeffs);
+  bool isMonic() const override { return coefficient == 1; }
+
+  void coefficientToString(llvm::SmallString<16> &coeffString) const override {
+    coefficient.toStringSigned(coeffString);
+  }
+};
+
+/// A class representing a monomial of a single-variable polynomial with integer
+/// coefficients.
+class FloatMonomial : public MonomialBase<APFloat> {
+public:
+  FloatMonomial(double coeff, uint64_t expo)
+      : MonomialBase(APFloat(coeff), APInt(apintBitWidth, expo)) {}
+
+  FloatMonomial() : MonomialBase(APFloat((double)0), APInt(apintBitWidth, 0)) {}
+
+  ~FloatMonomial() = default;
+
+  bool isMonic() const override { return coefficient == APFloat(1.0); }
+
+  void coefficientToString(llvm::SmallString<16> &coeffString) const override {
+    coefficient.toString(coeffString);
+  }
+};
+
+template <typename Monomial>
+class PolynomialBase {
+public:
+  PolynomialBase() = delete;
+
+  explicit PolynomialBase(ArrayRef<Monomial> terms) : terms(terms) {};
 
   explicit operator bool() const { return !terms.empty(); }
-  bool operator==(const Polynomial &other) const {
+  bool operator==(const PolynomialBase &other) const {
     return other.terms == terms;
   }
-  bool operator!=(const Polynomial &other) const {
+  bool operator!=(const PolynomialBase &other) const {
     return !(other.terms == terms);
   }
 
-  // Prints polynomial to 'os'.
-  void print(raw_ostream &os) const;
   void print(raw_ostream &os, ::llvm::StringRef separator,
-             ::llvm::StringRef exponentiation) const;
+             ::llvm::StringRef exponentiation) const {
+    bool first = true;
+    for (const Monomial &term : getTerms()) {
+      if (first) {
+        first = false;
+      } else {
+        os << separator;
+      }
+      std::string coeffToPrint;
+      if (term.isMonic() && term.getExponent().uge(1)) {
+        coeffToPrint = "";
+      } else {
+        llvm::SmallString<16> coeffString;
+        term.coefficientToString(coeffString);
+        coeffToPrint = coeffString.str();
+      }
+
+      if (term.getExponent() == 0) {
+        os << coeffToPrint;
+      } else if (term.getExponent() == 1) {
+        os << coeffToPrint << "x";
+      } else {
+        llvm::SmallString<16> expString;
+        term.getExponent().toStringSigned(expString);
+        os << coeffToPrint << "x" << exponentiation << expString;
+      }
+    }
+  }
+
+  // Prints polynomial to 'os'.
+  void print(raw_ostream &os) const { print(os, " + ", "**"); }
+
   void dump() const;
 
   // Prints polynomial so that it can be used as a valid identifier
-  std::string toIdentifier() const;
+  std::string toIdentifier() const {
+    std::string result;
+    llvm::raw_string_ostream os(result);
+    print(os, "_", "");
+    return os.str();
+  }
 
-  unsigned getDegree() const;
+  unsigned getDegree() const {
+    return terms.back().getExponent().getZExtValue();
+  }
 
   ArrayRef<Monomial> getTerms() const { return terms; }
 
-  friend ::llvm::hash_code hash_value(const Polynomial &arg);
+  template <typename T>
+  friend ::llvm::hash_code hash_value(const PolynomialBase<T> &arg);
 
 private:
   // The monomial terms for this polynomial.
   SmallVector<Monomial> terms;
 };
 
-// Make Polynomial hashable.
-inline ::llvm::hash_code hash_value(const Polynomial &arg) {
+/// A single-variable polynomial with integer coefficients.
+///
+/// Eg: x^1024 + x + 1
+class IntPolynomial : public PolynomialBase<IntMonomial> {
+public:
+  explicit IntPolynomial(ArrayRef<IntMonomial> terms) : PolynomialBase(terms) {}
+
+  // Returns a Polynomial from a list of monomials.
+  // Fails if two monomials have the same exponent.
+  static FailureOr<IntPolynomial>
+  fromMonomials(ArrayRef<IntMonomial> monomials);
+
+  /// Returns a polynomial with coefficients given by `coeffs`. The value
+  /// coeffs[i] is converted to a monomial with exponent i.
+  static IntPolynomial fromCoefficients(ArrayRef<int64_t> coeffs);
+};
+
+/// A single-variable polynomial with double coefficients.
+///
+/// Eg: 1.0 x^1024 + 3.5 x + 1e-05
+class FloatPolynomial : public PolynomialBase<FloatMonomial> {
+public:
+  explicit FloatPolynomial(ArrayRef<FloatMonomial> terms)
+      : PolynomialBase(terms) {}
+
+  // Returns a Polynomial from a list of monomials.
+  // Fails if two monomials have the same exponent.
+  static FailureOr<FloatPolynomial>
+  fromMonomials(ArrayRef<FloatMonomial> monomials);
+
+  /// Returns a polynomial with coefficients given by `coeffs`. The value
+  /// coeffs[i] is converted to a monomial with exponent i.
+  static FloatPolynomial fromCoefficients(ArrayRef<double> coeffs);
+};
+
+// Make Polynomials hashable.
+template <typename T>
+inline ::llvm::hash_code hash_value(const PolynomialBase<T> &arg) {
   return ::llvm::hash_combine_range(arg.terms.begin(), arg.terms.end());
 }
 
-inline ::llvm::hash_code hash_value(const Monomial &arg) {
+template <typename T>
+inline ::llvm::hash_code hash_value(const MonomialBase<T> &arg) {
   return llvm::hash_combine(::llvm::hash_value(arg.coefficient),
                             ::llvm::hash_value(arg.exponent));
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, const Polynomial &polynomial) {
+template <typename T>
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const PolynomialBase<T> &polynomial) {
   polynomial.print(os);
   return os;
 }
