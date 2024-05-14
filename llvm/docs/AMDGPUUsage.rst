@@ -824,8 +824,8 @@ supported for the ``amdgcn`` target.
      Constant                              4               constant    *same as global* 64      0x0000000000000000
      Private                               5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                       6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental)     7               *TODO*
-     Buffer Resource (experimental)        8               *TODO*
+     Buffer Fat Pointer                    7               N/A         N/A              160     0
+     Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
