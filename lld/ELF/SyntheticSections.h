@@ -549,8 +549,8 @@ public:
     return SyntheticSection::classof(d) &&
            (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
             d->type == llvm::ELF::SHT_RELR ||
-            (config->emachine == llvm::ELF::EM_AARCH64 &&
-             d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR));
+            (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
+             config->emachine == llvm::ELF::EM_AARCH64));
   }
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;

@@ -1459,7 +1459,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // during RelocationScanner::processAux, but the target VA for some of
       // them might be wider than 32 bits. We can only know the final VA at this
       // point, so move relocations with large values from .relr.auth.dyn to
-      // .rela.dyn.
+      // .rela.dyn. See also AArch64::relocate.
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
             part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
@@ -1470,7 +1470,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
                                       reloc.offset,
                                       DynamicReloc::AddendOnlyWithTargetVA,
                                       *reloc.sym, reloc.addend, R_ABS});
-              // See also AArch64::relocate
               return true;
             });
         changed |= (it != part.relrAuthDyn->relocs.end());

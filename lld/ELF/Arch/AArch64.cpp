@@ -433,7 +433,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     // .relr.auth.dyn to .rela.dyn, and the addend write is not needed.
     //
     // If val fits in 32 bits, we have two potential scenarios:
-    // * True RELR: Write the 32-bit `val`
+    // * True RELR: Write the 32-bit `val`.
     // * RELA: Even if the value now fits in 32 bits, it might have been
     //   converted from RELR during an iteration in
     //   finalizeAddressDependentContent(). Writing the value is harmless
