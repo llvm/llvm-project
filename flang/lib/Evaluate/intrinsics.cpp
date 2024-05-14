@@ -3231,7 +3231,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   }
 
   if (specificBuffer.empty() && genericBuffer.empty() &&
-      IsIntrinsicSubroutine(call.name) && IsDualIntrinsic(call.name)) {
+      IsIntrinsicSubroutine(call.name) && !IsDualIntrinsic(call.name)) {
     context.messages().Say(
         "Cannot use intrinsic subroutine '%s' as a function"_err_en_US,
         call.name);
