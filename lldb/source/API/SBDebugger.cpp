@@ -970,7 +970,7 @@ void SBDebugger::SendTelemetry(SBStructuredData *entry) {
   if (lldb_private::Debugger *debugger = this->get()) {
     debugger->SendClientTelemetry(entry->m_impl_up->GetObjectSP().get());
   } else {
-    std::cerr << " --- cannot log dap request - debugger is null\n";
+    std::cerr << " --- cannot send telemetry entry - debugger is null\n";
   }
 }
 

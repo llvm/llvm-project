@@ -1499,8 +1499,6 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     // what we found in the executable module.
     if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
-      // executable_sp->GetArchitecture().GetSpec().GetArchitectureName();
-      //  m_arch.
       LLDB_LOG(log,
                "Target::SetExecutableModule setting architecture to {0} ({1}) "
                "based on executable file",

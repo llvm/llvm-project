@@ -32,6 +32,7 @@
 #include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -39,7 +40,6 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
-#include "third_party/llvm/llvm-project/lldb/include/lldb/Utility/StructuredData.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
@@ -147,7 +147,7 @@ public:
 
   lldb::StreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
 
-  std::shared_ptr<TelemetryLogger> GetTelemetryLogger() {
+  std::shared_ptr<LldbTelemetryLogger> GetTelemetryLogger() {
     return m_telemetry_logger;
   }
 
@@ -745,7 +745,7 @@ protected:
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests
   std::mutex m_interrupt_mutex;
 
-  std::shared_ptr<TelemetryLogger> m_telemetry_logger;
+  std::shared_ptr<LldbTelemetryLogger> m_telemetry_logger;
   // Events for m_sync_broadcaster
   enum {
     eBroadcastBitEventThreadIsListening = (1 << 0),

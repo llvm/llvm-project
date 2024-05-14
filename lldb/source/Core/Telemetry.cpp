@@ -8,9 +8,10 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Core/Telemetry.h"
 
-#include <memory>
 #include <stdbool.h>
 #include <sys/auxv.h>
+
+#include <memory>
 
 #include <chrono>
 #include <cstdlib>
@@ -37,69 +38,59 @@
 #include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Chrono.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
-
-#include "clang/Basic/Version.h"
+#include "llvm/Telemetry/Telemetry.h"
 
 namespace lldb_private {
 
-std::string BaseTelemetryEntry::ToString() const {
-  return "[BaseTelemetryEntry]\n" + ("  session_uuid:" + session_uuid + "\n") +
-         ("  start timestamp: " +
-          std::to_string(stats.m_start.time_since_epoch().count()) + "\n") +
-         (" counter: " + std::to_string(counter));
+static std::string GetDuration(const TelemetryEventStats &stats) {
+  if (stats.m_end.has_value())
+    return std::to_string((stats.m_end.value() - stats.m_start).count()) +
+           "(nanosec)";
+  return "<NONE>";
 }
 
 std::string DebuggerInfoEntry::ToString() const {
-  auto duration = stats.Duration();
+  std::string duration_desc =
+      (exit_description.has_value() ? "  lldb session duration: "
+                                    : "  lldb startup duration: ") +
+      std::to_string((stats.m_end.value() - stats.m_start).count()) +
+      "(nanosec)\n";
+
   return BaseTelemetryEntry::ToString() + "\n" + ("[DebuggerInfoEntry]\n") +
          ("  username: " + username + "\n") +
          ("  lldb_git_sha: " + lldb_git_sha + "\n") +
          ("  lldb_path: " + lldb_path + "\n") + ("  cwd: " + cwd + "\n") +
-         ("  lldb startup/session duration: " +
-          (duration.has_value() ? std::to_string(duration->count())
-                                : "<empty>") +
-          "(nanosec)\n") +
-         (lldb_exit.has_value()
-              ? ("lldb_exit_code: " + std::to_string(lldb_exit->exit_code) +
-                 ", lldb_exit_description: " + lldb_exit->description + "\n  ")
-              : (""));
+         duration_desc + "\n";
 }
 
 std::string ClientTelemetryEntry::ToString() const {
   return BaseTelemetryEntry::ToString() + "\n" + ("[DapRequestInfoEntry]\n") +
          ("  request_name: " + request_name + "\n") +
-         ("  request_duration: " + std::to_string(stats.Duration()->count()) +
-          "(nanosec)\n") +
+         ("  request_duration: " + GetDuration(stats) + "(nanosec)\n") +
          ("  error_msg: " + error_msg + "\n");
 }
 
 std::string TargetInfoEntry::ToString() const {
   std::string exit_or_load_desc;
-  if (process_exit.has_value()) {
+  if (exit_description.has_value()) {
     // If this entry was emitted for an exit
-    exit_or_load_desc =
-        "  process_duration: " + std::to_string(stats.Duration()->count()) +
-        "(nanosec)" +
-        "\n"
-        "  exit_code: " +
-        std::to_string(process_exit->exit_code) +
-        ", exit description: " + process_exit->description + "\n";
+    exit_or_load_desc = "  process_duration: " + GetDuration(stats) +
+                        "  exit: " + exit_description->ToString() + "\n";
   } else {
     // This was emitted for a load event.
     // See if it was the start-load or end-load entry
     if (stats.m_end.has_value()) {
-      exit_or_load_desc = "  startup_init_duration: " +
-                          std::to_string(stats.Duration()->count()) +
-                          "(nanosec)" + "\n";
+      exit_or_load_desc =
+          "  startup_init_duration: " + GetDuration(stats) + "\n";
     } else {
       exit_or_load_desc = " startup_init_start\n";
     }
@@ -158,12 +149,11 @@ std::string CommandInfoEntry::ToString() const {
            ("  command_uuid: " + command_uuid + "\n") +
            ("  command_name: " + command_name + "\n") +
            ("  args: " + args + "\n") +
-           ("  command_runtime: " + std::to_string(stats.Duration()->count()) +
-            "(nanosec)\n") +
-           ("  exit_code: " + std::to_string(exit_description.exit_code) +
-            ", exit description: " + exit_description.description + "\n");
+           ("  command_runtime: " + GetDuration(stats) + "\n") +
+           (exit_description.has_value() ? exit_description->ToString()
+                                         : "no exit-description") +
+           "\n";
   } else {
-    // NOt going to have much info at the beginning.
     return BaseTelemetryEntry::ToString() + "\n" +
            ("[CommandInfoEntry] - START\n") +
            ("  target_uuid: " + target_uuid + "\n") +
@@ -188,8 +178,8 @@ public:
   StreamTelemetryDestination(std::ostream &os, std::string desc,
                              bool omit_sensitive_fields)
       : os(os), desc(desc), omit_sensitive_fields(omit_sensitive_fields) {}
-  Status EmitEntry(const lldb_private::BaseTelemetryEntry *entry) override {
-    Status ret_status;
+  llvm::Error EmitEntry(const BaseTelemetryEntry *entry) override {
+    llvm::Error ret_status = llvm::Error::success();
     if (omit_sensitive_fields) {
       // clean up the data before logging
       // TODO: clean up the data before logging
@@ -210,18 +200,19 @@ private:
 };
 
 // No-op logger to use when users disable logging.
-class NoOpTelemetryLogger : public TelemetryLogger {
+class NoOpTelemetryLogger : public LldbTelemetryLogger {
 public:
-  static std::shared_ptr<TelemetryLogger> CreateInstance(Debugger *debugger) {
-    static std::shared_ptr<TelemetryLogger> ins(
+  static std::shared_ptr<LldbTelemetryLogger>
+  CreateInstance(Debugger *debugger) {
+    static std::shared_ptr<LldbTelemetryLogger> ins(
         new NoOpTelemetryLogger(debugger));
     return ins;
   }
 
   NoOpTelemetryLogger(Debugger *debugger) {}
-  void LogStartup(llvm::StringRef lldb_path,
-                  TelemetryEventStats stats) override {}
-  void LogExit(llvm::StringRef lldb_path, TelemetryEventStats stats) override {}
+  void LogStartup(llvm::StringRef tool_path,
+                  BaseTelemetryEntry *entry) override {}
+  void LogExit(llvm::StringRef tool_path, BaseTelemetryEntry *entry) override {}
   void LogProcessExit(int status, llvm::StringRef exit_string,
                       TelemetryEventStats stats, Target *target_ptr) override {}
   void LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
@@ -244,15 +235,16 @@ public:
   std::string GetNextUUID() override { return ""; }
 };
 
-class BasicTelemetryLogger : public TelemetryLogger {
+class BasicTelemetryLogger : public LldbTelemetryLogger {
 public:
-  static std::shared_ptr<TelemetryLogger> CreateInstance(Debugger *);
+  static std::shared_ptr<BasicTelemetryLogger> CreateInstance(Debugger *);
 
   virtual ~BasicTelemetryLogger() = default;
 
   void LogStartup(llvm::StringRef lldb_path,
-                  TelemetryEventStats stats) override;
-  void LogExit(llvm::StringRef lldb_path, TelemetryEventStats stats) override;
+                  BaseTelemetryEntry *entry) override;
+  void LogExit(llvm::StringRef lldb_path, BaseTelemetryEntry *entry) override;
+
   void LogProcessExit(int status, llvm::StringRef exit_string,
                       TelemetryEventStats stats, Target *target_ptr) override;
   void LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
@@ -318,13 +310,14 @@ static std::string MakeUUID(lldb_private::Debugger *debugger) {
 
   return ret;
 }
+
 BasicTelemetryLogger::BasicTelemetryLogger(lldb_private::Debugger *debugger)
     : m_debugger(debugger), m_session_uuid(MakeUUID(debugger)) {}
 
-std::shared_ptr<TelemetryLogger>
+std::shared_ptr<BasicTelemetryLogger>
 BasicTelemetryLogger::CreateInstance(lldb_private::Debugger *debugger) {
   auto *config = GetLoggerConfig();
-  assert(config->enable_logging);
+  // llvm::Assert(config->enable_logging);
 
   BasicTelemetryLogger *ins = new BasicTelemetryLogger(debugger);
 
@@ -344,16 +337,18 @@ BasicTelemetryLogger::CreateInstance(lldb_private::Debugger *debugger) {
   return std::shared_ptr<BasicTelemetryLogger>(ins);
 }
 
-void BasicTelemetryLogger::EmitToDestinations(
-    const lldb_private::BaseTelemetryEntry *entry) {
+void BasicTelemetryLogger::EmitToDestinations(const BaseTelemetryEntry *entry) {
   // TODO: can do this in a separate thread (need to own the ptrs!).
   for (auto destination : m_destinations) {
-    destination->EmitEntry(entry);
+    if (auto err = destination->EmitEntry(entry); !err.success()) {
+      std::cerr << "error emitting to destination: " << destination->name()
+                << "\n";
+    }
   }
 }
 
 void BasicTelemetryLogger::LogStartup(llvm::StringRef lldb_path,
-                                      TelemetryEventStats stats) {
+                                      BaseTelemetryEntry *entry) {
   std::cout << "debugger starting up\n";
 
   startup_lldb_path = lldb_path.str();
@@ -367,7 +362,7 @@ void BasicTelemetryLogger::LogStartup(llvm::StringRef lldb_path,
 
   startup_info.lldb_git_sha = lldb_private::GetVersion(); // TODO: fix this
   startup_info.lldb_path = startup_lldb_path;
-  startup_info.stats = stats;
+  startup_info.stats = entry->stats;
 
   llvm::SmallString<64> cwd;
   if (!llvm::sys::fs::current_path(cwd)) {
@@ -381,8 +376,35 @@ void BasicTelemetryLogger::LogStartup(llvm::StringRef lldb_path,
   std::cout << "emitting startup info\n";
   EmitToDestinations(&startup_info);
 
-  // OPtional part
+  // Optional part
   CollectMiscBuildInfo();
+}
+
+void BasicTelemetryLogger::LogExit(llvm::StringRef lldb_path,
+                                   BaseTelemetryEntry *entry) {
+  std::cout << "debugger exiting at " << lldb_path.str() << "\n";
+  // we should be shutting down the same instance that we started?!
+  // llvm::Assert(startup_lldb_path == lldb_path.str());
+
+  lldb_private::DebuggerInfoEntry exit_info =
+      MakeBaseEntry<lldb_private::DebuggerInfoEntry>();
+  exit_info.stats = entry->stats;
+  exit_info.lldb_path = startup_lldb_path;
+  if (auto *selected_target =
+          m_debugger->GetSelectedExecutionContext().GetTargetPtr()) {
+    if (!selected_target->IsDummyTarget()) {
+      const lldb::ProcessSP proc = selected_target->GetProcessSP();
+      if (proc == nullptr) {
+        // no process has been launched yet.
+        exit_info.exit_description = {-1, "no process launched."};
+      } else {
+        exit_info.exit_description = {proc->GetExitStatus(), ""};
+        if (const char *description = proc->GetExitDescription())
+          exit_info.exit_description->description = std::string(description);
+      }
+    }
+  }
+  EmitToDestinations(&exit_info);
 }
 
 void BasicTelemetryLogger::LogProcessExit(int status,
@@ -396,36 +418,9 @@ void BasicTelemetryLogger::LogProcessExit(int status,
       target_ptr && !target_ptr->IsDummyTarget()
           ? target_ptr->GetExecutableModule()->GetUUID().GetAsString()
           : "";
-  exit_info.process_exit = {status, exit_string.str()};
+  exit_info.exit_description = {status, exit_string.str()};
 
   std::cout << "emitting process exit ...\n";
-  EmitToDestinations(&exit_info);
-}
-
-void BasicTelemetryLogger::LogExit(llvm::StringRef lldb_path,
-                                   TelemetryEventStats stats) {
-  std::cout << "debugger exiting at " << lldb_path.str() << "\n";
-  // we should be shutting down the same instance that we started?!
-  assert(startup_lldb_path == lldb_path.str());
-
-  lldb_private::DebuggerInfoEntry exit_info =
-      MakeBaseEntry<lldb_private::DebuggerInfoEntry>();
-  exit_info.stats = stats;
-  exit_info.lldb_path = startup_lldb_path;
-  if (auto *selected_target =
-          m_debugger->GetSelectedExecutionContext().GetTargetPtr()) {
-    if (!selected_target->IsDummyTarget()) {
-      const lldb::ProcessSP proc = selected_target->GetProcessSP();
-      if (proc == nullptr) {
-        // no process has been launched yet.
-        exit_info.lldb_exit = {-1, "no process launched."};
-      } else {
-        exit_info.lldb_exit = {proc->GetExitStatus(), ""};
-        if (const char *description = proc->GetExitDescription())
-          exit_info.lldb_exit->description = std::string(description);
-      }
-    }
-  }
   EmitToDestinations(&exit_info);
 }
 
@@ -501,15 +496,8 @@ void BasicTelemetryLogger::LogClientTelemetry(
     EmitToDestinations(&misc_info);
     return;
   }
-
-  std::chrono::nanoseconds start_time_nanos =
-      std::chrono::nanoseconds(start_time);
-  std::chrono::nanoseconds end_time_nanos = std::chrono::nanoseconds(end_time);
-  data_entry.stats.m_start = SteadyTimePoint(start_time_nanos);
-  data_entry.stats.m_end = SteadyTimePoint(end_time_nanos);
-
-  EmitToDestinations(&data_entry);
 }
+
 void BasicTelemetryLogger::LogCommandStart(llvm::StringRef uuid,
                                            llvm::StringRef original_command,
                                            TelemetryEventStats stats,
@@ -565,8 +553,8 @@ bool parse_field(llvm::StringRef str, llvm::StringRef label) {
   return false;
 }
 
-LoggerConfig *GetLoggerConfig() {
-  static lldb_private::LoggerConfig *config = []() {
+llvm::telemetry::LoggerConfig *GetLoggerConfig() {
+  static llvm::telemetry::LoggerConfig *config = []() {
     bool enable_logging = true;
     std::vector<std::string> additional_destinations;
 
@@ -601,20 +589,19 @@ LoggerConfig *GetLoggerConfig() {
 
     if (additional_destinations.empty())
       additional_destinations.push_back("stdout");
-    auto *ret =
-        new lldb_private::LoggerConfig{enable_logging, additional_destinations};
+    auto *ret = new llvm::telemetry::LoggerConfig{enable_logging,
+                                                  additional_destinations};
     return ret;
   }();
   return config;
 }
 
-std::shared_ptr<TelemetryLogger>
-TelemetryLogger::CreateInstance(lldb_private::Debugger *debugger) {
+std::shared_ptr<LldbTelemetryLogger>
+LldbTelemetryLogger::CreateInstance(lldb_private::Debugger *debugger) {
   auto *config = GetLoggerConfig();
   if (!config->enable_logging) {
     return NoOpTelemetryLogger::CreateInstance(debugger);
   }
   return BasicTelemetryLogger::CreateInstance(debugger);
 }
-
 } // namespace lldb_private

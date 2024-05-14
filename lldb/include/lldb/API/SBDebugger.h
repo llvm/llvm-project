@@ -14,7 +14,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
-#include "third_party/llvm/llvm-project/lldb/include/lldb/API/SBStructuredData.h"
+#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;

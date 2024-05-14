@@ -6,87 +6,29 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Telemetry/Telemetry.h"
+
+using namespace llvm::telemetry;
 
 namespace lldb_private {
 
-using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
-
-struct TelemetryEventStats {
-  // REQUIRED: Start time of event
-  SteadyTimePoint m_start;
-  // OPTIONAL: End time of event - may be empty if not meaningful.
-  std::optional<SteadyTimePoint> m_end;
-
-  // TBD: could add some memory stats here too?
-
-  TelemetryEventStats() = default;
-  TelemetryEventStats(SteadyTimePoint start) : m_start(start) {}
-  TelemetryEventStats(SteadyTimePoint start, SteadyTimePoint end)
-      : m_start(start), m_end(end) {}
-
-  std::optional<std::chrono::nanoseconds> Duration() const {
-    if (m_end.has_value())
-      return *m_end - m_start;
-    else
-      return std::nullopt;
-  }
-};
-
-struct LoggerConfig {
-  // If true, loggings will be enabled.
-  bool enable_logging;
-
-  // Additional destinations to send the logged entries.
-  // Could be stdout, stderr, or some local paths.
-  // Note: these are destinations are __in addition to__ whatever the default
-  // destination(s) are, as implemented by vendors.
-  std::vector<std::string> additional_destinations;
-};
-
-// The base class contains the basic set of data.
-// Downstream implementations can add more fields as needed.
-struct BaseTelemetryEntry {
-  // A "session" corresponds to every time lldb starts.
-  // All entries emitted for the same session will have
-  // the same session_uuid
-  std::string session_uuid;
-
-  TelemetryEventStats stats;
-
-  // Counting number of entries.
-  // (For each set of entries with the same session_uuid, this value should
-  // be unique for each entry)
-  size_t counter;
-
-  virtual ~BaseTelemetryEntry() = default;
-  virtual std::string ToString() const;
-};
-
-struct ExitDescription {
-  int exit_code;
-  std::string description;
-};
-
-struct DebuggerInfoEntry : public BaseTelemetryEntry {
+struct DebuggerInfoEntry : public ::llvm::telemetry::BaseTelemetryEntry {
   std::string username;
   std::string lldb_git_sha;
   std::string lldb_path;
   std::string cwd;
 
-  // The debugger exit info. Not populated if this entry was emitted for startup
-  // event.
-  std::optional<ExitDescription> lldb_exit;
-
   std::string ToString() const override;
 };
 
-struct TargetInfoEntry : public BaseTelemetryEntry {
+struct TargetInfoEntry : public ::llvm::telemetry::BaseTelemetryEntry {
   // All entries emitted for the same SBTarget will have the same
   // target_uuid.
   std::string target_uuid;
@@ -95,21 +37,17 @@ struct TargetInfoEntry : public BaseTelemetryEntry {
   std::string binary_path;
   size_t binary_size;
 
-  // The process(target) exit info. Not populated of this entry was emitted for
-  // startup event.
-  std::optional<ExitDescription> process_exit;
-
   std::string ToString() const override;
 };
 
 // Entry from client (eg., SB-API)
-struct ClientTelemetryEntry : public BaseTelemetryEntry {
+struct ClientTelemetryEntry : public ::llvm::telemetry::BaseTelemetryEntry {
   std::string request_name;
   std::string error_msg;
   std::string ToString() const override;
 };
 
-struct CommandInfoEntry : public BaseTelemetryEntry {
+struct CommandInfoEntry : public ::llvm::telemetry::BaseTelemetryEntry {
   // If the command is/can be associated with a target entry,
   // this field contains that target's UUID.
   // <EMPTY> otherwise.
@@ -124,14 +62,12 @@ struct CommandInfoEntry : public BaseTelemetryEntry {
   std::string original_command;
   std::string args;
 
-  ExitDescription exit_description;
-
   std::string ToString() const override;
 };
 
 // The "catch-all" entry to store a set of custom/non-standard
 // data.
-struct MiscInfoEntry : public BaseTelemetryEntry {
+struct MiscInfoEntry : public ::llvm::telemetry::BaseTelemetryEntry {
   // If the event is/can be associated with a target entry,
   // this field contains that target's UUID.
   // <EMPTY> otherwise.
@@ -143,28 +79,16 @@ struct MiscInfoEntry : public BaseTelemetryEntry {
   std::string ToString() const override;
 };
 
-// Where/how to send the logged entries.
-class TelemetryDestination {
+class LldbTelemetryLogger : public llvm::telemetry::BaseTelemetryLogger {
 public:
-  virtual ~TelemetryDestination() = default;
-  virtual Status EmitEntry(const BaseTelemetryEntry *entry) = 0;
-  virtual std::string name() const = 0;
-};
+  static std::shared_ptr<LldbTelemetryLogger> CreateInstance(Debugger *);
 
-// The logger itself!
-class TelemetryLogger {
-public:
-  static std::shared_ptr<TelemetryLogger> CreateInstance(Debugger *);
+  virtual ~LldbTelemetryLogger() = default;
 
-  virtual ~TelemetryLogger() = default;
-
-  // Invoked upon lldb startup
-  virtual void LogStartup(llvm::StringRef lldb_path,
-                          TelemetryEventStats stats) = 0;
-
-  // Invoked upon lldb exit.
-  virtual void LogExit(llvm::StringRef lldb_path,
-                       TelemetryEventStats stats) = 0;
+  // void LogStartup(llvm::StringRef lldb_path,
+  //                 BaseTelemetryEntry *entry) override;
+  // void LogExit(llvm::StringRef lldb_path, BaseTelemetryEntry *entry)
+  // override;
 
   // Invoked upon process exit
   virtual void LogProcessExit(int status, llvm::StringRef exit_string,
@@ -196,8 +120,6 @@ public:
   // For client (eg., SB API) to send telemetry entries.
   virtual void
   LogClientTelemetry(lldb_private::StructuredData::Object *entry) = 0;
-
-  virtual void AddDestination(TelemetryDestination *destination) = 0;
 };
 
 /*
@@ -215,12 +137,12 @@ destination:/path/to/some/file
 
 The allowed field_name values are:
  * enable_logging
-       If the fields are specified more than once, the last line will take precedence
-       If enable_logging is set to false, no logging will occur.
+       If the fields are specified more than once, the last line will take
+precedence If enable_logging is set to false, no logging will occur.
  * destination.
-      This is allowed to be specified multiple times - it will add to the default
-      (ie, specified by vendor) list of destinations.
-      The value can be either of
+      This is allowed to be specified multiple times - it will add to the
+default (ie, specified by vendor) list of destinations. The value can be either
+of
          + one of the two magic values "stdout" or "stderr".
          + a path to a local file
 

@@ -54,6 +54,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Telemetry/Telemetry.h"
+#include <chrono>
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -743,14 +745,11 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   }
   debugger_sp->InstanceInitialize();
   TelemetryEventStats init_stats(start_time, std::chrono::steady_clock::now());
-
-  // TODO: we could split up the logging:
-  // - LogStartup_start: called at the beginning
-  // - LogStartup_end: called at the end
-  // This way if the init crashes, we still have some logging.
+  llvm::telemetry::BaseTelemetryEntry entry;
+  entry.stats = {start_time, std::chrono::steady_clock::now()};
   debugger_sp->m_telemetry_logger->LogStartup(
       HostInfo::GetProgramFileSpec().GetPathAsConstString().GetCString(),
-      std::move(init_stats));
+      &entry);
   return debugger_sp;
 }
 
@@ -859,8 +858,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().AsCString()),
-      m_forward_listener_sp(), m_clear_once(),
-      m_telemetry_logger(TelemetryLogger::CreateInstance(this)) {
+      m_forward_listener_sp(), m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);
@@ -957,12 +955,12 @@ void Debugger::Clear() {
     // (now).
     // TBD: we could also record stats for *just* the quit action, if needed?
     //      (ie., how long it takes to run all these cleanup functions?)
-    TelemetryEventStats session_stats{
-        /*start_session*/ stats.m_start,
-        /*end_session*/ std::chrono::steady_clock::now()};
+    llvm::telemetry::BaseTelemetryEntry entry;
+    entry.stats = {/*start_session*/ stats.m_start,
+                   /*end_session*/ std::chrono::steady_clock::now()};
     m_telemetry_logger->LogExit(
         HostInfo::GetProgramFileSpec().GetPathAsConstString().GetCString(),
-        session_stats);
+        &entry);
 
     ClearIOHandlers();
     StopIOHandlerThread();
