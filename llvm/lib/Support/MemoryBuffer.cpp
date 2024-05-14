@@ -98,7 +98,7 @@ public:
 
   /// Disable sized deallocation for MemoryBufferMem, because it has
   /// tail-allocated data.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *p) { std::free(p); }
 
   StringRef getBufferIdentifier() const override {
     // The name is stored after the class itself.
@@ -315,7 +315,7 @@ WritableMemoryBuffer::getNewUninitMemBuffer(size_t Size,
   size_t RealLen = StringLen + Size + 1 + BufAlign.value();
   if (RealLen <= Size) // Check for rollover.
     return nullptr;
-  char *Mem = static_cast<char*>(operator new(RealLen, std::nothrow));
+  char *Mem = static_cast<char*>(std::malloc(RealLen));
   if (!Mem)
     return nullptr;
 
