@@ -25,6 +25,7 @@ class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_stripped(self):
         """
         Validate behavior with a stripped binary, no symbols or symbol locator.
@@ -32,6 +33,7 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_stripped_split_with_dwp(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -39,6 +41,7 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out", "a.out.debug", "a.out.dwp"])
         self.try_breakpoint(True)
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_stripped_only_dwp(self):
         """
         Validate behavior *with* dwp symbols only, but missing other symbols,
@@ -49,6 +52,7 @@ class DebugInfodDWPTests(TestBase):
         self.try_breakpoint(False)
 
     @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_dwp_from_service(self):
         """
         Test behavior with the unstripped binary, and DWP from the service.
@@ -57,6 +61,7 @@ class DebugInfodDWPTests(TestBase):
         self.try_breakpoint(True)
 
     @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_both_symfiles_from_service(self):
         """
         Test behavior with a stripped binary, with the unstripped binary and
@@ -66,6 +71,7 @@ class DebugInfodDWPTests(TestBase):
         self.try_breakpoint(True)
 
     @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_both_okd_symfiles_from_service(self):
         """
         Test behavior with both the only-keep-debug symbols and the dwp symbols
