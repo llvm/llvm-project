@@ -117,7 +117,22 @@ libc_support_library(
     hdrs = ["hdr/sys_epoll_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_errno_macros",
+    hdrs = ["hdr/errno_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_time_macros",
+    hdrs = ["hdr/time_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
+
+libc_support_library(
+    name = "types_clockid_t",
+    hdrs = ["hdr/types/clockid_t.h"],
+)
 
 libc_support_library(
     name = "types_fenv_t",
@@ -142,6 +157,11 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_timespec",
     hdrs = ["hdr/types/struct_timespec.h"],
+)
+
+libc_support_library(
+    name = "types_time_t",
+    hdrs = ["hdr/types/time_t.h"],
 )
 
 ############################### Support libraries ##############################
@@ -1110,6 +1130,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_osutil_syscall",
         ":__support_threads_linux_futex_word_type",
+        ":__support_time_linux",
         ":types_struct_timespec",
     ],
 )
@@ -1134,6 +1155,35 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_time",
+    hdrs = glob(["src/__support/time/*.h"]),
+    deps = [
+        ":__support_common",
+        ":hdr_time_macros",
+        ":types_time_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_time_linux",
+    hdrs = glob(["src/__support/time/linux/**/*.h"]),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_cpp_expected",
+        ":__support_error_or",
+        ":__support_libc_assert",
+        ":__support_time",
+        ":hdr_time_macros",
+        ":types_clockid_t",
+        ":types_struct_timespec",
+    ],
+)
+
 ############################### errno targets ################################
 
 libc_function(
@@ -1144,6 +1194,7 @@ libc_function(
         ":__support_common",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
+        ":hdr_errno_macros",
     ],
 )
 

@@ -1507,7 +1507,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       StringRef sep = sys::path::get_separator();
       // real_path removes trailing slashes as part of the normalization, but
       // these are meaningful for our text based stripping
-      if (config->osoPrefix.equals(".") || config->osoPrefix.ends_with(sep))
+      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
         expanded += sep;
       config->osoPrefix = saver().save(expanded.str());
     }

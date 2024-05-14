@@ -171,7 +171,7 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
     if (IgnoreCase) {
       if (Value.equals_insensitive(NameAndEnum.second))
         return NameAndEnum.first;
-    } else if (Value.equals(NameAndEnum.second)) {
+    } else if (Value == NameAndEnum.second) {
       return NameAndEnum.first;
     } else if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;

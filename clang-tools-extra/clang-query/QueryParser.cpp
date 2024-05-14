@@ -183,7 +183,8 @@ enum ParsedQueryKind {
   PQK_Unlet,
   PQK_Quit,
   PQK_Enable,
-  PQK_Disable
+  PQK_Disable,
+  PQK_File
 };
 
 enum ParsedQueryVariable {
@@ -222,12 +223,14 @@ QueryRef QueryParser::doParse() {
                               .Case("let", PQK_Let)
                               .Case("m", PQK_Match, /*IsCompletion=*/false)
                               .Case("match", PQK_Match)
-                              .Case("q", PQK_Quit,  /*IsCompletion=*/false)
+                              .Case("q", PQK_Quit, /*IsCompletion=*/false)
                               .Case("quit", PQK_Quit)
                               .Case("set", PQK_Set)
                               .Case("enable", PQK_Enable)
                               .Case("disable", PQK_Disable)
                               .Case("unlet", PQK_Unlet)
+                              .Case("f", PQK_File, /*IsCompletion=*/false)
+                              .Case("file", PQK_File)
                               .Default(PQK_Invalid);
 
   switch (QKind) {
@@ -350,6 +353,9 @@ QueryRef QueryParser::doParse() {
 
     return endQuery(new LetQuery(Name, VariantValue()));
   }
+
+  case PQK_File:
+    return new FileQuery(Line);
 
   case PQK_Invalid:
     return new InvalidQuery("unknown command: " + CommandStr);
