@@ -25,7 +25,7 @@ class Mutex final : private internal::RawMutex {
   unsigned char robust;
   unsigned char pshared;
 
-  // TLS address may not work across forked processes. Use thead id instead.
+  // TLS address may not work across forked processes. Use thread id instead.
   pid_t owner;
   unsigned long long lock_count;
 
