@@ -114,6 +114,102 @@ func.func @reuse_tiles_after_initial_use() {
 
 // -----
 
+//  CHECK-LIVE-RANGE-LABEL: @tile_live_ins
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT: EE cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT: || test.dummy
+//   CHECK-LIVE-RANGE-NEXT: || test.dummy
+//   CHECK-LIVE-RANGE-NEXT: EE cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: || test.dummy
+//   CHECK-LIVE-RANGE-NEXT: || test.dummy
+//   CHECK-LIVE-RANGE-NEXT: EE cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb3:
+//   CHECK-LIVE-RANGE-NEXT: E| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  E test.some_use
+
+// CHECK-LABEL: @tile_live_ins
+func.func @tile_live_ins()
+{
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32} : vector<[4]x[4]xf32>
+  // CHECK: arm_sme.zero {tile_id = 1 : i32} : vector<[4]x[4]xf32>
+  %tile_1 = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %tile_2 = arm_sme.zero : vector<[4]x[4]xf32>
+  cf.br ^bb1
+^bb1:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  cf.br ^bb2
+^bb2:
+  "test.dummy"(): () -> ()
+  "test.dummy"(): () -> ()
+  cf.br ^bb3
+^bb3:
+  "test.some_use"(%tile_1) : (vector<[4]x[4]xf32>) -> ()
+  "test.some_use"(%tile_2) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+// -----
+
+// This is basically the same test as tile_live_ins but shows that the order of
+// the blocks within the source does not relate to the liveness, which is based
+// on successors and predecessors (not textual order).
+//
+// So %tile_1 is live on the path bb0 -> bb2 -> bb1 (and dies in bb1). The
+// 'hole' when looking at the live range dump comes from the textual order
+// (and would disappear if bb1 was moved before bb2 in the source).
+//
+// When looking at the live range dump (outside of straight-line code) it
+// normally makes more sense to consider blocks in isolation (and how they
+// relate to the CFG).
+
+//  CHECK-LIVE-RANGE-LABEL: @non_sequential_live_ins
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S  arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: |  test.dummy
+//   CHECK-LIVE-RANGE-NEXT: E  cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT: E| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  | test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  E cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT: || test.dummy
+//   CHECK-LIVE-RANGE-NEXT: EE cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: ^bb3:
+//   CHECK-LIVE-RANGE-NEXT:  | test.dummy
+//   CHECK-LIVE-RANGE-NEXT:  E test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    func.return
+
+// CHECK-LABEL: @non_sequential_live_ins
+func.func @non_sequential_live_ins(%cond: i1) {
+  // CHECK: arm_sme.get_tile {tile_id = 0 : i32} : vector<[4]x[4]xf32>
+  // CHECK: arm_sme.zero {tile_id = 1 : i32} : vector<[4]x[4]xf32>
+  %tile_1 = arm_sme.get_tile : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  cf.br ^bb2
+^bb1:
+  "test.some_use"(%tile_1) : (vector<[4]x[4]xf32>) -> ()
+  "test.dummy"(): () -> ()
+  cf.br ^bb3
+^bb2:
+  %tile_2 = arm_sme.zero : vector<[4]x[4]xf32>
+  "test.dummy"(): () -> ()
+  cf.cond_br %cond, ^bb1, ^bb3
+^bb3:
+  "test.dummy"(): () -> ()
+  "test.some_use"(%tile_2) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+// -----
+
 //  CHECK-LIVE-RANGE-LABEL: @non_overlapping_branches
 //        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
 //        CHECK-LIVE-RANGE: ^bb1:
@@ -156,31 +252,6 @@ func.func @overlapping_branches(%cond: i1, %vecA: vector<[4]x[4]xf32>, %vecB: ve
     scf.yield %vecB : vector<[4]x[4]xf32>
   }
   "test.some_use"(%tile) : (vector<[4]x[4]xf32>) -> ()
-  return
-}
-
-// -----
-
-// CHECK-LABEL: @constant_loop_init_with_multiple_users
-func.func @constant_loop_init_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>) {
-  // CHECK: arm_sme.zero {tile_id = 0 : i32} : vector<[4]x[4]xf32>
-  // CHECK: arm_sme.zero {tile_id = 1 : i32} : vector<[4]x[4]xf32>
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 1 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %init = arm_sme.zero : vector<[4]x[4]xf32>
-  %tile_a = scf.for %i = %c0 to %c10 step %c1 iter_args(%iter = %init) -> vector<[4]x[4]xf32> {
-    %new_tile = arm_sme.move_vector_to_tile_slice %a, %iter, %i : vector<[4]xf32> into vector<[4]x[4]xf32>
-    scf.yield %new_tile : vector<[4]x[4]xf32>
-  }
-  %tile_b = scf.for %i = %c0 to %c10 step %c1 iter_args(%iter = %init) -> vector<[4]x[4]xf32> {
-    %new_tile = arm_sme.move_vector_to_tile_slice %a, %iter, %i : vector<[4]xf32> into vector<[4]x[4]xf32>
-    scf.yield %new_tile : vector<[4]x[4]xf32>
-  }
-  "test.some_use"(%tile_a) : (vector<[4]x[4]xf32>) -> ()
-  "test.some_use"(%tile_b) : (vector<[4]x[4]xf32>) -> ()
   return
 }
 

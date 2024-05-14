@@ -275,6 +275,7 @@ struct LiveRange {
   using RangeSet = llvm::IntervalMap<uint64_t, uint8_t, 16,
                                      llvm::IntervalMapHalfOpenInfo<unsigned>>;
   using Allocator = RangeSet::Allocator;
+  // Dummy value for the IntervalMap. Only the keys matter (the intervals).
   static constexpr uint8_t kValidLiveRange = 0xff;
 
   LiveRange(Allocator &allocator)
