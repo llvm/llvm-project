@@ -48,20 +48,19 @@
 ; First disassemble per-module summary and find out the GUID for {large_func, large_indirect_callee}.
 ;
 ; RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=LIB-DIS
+; LIB-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
 ; LIB-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (name: "large_func", summaries: {{.*}}) ; guid = 2418497564662708935
 ; LIB-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (name: "large_indirect_callee", summaries: {{.*}}) ; guid = 14343440786664691134
-; LIB-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (name: "large_indirect_callee_alias", summaries: {{.*}}, aliasee: [[LARGEINDIRECT]]
 ;
-; Secondly disassemble main's combined summary and test that large callees are
-; not imported as declarations yet.
-; TODO: Serialize declaration bit and test declaration bits are correctly set.
+; Secondly disassemble main's combined summary and verify the import type of
+; these two GUIDs are declaration.
 ;
 ; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
 ;
 ; MAIN-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
-; MAIN-DIS-NOT: [[LARGEFUNC:\^[0-9]+]] = gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
-; MAIN-DIS-NOT: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
-; MAIN-DIS-NOT: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration)
+; MAIN-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; MAIN-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
 
 ; Run in-process ThinLTO and tests that
 ; 1. `callee` remains internalized even if the symbols of its callers

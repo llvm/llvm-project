@@ -1436,7 +1436,8 @@ void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    GVSummaryPtrSet &DecSummaries) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
@@ -1451,7 +1452,7 @@ void llvm::gatherImportedSummariesForModule(
       assert(DS != DefinedGVSummaries.end() &&
              "Expected a defined summary for imported global value");
       if (Type == GlobalValueSummary::Declaration)
-        continue;
+        DecSummaries.insert(DS->second);
 
       SummariesForIndex[GUID] = DS->second;
     }
