@@ -609,13 +609,13 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (TFI->hasFP(MF) && !shouldRealignStack(MF)) {
+    auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
     // Estimate the stack size used to store callee saved registers(
     // excludes reserved registers).
     unsigned CalleeSavedSize = 0;
-    BitVector ReservedRegs = getReservedRegs(MF);
     for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R;
          ++R) {
-      if (!ReservedRegs.test(Reg))
+      if (!Subtarget.isRegisterReservedByUser(Reg))
         CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
     }
 
