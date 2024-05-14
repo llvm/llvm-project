@@ -545,6 +545,14 @@ enum : uint64_t {
   /// PrefixByte - This form is used for instructions that represent a prefix
   /// byte like data16 or rep.
   PrefixByte = 10,
+  /// MRMDestRegCC - This form is used for the cfcmov instructions, which use
+  /// the Mod/RM byte to specify the operands reg(r/m) and reg(reg) and also
+  /// encodes a condition code.
+  MRMDestRegCC = 18,
+  /// MRMDestMemCC - This form is used for the cfcmov instructions, which use
+  /// the Mod/RM byte to specify the operands mem(r/m) and reg(reg) and also
+  /// encodes a condition code.
+  MRMDestMemCC = 19,
   /// MRMDestMem4VOp3CC - This form is used for instructions that use the Mod/RM
   /// byte to specify a destination which in this case is memory and operand 3
   /// with VEX.VVVV, and also encodes a condition code.
@@ -875,7 +883,10 @@ enum : uint64_t {
   ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift,
   /// EVEX_NF - Set if this instruction has EVEX.NF field set.
   EVEX_NFShift = ExplicitOpPrefixShift + 2,
-  EVEX_NF = 1ULL << EVEX_NFShift
+  EVEX_NF = 1ULL << EVEX_NFShift,
+  // TwoConditionalOps - Set if this instruction has two conditional operands
+  TwoConditionalOps_Shift = EVEX_NFShift + 1,
+  TwoConditionalOps = 1ULL << TwoConditionalOps_Shift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.
@@ -1029,6 +1040,7 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     return -1;
   case X86II::MRMDestMem:
   case X86II::MRMDestMemFSIB:
+  case X86II::MRMDestMemCC:
     return hasNewDataDest(TSFlags);
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMemFSIB:
@@ -1042,11 +1054,13 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     // Skip registers encoded in reg, VEX_VVVV, and I8IMM.
     return 3;
   case X86II::MRMSrcMemCC:
+    return 1 + hasNewDataDest(TSFlags);
   case X86II::MRMDestMem4VOp3CC:
     // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a
     // mask register.
     return 1;
   case X86II::MRMDestReg:
+  case X86II::MRMDestRegCC:
   case X86II::MRMSrcReg:
   case X86II::MRMSrcReg4VOp3:
   case X86II::MRMSrcRegOp4:
@@ -1154,33 +1168,34 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
 
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(unsigned RegNo) {
-  assert(X86::XMM15 - X86::XMM0 == 15 &&
-         "XMM0-15 registers are not continuous");
-  assert(X86::XMM31 - X86::XMM16 == 15 &&
-         "XMM16-31 registers are not continuous");
+  static_assert(X86::XMM15 - X86::XMM0 == 15,
+                "XMM0-15 registers are not continuous");
+  static_assert(X86::XMM31 - X86::XMM16 == 15,
+                "XMM16-31 registers are not continuous");
   return (RegNo >= X86::XMM0 && RegNo <= X86::XMM15) ||
          (RegNo >= X86::XMM16 && RegNo <= X86::XMM31);
 }
 
 /// \returns true if the register is a YMM.
 inline bool isYMMReg(unsigned RegNo) {
-  assert(X86::YMM15 - X86::YMM0 == 15 &&
-         "YMM0-15 registers are not continuous");
-  assert(X86::YMM31 - X86::YMM16 == 15 &&
-         "YMM16-31 registers are not continuous");
+  static_assert(X86::YMM15 - X86::YMM0 == 15,
+                "YMM0-15 registers are not continuous");
+  static_assert(X86::YMM31 - X86::YMM16 == 15,
+                "YMM16-31 registers are not continuous");
   return (RegNo >= X86::YMM0 && RegNo <= X86::YMM15) ||
          (RegNo >= X86::YMM16 && RegNo <= X86::YMM31);
 }
 
 /// \returns true if the register is a ZMM.
 inline bool isZMMReg(unsigned RegNo) {
-  assert(X86::ZMM31 - X86::ZMM0 == 31 && "ZMM registers are not continuous");
+  static_assert(X86::ZMM31 - X86::ZMM0 == 31,
+                "ZMM registers are not continuous");
   return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
 }
 
 /// \returns true if \p RegNo is an apx extended register.
 inline bool isApxExtendedReg(unsigned RegNo) {
-  assert(X86::R31WH - X86::R16 == 95 && "EGPRs are not continuous");
+  static_assert(X86::R31WH - X86::R16 == 95, "EGPRs are not continuous");
   return RegNo >= X86::R16 && RegNo <= X86::R31WH;
 }
 
@@ -1315,6 +1330,33 @@ inline bool isKMasked(uint64_t TSFlags) {
 inline bool isKMergeMasked(uint64_t TSFlags) {
   return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
 }
+
+/// \returns true if the intruction needs a SIB.
+inline bool needSIB(unsigned BaseReg, unsigned IndexReg, bool In64BitMode) {
+  // The SIB byte must be used if there is an index register.
+  if (IndexReg)
+    return true;
+
+  // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
+  // which encode to an R/M value of 4, which indicates that a SIB byte is
+  // present.
+  switch (BaseReg) {
+  default:
+    // If there is no base register and we're in 64-bit mode, we need a SIB
+    // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
+    return In64BitMode && !BaseReg;
+  case X86::ESP:
+  case X86::RSP:
+  case X86::R12:
+  case X86::R12D:
+  case X86::R20:
+  case X86::R20D:
+  case X86::R28:
+  case X86::R28D:
+    return true;
+  }
+}
+
 } // namespace X86II
 } // namespace llvm
 #endif

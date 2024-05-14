@@ -49,13 +49,13 @@ void test_index_type() {
 template <class IndexType>
 void test_index_internals() {
   using Lim = std::numeric_limits<IndexType>;
-  static_assert(std::__choose_index_type(Lim::max() -1) !=
-                std::__choose_index_type(Lim::max()), "");
-  static_assert(std::is_same_v<
-      std::__variant_index_t<Lim::max()-1>,
-      std::__variant_index_t<Lim::max()>
-    > == ExpectEqual, "");
-  using IndexT = std::__variant_index_t<Lim::max()-1>;
+#ifdef _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+  static_assert(!std::is_same_v<decltype(std::__choose_index_type<Lim::max() - 1>()),
+                                decltype(std::__choose_index_type<Lim::max()>())>);
+#endif
+  static_assert(
+      std::is_same_v<std::__variant_index_t<Lim::max() - 1>, std::__variant_index_t<Lim::max()> > == ExpectEqual, "");
+  using IndexT   = std::__variant_index_t<Lim::max() - 1>;
   using IndexLim = std::numeric_limits<IndexT>;
   static_assert(std::__variant_npos<IndexT> == IndexLim::max(), "");
 }

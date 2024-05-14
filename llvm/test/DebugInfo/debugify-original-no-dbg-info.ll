@@ -1,4 +1,5 @@
 ; RUN: opt -verify-debuginfo-preserve -passes=instcombine -S -o - < %s 2>&1 | FileCheck %s
+; RUN: opt --experimental-debuginfo-iterators=false -verify-debuginfo-preserve -passes=instcombine -S -o - < %s 2>&1 | FileCheck %s
 
 ; CHECK: ModuleDebugify (original debuginfo): Skipping module without debug info
 ; CHECK-NEXT: CheckModuleDebugify (original debuginfo): Skipping module without debug info

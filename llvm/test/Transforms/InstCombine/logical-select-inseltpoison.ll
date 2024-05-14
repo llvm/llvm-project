@@ -647,7 +647,7 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
 ; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
 ; CHECK-NEXT:    [[SHUF_OR2:%.*]] = or <4 x i32> [[S3]], [[S4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[SHUF_OR2]] to <4 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw <4 x i32> [[SHUF_OR2]] to <4 x i1>
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = bitcast <4 x float> [[SEL_V]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]

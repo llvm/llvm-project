@@ -1,5 +1,5 @@
 ! Test creation of temporary from polymorphic enities
-! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module poly_tmp
   type p1

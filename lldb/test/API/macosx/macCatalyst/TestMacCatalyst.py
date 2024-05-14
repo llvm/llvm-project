@@ -27,7 +27,7 @@ class TestMacCatalyst(TestBase):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
         self.assertIn("ostype", process_info)
-        self.assertEquals(process_info["ostype"], "maccatalyst")
+        self.assertEqual(process_info["ostype"], "maccatalyst")
 
         aout_info = None
         dylib_info = lldbutil.packetlog_get_dylib_info(log)
@@ -35,4 +35,4 @@ class TestMacCatalyst(TestBase):
             if image["pathname"].endswith("a.out"):
                 aout_info = image
         self.assertTrue(aout_info)
-        self.assertEquals(aout_info["min_version_os_name"], "maccatalyst")
+        self.assertEqual(aout_info["min_version_os_name"], "maccatalyst")

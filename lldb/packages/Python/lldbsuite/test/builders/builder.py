@@ -148,6 +148,9 @@ class Builder:
             return libcpp_args
         return []
 
+    def getLLDBObjRoot(self):
+        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
+
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
@@ -185,6 +188,7 @@ class Builder:
             self.getSDKRootSpec(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
+            self.getLLDBObjRoot(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))

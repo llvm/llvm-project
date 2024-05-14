@@ -497,9 +497,14 @@ void MutableOperandRange::clear() {
   }
 }
 
+/// Explicit conversion to an OperandRange.
+OperandRange MutableOperandRange::getAsOperandRange() const {
+  return owner->getOperands().slice(start, length);
+}
+
 /// Allow implicit conversion to an OperandRange.
 MutableOperandRange::operator OperandRange() const {
-  return owner->getOperands().slice(start, length);
+  return getAsOperandRange();
 }
 
 MutableOperandRange::operator MutableArrayRef<OpOperand>() const {

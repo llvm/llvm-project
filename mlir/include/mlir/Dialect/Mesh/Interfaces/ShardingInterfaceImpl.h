@@ -22,6 +22,24 @@ class SymbolTableCollection;
 
 namespace mesh {
 
+// Retrieve the mesh axes corresponding to each operation loop iterator based
+// on the provided shardings for the op's operands and results.
+// Assumes that the indexingMaps are projected permutations.
+ShardingArray getMeshAxisAssignmentForLoopIterators(
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings,
+    ArrayRef<utils::IteratorType> loopIteratorTypes,
+    ArrayRef<AffineMap> indexingMaps);
+
+bool isAtLeastOneReductionIteratorSharded(
+    ArrayRef<utils::IteratorType> loopIteratorTypes,
+    ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators);
+
+// Get the set of mesh axes that correspond to reduction loop iterators.
+SmallVector<MeshAxis> getReductionMeshAxes(
+    ArrayRef<utils::IteratorType> loopIteratorTypes,
+    ArrayRef<SmallVector<MeshAxis>> meshAxisAssignmentForLoopIterators);
+
 // Inserts a clone of the operation that has all ranked tensor
 // arguments/results sharded.
 void spmdizeTriviallyShardableOperation(
@@ -36,8 +54,9 @@ template <typename Op>
 struct IndependentParallelIteratorDomainShardingInterface
     : public ShardingInterface::ExternalModel<
           IndependentParallelIteratorDomainShardingInterface<Op>, Op> {
-  SmallVector<IteratorType> getLoopIteratorTypes(Operation *operation) const {
-    SmallVector<IteratorType> iterTypes;
+  SmallVector<utils::IteratorType>
+  getLoopIteratorTypes(Operation *operation) const {
+    SmallVector<utils::IteratorType> iterTypes;
     for (Type t : operation->getOperandTypes()) {
       populateIteratorTypes(t, iterTypes);
     }
@@ -65,16 +84,17 @@ struct IndependentParallelIteratorDomainShardingInterface
   }
 
 private:
-  void populateIteratorTypes(Type t,
-                             SmallVector<IteratorType> &iterTypes) const {
-    RankedTensorType rankedTensorType = t.dyn_cast<RankedTensorType>();
+  void
+  populateIteratorTypes(Type t,
+                        SmallVector<utils::IteratorType> &iterTypes) const {
+    RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(t);
     if (!rankedTensorType) {
       return;
     }
 
     iterTypes.reserve(iterTypes.size() + rankedTensorType.getRank());
     for (int64_t i = 0; i < rankedTensorType.getRank(); ++i) {
-      iterTypes.push_back(IteratorType::Parallel);
+      iterTypes.push_back(utils::IteratorType::parallel);
     }
   }
 };
@@ -84,19 +104,20 @@ template <typename ElemwiseOp>
 struct ElementwiseShardingInterface
     : public ShardingInterface::ExternalModel<
           ElementwiseShardingInterface<ElemwiseOp>, ElemwiseOp> {
-  SmallVector<IteratorType> getLoopIteratorTypes(Operation *op) const {
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     Value val = op->getOperand(0);
-    auto type = val.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
-    SmallVector<IteratorType> types(type.getRank(), IteratorType::Parallel);
+    SmallVector<utils::IteratorType> types(type.getRank(),
+                                           utils::IteratorType::parallel);
     return types;
   }
 
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
     MLIRContext *ctx = op->getContext();
     Value val = op->getOperand(0);
-    auto type = val.getType().dyn_cast<RankedTensorType>();
+    auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
     int64_t rank = type.getRank();

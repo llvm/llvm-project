@@ -60,7 +60,7 @@ Analysis & CFG
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
-| tbaeder@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub)
+| tbaeder\@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
 
 
 Modules & serialization

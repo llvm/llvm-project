@@ -296,8 +296,8 @@ static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-CallBase &llvm::versionCallSiteWithCond(CallBase &CB, Value *Cond,
-                                        MDNode *BranchWeights) {
+static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                         MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;

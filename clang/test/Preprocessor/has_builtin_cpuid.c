@@ -13,8 +13,3 @@
 #   error "ARM/PPC shouldn't have __builtin_cpu_init"
 # endif
 #endif
-#if __has_builtin(__builtin_cpu_supports)
-# ifdef ARM
-#   error "ARM shouldn't have __builtin_cpu_supports"
-# endif
-#endif

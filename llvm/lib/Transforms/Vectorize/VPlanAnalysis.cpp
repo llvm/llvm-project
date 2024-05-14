@@ -35,12 +35,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
-  case Instruction::ICmp: {
-    // TODO: Check if types for both operands agree. This also requires
-    // type-inference for the vector-trip-count, which is missing at the moment.
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    return ResTy;
-  }
+  case Instruction::Or:
+  case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     VPValue *OtherV = R->getOperand(1);
@@ -49,6 +45,15 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case VPInstruction::Not: {
+    Type *ResTy = inferScalarType(R->getOperand(0));
+    assert(IntegerType::get(Ctx, 1) == ResTy &&
+           "unexpected scalar type inferred for operand");
+    return ResTy;
+  }
+  case VPInstruction::PtrAdd:
+    // Return the type based on the pointer argument (i.e. first operand).
+    return inferScalarType(R->getOperand(0));
   default:
     break;
   }
@@ -110,9 +115,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
   return CI.getType();
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(
-    const VPWidenMemoryInstructionRecipe *R) {
-  assert(!R->isStore() && "Store recipes should not define any values");
+Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
+  assert((isa<VPWidenLoadRecipe>(R) || isa<VPWidenLoadEVLRecipe>(R)) &&
+         "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }
 
@@ -207,20 +212,25 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn())
-    return V->getLiveInIRValue()->getType();
+  if (V->isLiveIn()) {
+    if (auto *IRValue = V->getLiveInIRValue())
+      return IRValue->getType();
+    // All VPValues without any underlying IR value (like the vector trip count
+    // or the backedge-taken count) have the same type as the canonical IV.
+    return CanonicalIVTy;
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
-                VPReductionPHIRecipe, VPWidenPointerInductionRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWienIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
+                VPEVLBasedIVPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPPredInstPHIRecipe, VPWidenPHIRecipe, VPScalarIVStepsRecipe,
@@ -228,8 +238,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryInstructionRecipe,
-                VPWidenSelectRecipe>(
+                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
             // TODO: Use info from interleave group.

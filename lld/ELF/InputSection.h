@@ -48,7 +48,7 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, EHFrame, Merge, Output };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
 
   Kind kind() const { return (Kind)sectionKind; }
 
@@ -382,7 +382,8 @@ public:
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Regular ||
-           s->kind() == SectionBase::Synthetic;
+           s->kind() == SectionBase::Synthetic ||
+           s->kind() == SectionBase::Spill;
   }
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
@@ -425,6 +426,26 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
+// A marker for a potential spill location for another input section. This
+// broadly acts as if it were the original section until address assignment.
+// Then it is either replaced with the real input section or removed.
+class PotentialSpillSection : public InputSection {
+public:
+  // The containing input section description; used to quickly replace this stub
+  // with the actual section.
+  InputSectionDescription *isd;
+
+  // Next potential spill location for the same source input section.
+  PotentialSpillSection *next = nullptr;
+
+  PotentialSpillSection(const InputSectionBase &source,
+                        InputSectionDescription &isd);
+
+  static bool classof(const SectionBase *sec) {
+    return sec->kind() == InputSectionBase::Spill;
+  }
+};
+
 static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
@@ -447,6 +468,10 @@ public:
     return sec->kind() == InputSectionBase::Synthetic;
   }
 };
+
+inline bool isStaticRelSecType(uint32_t type) {
+  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_REL;
+}
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&

@@ -14,7 +14,7 @@ unittest("DebugInfoLogicalViewTests") {
     "CodeViewReaderTest.cpp",
     "CommandLineOptionsTest.cpp",
     "CompareElementsTest.cpp",
-    "ELFReaderTest.cpp",
+    "DWARFReaderTest.cpp",
     "LocationRangesTest.cpp",
     "LogicalElementsTest.cpp",
     "SelectElementsTest.cpp",

@@ -44,6 +44,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -1237,7 +1238,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     // Lookup the symbol variant if used.
     if (!Split.second.empty()) {
-      Variant = MCSymbolRefExpr::getVariantKindForName(Split.second);
+      Variant = getTargetParser().getVariantKindForName(Split.second);
       if (Variant != MCSymbolRefExpr::VK_Invalid) {
         SymbolName = Split.first;
       } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
@@ -1950,7 +1951,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc && Sym->isExternal())
+    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc &&
+        Sym->isExternal() && !cast<MCSymbolMachO>(Sym)->isAltEntry())
       return Error(StartTokLoc, "non-private labels cannot appear between "
                                 ".cfi_startproc / .cfi_endproc pairs") &&
              Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
@@ -4541,7 +4543,7 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
 
     // Emit an error if two (or more) named parameters share the same name
     for (const MCAsmMacroParameter& CurrParam : Parameters)
-      if (CurrParam.Name.equals(Parameter.Name))
+      if (CurrParam.Name == Parameter.Name)
         return TokError("macro '" + Name + "' has multiple parameters"
                         " named '" + Parameter.Name + "'");
 

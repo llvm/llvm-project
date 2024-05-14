@@ -138,8 +138,8 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
     return false;
 
   // Find the ptrue with the most lanes.
-  auto *MostEncompassingPTrue = *std::max_element(
-      PTrues.begin(), PTrues.end(), [](auto *PTrue1, auto *PTrue2) {
+  auto *MostEncompassingPTrue =
+      *llvm::max_element(PTrues, [](auto *PTrue1, auto *PTrue2) {
         auto *PTrue1VTy = cast<ScalableVectorType>(PTrue1->getType());
         auto *PTrue2VTy = cast<ScalableVectorType>(PTrue2->getType());
         return PTrue1VTy->getElementCount().getKnownMinValue() <

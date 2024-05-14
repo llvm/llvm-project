@@ -156,11 +156,6 @@ ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI) {
            "Subclass not added?");
     assert(RBGPR.covers(*TRI.getRegClass(ARM::tcGPRRegClassID)) &&
            "Subclass not added?");
-    assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRnoip_and_tcGPRRegClassID)) &&
-           "Subclass not added?");
-    assert(RBGPR.covers(*TRI.getRegClass(
-               ARM::tGPREven_and_GPRnoip_and_tcGPRRegClassID)) &&
-           "Subclass not added?");
     assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPROdd_and_tcGPRRegClassID)) &&
            "Subclass not added?");
     assert(getMaximumSize(RBGPR.getID()) == 32 &&
@@ -188,16 +183,16 @@ ARMRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case GPRnoip_and_GPRnopcRegClassID:
   case rGPRRegClassID:
   case GPRspRegClassID:
-  case GPRnoip_and_tcGPRRegClassID:
   case tcGPRRegClassID:
+  case tcGPRnotr12RegClassID:
   case tGPRRegClassID:
   case tGPREvenRegClassID:
   case tGPROddRegClassID:
   case tGPR_and_tGPREvenRegClassID:
   case tGPR_and_tGPROddRegClassID:
   case tGPREven_and_tcGPRRegClassID:
-  case tGPREven_and_GPRnoip_and_tcGPRRegClassID:
   case tGPROdd_and_tcGPRRegClassID:
+  case tGPREven_and_tcGPRnotr12RegClassID:
     return getRegBank(ARM::GPRRegBankID);
   case HPRRegClassID:
   case SPR_8RegClassID:

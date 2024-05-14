@@ -1817,10 +1817,12 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
   case LSRUse::Address: {
     // Check the scaling factor cost with both the min and max offsets.
     InstructionCost ScaleCostMinOffset = TTI.getScalingFactorCost(
-        LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MinOffset, F.HasBaseReg,
+        LU.AccessTy.MemTy, F.BaseGV,
+        StackOffset::getFixed(F.BaseOffset + LU.MinOffset), F.HasBaseReg,
         F.Scale, LU.AccessTy.AddrSpace);
     InstructionCost ScaleCostMaxOffset = TTI.getScalingFactorCost(
-        LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MaxOffset, F.HasBaseReg,
+        LU.AccessTy.MemTy, F.BaseGV,
+        StackOffset::getFixed(F.BaseOffset + LU.MaxOffset), F.HasBaseReg,
         F.Scale, LU.AccessTy.AddrSpace);
 
     assert(ScaleCostMinOffset.isValid() && ScaleCostMaxOffset.isValid() &&
@@ -2215,17 +2217,18 @@ void LSRInstance::OptimizeShadowIV() {
 
     // Ignore negative constants, as the code below doesn't handle them
     // correctly. TODO: Remove this restriction.
-    if (!C->getValue().isStrictlyPositive()) continue;
+    if (!C->getValue().isStrictlyPositive())
+      continue;
 
     /* Add new PHINode. */
-    PHINode *NewPH = PHINode::Create(DestTy, 2, "IV.S.", PH);
+    PHINode *NewPH = PHINode::Create(DestTy, 2, "IV.S.", PH->getIterator());
 
     /* create new increment. '++d' in above example. */
     Constant *CFP = ConstantFP::get(DestTy, C->getZExtValue());
-    BinaryOperator *NewIncr =
-      BinaryOperator::Create(Incr->getOpcode() == Instruction::Add ?
-                               Instruction::FAdd : Instruction::FSub,
-                             NewPH, CFP, "IV.S.next.", Incr);
+    BinaryOperator *NewIncr = BinaryOperator::Create(
+        Incr->getOpcode() == Instruction::Add ? Instruction::FAdd
+                                              : Instruction::FSub,
+        NewPH, CFP, "IV.S.next.", Incr->getIterator());
 
     NewPH->addIncoming(NewInit, PH->getIncomingBlock(Entry));
     NewPH->addIncoming(NewIncr, PH->getIncomingBlock(Latch));
@@ -2395,8 +2398,8 @@ ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
 
   // Ok, everything looks ok to change the condition into an SLT or SGE and
   // delete the max calculation.
-  ICmpInst *NewCond =
-    new ICmpInst(Cond, Pred, Cond->getOperand(0), NewRHS, "scmp");
+  ICmpInst *NewCond = new ICmpInst(Cond->getIterator(), Pred,
+                                   Cond->getOperand(0), NewRHS, "scmp");
 
   // Delete the max calculation instructions.
   NewCond->setDebugLoc(Cond->getDebugLoc());
@@ -5532,10 +5535,9 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
                            "a scale at the same time!");
     if (F.Scale == -1) {
       if (ICmpScaledV->getType() != OpTy) {
-        Instruction *Cast =
-          CastInst::Create(CastInst::getCastOpcode(ICmpScaledV, false,
-                                                   OpTy, false),
-                           ICmpScaledV, OpTy, "tmp", CI);
+        Instruction *Cast = CastInst::Create(
+            CastInst::getCastOpcode(ICmpScaledV, false, OpTy, false),
+            ICmpScaledV, OpTy, "tmp", CI->getIterator());
         ICmpScaledV = Cast;
       }
       CI->setOperand(1, ICmpScaledV);
@@ -5635,11 +5637,10 @@ void LSRInstance::RewriteForPHI(
         // If this is reuse-by-noop-cast, insert the noop cast.
         Type *OpTy = LF.OperandValToReplace->getType();
         if (FullV->getType() != OpTy)
-          FullV =
-            CastInst::Create(CastInst::getCastOpcode(FullV, false,
-                                                     OpTy, false),
-                             FullV, LF.OperandValToReplace->getType(),
-                             "tmp", BB->getTerminator());
+          FullV = CastInst::Create(
+              CastInst::getCastOpcode(FullV, false, OpTy, false), FullV,
+              LF.OperandValToReplace->getType(), "tmp",
+              BB->getTerminator()->getIterator());
 
         // If the incoming block for this value is not in the loop, it means the
         // current PHI is not in a loop exit, so we must create a LCSSA PHI for
@@ -5711,8 +5712,8 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     Type *OpTy = LF.OperandValToReplace->getType();
     if (FullV->getType() != OpTy) {
       Instruction *Cast =
-        CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
-                         FullV, OpTy, "tmp", LF.UserInst);
+          CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
+                           FullV, OpTy, "tmp", LF.UserInst->getIterator());
       FullV = Cast;
     }
 
@@ -6368,10 +6369,10 @@ struct DVIRecoveryRec {
   DVIRecoveryRec(DbgValueInst *DbgValue)
       : DbgRef(DbgValue), Expr(DbgValue->getExpression()),
         HadLocationArgList(false) {}
-  DVIRecoveryRec(DPValue *DPV)
-      : DbgRef(DPV), Expr(DPV->getExpression()), HadLocationArgList(false) {}
+  DVIRecoveryRec(DbgVariableRecord *DVR)
+      : DbgRef(DVR), Expr(DVR->getExpression()), HadLocationArgList(false) {}
 
-  PointerUnion<DbgValueInst *, DPValue *> DbgRef;
+  PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgRef;
   DIExpression *Expr;
   bool HadLocationArgList;
   SmallVector<WeakVH, 2> LocationOps;
@@ -6467,7 +6468,7 @@ static void UpdateDbgValueInst(DVIRecoveryRec &DVIRec,
   if (isa<DbgValueInst *>(DVIRec.DbgRef))
     UpdateDbgValueInstImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
   else
-    UpdateDbgValueInstImpl(cast<DPValue *>(DVIRec.DbgRef));
+    UpdateDbgValueInstImpl(cast<DbgVariableRecord *>(DVIRec.DbgRef));
 }
 
 /// Cached location ops may be erased during LSR, in which case a poison is
@@ -6513,7 +6514,7 @@ static void restorePreTransformState(DVIRecoveryRec &DVIRec) {
   if (isa<DbgValueInst *>(DVIRec.DbgRef))
     RestorePreTransformStateImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
   else
-    RestorePreTransformStateImpl(cast<DPValue *>(DVIRec.DbgRef));
+    RestorePreTransformStateImpl(cast<DbgVariableRecord *>(DVIRec.DbgRef));
 }
 
 static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
@@ -6523,7 +6524,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
 
   if (isa<DbgValueInst *>(DVIRec.DbgRef)
           ? !cast<DbgValueInst *>(DVIRec.DbgRef)->isKillLocation()
-          : !cast<DPValue *>(DVIRec.DbgRef)->isKillLocation())
+          : !cast<DbgVariableRecord *>(DVIRec.DbgRef)->isKillLocation())
     return false;
 
   // LSR may have caused several changes to the dbg.value in the failed salvage
@@ -6621,7 +6622,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
                       << *cast<DbgValueInst *>(DVIRec.DbgRef) << "\n");
   else
     LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
-                      << *cast<DPValue *>(DVIRec.DbgRef) << "\n");
+                      << *cast<DbgVariableRecord *>(DVIRec.DbgRef) << "\n");
   return true;
 }
 
@@ -6712,9 +6713,9 @@ static void DbgGatherSalvagableDVI(
         SalvageableDVISCEVs.push_back(std::move(NewRec));
         return true;
       };
-      for (auto &DPV : I.getDbgValueRange()) {
-        if (DPV.isDbgValue() || DPV.isDbgAssign())
-          ProcessDbgValue(&DPV);
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        if (DVR.isDbgValue() || DVR.isDbgAssign())
+          ProcessDbgValue(&DVR);
       }
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
@@ -6806,6 +6807,10 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   PHINode *ToFold;
   Value *ToFoldStart, *ToFoldStep;
   if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
+    return std::nullopt;
+
+  // Ensure the simple recurrence is a part of the current loop.
+  if (ToFold->getParent() != L->getHeader())
     return std::nullopt;
 
   // If that IV isn't dead after we rewrite the exit condition in terms of
@@ -6968,6 +6973,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     Rewriter.setDebugType(DEBUG_TYPE);
 #endif
     unsigned numFolded = Rewriter.replaceCongruentIVs(L, &DT, DeadInsts, &TTI);
+    Rewriter.clear();
     if (numFolded) {
       Changed = true;
       RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts, &TLI,
@@ -6986,6 +6992,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     SCEVExpander Rewriter(SE, DL, "lsr", true);
     int Rewrites = rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
                                          UnusedIndVarInLoop, DeadInsts);
+    Rewriter.clear();
     if (Rewrites) {
       Changed = true;
       RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts, &TLI,
@@ -7033,7 +7040,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       // SCEVExpander for both use in preheader and latch
       const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
       SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
-      SCEVExpanderCleaner ExpCleaner(Expander);
 
       assert(Expander.isSafeToExpand(TermValueS) &&
              "Terminating value was checked safe in canFoldTerminatingCondition");
@@ -7064,10 +7070,9 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       BI->setCondition(NewTermCond);
 
+      Expander.clear();
       OldTermCond->eraseFromParent();
       DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
-
-      ExpCleaner.markResultUsed();
     }
   }
 

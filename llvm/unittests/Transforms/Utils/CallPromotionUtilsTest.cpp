@@ -40,7 +40,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -174,7 +174,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -216,7 +216,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -259,7 +259,7 @@ entry:
   %a = alloca %struct.A, align 8
   %0 = bitcast %struct.A* %a to i8*
   %1 = getelementptr %struct.A, %struct.A* %a, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
   %2 = bitcast %struct.A* %a to i8*
   %3 = bitcast i8* %2 to i8**
   %vtable.i = load i8*, i8** %3, align 8
@@ -274,7 +274,7 @@ entry:
   %a = alloca %struct.A, align 8
   %0 = bitcast %struct.A* %a to i8*
   %1 = getelementptr %struct.A, %struct.A* %a, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
   %2 = bitcast %struct.A* %a to i8*
   %3 = bitcast i8* %2 to i8**
   %vtable.i = load i8*, i8** %3, align 8
@@ -343,7 +343,7 @@ define %struct1 @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -393,14 +393,13 @@ declare void @_ZN5Base35func3Ev(ptr)
     Constant *AddressPoint =
         getVTableAddressPointOffset(GV, AddressPointOffset);
 
-    ConstantExpr *GEP = dyn_cast<ConstantExpr>(AddressPoint);
-    ASSERT_TRUE(GEP);
     SmallVector<Constant *> Indices = {
         llvm::ConstantInt::get(Type::getInt32Ty(C), 0U),
         llvm::ConstantInt::get(Type::getInt32Ty(C), Index),
         llvm::ConstantInt::get(Type::getInt32Ty(C), 2U)};
-    EXPECT_EQ(GEP, ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(),
-                                                          GV, Indices));
+    EXPECT_EQ(dyn_cast<ConstantExpr>(AddressPoint),
+              ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
+                                                     Indices));
   }
 }
 
@@ -444,16 +443,13 @@ declare void @_ZN5Base35func3Ev(ptr)
 !8 = !{!"VP", i32 0, i64 1600, i64 6804820478065511155, i64 1600})IR");
 
   Function *F = M->getFunction("testfunc");
-  ASSERT_TRUE(F);
   CallInst *CI = dyn_cast<CallInst>(&*std::next(F->front().rbegin()));
   ASSERT_TRUE(CI && CI->isIndirectCall());
 
   LoadInst *FuncPtr = dyn_cast<LoadInst>(CI->getCalledOperand());
-  ASSERT_TRUE(FuncPtr);
 
   GetElementPtrInst *GEP =
       dyn_cast<GetElementPtrInst>(FuncPtr->getPointerOperand());
-  ASSERT_TRUE(GEP);
 
   // Create the constant and the branch weights
   SmallVector<Constant *, 3> VTableAddressPoints;

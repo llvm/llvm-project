@@ -60,6 +60,10 @@ private:
   // inline.
   llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
 
+  // A map to hold call stack id to call stacks.
+  llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+      MemProfCallStackData;
+
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
 
@@ -71,10 +75,25 @@ private:
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
+  // Temporary support for writing the previous version of the format, to enable
+  // some forward compatibility. Currently this suppresses the writing of the
+  // new vtable names section and header fields.
+  // TODO: Consider enabling this with future version changes as well, to ease
+  // deployment of newer versions of llvm-profdata.
+  bool WritePrevVersion = false;
+
+  // The MemProf version we should write.
+  memprof::IndexedVersion MemProfVersionRequested;
+
+  // Whether to serialize the full schema.
+  bool MemProfFullSchema;
+
 public:
-  InstrProfWriter(bool Sparse = false,
-                  uint64_t TemporalProfTraceReservoirSize = 0,
-                  uint64_t MaxTemporalProfTraceLength = 0);
+  InstrProfWriter(
+      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
+      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
+      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
+      bool MemProfFullSchema = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -102,6 +121,12 @@ public:
   /// \p FrameId.
   bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
                        function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
@@ -172,9 +197,17 @@ public:
 
   InstrProfKind getProfileKind() const { return ProfileKind; }
 
-  // Internal interface for testing purpose only.
+  bool hasSingleByteCoverage() const {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
+
+  // Internal interfaces for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);
   void setOutputSparse(bool Sparse);
+  void setMemProfVersionRequested(memprof::IndexedVersion Version) {
+    MemProfVersionRequested = Version;
+  }
+  void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,

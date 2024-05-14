@@ -1272,6 +1272,299 @@ void kmp_calc_original_ivs_for_end(
   }
 }
 
+/**************************************************************************
+ * Identify nested loop structure - loops come in the canonical form
+ * Lower triangle matrix: i = 0; i <= N; i++        {0,0}:{N,0}
+ *                        j = 0; j <= 0/-1+1*i; j++ {0,0}:{0/-1,1}
+ * Upper Triangle matrix
+ *                        i = 0;     i <= N; i++    {0,0}:{N,0}
+ *                        j = 0+1*i; j <= N; j++    {0,1}:{N,0}
+ * ************************************************************************/
+nested_loop_type_t
+kmp_identify_nested_loop_structure(/*in*/ bounds_info_t *original_bounds_nest,
+                                   /*in*/ kmp_index_t n) {
+  // only 2-level nested loops are supported
+  if (n != 2) {
+    return nested_loop_type_unkown;
+  }
+  // loops must be canonical
+  KMP_ASSERT(
+      (original_bounds_nest[0].comparison == comparison_t::comp_less_or_eq) &&
+      (original_bounds_nest[1].comparison == comparison_t::comp_less_or_eq));
+  // check outer loop bounds: for triangular need to be {0,0}:{N,0}
+  kmp_uint64 outer_lb0_u64 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                        original_bounds_nest[0].lb0_u64);
+  kmp_uint64 outer_ub0_u64 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                        original_bounds_nest[0].ub0_u64);
+  kmp_uint64 outer_lb1_u64 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                        original_bounds_nest[0].lb1_u64);
+  kmp_uint64 outer_ub1_u64 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                        original_bounds_nest[0].ub1_u64);
+  if (outer_lb0_u64 != 0 || outer_lb1_u64 != 0 || outer_ub1_u64 != 0) {
+    return nested_loop_type_unkown;
+  }
+  // check inner bounds to determine triangle type
+  kmp_uint64 inner_lb0_u64 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
+                                        original_bounds_nest[1].lb0_u64);
+  kmp_uint64 inner_ub0_u64 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
+                                        original_bounds_nest[1].ub0_u64);
+  kmp_uint64 inner_lb1_u64 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
+                                        original_bounds_nest[1].lb1_u64);
+  kmp_uint64 inner_ub1_u64 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
+                                        original_bounds_nest[1].ub1_u64);
+  // lower triangle loop inner bounds need to be {0,0}:{0/-1,1}
+  if (inner_lb0_u64 == 0 && inner_lb1_u64 == 0 &&
+      (inner_ub0_u64 == 0 || inner_ub0_u64 == -1) && inner_ub1_u64 == 1) {
+    return nested_loop_type_lower_triangular_matrix;
+  }
+  // upper triangle loop inner bounds need to be {0,1}:{N,0}
+  if (inner_lb0_u64 == 0 && inner_lb1_u64 == 1 &&
+      inner_ub0_u64 == outer_ub0_u64 && inner_ub1_u64 == 0) {
+    return nested_loop_type_upper_triangular_matrix;
+  }
+  return nested_loop_type_unkown;
+}
+
+/**************************************************************************
+ * SQRT Approximation: https://math.mit.edu/~stevenj/18.335/newton-sqrt.pdf
+ * Start point is x so the result is always > sqrt(x)
+ * The method has uniform convergence, PRECISION is set to 0.1
+ * ************************************************************************/
+#define level_of_precision 0.1
+double sqrt_newton_approx(/*in*/ kmp_uint64 x) {
+  double sqrt_old = 0.;
+  double sqrt_new = (double)x;
+  do {
+    sqrt_old = sqrt_new;
+    sqrt_new = (sqrt_old + x / sqrt_old) / 2;
+  } while ((sqrt_old - sqrt_new) > level_of_precision);
+  return sqrt_new;
+}
+
+/**************************************************************************
+ *  Handle lower triangle matrix in the canonical form
+ *  i = 0; i <= N; i++          {0,0}:{N,0}
+ *  j = 0; j <= 0/-1 + 1*i; j++ {0,0}:{0/-1,1}
+ * ************************************************************************/
+void kmp_handle_lower_triangle_matrix(
+    /*in*/ kmp_uint32 nth,
+    /*in*/ kmp_uint32 tid,
+    /*in */ kmp_index_t n,
+    /*in/out*/ bounds_info_t *original_bounds_nest,
+    /*out*/ bounds_info_t *chunk_bounds_nest) {
+
+  // transfer loop types from the original loop to the chunks
+  for (kmp_index_t i = 0; i < n; ++i) {
+    chunk_bounds_nest[i] = original_bounds_nest[i];
+  }
+  // cleanup iv variables
+  kmp_uint64 outer_ub0 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                    original_bounds_nest[0].ub0_u64);
+  kmp_uint64 outer_lb0 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                    original_bounds_nest[0].lb0_u64);
+  kmp_uint64 inner_ub0 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
+                                    original_bounds_nest[1].ub0_u64);
+  // calculate the chunk's lower and upper bounds
+  // the total number of iterations in the loop is the sum of the arithmetic
+  // progression from the outer lower to outer upper bound (inclusive since the
+  // loop is canonical) note that less_than inner loops (inner_ub0 = -1)
+  // effectively make the progression 1-based making N = (outer_ub0 - inner_lb0
+  // + 1) -> N - 1
+  kmp_uint64 outer_iters = (outer_ub0 - outer_lb0 + 1) + inner_ub0;
+  kmp_uint64 iter_total = outer_iters * (outer_iters + 1) / 2;
+  // the current thread's number of iterations:
+  // each thread gets an equal number of iterations: total number of iterations
+  // divided by the number of threads plus, if there's a remainder,
+  // the first threads with the number up to the remainder get an additional
+  // iteration each to cover it
+  kmp_uint64 iter_current =
+      iter_total / nth + ((tid < (iter_total % nth)) ? 1 : 0);
+  // cumulative number of iterations executed by all the previous threads:
+  // threads with the tid below the remainder will have (iter_total/nth+1)
+  // elements, and so will all threads before them so the cumulative number of
+  // iterations executed by the all previous will be the current thread's number
+  // of iterations multiplied by the number of previous threads which is equal
+  // to the current thread's tid; threads with the number equal or above the
+  // remainder will have (iter_total/nth) elements so the cumulative number of
+  // iterations previously executed is its number of iterations multipled by the
+  // number of previous threads which is again equal to the current thread's tid
+  // PLUS all the remainder iterations that will have been executed by the
+  // previous threads
+  kmp_uint64 iter_before_current =
+      tid * iter_current + ((tid < iter_total % nth) ? 0 : (iter_total % nth));
+  // cumulative number of iterations executed with the current thread is
+  // the cumulative number executed before it plus its own
+  kmp_uint64 iter_with_current = iter_before_current + iter_current;
+  // calculate the outer loop lower bound (lbo) which is the max outer iv value
+  // that gives the number of iterations that is equal or just below the total
+  // number of iterations executed by the previous threads, for less_than
+  // (1-based) inner loops (inner_ub0 == -1) it will be i.e.
+  // lbo*(lbo-1)/2<=iter_before_current => lbo^2-lbo-2*iter_before_current<=0
+  // for less_than_equal (0-based) inner loops (inner_ub == 0) it will be:
+  // i.e. lbo*(lbo+1)/2<=iter_before_current =>
+  // lbo^2+lbo-2*iter_before_current<=0 both cases can be handled similarily
+  // using a parameter to control the equation sign
+  kmp_int64 inner_adjustment = 1 + 2 * inner_ub0;
+  kmp_uint64 lower_bound_outer =
+      (kmp_uint64)(sqrt_newton_approx(inner_adjustment * inner_adjustment +
+                                      8 * iter_before_current) +
+                   inner_adjustment) /
+          2 -
+      inner_adjustment;
+  // calculate the inner loop lower bound which is the remaining number of
+  // iterations required to hit the total number of iterations executed by the
+  // previous threads giving the starting point of this thread
+  kmp_uint64 lower_bound_inner =
+      iter_before_current -
+      ((lower_bound_outer + inner_adjustment) * lower_bound_outer) / 2;
+  // calculate the outer loop upper bound using the same approach as for the
+  // inner bound except using the total number of iterations executed with the
+  // current thread
+  kmp_uint64 upper_bound_outer =
+      (kmp_uint64)(sqrt_newton_approx(inner_adjustment * inner_adjustment +
+                                      8 * iter_with_current) +
+                   inner_adjustment) /
+          2 -
+      inner_adjustment;
+  // calculate the inner loop upper bound which is the remaining number of
+  // iterations required to hit the total number of iterations executed after
+  // the current thread giving the starting point of the next thread
+  kmp_uint64 upper_bound_inner =
+      iter_with_current -
+      ((upper_bound_outer + inner_adjustment) * upper_bound_outer) / 2;
+  // adjust the upper bounds down by 1 element to point at the last iteration of
+  // the current thread the first iteration of the next thread
+  if (upper_bound_inner == 0) {
+    // {n,0} => {n-1,n-1}
+    upper_bound_outer -= 1;
+    upper_bound_inner = upper_bound_outer;
+  } else {
+    // {n,m} => {n,m-1} (m!=0)
+    upper_bound_inner -= 1;
+  }
+
+  // assign the values, zeroing out lb1 and ub1 values since the iteration space
+  // is now one-dimensional
+  chunk_bounds_nest[0].lb0_u64 = lower_bound_outer;
+  chunk_bounds_nest[1].lb0_u64 = lower_bound_inner;
+  chunk_bounds_nest[0].ub0_u64 = upper_bound_outer;
+  chunk_bounds_nest[1].ub0_u64 = upper_bound_inner;
+  chunk_bounds_nest[0].lb1_u64 = 0;
+  chunk_bounds_nest[0].ub1_u64 = 0;
+  chunk_bounds_nest[1].lb1_u64 = 0;
+  chunk_bounds_nest[1].ub1_u64 = 0;
+
+#if 0
+  printf("tid/nth = %d/%d : From [%llu, %llu] To [%llu, %llu] : Chunks %llu/%llu\n",
+         tid, nth, chunk_bounds_nest[0].lb0_u64, chunk_bounds_nest[1].lb0_u64,
+         chunk_bounds_nest[0].ub0_u64, chunk_bounds_nest[1].ub0_u64, iter_current, iter_total);
+#endif
+}
+
+/**************************************************************************
+ *  Handle upper triangle matrix in the canonical form
+ *  i = 0; i <= N; i++     {0,0}:{N,0}
+ *  j = 0+1*i; j <= N; j++ {0,1}:{N,0}
+ * ************************************************************************/
+void kmp_handle_upper_triangle_matrix(
+    /*in*/ kmp_uint32 nth,
+    /*in*/ kmp_uint32 tid,
+    /*in */ kmp_index_t n,
+    /*in/out*/ bounds_info_t *original_bounds_nest,
+    /*out*/ bounds_info_t *chunk_bounds_nest) {
+
+  // transfer loop types from the original loop to the chunks
+  for (kmp_index_t i = 0; i < n; ++i) {
+    chunk_bounds_nest[i] = original_bounds_nest[i];
+  }
+  // cleanup iv variables
+  kmp_uint64 outer_ub0 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                    original_bounds_nest[0].ub0_u64);
+  kmp_uint64 outer_lb0 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
+                                    original_bounds_nest[0].lb0_u64);
+  [[maybe_unused]] kmp_uint64 inner_ub0 = kmp_fix_iv(
+      original_bounds_nest[1].loop_iv_type, original_bounds_nest[1].ub0_u64);
+  // calculate the chunk's lower and upper bounds
+  // the total number of iterations in the loop is the sum of the arithmetic
+  // progression from the outer lower to outer upper bound (inclusive since the
+  // loop is canonical) note that less_than inner loops (inner_ub0 = -1)
+  // effectively make the progression 1-based making N = (outer_ub0 - inner_lb0
+  // + 1) -> N - 1
+  kmp_uint64 outer_iters = (outer_ub0 - outer_lb0 + 1);
+  kmp_uint64 iter_total = outer_iters * (outer_iters + 1) / 2;
+  // the current thread's number of iterations:
+  // each thread gets an equal number of iterations: total number of iterations
+  // divided by the number of threads plus, if there's a remainder,
+  // the first threads with the number up to the remainder get an additional
+  // iteration each to cover it
+  kmp_uint64 iter_current =
+      iter_total / nth + ((tid < (iter_total % nth)) ? 1 : 0);
+  // cumulative number of iterations executed by all the previous threads:
+  // threads with the tid below the remainder will have (iter_total/nth+1)
+  // elements, and so will all threads before them so the cumulative number of
+  // iterations executed by the all previous will be the current thread's number
+  // of iterations multiplied by the number of previous threads which is equal
+  // to the current thread's tid; threads with the number equal or above the
+  // remainder will have (iter_total/nth) elements so the cumulative number of
+  // iterations previously executed is its number of iterations multipled by the
+  // number of previous threads which is again equal to the current thread's tid
+  // PLUS all the remainder iterations that will have been executed by the
+  // previous threads
+  kmp_uint64 iter_before_current =
+      tid * iter_current + ((tid < iter_total % nth) ? 0 : (iter_total % nth));
+  // cumulative number of iterations executed with the current thread is
+  // the cumulative number executed before it plus its own
+  kmp_uint64 iter_with_current = iter_before_current + iter_current;
+  // calculate the outer loop lower bound (lbo) which is the max outer iv value
+  // that gives the number of iterations that is equal or just below the total
+  // number of iterations executed by the previous threads:
+  // lbo*(lbo+1)/2<=iter_before_current =>
+  // lbo^2+lbo-2*iter_before_current<=0
+  kmp_uint64 lower_bound_outer =
+      (kmp_uint64)(sqrt_newton_approx(1 + 8 * iter_before_current) + 1) / 2 - 1;
+  // calculate the inner loop lower bound which is the remaining number of
+  // iterations required to hit the total number of iterations executed by the
+  // previous threads giving the starting point of this thread
+  kmp_uint64 lower_bound_inner =
+      iter_before_current - ((lower_bound_outer + 1) * lower_bound_outer) / 2;
+  // calculate the outer loop upper bound using the same approach as for the
+  // inner bound except using the total number of iterations executed with the
+  // current thread
+  kmp_uint64 upper_bound_outer =
+      (kmp_uint64)(sqrt_newton_approx(1 + 8 * iter_with_current) + 1) / 2 - 1;
+  // calculate the inner loop upper bound which is the remaining number of
+  // iterations required to hit the total number of iterations executed after
+  // the current thread giving the starting point of the next thread
+  kmp_uint64 upper_bound_inner =
+      iter_with_current - ((upper_bound_outer + 1) * upper_bound_outer) / 2;
+  // adjust the upper bounds down by 1 element to point at the last iteration of
+  // the current thread the first iteration of the next thread
+  if (upper_bound_inner == 0) {
+    // {n,0} => {n-1,n-1}
+    upper_bound_outer -= 1;
+    upper_bound_inner = upper_bound_outer;
+  } else {
+    // {n,m} => {n,m-1} (m!=0)
+    upper_bound_inner -= 1;
+  }
+
+  // assign the values, zeroing out lb1 and ub1 values since the iteration space
+  // is now one-dimensional
+  chunk_bounds_nest[0].lb0_u64 = (outer_iters - 1) - upper_bound_outer;
+  chunk_bounds_nest[1].lb0_u64 = (outer_iters - 1) - upper_bound_inner;
+  chunk_bounds_nest[0].ub0_u64 = (outer_iters - 1) - lower_bound_outer;
+  chunk_bounds_nest[1].ub0_u64 = (outer_iters - 1) - lower_bound_inner;
+  chunk_bounds_nest[0].lb1_u64 = 0;
+  chunk_bounds_nest[0].ub1_u64 = 0;
+  chunk_bounds_nest[1].lb1_u64 = 0;
+  chunk_bounds_nest[1].ub1_u64 = 0;
+
+#if 0
+  printf("tid/nth = %d/%d : From [%llu, %llu] To [%llu, %llu] : Chunks %llu/%llu\n",
+         tid, nth, chunk_bounds_nest[0].lb0_u64, chunk_bounds_nest[1].lb0_u64,
+         chunk_bounds_nest[0].ub0_u64, chunk_bounds_nest[1].ub0_u64, iter_current, iter_total);
+#endif
+}
 //----------Init API for non-rectangular loops--------------------------------
 
 // Init API for collapsed loops (static, no chunks defined).
@@ -1333,6 +1626,19 @@ __kmpc_for_collapsed_init(ident_t *loc, kmp_int32 gtid,
   kmp_uint32 nth = team->t.t_nproc; // Number of threads
 
   KMP_DEBUG_ASSERT(tid < nth);
+
+  // Handle special cases
+  nested_loop_type_t loop_type =
+      kmp_identify_nested_loop_structure(original_bounds_nest, n);
+  if (loop_type == nested_loop_type_lower_triangular_matrix) {
+    kmp_handle_lower_triangle_matrix(nth, tid, n, original_bounds_nest,
+                                     chunk_bounds_nest);
+    return TRUE;
+  } else if (loop_type == nested_loop_type_upper_triangular_matrix) {
+    kmp_handle_upper_triangle_matrix(nth, tid, n, original_bounds_nest,
+                                     chunk_bounds_nest);
+    return TRUE;
+  }
 
   CollapseAllocator<kmp_uint64> original_ivs_start(n);
 

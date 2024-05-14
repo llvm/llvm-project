@@ -1,3 +1,5 @@
+include(MLIRCheckHardwareFeatures)
+
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
@@ -39,6 +41,10 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
+  # Check whether an emulator is required - if yes then make sure that it's
+  # been set.
+  check_emulator(MLIR_RUN_ARM_SVE_TESTS "HWCAP_SVE" ARM_EMULATOR_EXECUTABLE)
+  check_emulator(MLIR_RUN_ARM_SME_TESTS "HWCAP2_SME" ARM_EMULATOR_EXECUTABLE)
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
@@ -95,11 +101,13 @@ configure_lit_site_cfg(
 set(MLIR_TEST_DEPENDS
   FileCheck count not split-file
   mlir-capi-ir-test
+  mlir-capi-irdl-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-transform-interpreter-test
   mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
@@ -172,6 +180,7 @@ if(LLVM_BUILD_EXAMPLES)
     transform-opt-ch3
     transform-opt-ch4
     mlir-minimal-opt
+    mlir-transform-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

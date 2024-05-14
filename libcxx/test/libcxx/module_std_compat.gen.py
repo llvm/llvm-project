@@ -16,7 +16,7 @@
 # to be one monolitic test. Since the test doesn't take very long it's
 # not a huge issue.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 
@@ -26,9 +26,9 @@ from libcxx.test.modules import module_test_generator
 
 generator = module_test_generator(
     "%t",
-    "%{module}",
+    "%{module-dir}",
     "%{clang-tidy}",
-    "%{test-tools}/clang_tidy_checks/libcxx-tidy.plugin",
+    "%{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin",
     "%{cxx}",
     "%{flags} %{compile_flags}",
     "std.compat",

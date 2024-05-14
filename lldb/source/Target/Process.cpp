@@ -63,6 +63,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -407,8 +408,8 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
   return process_sp;
 }
 
-ConstString &Process::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.process");
+llvm::StringRef Process::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.process");
   return class_name;
 }
 
@@ -422,7 +423,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
                  const UnixSignalsSP &unix_signals_sp)
     : ProcessProperties(this),
       Broadcaster((target_sp->GetDebugger().GetBroadcasterManager()),
-                  Process::GetStaticBroadcasterClass().AsCString()),
+                  Process::GetStaticBroadcasterClass().str()),
       m_target_wp(target_sp), m_public_state(eStateUnloaded),
       m_private_state(eStateUnloaded),
       m_private_state_broadcaster(nullptr,
@@ -2937,14 +2938,11 @@ void Process::CompleteAttach() {
   DidAttach(process_arch);
 
   if (process_arch.IsValid()) {
+    LLDB_LOG(log,
+             "Process::{0} replacing process architecture with DidAttach() "
+             "architecture: \"{1}\"",
+             __FUNCTION__, process_arch.GetTriple().getTriple());
     GetTarget().SetArchitecture(process_arch);
-    if (log) {
-      const char *triple_str = process_arch.GetTriple().getTriple().c_str();
-      LLDB_LOGF(log,
-                "Process::%s replacing process architecture with DidAttach() "
-                "architecture: %s",
-                __FUNCTION__, triple_str ? triple_str : "<null>");
-    }
   }
 
   // We just attached.  If we have a platform, ask it for the process
@@ -4740,27 +4738,26 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   if (!thread_plan_sp) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "RunThreadPlan called with empty thread plan.");
+        lldb::eSeverityError, "RunThreadPlan called with empty thread plan.");
     return eExpressionSetupError;
   }
 
   if (!thread_plan_sp->ValidatePlan(nullptr)) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan called with an invalid thread plan.");
     return eExpressionSetupError;
   }
 
   if (exe_ctx.GetProcessPtr() != this) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called on wrong process.");
     return eExpressionSetupError;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   if (thread == nullptr) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called with invalid thread.");
     return eExpressionSetupError;
   }
@@ -4795,7 +4792,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   if (m_private_state.GetValue() != eStateStopped) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan called while the private state was not stopped.");
     return eExpressionSetupError;
   }
@@ -4809,7 +4806,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     selected_frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (!selected_frame_sp) {
       diagnostic_manager.Printf(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "RunThreadPlan called without a selected frame on thread %d",
           thread_idx_id);
       return eExpressionSetupError;
@@ -4820,7 +4817,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // be smaller than the overall timeout.
   if (options.GetOneThreadTimeout() && options.GetTimeout() &&
       *options.GetTimeout() < *options.GetOneThreadTimeout()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called with one thread "
                                  "timeout greater than total timeout");
     return eExpressionSetupError;
@@ -4948,7 +4945,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     Event *other_events = listener_sp->PeekAtNextEvent();
     if (other_events != nullptr) {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "RunThreadPlan called with pending events on the queue.");
       return eExpressionSetupError;
     }
@@ -4991,7 +4988,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           Status resume_error = PrivateResume();
           if (!resume_error.Success()) {
             diagnostic_manager.Printf(
-                eDiagnosticSeverityError,
+                lldb::eSeverityError,
                 "couldn't resume inferior the %d time: \"%s\".", num_resumes,
                 resume_error.AsCString());
             return_value = eExpressionSetupError;
@@ -5007,7 +5004,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                     "resume %" PRIu32 ", exiting.",
                     num_resumes);
 
-          diagnostic_manager.Printf(eDiagnosticSeverityError,
+          diagnostic_manager.Printf(lldb::eSeverityError,
                                     "didn't get any event after resume %" PRIu32
                                     ", exiting.",
                                     num_resumes);
@@ -5043,7 +5040,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           }
 
           diagnostic_manager.Printf(
-              eDiagnosticSeverityError,
+              lldb::eSeverityError,
               "didn't get running event after initial resume, got %s instead.",
               StateAsCString(stop_state));
           return_value = eExpressionSetupError;
@@ -5101,7 +5098,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             const bool use_run_lock = false;
             Halt(clear_thread_plans, use_run_lock);
             return_value = eExpressionInterrupted;
-            diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+            diagnostic_manager.PutString(lldb::eSeverityInfo,
                                          "execution halted by user interrupt.");
             LLDB_LOGF(log, "Process::RunThreadPlan(): Got  interrupted by "
                            "eBroadcastBitInterrupted, exiting.");
@@ -5154,7 +5151,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 event_to_broadcast_sp = event_sp;
 
               diagnostic_manager.PutString(
-                  eDiagnosticSeverityError,
+                  lldb::eSeverityError,
                   "execution stopped with unexpected state.");
               return_value = eExpressionInterrupted;
               break;
@@ -5685,30 +5682,32 @@ void Process::Flush() {
 
 lldb::addr_t Process::GetCodeAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_code_address_mask;
 }
 
 lldb::addr_t Process::GetDataAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_data_address_mask;
 }
 
 lldb::addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
-  if (m_highmem_code_address_mask)
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_code_address_mask != LLDB_INVALID_ADDRESS_MASK)
     return m_highmem_code_address_mask;
   return GetCodeAddressMask();
 }
 
 lldb::addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
-    return ~((1ULL << num_bits_setting) - 1);
-  if (m_highmem_data_address_mask)
+    return AddressableBits::AddressableBitToMask(num_bits_setting);
+
+  if (m_highmem_data_address_mask != LLDB_INVALID_ADDRESS_MASK)
     return m_highmem_data_address_mask;
   return GetDataAddressMask();
 }
@@ -6325,8 +6324,11 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // ranges.
 static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                       Process::CoreFileMemoryRanges &ranges) {
-  // Don't add empty ranges or ranges with no permissions.
-  if (region.GetRange().GetByteSize() == 0 || region.GetLLDBPermissions() == 0)
+  // Don't add empty ranges.
+  if (region.GetRange().GetByteSize() == 0)
+    return;
+  // Don't add ranges with no read permissions.
+  if ((region.GetLLDBPermissions() & lldb::ePermissionsReadable) == 0)
     return;
   if (try_dirty_pages && AddDirtyPages(region, ranges))
     return;
@@ -6453,4 +6455,26 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     return Status("no valid address ranges found for core style");
 
   return Status(); // Success!
+}
+
+void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
+  uint32_t low_memory_addr_bits = bit_masks.GetLowmemAddressableBits();
+  uint32_t high_memory_addr_bits = bit_masks.GetHighmemAddressableBits();
+
+  if (low_memory_addr_bits == 0 && high_memory_addr_bits == 0)
+    return;
+
+  if (low_memory_addr_bits != 0) {
+    addr_t low_addr_mask =
+        AddressableBits::AddressableBitToMask(low_memory_addr_bits);
+    SetCodeAddressMask(low_addr_mask);
+    SetDataAddressMask(low_addr_mask);
+  }
+
+  if (high_memory_addr_bits != 0) {
+    addr_t high_addr_mask =
+        AddressableBits::AddressableBitToMask(high_memory_addr_bits);
+    SetHighmemCodeAddressMask(high_addr_mask);
+    SetHighmemDataAddressMask(high_addr_mask);
+  }
 }

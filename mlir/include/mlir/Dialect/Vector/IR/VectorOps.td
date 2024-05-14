@@ -420,7 +420,7 @@ def Vector_ShuffleOp :
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
-     Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
+     Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
                     I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
@@ -443,6 +443,8 @@ def Vector_ShuffleOp :
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
+
+    Note, scalable vectors are not supported.
 
     Example:
 
@@ -476,6 +478,69 @@ def Vector_ShuffleOp :
   let assemblyFormat = "operands $mask attr-dict `:` type(operands)";
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+}
+
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure,
+    AllTypesMatch<["lhs", "rhs"]>,
+    TypesMatchWith<
+    "type of 'result' is double the width of the inputs",
+    "lhs", "result",
+    [{
+      [&]() -> ::mlir::VectorType {
+        auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+        ::mlir::VectorType::Builder builder(vectorType);
+        if (vectorType.getRank() == 0) {
+          static constexpr int64_t v2xty_shape[] = { 2 };
+          return builder.setShape(v2xty_shape);
+        }
+        auto lastDim = vectorType.getRank() - 1;
+        return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
+      }()
+    }]>]> {
+  let summary = "constructs a vector by interleaving two input vectors";
+  let description = [{
+    The interleave operation constructs a new vector by interleaving the
+    elements from the trailing (or final) dimension of two input vectors,
+    returning a new vector where the trailing dimension is twice the size.
+
+    Note that for the n-D case this differs from the interleaving possible with
+    `vector.shuffle`, which would only operate on the leading dimension.
+
+    Another key difference is this operation supports scalable vectors, though
+    currently a general LLVM lowering is limited to the case where only the
+    trailing dimension is scalable.
+
+    Example:
+    ```mlir
+    %0 = vector.interleave %a, %b
+               : vector<[4]xi32>     ; yields vector<[8]xi32>
+    %1 = vector.interleave %c, %d
+               : vector<8xi8>        ; yields vector<16xi8>
+    %2 = vector.interleave %e, %f
+               : vector<f16>         ; yields vector<2xf16>
+    %3 = vector.interleave %g, %h
+               : vector<2x4x[2]xf64> ; yields vector<2x4x[4]xf64>
+    %4 = vector.interleave %i, %j
+               : vector<6x3xf32>     ; yields vector<6x6xf32>
+    ```
+  }];
+
+  let arguments = (ins AnyVectorOfAnyRank:$lhs, AnyVectorOfAnyRank:$rhs);
+  let results = (outs AnyVector:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs  attr-dict `:` type($lhs)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return ::llvm::cast<VectorType>(getLhs().getType());
+    }
+    VectorType getResultVectorType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
 }
 
 def Vector_ExtractElementOp :
@@ -1262,7 +1327,7 @@ def Vector_TransferReadOp :
           // Update the temporary gathered slice with the individual element
           %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
           %updated = vector.insert %a, %slice[%i, %j, %k] : f32 into vector<3x4x5xf32>
-          memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+          memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -1285,7 +1350,7 @@ def Vector_TransferReadOp :
         %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
         // Here we only store to the first element in dimension one
         %updated = vector.insert %a, %slice[%i, 0, %k] : f32 into vector<3x4x5xf32>
-        memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+        memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -2746,7 +2811,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
 //       call to the function. For that, it might be useful to have a
 //       'vector.scale.global' and a 'vector.scale.local' operation.
 def VectorScaleOp : Vector_Op<"vscale",
-                 [Pure]> {
+  [Pure, DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]
+> {
   let summary = "Load vector scale size";
   let description = [{
     The `vscale` op returns the scale of the scalable vectors, a positive
@@ -2762,6 +2828,13 @@ def VectorScaleOp : Vector_Op<"vscale",
   }];
   let results = (outs Index:$res);
   let assemblyFormat = "attr-dict";
+
+  let extraClassDefinition = [{
+    void $cppClass::getAsmResultNames(
+        ::llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
+      setNameFn(getResult(), "vscale");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

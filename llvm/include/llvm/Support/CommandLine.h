@@ -878,7 +878,7 @@ public:
   void addLiteralOption(StringRef Name, const DT &V, StringRef HelpStr) {
 #ifndef NDEBUG
     if (findOption(Name) != Values.size())
-      report_fatal_error("Option " + Name + " already exists!");
+      report_fatal_error("Option '" + Name + "' already exists!");
 #endif
     OptionInfo X(Name, static_cast<DataType>(V), HelpStr);
     Values.push_back(X);
@@ -2001,6 +2001,16 @@ void PrintVersionMessage();
 /// \param Hidden if true will print hidden options
 /// \param Categorized if true print options in categories
 void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
+
+/// An array of optional enabled settings in the LLVM build configuration,
+/// which may be of interest to compiler developers. For example, includes
+/// "+assertions" if assertions are enabled. Used by printBuildConfig.
+ArrayRef<StringRef> getCompilerBuildConfig();
+
+/// Prints the compiler build configuration.
+/// Designed for compiler developers, not compiler end-users.
+/// Intended to be used in --version output when enabled.
+void printBuildConfig(raw_ostream &OS);
 
 //===----------------------------------------------------------------------===//
 // Public interface for accessing registered options.

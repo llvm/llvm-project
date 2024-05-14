@@ -38,29 +38,17 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 // Used to express accumulator results or compare results.
 //===----------------------------------------------------------------------===//
 
-def Tosa_UInt8 : UI<8>;
-def Tosa_UInt16 : UI<16>;
-
 def Tosa_Int4 : I<4>;
 def Tosa_Int8 : I<8>;
-def Tosa_Int16 : I<16>;
 def Tosa_Int32 : I<32>;
-def Tosa_Int48 : I<48>;
 def Tosa_Int64 : I<64>;
 
-def Tosa_SignedInt : AnyTypeOf<[Tosa_Int8,
-                                Tosa_Int16,
-                                Tosa_Int32,
-                                Tosa_Int48,
-                                Tosa_Int64]>;
-
-def Tosa_Bool : I<1>;
-
-// No unsigned unquantized int types.
-def Tosa_Int : AnyTypeOf<[Tosa_Bool,
-                          Tosa_UInt8,
-                          Tosa_UInt16,
-                          Tosa_SignedInt]>;
+// The TOSA dialect allows more types than the TOSA standard to allow for
+// experimentation. For historical reasons, signless is used in the place of
+// signed.
+// The TosaValidation pass can be used to check for standard conformance.
+def Tosa_Int : AnyTypeOf<[AnyUnsignedInteger,
+                          AnySignlessInteger]>;
 
 def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
                    	        Tosa_Int64]>;
@@ -84,27 +72,15 @@ def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
                                      Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
-// Floating-point types.
-//===----------------------------------------------------------------------===//
-def Tosa_Float : AnyTypeOf<[
-                            F32,
-			    F16,
-			    BF16]>;
-
-//===----------------------------------------------------------------------===//
 // Multi-category types.
 //===----------------------------------------------------------------------===//
-def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, Tosa_Float],
+def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat],
                                "number">;
-
-// Add F64 type support just for tosa::CastOp and tosa::ConstOp
-def Tosa_AnyNumber_Plus_F64 : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, Tosa_Float, F64],
-                               "number_plus_f64">;
 
 // For weight tensors from tosa::Conv2DOp, tosa::Conv3DOp,
 // tosa::DepthwiseConv2DOp, tosa::TransposeConv2DOp, tosa::FullyConnectedOp
 def Tosa_Weight : AnyTypeOf<[Tosa_Int4, Tosa_Int8,
-                             Tosa_QuantizedInt, Tosa_Float]>;
+                             Tosa_QuantizedInt, AnyFloat]>;
 
 //===----------------------------------------------------------------------===//
 // Tensor types
@@ -113,16 +89,17 @@ def Tosa_Weight : AnyTypeOf<[Tosa_Int4, Tosa_Int8,
 def Tosa_Int32Tensor : TensorOf<[Tosa_Int32]>;
 def Tosa_Int32Or64Tensor : TensorOf<[Tosa_Int32Or64]>;
 
+def Tosa_FloatTensor : TensorOf<[AnyFloat]>;
+
 // Either ranked or unranked tensor of TOSA supported element types.
 def Tosa_Tensor : TensorOf<[Tosa_AnyNumber]>;
-def Tosa_Tensor_Plus_F64 : TensorOf<[Tosa_AnyNumber_Plus_F64]>;
 
 // Must be ranked but no further constraints
 def Tosa_RankedTensor : RankedTensorOf<[Tosa_AnyNumber]>;
 
 // Any tensor element type allowed in Tosa ops.
 def Tosa_ElementType : Type<Or<[Tosa_Int.predicate, Tosa_QuantizedInt.predicate,
-                                Tosa_Float.predicate]>, "tosa.dtype">;
+                                AnyFloat.predicate]>, "tosa.dtype">;
 
 class Tosa_TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], description>;
@@ -140,11 +117,11 @@ def Tosa_ScalarTensor : TensorRankOf<[Tosa_AnyNumber], [0]>;
 // to not include any remaining unranked tensors.
 def Tosa_UnrankedTensor : UnrankedTensorOf<[Tosa_AnyNumber]>;
 
-def Tosa_Tensor1D : AnyTypeOf<[Tosa_UnrankedTensor, 1DTensorOf<[Tosa_AnyNumber]>]>;
-def Tosa_Tensor2D : AnyTypeOf<[Tosa_UnrankedTensor, 2DTensorOf<[Tosa_AnyNumber]>]>;
-def Tosa_Tensor3D : AnyTypeOf<[Tosa_UnrankedTensor, 3DTensorOf<[Tosa_AnyNumber]>]>;
-def Tosa_Tensor4D : AnyTypeOf<[Tosa_UnrankedTensor, 4DTensorOf<[Tosa_AnyNumber]>]>;
-def Tosa_Tensor5D : AnyTypeOf<[Tosa_UnrankedTensor, TensorRankOf<[Tosa_AnyNumber], [5]>]>;
+def Tosa_Tensor1D : AnyTypeOf<[Tosa_UnrankedTensor, 1DTensorOf<[Tosa_AnyNumber]>], "1-d tensor", "::mlir::TensorType">;
+def Tosa_Tensor2D : AnyTypeOf<[Tosa_UnrankedTensor, 2DTensorOf<[Tosa_AnyNumber]>], "2-d tensor", "::mlir::TensorType">;
+def Tosa_Tensor3D : AnyTypeOf<[Tosa_UnrankedTensor, 3DTensorOf<[Tosa_AnyNumber]>], "3-d tensor", "::mlir::TensorType">;
+def Tosa_Tensor4D : AnyTypeOf<[Tosa_UnrankedTensor, 4DTensorOf<[Tosa_AnyNumber]>], "4-d tensor", "::mlir::TensorType">;
+def Tosa_Tensor5D : AnyTypeOf<[Tosa_UnrankedTensor, TensorRankOf<[Tosa_AnyNumber], [5]>], "5-d tensor", "::mlir::TensorType">;
 
 // Ranked tensors up to given rank.
 def Tosa_Tensor1Dto4D : AnyTypeOf<[
@@ -170,9 +147,6 @@ class Tosa_TypeLike<list<Type> types, string description = ""> : TypeConstraint<
 
 def Tosa_IntLike : Tosa_TypeLike<[Tosa_Int], "signless-integer-like">;
 def Tosa_Int8Like : Tosa_TypeLike<[Tosa_Int8], "signless-integer-8-bit-like">;
-def Tosa_Int16Like : Tosa_TypeLike<[Tosa_Int16], "signless-integer-16-bit-like">;
-def Tosa_Int32Like : Tosa_TypeLike<[Tosa_Int32], "signless-integer-32-bit-like">;
-def Tosa_Int64Like : Tosa_TypeLike<[Tosa_Int64], "signless-integer-64-bit-like">;
 
 //===----------------------------------------------------------------------===//
 // Attribute predicates and classes.

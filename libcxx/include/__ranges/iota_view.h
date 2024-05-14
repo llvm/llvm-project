@@ -31,7 +31,7 @@
 #include <__ranges/movable_box.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>

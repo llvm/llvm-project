@@ -2216,7 +2216,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_sitofp(float %x, i32 %y)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
@@ -2304,7 +2304,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp(float %x, i32 %y)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
@@ -2353,7 +2353,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp_i256(float %x, i2
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
@@ -2376,7 +2376,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_sitofp_i256(float %x, i2
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
@@ -2399,7 +2399,7 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_sitofp(<2 x floa
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[__EXP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i32> [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP5]]
 ;
@@ -2448,7 +2448,7 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_uitofp(<2 x floa
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[__EXP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i32> [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP5]]
 ;
@@ -2560,7 +2560,7 @@ define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[__POW_SIGN]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;

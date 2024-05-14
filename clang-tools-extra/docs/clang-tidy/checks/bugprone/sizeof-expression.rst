@@ -190,6 +190,6 @@ Options
 
 .. option:: WarnOnSizeOfPointerToAggregate
 
-   When `true, the check will warn on an expression like
+   When `true`, the check will warn on an expression like
    ``sizeof(expr)`` where the expression is a pointer
    to aggregate. Default is `true`.

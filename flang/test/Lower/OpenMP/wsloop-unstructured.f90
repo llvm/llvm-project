@@ -29,29 +29,32 @@ end subroutine sub
 ! CHECK-SAME:                      %[[VAL_2:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                      %[[VAL_3:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
 ! [...]
-! CHECK:             omp.wsloop for  (%[[VAL_53:.*]], %[[VAL_54:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) {
+! CHECK:             omp.wsloop {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_53:.*]], %[[VAL_54:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) {
 ! [...]
-! CHECK:               cf.br ^bb1
-! CHECK:             ^bb1:
-! CHECK:               cf.br ^bb2
-! CHECK:             ^bb2:
+! CHECK:                 cf.br ^bb1
+! CHECK:               ^bb1:
+! CHECK:                 cf.br ^bb2
+! CHECK:               ^bb2:
 ! [...]
-! CHECK:               cf.br ^bb3
-! CHECK:             ^bb3:
+! CHECK:                 cf.br ^bb3
+! CHECK:               ^bb3:
 ! [...]
-! CHECK:               %[[VAL_63:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
-! CHECK:               cf.cond_br %[[VAL_63]], ^bb4, ^bb7
-! CHECK:             ^bb4:
+! CHECK:                 %[[VAL_63:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
+! CHECK:                 cf.cond_br %[[VAL_63]], ^bb4, ^bb7
+! CHECK:               ^bb4:
 ! [...]
-! CHECK:               %[[VAL_76:.*]] = arith.cmpf olt, %{{.*}}, %{{.*}} fastmath<contract> : f32
-! CHECK:               cf.cond_br %[[VAL_76]], ^bb5, ^bb6
-! CHECK:             ^bb5:
-! CHECK:               cf.br ^bb7
-! CHECK:             ^bb6:
+! CHECK:                 %[[VAL_76:.*]] = arith.cmpf olt, %{{.*}}, %{{.*}} fastmath<contract> : f32
+! CHECK:                 cf.cond_br %[[VAL_76]], ^bb5, ^bb6
+! CHECK:               ^bb5:
+! CHECK:                 cf.br ^bb7
+! CHECK:               ^bb6:
 ! [...]
-! CHECK:               cf.br ^bb3
-! CHECK:             ^bb7:
-! CHECK:               omp.yield
+! CHECK:                 cf.br ^bb3
+! CHECK:               ^bb7:
+! CHECK:                 omp.yield
+! CHECK:               }
+! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

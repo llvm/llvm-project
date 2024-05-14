@@ -889,6 +889,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   DataExtractor Data(Content, Obj.isLE(), ELFT::Is64Bits ? 8 : 4);
 
   std::vector<ELFYAML::BBAddrMapEntry> Entries;
+  bool HasAnyPGOAnalysisMapEntry = false;
+  std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
   uint8_t Feature = 0;
@@ -905,6 +907,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     }
     uint64_t NumBBRanges = 1;
     uint64_t NumBlocks = 0;
+    uint32_t TotalNumBlocks = 0;
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(Feature);
     if (!FeatureOrErr)
       return FeatureOrErr.takeError();
@@ -934,10 +937,42 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
         uint64_t Metadata = Data.getULEB128(Cur);
         BBEntries.push_back({ID, Offset, Size, Metadata});
       }
+      TotalNumBlocks += BBEntries.size();
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
     }
     Entries.push_back(
         {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
+
+    ELFYAML::PGOAnalysisMapEntry &PGOAnalysis = PGOAnalyses.emplace_back();
+    if (FeatureOrErr->hasPGOAnalysis()) {
+      HasAnyPGOAnalysisMapEntry = true;
+
+      if (FeatureOrErr->FuncEntryCount)
+        PGOAnalysis.FuncEntryCount = Data.getULEB128(Cur);
+
+      if (FeatureOrErr->hasPGOAnalysisBBData()) {
+        auto &PGOBBEntries = PGOAnalysis.PGOBBEntries.emplace();
+        for (uint64_t BlockIndex = 0; Cur && BlockIndex < TotalNumBlocks;
+             ++BlockIndex) {
+          auto &PGOBBEntry = PGOBBEntries.emplace_back();
+          if (FeatureOrErr->BBFreq) {
+            PGOBBEntry.BBFreq = Data.getULEB128(Cur);
+            if (!Cur)
+              break;
+          }
+
+          if (FeatureOrErr->BrProb) {
+            auto &SuccEntries = PGOBBEntry.Successors.emplace();
+            uint64_t SuccCount = Data.getULEB128(Cur);
+            for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
+              uint32_t ID = Data.getULEB128(Cur);
+              uint32_t BrProb = Data.getULEB128(Cur);
+              SuccEntries.push_back({ID, BrProb});
+            }
+          }
+        }
+      }
+    }
   }
 
   if (!Cur) {
@@ -946,6 +981,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     S->Content = yaml::BinaryRef(Content);
   } else {
     S->Entries = std::move(Entries);
+    if (HasAnyPGOAnalysisMapEntry)
+      S->PGOAnalyses = std::move(PGOAnalyses);
   }
 
   return S.release();

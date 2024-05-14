@@ -26,7 +26,7 @@ func.func @check_results(%lhs : i16, %rhs : i16, %res0 : i16, %res1 : i16) -> ()
   %mismatch = arith.cmpi ne, %res0, %res1 : i16
   scf.if %mismatch -> () {
     vector.print %res1 : i16
-    vector.print str "Mismatch"
+    vector.print str "Mismatch\n"
   }
   return
 }

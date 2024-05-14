@@ -20,8 +20,32 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
+
+using ReassociationIndices = SmallVector<int64_t, 2>;
+
+/// Infer the output shape for a {memref|tensor}.expand_shape when it is
+/// possible to do so.
+///
+/// Note: This should *only* be used to implement
+/// `ExpandShapeOp::inferOutputShape` in both the memref and tensor namespaces.
+/// If you need to infer the output shape you should use the static method of
+/// `ExpandShapeOp` instead of calling this.
+///
+/// `inputShape` is the shape of the tensor or memref being expanded as a
+/// sequence of SSA values or constants. `expandedType` is the output shape of
+/// the expand_shape operation. `reassociation` is the reassociation denoting
+/// the output dims each input dim is mapped to.
+///
+/// Returns the output shape in `outputShape` and `staticOutputShape`, following
+/// the conventions for the output_shape and static_output_shape inputs to the
+/// expand_shape ops.
+std::optional<SmallVector<OpFoldResult>>
+inferExpandShapeOutputShape(OpBuilder &b, Location loc, ShapedType expandedType,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            ArrayRef<OpFoldResult> inputShape);
 
 /// Matches a ConstantIndexOp.
 detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
@@ -81,6 +105,22 @@ private:
   OpBuilder &b;
   Location loc;
 };
+
+namespace arith {
+
+// Build the product of a sequence.
+// If values = (v0, v1, ..., vn) than the returned
+// value is v0 * v1 * ... * vn.
+// All values must have the same type.
+//
+// The version without `resultType` must contain at least one element in values.
+// Then the result will have the same type as the elements in `values`.
+// If `values` is empty in the version with `resultType` returns 1 with type
+// `resultType`.
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values);
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
+                    Type resultType);
+} // namespace arith
 } // namespace mlir
 
 #endif // MLIR_DIALECT_ARITH_UTILS_UTILS_H

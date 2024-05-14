@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_check_utils.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_generic.h" // LLVM_LIBC_HAS_UINT64
+#include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_riscv.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
@@ -124,9 +125,9 @@ using MemsetImplementations = testing::TypeList<
     builtin::Memset<32>, //
     builtin::Memset<64>,
 #endif
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
     generic::Memset<uint64_t>, generic::Memset<cpp::array<uint64_t, 2>>,
-#endif
+#endif // LIBC_TYPES_HAS_INT64
 #ifdef __AVX512F__
     generic::Memset<generic_v512>, generic::Memset<cpp::array<generic_v512, 2>>,
 #endif
@@ -210,9 +211,9 @@ using BcmpImplementations = testing::TypeList<
 #ifndef LIBC_TARGET_ARCH_IS_ARM // Removing non uint8_t types for ARM
     generic::Bcmp<uint16_t>,
     generic::Bcmp<uint32_t>, //
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
     generic::Bcmp<uint64_t>,
-#endif // LLVM_LIBC_HAS_UINT64
+#endif // LIBC_TYPES_HAS_INT64
     generic::BcmpSequence<uint16_t, uint8_t>,
     generic::BcmpSequence<uint32_t, uint8_t>,  //
     generic::BcmpSequence<uint32_t, uint16_t>, //
@@ -292,9 +293,9 @@ using MemcmpImplementations = testing::TypeList<
 #ifndef LIBC_TARGET_ARCH_IS_ARM // Removing non uint8_t types for ARM
     generic::Memcmp<uint16_t>,
     generic::Memcmp<uint32_t>, //
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
     generic::Memcmp<uint64_t>,
-#endif // LLVM_LIBC_HAS_UINT64
+#endif // LIBC_TYPES_HAS_INT64
     generic::MemcmpSequence<uint16_t, uint8_t>,
     generic::MemcmpSequence<uint32_t, uint16_t, uint8_t>, //
 #endif // LIBC_TARGET_ARCH_IS_ARM

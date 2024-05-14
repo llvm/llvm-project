@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify -pedantic
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify -pedantic
 enum e {A,
         B = 42LL << 32,        // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
       C = -4, D = 12456 };
@@ -167,3 +168,27 @@ enum struct GH42372_1 { // expected-error {{expected identifier or '{'}}
 enum class GH42372_2 {
   One
 };
+
+#if __STDC_VERSION__ >= 202311L
+// FIXME: GCC picks __uint128_t as the underlying type for the enumeration
+// value and Clang picks unsigned long long.
+// FIXME: Clang does not yet implement WG14 N3029, so the warning about
+// restricting enumerator values to 'int' is not correct.
+enum GH59352 { // expected-warning {{enumeration values exceed range of largest integer}}
+ BigVal = 66666666666666666666wb // expected-warning {{ISO C restricts enumerator values to range of 'int' (66666666666666666666 is too large)}}
+};
+_Static_assert(BigVal == 66666666666666666666wb); /* expected-error {{static assertion failed due to requirement 'BigVal == 66666666666666666666wb'}}
+                                                     expected-note {{expression evaluates to '11326434445538011818 == 66666666666666666666'}}
+                                                   */
+_Static_assert(
+    _Generic(BigVal,                             // expected-error {{static assertion failed}}
+    _BitInt(67) : 0,
+    __INTMAX_TYPE__ : 0,
+    __UINTMAX_TYPE__ : 0,
+    long long : 0,
+    unsigned long long : 0,
+    __int128_t : 0,
+    __uint128_t : 1
+    )
+);
+#endif // __STDC_VERSION__ >= 202311L

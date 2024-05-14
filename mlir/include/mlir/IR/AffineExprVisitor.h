@@ -222,7 +222,7 @@ private:
       walkPostOrder(expr.getLHS());
     }
     if constexpr (std::is_same<RetTy, WalkResult>::value) {
-      if (walkPostOrder(expr.getLHS()).wasInterrupted())
+      if (walkPostOrder(expr.getRHS()).wasInterrupted())
         return WalkResult::interrupt();
       return WalkResult::advance();
     } else {

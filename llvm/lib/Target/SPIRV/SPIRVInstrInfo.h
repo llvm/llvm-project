@@ -53,6 +53,14 @@ public:
                    bool KillSrc) const override;
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 };
+
+namespace SPIRV {
+enum AsmComments {
+  // It is a half type
+  ASM_PRINTER_WIDTH16 = MachineInstr::TAsmComments
+};
+} // namespace SPIRV
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVINSTRINFO_H

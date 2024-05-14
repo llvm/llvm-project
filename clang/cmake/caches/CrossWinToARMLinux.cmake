@@ -29,6 +29,11 @@
 #  cmake --build . --target check-cxxabi-<TOOLCHAIN_TARGET_TRIPLE>
 #  cmake --build . --target check-unwind-<TOOLCHAIN_TARGET_TRIPLE>
 #  cmake --build . --target check-cxx-<TOOLCHAIN_TARGET_TRIPLE>
+# (another way to execute the tests)
+# python bin/llvm-lit.py -v --threads=32 runtimes/runtimes-<TOOLCHAIN_TARGET_TRIPLE>bins/libunwind/test  2>&1 | tee libunwind-tests.log
+# python bin/llvm-lit.py -v --threads=32 runtimes/runtimes-<TOOLCHAIN_TARGET_TRIPLE>-bins/libcxxabi/test 2>&1 | tee libcxxabi-tests.log
+# python bin/llvm-lit.py -v --threads=32 runtimes/runtimes-<TOOLCHAIN_TARGET_TRIPLE>-bins/libcxx/test    2>&1 | tee libcxx-tests.log
+
 
 # LLVM_PROJECT_DIR is the path to the llvm-project directory.
 # The right way to compute it would probably be to use "${CMAKE_SOURCE_DIR}/../",
@@ -42,9 +47,6 @@ if (NOT DEFINED DEFAULT_SYSROOT)
   message(WARNING "DEFAULT_SYSROOT must be specified for the cross toolchain build.")
 endif()
 
-if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
-  set(LLVM_TARGETS_TO_BUILD "ARM" CACHE STRING "")
-endif()
 if (NOT DEFINED LLVM_ENABLE_ASSERTIONS)
   set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
 endif()
@@ -56,7 +58,7 @@ if (NOT DEFINED LLVM_ENABLE_RUNTIMES)
 endif()
 
 if (NOT DEFINED TOOLCHAIN_TARGET_TRIPLE)
-  set(TOOLCHAIN_TARGET_TRIPLE "armv7-unknown-linux-gnueabihf")
+  set(TOOLCHAIN_TARGET_TRIPLE "aarch64-unknown-linux-gnu")
 else()
   #NOTE: we must normalize specified target triple to a fully specified triple,
   # including the vendor part. It is necessary to synchronize the runtime library
@@ -74,11 +76,22 @@ else()
   string(REPLACE ";" "-" TOOLCHAIN_TARGET_TRIPLE "${TOOLCHAIN_TARGET_TRIPLE}")
 endif()
 
+message(STATUS "Toolchain target triple: ${TOOLCHAIN_TARGET_TRIPLE}")
+
+if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
+  if ("${TOOLCHAIN_TARGET_TRIPLE}" MATCHES "^(armv|arm32)+")
+    set(LLVM_TARGETS_TO_BUILD "ARM" CACHE STRING "")
+  endif()
+  if ("${TOOLCHAIN_TARGET_TRIPLE}" MATCHES "^(aarch64|arm64)+")
+    set(LLVM_TARGETS_TO_BUILD "AArch64" CACHE STRING "")
+  endif()
+endif()
+
+message(STATUS "Toolchain target to build: ${LLVM_TARGETS_TO_BUILD}")
+
 if (NOT DEFINED CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 endif()
-
-message(STATUS "Toolchain target triple: ${TOOLCHAIN_TARGET_TRIPLE}")
 
 set(CMAKE_CROSSCOMPILING                    ON CACHE BOOL "")
 set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRING "")
@@ -86,12 +99,15 @@ set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRIN
 set(CMAKE_C_COMPILER_TARGET                 "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 set(CMAKE_CXX_COMPILER_TARGET               "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 
-set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR      ON CACHE BOOL "")
 set(LLVM_DEFAULT_TARGET_TRIPLE              "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_TARGET_ARCH                        "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_LIT_ARGS                           "-vv ${LLVM_LIT_ARGS}" CACHE STRING "" FORCE)
 
+set(CLANG_DEFAULT_CXX_STDLIB                "libc++" CACHE STRING "")
 set(CLANG_DEFAULT_LINKER                    "lld" CACHE STRING "")
+set(CLANG_DEFAULT_OBJCOPY                   "llvm-objcopy" CACHE STRING "")
+set(CLANG_DEFAULT_RTLIB                     "compiler-rt" CACHE STRING "")
+set(CLANG_DEFAULT_UNWINDLIB                 "libunwind" CACHE STRING "")
 
 if(WIN32)
   set(CMAKE_MSVC_RUNTIME_LIBRARY            "MultiThreaded" CACHE STRING "")
@@ -109,9 +125,10 @@ set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSTEM_NAME                       
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_SYSROOT                             "${DEFAULT_SYSROOT}"  CACHE STRING "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_INSTALL_RPATH                       "${RUNTIMES_INSTALL_RPATH}"  CACHE STRING "")
 set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_CMAKE_BUILD_WITH_INSTALL_RPATH            ON  CACHE BOOL "")
-
+set(BUILTINS_${TOOLCHAIN_TARGET_TRIPLE}_LLVM_CMAKE_DIR                            "${LLVM_PROJECT_DIR}/llvm/cmake/modules" CACHE PATH "")
 
 set(LLVM_RUNTIME_TARGETS                    "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR      ON CACHE BOOL "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LLVM_ENABLE_RUNTIMES                      "${LLVM_ENABLE_RUNTIMES}" CACHE STRING "")
 
@@ -125,13 +142,16 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_SANITIZERS            
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_XRAY                    OFF CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_LIBFUZZER               OFF CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_PROFILE                 OFF CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_CRT                     OFF CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_CRT                     ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_BUILD_ORC                     OFF CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_DEFAULT_TARGET_ONLY           ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_INCLUDE_TESTS                 ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_CAN_EXECUTE_TESTS             ON CACHE BOOL "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_USE_BUILTINS_LIBRARY          ON CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_CXX_LIBRARY                   libcxx CACHE STRING "")
+# Tell Clang to seach C++ headers alongside with the just-built binaries for the C++ compiler-rt tests.
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_TEST_COMPILER_CFLAGS          "--stdlib=libc++" CACHE STRING "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_USE_COMPILER_RT                 ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_ENABLE_SHARED                   OFF CACHE BOOL "")
@@ -148,8 +168,10 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ABI_VERSION                      
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
 
-
+# Avoid searching for the python3 interpreter during the runtimes configuration for the cross builds.
+# It starts searching the python3 package using the target's sysroot path, that usually is not compatible with the build host.
 find_package(Python3 COMPONENTS Interpreter)
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_Python3_EXECUTABLE                        ${Python3_EXECUTABLE} CACHE PATH "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_TEST_PARAMS_default "${RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_TEST_PARAMS}")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_TEST_PARAMS_default "${RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_TEST_PARAMS}")

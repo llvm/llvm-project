@@ -1,4 +1,4 @@
-//===--- ByteCodeEmitter.h - Instruction emitter for the VM ---------*- C++ -*-===//
+//===--- ByteCodeEmitter.h - Instruction emitter for the VM -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,7 +62,7 @@ protected:
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.
-  unsigned LambdaThisCapture = 0;
+  ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 

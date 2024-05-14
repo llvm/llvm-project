@@ -158,7 +158,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return a vector of all the static or dynamic sizes of the op.
+        Return a vector of all the static or dynamic offsets of the op.
       }],
       /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
       /*methodName=*/"getMixedOffsets",

@@ -66,7 +66,7 @@ void findDevirtualizableCallsForTypeCheckedLoad(
 /// Used for example from GlobalDCE to find an entry in a C++ vtable that
 /// matches a vcall offset.
 ///
-/// To support Swift vtables, getPointerAtOffset can see through "relative
+/// To support relative vtables, getPointerAtOffset can see through "relative
 /// pointers", i.e. (sub-)expressions of the form of:
 ///
 /// @symbol = ... {
@@ -87,8 +87,8 @@ std::pair<Function *, Constant *>
 getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
 
 /// Finds the same "relative pointer" pattern as described above, where the
-/// target is `F`, and replaces the entire pattern with a constant zero.
-void replaceRelativePointerUsersWithZero(Function *F);
+/// target is `C`, and replaces the entire pattern with a constant zero.
+void replaceRelativePointerUsersWithZero(Constant *C);
 
 } // namespace llvm
 

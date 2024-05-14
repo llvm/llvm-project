@@ -9,17 +9,19 @@
 //  This file implements semantic analysis for C++ lambda expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/SemaLambda.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
-#include "clang/Sema/SemaLambda.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -1393,11 +1395,11 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
-    CUDASetLambdaAttrs(Method);
+    CUDA().SetLambdaAttrs(Method);
 
   // OpenMP lambdas might get assumumption attributes.
   if (LangOpts.OpenMP)
-    ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
 
   handleLambdaNumbering(Class, Method);
 
@@ -2136,7 +2138,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       CaptureInits.push_back(Init.get());
 
       if (LangOpts.CUDA)
-        CUDACheckLambdaCapture(CallOperator, From);
+        CUDA().CheckLambdaCapture(CallOperator, From);
     }
 
     Class->setCaptures(Context, Captures);

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -39,7 +40,7 @@ struct TestResourceBlobManagerInterface
 
 namespace {
 enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
-}
+} // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
 struct TestBytecodeDialectInterface : public BytecodeDialectInterface {

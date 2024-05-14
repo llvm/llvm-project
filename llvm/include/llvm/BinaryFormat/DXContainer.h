@@ -103,8 +103,8 @@ struct PartHeader {
 
 struct BitcodeHeader {
   uint8_t Magic[4];     // ACSII "DXIL".
-  uint8_t MajorVersion; // DXIL version.
   uint8_t MinorVersion; // DXIL version.
+  uint8_t MajorVersion; // DXIL version.
   uint16_t Unused;
   uint32_t Offset; // Offset to LLVM bitcode (from start of header).
   uint32_t Size;   // Size of LLVM bitcode (in bytes).
@@ -119,8 +119,7 @@ struct BitcodeHeader {
 };
 
 struct ProgramHeader {
-  uint8_t MinorVersion : 4;
-  uint8_t MajorVersion : 4;
+  uint8_t Version;
   uint8_t Unused;
   uint16_t ShaderKind;
   uint32_t Size; // Size in uint32_t words including this header.
@@ -130,6 +129,11 @@ struct ProgramHeader {
     sys::swapByteOrder(ShaderKind);
     sys::swapByteOrder(Size);
     Bitcode.swapBytes();
+  }
+  uint8_t getMajorVersion() { return Version >> 4; }
+  uint8_t getMinorVersion() { return Version & 0xF; }
+  static uint8_t getVersion(uint8_t Major, uint8_t Minor) {
+    return (Major << 4) | Minor;
   }
 };
 
@@ -141,7 +145,7 @@ enum class PartType {
 #include "DXContainerConstants.def"
 };
 
-#define SHADER_FLAG(Num, Val, Str) Val = 1ull << Num,
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str) Val = 1ull << Num,
 enum class FeatureFlags : uint64_t {
 #include "DXContainerConstants.def"
 };
@@ -424,6 +428,22 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 };
 
 } // namespace v2
+
+namespace v3 {
+struct RuntimeInfo : public v2::RuntimeInfo {
+  uint32_t EntryNameOffset;
+
+  void swapBytes() {
+    v2::RuntimeInfo::swapBytes();
+    sys::swapByteOrder(EntryNameOffset);
+  }
+
+  void swapBytes(Triple::EnvironmentType Stage) {
+    v2::RuntimeInfo::swapBytes(Stage);
+  }
+};
+
+} // namespace v3
 } // namespace PSV
 
 #define COMPONENT_PRECISION(Val, Enum) Enum = Val,

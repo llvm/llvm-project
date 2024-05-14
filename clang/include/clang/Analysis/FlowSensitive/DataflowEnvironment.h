@@ -30,6 +30,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -41,6 +42,15 @@ enum class ComparisonResult {
   Same,
   Different,
   Unknown,
+};
+
+/// The result of a `widen` operation.
+struct WidenResult {
+  /// Non-null pointer to a potentially widened version of the input value.
+  Value *V;
+  /// Whether `V` represents a "change" (that is, a different value) with
+  /// respect to the previous value in the sequence.
+  LatticeEffect Effect;
 };
 
 /// Holds the state of the program (store and heap) at a given program point.
@@ -74,35 +84,9 @@ public:
     virtual ComparisonResult compare(QualType Type, const Value &Val1,
                                      const Environment &Env1, const Value &Val2,
                                      const Environment &Env2) {
-      // FIXME: Consider adding QualType to RecordValue and removing the Type
+      // FIXME: Consider adding `QualType` to `Value` and removing the `Type`
       // argument here.
       return ComparisonResult::Unknown;
-    }
-
-    /// DEPRECATED. Override `join` and/or `widen`, instead.
-    ///
-    /// Modifies `MergedVal` to approximate both `Val1` and `Val2`. This could
-    /// be a strict lattice join or a more general widening operation.
-    ///
-    /// If this function returns true, `MergedVal` will be assigned to a storage
-    /// location of type `Type` in `MergedEnv`.
-    ///
-    /// `Env1` and `Env2` can be used to query child values and path condition
-    /// implications of `Val1` and `Val2` respectively.
-    ///
-    /// Requirements:
-    ///
-    ///  `Val1` and `Val2` must be distinct.
-    ///
-    ///  `Val1`, `Val2`, and `MergedVal` must model values of type `Type`.
-    ///
-    ///  `Val1` and `Val2` must be assigned to the same storage location in
-    ///  `Env1` and `Env2` respectively.
-    virtual bool merge(QualType Type, const Value &Val1,
-                       const Environment &Env1, const Value &Val2,
-                       const Environment &Env2, Value &MergedVal,
-                       Environment &MergedEnv) {
-      return true;
     }
 
     /// Modifies `JoinedVal` to approximate both `Val1` and `Val2`. This should
@@ -121,11 +105,7 @@ public:
     ///  `Env1` and `Env2` respectively.
     virtual void join(QualType Type, const Value &Val1, const Environment &Env1,
                       const Value &Val2, const Environment &Env2,
-                      Value &JoinedVal, Environment &JoinedEnv) {
-      [[maybe_unused]] bool ShouldKeep =
-          merge(Type, Val1, Env1, Val2, Env2, JoinedVal, JoinedEnv);
-      assert(ShouldKeep && "dropping merged value is unsupported");
-    }
+                      Value &JoinedVal, Environment &JoinedEnv) {}
 
     /// This function may widen the current value -- replace it with an
     /// approximation that can reach a fixed point more quickly than iterated
@@ -134,14 +114,17 @@ public:
     /// serve as a comparison operation, by indicating whether the widened value
     /// is equivalent to the previous value.
     ///
-    /// Returns either:
-    ///
-    ///   `nullptr`, if this value is not of interest to the model, or
-    ///
-    ///   `&Prev`, if the widened value is equivalent to `Prev`, or
-    ///
-    ///   A non-null value that approximates `Current`. `Prev` is available to
-    ///   inform the chosen approximation.
+    /// Returns one of the folowing:
+    /// *  `std::nullopt`, if this value is not of interest to the
+    ///     model.
+    /// *  A `WidenResult` with:
+    ///    *  A non-null `Value *` that points either to `Current` or a widened
+    ///       version of `Current`. This value must be consistent with
+    ///       the flow condition of `CurrentEnv`. We particularly caution
+    ///       against using `Prev`, which is rarely consistent.
+    ///    *  A `LatticeEffect` indicating whether the value should be
+    ///       considered a new value (`Changed`) or one *equivalent* (if not
+    ///       necessarily equal) to `Prev` (`Unchanged`).
     ///
     /// `PrevEnv` and `CurrentEnv` can be used to query child values and path
     /// condition implications of `Prev` and `Current`, respectively.
@@ -152,17 +135,19 @@ public:
     ///
     ///  `Prev` and `Current` must be assigned to the same storage location in
     ///  `PrevEnv` and `CurrentEnv`, respectively.
-    virtual Value *widen(QualType Type, Value &Prev, const Environment &PrevEnv,
-                         Value &Current, Environment &CurrentEnv) {
+    virtual std::optional<WidenResult> widen(QualType Type, Value &Prev,
+                                             const Environment &PrevEnv,
+                                             Value &Current,
+                                             Environment &CurrentEnv) {
       // The default implementation reduces to just comparison, since comparison
       // is required by the API, even if no widening is performed.
       switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
-        case ComparisonResult::Same:
-          return &Prev;
-        case ComparisonResult::Different:
-          return &Current;
-        case ComparisonResult::Unknown:
-          return nullptr;
+      case ComparisonResult::Unknown:
+        return std::nullopt;
+      case ComparisonResult::Same:
+        return WidenResult{&Current, LatticeEffect::Unchanged};
+      case ComparisonResult::Different:
+        return WidenResult{&Current, LatticeEffect::Changed};
       }
       llvm_unreachable("all cases in switch covered");
     }
@@ -240,6 +225,14 @@ public:
   bool equivalentTo(const Environment &Other,
                     Environment::ValueModel &Model) const;
 
+  /// How to treat expression state (`ExprToLoc` and `ExprToVal`) in a join.
+  /// If the join happens within a full expression, expression state should be
+  /// kept; otherwise, we can discard it.
+  enum ExprJoinBehavior {
+    DiscardExprState,
+    KeepExprState,
+  };
+
   /// Joins two environments by taking the intersection of storage locations and
   /// values that are stored in them. Distinct values that are assigned to the
   /// same storage locations in `EnvA` and `EnvB` are merged using `Model`.
@@ -248,7 +241,23 @@ public:
   ///
   ///  `EnvA` and `EnvB` must use the same `DataflowAnalysisContext`.
   static Environment join(const Environment &EnvA, const Environment &EnvB,
-                          Environment::ValueModel &Model);
+                          Environment::ValueModel &Model,
+                          ExprJoinBehavior ExprBehavior);
+
+  /// Returns a value that approximates both `Val1` and `Val2`, or null if no
+  /// such value can be produced.
+  ///
+  /// `Env1` and `Env2` can be used to query child values and path condition
+  /// implications of `Val1` and `Val2` respectively. The joined value will be
+  /// produced in `JoinedEnv`.
+  ///
+  /// Requirements:
+  ///
+  ///  `Val1` and `Val2` must model values of type `Type`.
+  static Value *joinValues(QualType Ty, Value *Val1, const Environment &Env1,
+                           Value *Val2, const Environment &Env2,
+                           Environment &JoinedEnv,
+                           Environment::ValueModel &Model);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
@@ -257,8 +266,8 @@ public:
   ///
   ///  `PrevEnv` must be the immediate previous version of the environment.
   ///  `PrevEnv` and `this` must use the same `DataflowAnalysisContext`.
-  LatticeJoinEffect widen(const Environment &PrevEnv,
-                          Environment::ValueModel &Model);
+  LatticeEffect widen(const Environment &PrevEnv,
+                      Environment::ValueModel &Model);
 
   // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
   // `getStableStorageLocation`, or something more appropriate.
@@ -351,17 +360,6 @@ public:
   /// location of the result object to pass in `this`, even though prvalues are
   /// otherwise not associated with storage locations.
   ///
-  /// FIXME: Currently, this simply returns a stable storage location for `E`,
-  /// but this doesn't do the right thing in scenarios like the following:
-  /// ```
-  /// MyClass c = some_condition()? MyClass(foo) : MyClass(bar);
-  /// ```
-  /// Here, `MyClass(foo)` and `MyClass(bar)` will have two different storage
-  /// locations, when in fact their storage locations should be the same.
-  /// Eventually, we want to propagate storage locations from result objects
-  /// down to the prvalues that initialize them, similar to the way that this is
-  /// done in Clang's CodeGen.
-  ///
   /// Requirements:
   ///  `E` must be a prvalue of record type.
   RecordStorageLocation &
@@ -424,20 +422,15 @@ public:
   /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
-  /// If `Type` is a class, struct, or union type, creates values for all
-  /// modeled fields (including synthetic fields) and calls `setValue()` to
-  /// associate the `RecordValue` with its storage location
-  /// (`RecordValue::getLoc()`).
-  ///
   /// If `Type` is one of the following types, this function will always return
   /// a non-null pointer:
   /// - `bool`
   /// - Any integer type
-  /// - Any class, struct, or union type
   ///
   /// Requirements:
   ///
-  ///  `Type` must not be null.
+  ///  - `Type` must not be null.
+  ///  - `Type` must not be a reference type or record type.
   Value *createValue(QualType Type);
 
   /// Creates an object (i.e. a storage location with an associated value) of
@@ -466,7 +459,23 @@ public:
     return createObjectInternal(&D, D.getType(), InitExpr);
   }
 
+  /// Initializes the fields (including synthetic fields) of `Loc` with values,
+  /// unless values of the field type are not supported or we hit one of the
+  /// limits at which we stop producing values.
+  /// If a field already has a value, that value is preserved.
+  /// If `Type` is provided, initializes only those fields that are modeled for
+  /// `Type`; this is intended for use in cases where `Loc` is a derived type
+  /// and we only want to initialize the fields of a base type.
+  void initializeFieldsWithValues(RecordStorageLocation &Loc, QualType Type);
+  void initializeFieldsWithValues(RecordStorageLocation &Loc) {
+    initializeFieldsWithValues(Loc, Loc.getType());
+  }
+
   /// Assigns `Val` as the value of `Loc` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be a `RecordStorageLocation`.
   void setValue(const StorageLocation &Loc, Value &Val);
 
   /// Clears any association between `Loc` and a value in the environment.
@@ -476,20 +485,24 @@ public:
   ///
   /// Requirements:
   ///
-  ///  - `E` must be a prvalue
-  ///  - If `Val` is a `RecordValue`, its `RecordStorageLocation` must be
-  ///    `getResultObjectLocation(E)`. An exception to this is if `E` is an
-  ///    expression that originally creates a `RecordValue` (such as a
-  ///    `CXXConstructExpr` or `CallExpr`), as these establish the location of
-  ///    the result object in the first place.
+  ///  - `E` must be a prvalue.
+  ///  - `E` must not have record type.
   void setValue(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be a `RecordStorageLocation`.
   Value *getValue(const StorageLocation &Loc) const;
 
   /// Equivalent to `getValue(getStorageLocation(D))` if `D` is assigned a
   /// storage location in the environment, otherwise returns null.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must not have record type.
   Value *getValue(const ValueDecl &D) const;
 
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
@@ -655,6 +668,9 @@ public:
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
 
 private:
+  using PrValueToResultObject =
+      llvm::DenseMap<const Expr *, RecordStorageLocation *>;
+
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
 
@@ -681,6 +697,16 @@ private:
                                           llvm::DenseSet<QualType> &Visited,
                                           int Depth, int &CreatedValuesCount);
 
+  /// Initializes the fields (including synthetic fields) of `Loc` with values,
+  /// unless values of the field type are not supported or we hit one of the
+  /// limits at which we stop producing values (controlled by `Visited`,
+  /// `Depth`, and `CreatedValuesCount`). If `Type` is different from
+  /// `Loc.getType()`, initializes only those fields that are modeled for
+  /// `Type`.
+  void initializeFieldsWithValues(RecordStorageLocation &Loc, QualType Type,
+                                  llvm::DenseSet<QualType> &Visited, int Depth,
+                                  int &CreatedValuesCount);
+
   /// Shared implementation of `createObject()` overloads.
   /// `D` and `InitExpr` may be null.
   StorageLocation &createObjectInternal(const ValueDecl *D, QualType Ty,
@@ -696,22 +722,45 @@ private:
   /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
   void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
 
+  static PrValueToResultObject
+  buildResultObjectMap(DataflowAnalysisContext *DACtx,
+                       const FunctionDecl *FuncDecl,
+                       RecordStorageLocation *ThisPointeeLoc,
+                       RecordStorageLocation *LocForRecordReturnVal);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
-  // FIXME: move the fields `CallStack`, `ReturnVal`, `ReturnLoc` and
-  // `ThisPointeeLoc` into a separate call-context object, shared between
-  // environments in the same call.
+  // FIXME: move the fields `CallStack`, `ResultObjectMap`, `ReturnVal`,
+  // `ReturnLoc` and `ThisPointeeLoc` into a separate call-context object,
+  // shared between environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
   // `DeclContext` of the block being analysed if provided.
   std::vector<const DeclContext *> CallStack;
 
-  // Value returned by the function (if it has non-reference return type).
+  // Maps from prvalues of record type to their result objects. Shared between
+  // all environments for the same function.
+  // FIXME: It's somewhat unsatisfactory that we have to use a `shared_ptr`
+  // here, though the cost is acceptable: The overhead of a `shared_ptr` is
+  // incurred when it is copied, and this happens only relatively rarely (when
+  // we fork the environment). The need for a `shared_ptr` will go away once we
+  // introduce a shared call-context object (see above).
+  std::shared_ptr<PrValueToResultObject> ResultObjectMap;
+
+  // The following three member variables handle various different types of
+  // return values.
+  // - If the return type is not a reference and not a record: Value returned
+  //   by the function.
   Value *ReturnVal = nullptr;
-  // Storage location of the reference returned by the function (if it has
-  // reference return type).
+  // - If the return type is a reference: Storage location of the reference
+  //   returned by the function.
   StorageLocation *ReturnLoc = nullptr;
+  // - If the return type is a record or the function being analyzed is a
+  //   constructor: Storage location into which the return value should be
+  //   constructed.
+  RecordStorageLocation *LocForRecordReturnVal = nullptr;
+
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
@@ -744,16 +793,6 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
 /// member expression was written using `->`.
 RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                              const Environment &Env);
-
-/// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
-/// order in which they appear in `InitListExpr::inits()`.
-std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
-
-/// Associates a new `RecordValue` with `Loc` and returns the new value.
-RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
-
-/// Associates a new `RecordValue` with `Expr` and returns the new value.
-RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

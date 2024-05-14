@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
 #include "IntegralAP.h"
@@ -22,7 +21,44 @@
 using namespace clang;
 using namespace clang::interp;
 
+/// Unevaluated builtins don't get their arguments put on the stack
+/// automatically. They instead operate on the AST of their Call
+/// Expression.
+/// Similar information is available via ASTContext::BuiltinInfo,
+/// but that is not correct for our use cases.
+static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
+  return BuiltinID == Builtin::BI__builtin_classify_type;
+}
+
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+  bool IsLambdaStaticInvoker = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isLambdaStaticInvoker()) {
+    // For a lambda static invoker, we might have to pick a specialized
+    // version if the lambda is generic. In that case, the picked function
+    // will *NOT* be a static invoker anymore. However, it will still
+    // be a non-static member function, this (usually) requiring an
+    // instance pointer. We suppress that later in this function.
+    IsLambdaStaticInvoker = true;
+
+    const CXXRecordDecl *ClosureClass = MD->getParent();
+    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    if (ClosureClass->isGenericLambda()) {
+      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
+      assert(MD->isFunctionTemplateSpecialization() &&
+             "A generic lambda's static-invoker function must be a "
+             "template specialization");
+      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
+      FunctionTemplateDecl *CallOpTemplate =
+          LambdaCallOp->getDescribedFunctionTemplate();
+      void *InsertPos = nullptr;
+      const FunctionDecl *CorrespondingCallOpSpecialization =
+          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+      assert(CorrespondingCallOpSpecialization);
+      FuncDecl = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+    }
+  }
+
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
@@ -46,11 +82,13 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isImplicitObjectMemberFunction()) {
-      HasThisPointer = true;
-      ParamTypes.push_back(PT_Ptr);
-      ParamOffsets.push_back(ParamOffset);
-      ParamOffset += align(primSize(PT_Ptr));
+    if (!IsLambdaStaticInvoker) {
+      HasThisPointer = MD->isInstance();
+      if (MD->isImplicitObjectMemberFunction()) {
+        ParamTypes.push_back(PT_Ptr);
+        ParamOffsets.push_back(ParamOffset);
+        ParamOffset += align(primSize(PT_Ptr));
+      }
     }
 
     // Set up lambda capture to closure record field mapping.
@@ -71,8 +109,12 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      if (LTC)
-        this->LambdaThisCapture = R->getField(LTC)->Offset;
+      if (LTC) {
+        QualType CaptureType = R->getField(LTC)->Decl->getType();
+        this->LambdaThisCapture = {R->getField(LTC)->Offset,
+                                   CaptureType->isReferenceType() ||
+                                       CaptureType->isPointerType()};
+      }
     }
   }
 
@@ -94,7 +136,7 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Func) {
     bool IsUnevaluatedBuiltin = false;
     if (unsigned BI = FuncDecl->getBuiltinID())
-      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+      IsUnevaluatedBuiltin = isUnevaluatedBuiltin(BI);
 
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
@@ -261,10 +303,7 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &S
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
-  // The initializer list forces the expression to be evaluated
-  // for each argument in the variadic template, in order.
-  (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
-
+  (..., emit(P, Code, Args, Success));
   return Success;
 }
 

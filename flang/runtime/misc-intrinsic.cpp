@@ -9,16 +9,16 @@
 #include "flang/Runtime/misc-intrinsic.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstring>
-#include <optional>
 
 namespace Fortran::runtime {
 
 static RT_API_ATTRS void TransferImpl(Descriptor &result,
     const Descriptor &source, const Descriptor &mold, const char *sourceFile,
-    int line, std::optional<std::int64_t> resultExtent) {
+    int line, Fortran::common::optional<std::int64_t> resultExtent) {
   int rank{resultExtent.has_value() ? 1 : 0};
   std::size_t elementBytes{mold.ElementBytes()};
   result.Establish(mold.type(), elementBytes, nullptr, rank, nullptr,
@@ -57,7 +57,7 @@ RT_EXT_API_GROUP_BEGIN
 
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {
-  std::optional<std::int64_t> elements;
+  Fortran::common::optional<std::int64_t> elements;
   if (mold.rank() > 0) {
     if (std::size_t sourceElementBytes{
             source.Elements() * source.ElementBytes()}) {

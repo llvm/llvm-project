@@ -89,8 +89,9 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 
 define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 ; CHECK-LABEL: @overflow_add_positive_const_limit(
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], -255
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], -128
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -144,8 +145,9 @@ define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 
 define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 ; CHECK-LABEL: @overflow_sub_negative_const_limit(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A:%.*]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SUB]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[TMP1]], 255
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUB]], -128
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 8, i32 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

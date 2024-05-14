@@ -76,6 +76,7 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
 
   enum f { three };
   enum f x = __builtin_elementwise_add_sat(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_add_sat(ext, ext);
@@ -134,6 +135,7 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
 
   enum f { three };
   enum f x = __builtin_elementwise_sub_sat(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_sub_sat(ext, ext);
@@ -189,6 +191,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
 
   enum f { three };
   enum f x = __builtin_elementwise_max(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_max(ext, ext);
@@ -244,6 +247,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
 
   enum f { three };
   enum f x = __builtin_elementwise_min(one, three);
+  // expected-warning@-1 {{comparison of different enumeration types ('enum e' and 'enum f')}}
 
   _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
   ext = __builtin_elementwise_min(ext, ext);
@@ -619,6 +623,27 @@ void test_builtin_elementwise_sqrt(int i, float f, double d, float4 v, int3 iv, 
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
 
   uv = __builtin_elementwise_sqrt(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
+void test_builtin_elementwise_tan(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_tan(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_tan();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_tan(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_tan(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_tan(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_tan(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 

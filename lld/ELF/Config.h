@@ -126,7 +126,7 @@ public:
 private:
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
-  void link(llvm::opt::InputArgList &args);
+  template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
   bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
                         uint64_t offsetInArchive, bool lazy);
@@ -138,7 +138,7 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
-  std::optional<InputFile *> armCmseImpLib;
+  InputFile *armCmseImpLib = nullptr;
 
 public:
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
@@ -187,6 +187,7 @@ struct Config {
   llvm::StringRef cmseOutputLib;
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
+  StringRef zPauthReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -222,10 +223,14 @@ struct Config {
   CGProfileSortKind callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
-  llvm::DebugCompressionType compressDebugSections;
+  std::optional<llvm::DebugCompressionType> compressDebugSections;
+  llvm::SmallVector<
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
+      compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
+  bool debugNames;
   bool demangle = true;
   bool dependentLibraries;
   bool disableVerify;
@@ -233,6 +238,7 @@ struct Config {
   bool emitLLVM;
   bool emitRelocs;
   bool enableNewDtags;
+  bool enableNonContiguousRegions;
   bool executeOnly;
   bool exportDynamic;
   bool fixCortexA53Errata843419;
@@ -271,6 +277,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  bool rejectMismatch;
   bool relax;
   bool relaxGP;
   bool relocatable;
@@ -310,6 +317,7 @@ struct Config {
   bool zInitfirst;
   bool zInterpose;
   bool zKeepTextSectionPrefix;
+  bool zLrodataAfterBss;
   bool zNodefaultlib;
   bool zNodelete;
   bool zNodlopen;
@@ -495,6 +503,8 @@ struct Ctx {
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
+
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

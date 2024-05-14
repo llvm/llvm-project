@@ -211,4 +211,4 @@ define amdgpu_kernel void @test_indirect_w_static_stack() !dbg !10 {
 !8 = distinct !DISubprogram(name: "empty_func", scope: !1, file: !1, type: !4, scopeLine: 52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !9 = distinct !DISubprogram(name: "test_indirect_call", scope: !1, file: !1, type: !4, scopeLine: 64, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !10 = distinct !DISubprogram(name: "test_indirect_w_static_stack", scope: !1, file: !1, type: !4, scopeLine: 74, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!11 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!11 = !{i32 1, !"amdhsa_code_object_version", i32 500}

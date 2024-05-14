@@ -15,6 +15,7 @@
 
 #include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdlib>
@@ -136,13 +137,23 @@ public:
   }
   bool shouldShowDialects() const { return showDialectsFlag; }
 
-  /// Set whether to split the input file based on the `// -----` marker into
-  /// pieces and process each chunk independently.
-  MlirOptMainConfig &splitInputFile(bool split = true) {
-    splitInputFileFlag = split;
+  /// Set the marker on which to split the input into chunks and process each
+  /// chunk independently. Input is not split if empty.
+  MlirOptMainConfig &
+  splitInputFile(std::string splitMarker = kDefaultSplitMarker) {
+    splitInputFileFlag = std::move(splitMarker);
     return *this;
   }
-  bool shouldSplitInputFile() const { return splitInputFileFlag; }
+  StringRef inputSplitMarker() const { return splitInputFileFlag; }
+
+  /// Set whether to merge the output chunks into one file using the given
+  /// marker.
+  MlirOptMainConfig &
+  outputSplitMarker(std::string splitMarker = kDefaultSplitMarker) {
+    outputSplitMarkerFlag = std::move(splitMarker);
+    return *this;
+  }
+  StringRef outputSplitMarker() const { return outputSplitMarkerFlag; }
 
   /// Disable implicit addition of a top-level module op during parsing.
   MlirOptMainConfig &useExplicitModule(bool useExplicitModule) {
@@ -215,9 +226,12 @@ protected:
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
 
-  /// Split the input file based on the `// -----` marker into pieces and
-  /// process each chunk independently.
-  bool splitInputFileFlag = false;
+  /// Split the input file based on the given marker into chunks and process
+  /// each chunk independently. Input is not split if empty.
+  std::string splitInputFileFlag = "";
+
+  /// Merge output chunks into one file using the given marker.
+  std::string outputSplitMarkerFlag = "";
 
   /// Use an explicit top-level module op during parsing.
   bool useExplicitModuleFlag = false;

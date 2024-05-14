@@ -67,13 +67,8 @@ CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 /// calls). \p VPtr is the virtual table address stored in the objects, and
 /// \p AddressPoints contains address points of vtables to be compared with.
 ///
-/// It's the responsibility of caller to guarantee the transformation
-/// correctness (by specifying \p VPtr and \p AddressPoints properly).
-///
-/// This function doesn't sink the address-calculation instructions of indirect
-/// callee to the indirect call fallback. The subsequent passes (e.g.
-/// inst-combine) should sink them if possible and handle the sink of debug
-/// intrinsics together.
+/// TODO: sink the address-calculation instructions of indirect callee to the
+/// indirect call fallback after transformation.
 CallBase &promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
                                    Function *Callee,
                                    ArrayRef<Constant *> AddressPoints,
@@ -106,10 +101,6 @@ Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
 ///     i8* bitcast (void (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
 ///
 bool tryPromoteCall(CallBase &CB);
-
-/// Predicate and clone the given call site using the given condition.
-CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
-                                  MDNode *BranchWeights);
 
 /// Predicate and clone the given call site.
 ///

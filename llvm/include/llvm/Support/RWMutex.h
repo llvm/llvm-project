@@ -63,6 +63,10 @@ public:
   /// Unconditionally release the lock in reader mode.
   bool unlock_shared();
 
+  /// Attempts to acquire the lock in reader mode. Returns immediately.
+  /// @returns true on successful lock acquisition, false otherwise.
+  bool try_lock_shared();
+
   /// Attempts to unconditionally acquire the lock in reader mode. If the
   /// lock is held by any readers, this method will wait until it can
   /// acquire the lock.
@@ -74,6 +78,10 @@ public:
   /// @returns false if any kind of error occurs, true otherwise.
   /// Unconditionally release the lock in write mode.
   bool unlock();
+
+  /// Attempts to acquire the lock in writer mode. Returns immediately.
+  /// @returns true on successful lock acquisition, false otherwise.
+  bool try_lock();
 
   //@}
   /// @name Platform Dependent Data
@@ -123,6 +131,8 @@ public:
     return true;
   }
 
+  bool try_lock_shared() { return impl.try_lock_shared(); }
+
   bool lock() {
     if (!mt_only || llvm_is_multithreaded()) {
       impl.lock();
@@ -148,6 +158,8 @@ public:
     --writers;
     return true;
   }
+
+  bool try_lock() { return impl.try_lock(); }
 };
 
 typedef SmartRWMutex<false> RWMutex;

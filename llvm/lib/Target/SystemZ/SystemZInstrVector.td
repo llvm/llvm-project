@@ -139,9 +139,9 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1 in {
-    def VL32 : UnaryAliasVRX<load, v32sb, bdxaddr12pair>;
-    def VL64 : UnaryAliasVRX<load, v64db, bdxaddr12pair>;
+  let mayLoad = 1, canFoldAsLoad = 1 in {
+    def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
+    def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
   }
 
   // Load logical element and zero.
@@ -198,12 +198,12 @@ multiclass ReplicatePeephole<Instruction vlrep, ValueType vectype,
                       (scalartype (load bdxaddr12only:$addr)))),
             (vlrep bdxaddr12only:$addr)>;
 }
-defm : ReplicatePeephole<VLREPB, v16i8, anyextloadi8, i32>;
-defm : ReplicatePeephole<VLREPH, v8i16, anyextloadi16, i32>;
-defm : ReplicatePeephole<VLREPF, v4i32, load, i32>;
-defm : ReplicatePeephole<VLREPG, v2i64, load, i64>;
-defm : ReplicatePeephole<VLREPF, v4f32, load, f32>;
-defm : ReplicatePeephole<VLREPG, v2f64, load, f64>;
+defm : ReplicatePeephole<VLREPB, v16i8, z_anyextloadi8, i32>;
+defm : ReplicatePeephole<VLREPH, v8i16, z_anyextloadi16, i32>;
+defm : ReplicatePeephole<VLREPF, v4i32, z_load, i32>;
+defm : ReplicatePeephole<VLREPG, v2i64, z_load, i64>;
+defm : ReplicatePeephole<VLREPF, v4f32, z_load, f32>;
+defm : ReplicatePeephole<VLREPG, v2f64, z_load, f64>;
 
 //===----------------------------------------------------------------------===//
 // Stores
@@ -1561,13 +1561,13 @@ let Predicates = [FeatureVector] in {
 
 // Any-extending loads into i128.
 let Predicates = [FeatureVector] in {
-  def : Pat<(i128 (extloadi8 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_extloadi8 bdxaddr12only:$addr)),
             (VLREPB bdxaddr12only:$addr)>;
-  def : Pat<(i128 (extloadi16 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_extloadi16 bdxaddr12only:$addr)),
             (VLREPH bdxaddr12only:$addr)>;
-  def : Pat<(i128 (extloadi32 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_extloadi32 bdxaddr12only:$addr)),
             (VLREPF bdxaddr12only:$addr)>;
-  def : Pat<(i128 (extloadi64 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_extloadi64 bdxaddr12only:$addr)),
             (VLREPG bdxaddr12only:$addr)>;
 }
 
@@ -1621,13 +1621,13 @@ let Predicates = [FeatureVector] in {
 
 // Zero-extending loads into i128.
 let Predicates = [FeatureVector] in {
-  def : Pat<(i128 (zextloadi8 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_zextloadi8 bdxaddr12only:$addr)),
             (VLEB (VGBM 0), bdxaddr12only:$addr, 15)>;
-  def : Pat<(i128 (zextloadi16 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_zextloadi16 bdxaddr12only:$addr)),
             (VLEH (VGBM 0), bdxaddr12only:$addr, 7)>;
-  def : Pat<(i128 (zextloadi32 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_zextloadi32 bdxaddr12only:$addr)),
             (VLEF (VGBM 0), bdxaddr12only:$addr, 3)>;
-  def : Pat<(i128 (zextloadi64 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_zextloadi64 bdxaddr12only:$addr)),
             (VLEG (VGBM 0), bdxaddr12only:$addr, 1)>;
 }
 
@@ -1663,13 +1663,13 @@ let Predicates = [FeatureVector] in {
 
 // Sign-extending loads into i128.
 let Predicates = [FeatureVector] in {
-  def : Pat<(i128 (sextloadi8 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_sextloadi8 bdxaddr12only:$addr)),
             (VSRAB (VLREPB bdxaddr12only:$addr), (VREPIB 120))>;
-  def : Pat<(i128 (sextloadi16 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_sextloadi16 bdxaddr12only:$addr)),
             (VSRAB (VLREPH bdxaddr12only:$addr), (VREPIB 112))>;
-  def : Pat<(i128 (sextloadi32 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_sextloadi32 bdxaddr12only:$addr)),
             (VSRAB (VLREPF bdxaddr12only:$addr), (VREPIB 96))>;
-  def : Pat<(i128 (sextloadi64 bdxaddr12only:$addr)),
+  def : Pat<(i128 (z_sextloadi64 bdxaddr12only:$addr)),
             (VSRAB (VLREPG bdxaddr12only:$addr), (VREPIB 64))>;
 }
 
@@ -1692,6 +1692,7 @@ let Predicates = [FeatureVector] in
 // Conversions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [FeatureVector] in {
 def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
@@ -1755,6 +1756,7 @@ def : Pat<(i128  (bitconvert (v2i64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v4f32 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v2f64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (f128  VR128:$src))), (i128  VR128:$src)>;
+} // End Predicates = [FeatureVector]
 
 //===----------------------------------------------------------------------===//
 // Replicating scalars

@@ -64,9 +64,10 @@ public:
   /// to evaluate to poison despite having non-poison inputs.
   bool hasPoisonGeneratingFlags() const;
 
-  /// Return true if this operator has poison-generating flags or metadata.
-  /// The latter is only possible for instructions.
-  bool hasPoisonGeneratingFlagsOrMetadata() const;
+  /// Return true if this operator has poison-generating flags,
+  /// return attributes or metadata. The latter two is only possible for
+  /// instructions.
+  bool hasPoisonGeneratingAnnotations() const;
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
@@ -107,6 +108,18 @@ public:
   /// undergo signed overflow, aka the nsw property.
   bool hasNoSignedWrap() const {
     return (SubclassOptionalData & NoSignedWrap) != 0;
+  }
+
+  /// Returns the no-wrap kind of the operation.
+  unsigned getNoWrapKind() const {
+    unsigned NoWrapKind = 0;
+    if (hasNoUnsignedWrap())
+      NoWrapKind |= NoUnsignedWrap;
+
+    if (hasNoSignedWrap())
+      NoWrapKind |= NoSignedWrap;
+
+    return NoWrapKind;
   }
 
   static bool classof(const Instruction *I) {
@@ -392,7 +405,6 @@ class GEPOperator
 
   enum {
     IsInBounds = (1 << 0),
-    // InRangeIndex: bits 1-6
   };
 
   void setIsInBounds(bool B) {
@@ -411,11 +423,7 @@ public:
 
   /// Returns the offset of the index with an inrange attachment, or
   /// std::nullopt if none.
-  std::optional<unsigned> getInRangeIndex() const {
-    if (SubclassOptionalData >> 1 == 0)
-      return std::nullopt;
-    return (SubclassOptionalData >> 1) - 1;
-  }
+  std::optional<ConstantRange> getInRange() const;
 
   inline op_iterator       idx_begin()       { return op_begin()+1; }
   inline const_op_iterator idx_begin() const { return op_begin()+1; }

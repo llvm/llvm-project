@@ -81,7 +81,7 @@ macro(add_scudo_unittest testname)
         "${testname}-${arch}-Test" ${arch}
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         COMPILE_DEPS ${SCUDO_TEST_HEADERS}
-        DEPS llvm_gtest scudo_standalone
+        DEPS scudo_standalone
         RUNTIME ${RUNTIME}
         CFLAGS ${SCUDO_UNITTEST_CFLAGS}
         LINK_FLAGS ${SCUDO_UNITTEST_LINK_FLAGS})
@@ -90,6 +90,7 @@ macro(add_scudo_unittest testname)
 endmacro()
 
 set(SCUDO_UNIT_TEST_SOURCES
+  allocator_config_test.cpp
   atomic_test.cpp
   bytemap_test.cpp
   checksum_test.cpp

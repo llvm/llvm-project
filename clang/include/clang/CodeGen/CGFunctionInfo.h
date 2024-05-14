@@ -564,35 +564,45 @@ class CGFunctionInfo final
   unsigned EffectiveCallingConvention : 8;
 
   /// The clang::CallingConv that this was originally created with.
+  LLVM_PREFERRED_TYPE(CallingConv)
   unsigned ASTCallingConvention : 6;
 
   /// Whether this is an instance method.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InstanceMethod : 1;
 
   /// Whether this is a chain call.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ChainCall : 1;
 
   /// Whether this function is called by forwarding arguments.
   /// This doesn't support inalloca or varargs.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DelegateCall : 1;
 
   /// Whether this function is a CMSE nonsecure call
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CmseNSCall : 1;
 
   /// Whether this function is noreturn.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoReturn : 1;
 
   /// Whether this function is returns-retained.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ReturnsRetained : 1;
 
   /// Whether this function saved caller registers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoCallerSavedRegs : 1;
 
   /// How many arguments to pass inreg.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRegParm : 1;
   unsigned RegParm : 3;
 
   /// Whether this function has nocf_check attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoCfCheck : 1;
 
   /// Log 2 of the maximum vector width.
@@ -604,6 +614,7 @@ class CGFunctionInfo final
   /// passing non-trivial types with inalloca.  Not part of the profile.
   llvm::StructType *ArgStruct;
   unsigned ArgStructAlign : 31;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasExtParameterInfos : 1;
 
   unsigned NumArgs;

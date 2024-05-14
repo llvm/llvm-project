@@ -114,6 +114,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -497,12 +498,15 @@ bool AsmPrinter::doInitialization(Module &M) {
     else
       FileName = M.getSourceFileName();
     if (MAI->hasFourStringsDotFile()) {
-#ifdef PACKAGE_VENDOR
       const char VerStr[] =
-          PACKAGE_VENDOR " " PACKAGE_NAME " version " PACKAGE_VERSION;
-#else
-      const char VerStr[] = PACKAGE_NAME " version " PACKAGE_VERSION;
+#ifdef PACKAGE_VENDOR
+          PACKAGE_VENDOR " "
 #endif
+          PACKAGE_NAME " version " PACKAGE_VERSION
+#ifdef LLVM_REVISION
+                         " (" LLVM_REVISION ")"
+#endif
+          ;
       // TODO: Add timestamp and description.
       OutStreamer->emitFileDirective(FileName, VerStr, "", "");
     } else {
@@ -538,8 +542,10 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
-    emitInlineAsm(M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
-                  TM.Options.MCOptions);
+    emitInlineAsm(
+        M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
+        TM.Options.MCOptions, nullptr,
+        InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
@@ -925,6 +931,27 @@ void AsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
 
 void AsmPrinter::emitFunctionHeaderComment() {}
 
+void AsmPrinter::emitFunctionPrefix(ArrayRef<const Constant *> Prefix) {
+  const Function &F = MF->getFunction();
+  if (!MAI->hasSubsectionsViaSymbols()) {
+    for (auto &C : Prefix)
+      emitGlobalConstant(F.getParent()->getDataLayout(), C);
+    return;
+  }
+  // Preserving prefix-like data on platforms which use subsections-via-symbols
+  // is a bit tricky. Here we introduce a symbol for the prefix-like data
+  // and use the .alt_entry attribute to mark the function's real entry point
+  // as an alternative entry point to the symbol that precedes the function..
+  OutStreamer->emitLabel(OutContext.createLinkerPrivateTempSymbol());
+
+  for (auto &C : Prefix) {
+    emitGlobalConstant(F.getParent()->getDataLayout(), C);
+  }
+
+  // Emit an .alt_entry directive for the actual function symbol.
+  OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
+}
+
 /// EmitFunctionHeader - This method emits the header for the current
 /// function.
 void AsmPrinter::emitFunctionHeader() {
@@ -964,23 +991,8 @@ void AsmPrinter::emitFunctionHeader() {
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
   // Emit the prefix data.
-  if (F.hasPrefixData()) {
-    if (MAI->hasSubsectionsViaSymbols()) {
-      // Preserving prefix data on platforms which use subsections-via-symbols
-      // is a bit tricky. Here we introduce a symbol for the prefix data
-      // and use the .alt_entry attribute to mark the function's real entry point
-      // as an alternative entry point to the prefix-data symbol.
-      MCSymbol *PrefixSym = OutContext.createLinkerPrivateTempSymbol();
-      OutStreamer->emitLabel(PrefixSym);
-
-      emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
-
-      // Emit an .alt_entry directive for the actual function symbol.
-      OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
-    } else {
-      emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
-    }
-  }
+  if (F.hasPrefixData())
+    emitFunctionPrefix({F.getPrefixData()});
 
   // Emit KCFI type information before patchable-function-prefix nops.
   emitKCFITypeId(*MF);
@@ -1012,8 +1024,7 @@ void AsmPrinter::emitFunctionHeader() {
 
     auto *PrologueSig = mdconst::extract<Constant>(MD->getOperand(0));
     auto *TypeHash = mdconst::extract<Constant>(MD->getOperand(1));
-    emitGlobalConstant(F.getParent()->getDataLayout(), PrologueSig);
-    emitGlobalConstant(F.getParent()->getDataLayout(), TypeHash);
+    emitFunctionPrefix({PrologueSig, TypeHash});
   }
 
   if (isVerbose()) {
@@ -1106,25 +1117,21 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
 
   // We assume a single instruction only has a spill or reload, not
   // both.
-  std::optional<unsigned> Size;
+  std::optional<LocationSize> Size;
   if ((Size = MI.getRestoreSize(TII))) {
-    CommentOS << *Size << "-byte Reload\n";
+    CommentOS << Size->getValue() << "-byte Reload\n";
   } else if ((Size = MI.getFoldedRestoreSize(TII))) {
-    if (*Size) {
-      if (*Size == unsigned(MemoryLocation::UnknownSize))
-        CommentOS << "Unknown-size Folded Reload\n";
-      else
-        CommentOS << *Size << "-byte Folded Reload\n";
-    }
+    if (!Size->hasValue())
+      CommentOS << "Unknown-size Folded Reload\n";
+    else if (Size->getValue())
+      CommentOS << Size->getValue() << "-byte Folded Reload\n";
   } else if ((Size = MI.getSpillSize(TII))) {
-    CommentOS << *Size << "-byte Spill\n";
+    CommentOS << Size->getValue() << "-byte Spill\n";
   } else if ((Size = MI.getFoldedSpillSize(TII))) {
-    if (*Size) {
-      if (*Size == unsigned(MemoryLocation::UnknownSize))
-        CommentOS << "Unknown-size Folded Spill\n";
-      else
-        CommentOS << *Size << "-byte Folded Spill\n";
-    }
+    if (!Size->hasValue())
+      CommentOS << "Unknown-size Folded Spill\n";
+    else if (Size->getValue())
+      CommentOS << Size->getValue() << "-byte Folded Spill\n";
   }
 
   // Check for spill-induced copies
@@ -2127,7 +2134,7 @@ void AsmPrinter::emitGlobalGOTEquivs() {
     emitGlobalVariable(GV);
 }
 
-void AsmPrinter::emitGlobalAlias(Module &M, const GlobalAlias &GA) {
+void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   MCSymbol *Name = getSymbol(&GA);
   bool IsFunction = GA.getValueType()->isFunctionTy();
   // Treat bitcasts of functions as functions also. This is important at least
@@ -2929,7 +2936,7 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable");
+  report_fatal_error("unknown special variable with appending linkage");
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each

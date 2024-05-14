@@ -246,8 +246,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: if.then.0:
-; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%cmp>
-; CHECK-NEXT:   BLEND ir<%d> = ir<0>/vp<[[NOT]]> vp<[[PRED]]>/ir<%cmp>
+; CHECK-NEXT:   BLEND ir<%d> = ir<0> vp<[[PRED]]>/ir<%cmp>
 ; CHECK-NEXT:   CLONE ir<%idx> = getelementptr ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR]]>, ir<%d>
@@ -433,7 +432,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>
 ; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:5:3
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
-; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]>, ir<%cmp2>, ir<false>, !dbg /tmp/s.c:5:21
+; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = logical-and vp<[[NOT1]]>, ir<%cmp2>, !dbg /tmp/s.c:5:21
 ; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]>, ir<%cmp1>
 ; CHECK-NEXT:  Successor(s): pred.sdiv
 ; CHECK-EMPTY:
@@ -454,8 +453,8 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.0:
 ; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
-; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = select vp<[[NOT1]]>, vp<[[NOT2]]>, ir<false>
-; CHECK-NEXT:    BLEND ir<%ysd.0> = vp<[[PHI]]>/vp<[[OR1]]> ir<%psd>/vp<[[SEL2]]>
+; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = logical-and vp<[[NOT1]]>, vp<[[NOT2]]>
+; CHECK-NEXT:    BLEND ir<%ysd.0> = vp<[[PHI]]> ir<%psd>/vp<[[SEL2]]>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%isd>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%ysd.0>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -748,8 +747,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.1:
 ; CHECK-NEXT:    WIDEN ir<%fadd> = fadd vp<[[PHI1]]>, vp<[[PHI2]]>
-; CHECK-NEXT:    EMIT vp<[[NOT_COND:%.+]]> = not ir<%ifcond>
-; CHECK-NEXT:    BLEND ir<%st.value> = ir<%ld.value>/vp<[[NOT_COND]]> ir<%fadd>/ir<%ifcond>
+; CHECK-NEXT:    BLEND ir<%st.value> = ir<%ld.value> ir<%fadd>/ir<%ifcond>
 ; CHECK-NEXT:    CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<[[STEPS]]>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%st.addr>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%st.value>

@@ -33,12 +33,12 @@ declare swiftcc void @asyncReturn(ptr)
 declare swiftcc void @asyncSuspend(ptr)
 declare {ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
 
-define swifttailcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) alwaysinline {
-  musttail call swifttailcc void %fnPtr(ptr %async.ctxt)
+define swiftcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) {
+  tail call swiftcc void %fnPtr(ptr %async.ctxt)
   ret void
 }
 
-define ptr @__swift_async_resume_project_context(ptr %ctxt) alwaysinline {
+define ptr @__swift_async_resume_project_context(ptr %ctxt) {
 entry:
   %resume_ctxt = load ptr, ptr %ctxt, align 8
   ret ptr %resume_ctxt
@@ -46,7 +46,7 @@ entry:
 
 
 ; CHECK: %my_async_function.Frame = type { i64, [48 x i8], i64, i64, [16 x i8], ptr, i64, ptr }
-; CHECK: define swifttailcc void @my_async_function
+; CHECK: define swiftcc void @my_async_function
 ; CHECK:  [[T0:%.*]] = getelementptr inbounds %my_async_function.Frame, ptr %async.ctx.frameptr, i32 0, i32 3
 ; CHECK:  [[T1:%.*]] = ptrtoint ptr [[T0]] to i64
 ; CHECK:  [[T2:%.*]] = add i64 [[T1]], 31
@@ -60,7 +60,7 @@ entry:
 ; CHECK:  store i64 2, ptr [[T4]]
 ; CHECK:  store i64 3, ptr [[T9]]
 
-define swifttailcc void @my_async_function(ptr swiftasync %async.ctxt) presplitcoroutine {
+define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) presplitcoroutine {
 entry:
   %tmp = alloca i64, align 8
   %tmp2 = alloca i64, align 16

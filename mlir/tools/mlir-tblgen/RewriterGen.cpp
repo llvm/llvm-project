@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/IndentedOstream.h"
+#include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -18,6 +19,7 @@
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Pattern.h"
 #include "mlir/TableGen/Predicate.h"
+#include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -1518,10 +1520,36 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // the key. This includes both bound and unbound child nodes.
   ChildNodeIndexNameMap childNodeNames;
 
+  // If the argument is a type constraint, then its an operand. Check if the
+  // op's argument is variadic that the argument in the pattern is too.
+  auto checkIfMatchedVariadic = [&](int i) {
+    // FIXME: This does not yet check for variable/leaf case.
+    // FIXME: Change so that native code call can be handled.
+    const auto *operand =
+        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(i));
+    if (!operand || !operand->isVariadic())
+      return;
+
+    auto child = tree.getArgAsNestedDag(i);
+    if (!child)
+      return;
+
+    // Skip over replaceWithValues.
+    while (child.isReplaceWithValue()) {
+      if (!(child = child.getArgAsNestedDag(0)))
+        return;
+    }
+    if (!child.isNativeCodeCall() && !child.isVariadic())
+      PrintFatalError(loc, formatv("op expects variadic operand `{0}`, while "
+                                   "provided is non-variadic",
+                                   resultOp.getArgName(i)));
+  };
+
   // First go through all the child nodes who are nested DAG constructs to
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
   for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
+    checkIfMatchedVariadic(i);
     if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
   }
@@ -1785,7 +1813,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
                     range);
       sizes.push_back(formatv("static_cast<int32_t>({0}.size())", range));
     } else {
-      sizes.push_back("1");
+      sizes.emplace_back("1");
       os << formatv("tblgen_values.push_back(");
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(

@@ -253,34 +253,34 @@ define amdgpu_kernel void @test_default_queue_completion_action_offset_v5_0(ptr 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}
 
 
 ;.
 ; V4: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; V4: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR2]] = { "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR4]] = { "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR5]] = { "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V4: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; V4: attributes #[[ATTR2]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V4: attributes #[[ATTR3]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V4: attributes #[[ATTR4]] = { "amdgpu-no-agpr" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V4: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
 ;.
 ; V5: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; V5: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR2]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR4]] = { "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR5]] = { "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR2]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR3]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR4]] = { "amdgpu-no-agpr" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
 ;.
 ; V6: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; V6: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; V6: attributes #[[ATTR2]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V6: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V6: attributes #[[ATTR4]] = { "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V6: attributes #[[ATTR5]] = { "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V6: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; V6: attributes #[[ATTR2]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V6: attributes #[[ATTR3]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V6: attributes #[[ATTR4]] = { "amdgpu-no-agpr" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V6: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
 ;.
-; V4: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 400}
+; V4: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 400}
 ;.
-; V5: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 500}
+; V5: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
-; V6: [[META0:![0-9]+]] = !{i32 1, !"amdgpu_code_object_version", i32 600}
+; V6: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 ;.
