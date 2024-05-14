@@ -542,6 +542,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     } else if (!MaskEltCount.isScalable())
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
+
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
   if (isa<ScalableVectorType>(V1VTy))
