@@ -281,9 +281,10 @@ m_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or, true>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
+                             /*Commutative*/ true>
 m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_BinaryOr<Op0_t, Op1_t, true>(Op0, Op1);
+  return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t, bool Commutative = false>
@@ -312,10 +313,11 @@ m_And(const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 inline match_combine_or<
-    AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And, true>,
-    BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd, true>>
+    AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And, /*Commutative*/ true>,
+    BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd,
+                              /*Commutative*/ true>>
 m_c_And(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_And<Op0_t, Op1_t, true>(Op0, Op1);
+  return m_And<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
 }
 } // namespace VPlanPatternMatch
 } // namespace llvm
