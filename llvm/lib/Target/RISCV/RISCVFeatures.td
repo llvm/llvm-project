@@ -790,6 +790,14 @@ def FeatureStdExtZvksg
                      "'Zvksg' (shorthand for 'Zvks' and 'Zvkg')",
                      [FeatureStdExtZvks, FeatureStdExtZvkg]>;
 
+def FeatureStdExtZvinsert
+    : SubtargetFeature<"zvinsert", "HasStdExtZvinsert", "true",
+                       "'Zvinsert' (Vector Extension for Moves between Scalars and Vector Elements)">;
+
+def HasStdExtZvinsert : Predicate<"Subtarget->hasStdExtZvinsert()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvinsert),
+                         "'Zvinsert' (Vector Extension for Moves between Scalars and Vector Elements)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
