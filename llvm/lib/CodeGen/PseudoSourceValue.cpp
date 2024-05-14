@@ -124,7 +124,7 @@ const PseudoSourceValue *
 PseudoSourceValueManager::getFixedStack(int FI) {
   // Frame index is often continuously positive, but can be negative. Use
   // zig-zag encoding for dense index into FSValues vector.
-  unsigned Idx = FI >= 0 ? FI << 1 : (-FI - 1) << 1 | 1;
+  unsigned Idx = (2 * unsigned(FI)) ^ (FI >> (sizeof(FI) * 8 - 1));
   if (FSValues.size() <= Idx)
     FSValues.resize(Idx + 1);
   std::unique_ptr<FixedStackPseudoSourceValue> &V = FSValues[Idx];
