@@ -657,6 +657,14 @@ CALL CO_REDUCE
 CALL CO_SUM
 ```
 
+### Inquiry Functions
+ACCESS (GNU extension) is not supported on Windows. Otherwise:
+```
+CHARACTER(LEN=*) :: path = 'path/to/file'
+IF (ACCESS(path, 'rwx')) &
+  ...
+```
+
 ## Non-standard intrinsics
 ### PGI
 ```

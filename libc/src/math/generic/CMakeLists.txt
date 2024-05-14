@@ -1,4 +1,52 @@
 add_entrypoint_object(
+  canonicalize
+  SRCS
+    canonicalize.cpp
+  HDRS
+    ../canonicalize.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  canonicalizef
+  SRCS
+    canonicalizef.cpp
+  HDRS
+    ../canonicalizef.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  canonicalizef128
+  SRCS
+    canonicalizef128.cpp
+  HDRS
+    ../canonicalizef128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  canonicalizel
+  SRCS
+    canonicalizel.cpp
+  HDRS
+    ../canonicalizel.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
   ceil
   SRCS
     ceil.cpp
@@ -47,18 +95,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
-add_object_library(
-  math_utils
-  SRCS
-    math_utils.cpp
-  HDRS
-    math_utils.h
-  DEPENDS
-    libc.include.errno
-    libc.include.math
-    libc.src.errno.errno
-)
-
 add_header_library(
   range_reduction
   HDRS
@@ -91,7 +127,6 @@ add_entrypoint_object(
     ../cosf.h
   DEPENDS
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fenv_impl
@@ -114,7 +149,6 @@ add_entrypoint_object(
   DEPENDS
     .range_reduction
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fenv_impl
@@ -137,7 +171,6 @@ add_entrypoint_object(
   DEPENDS
     .range_reduction
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -159,7 +192,6 @@ add_entrypoint_object(
   DEPENDS
     .range_reduction
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fenv_impl
@@ -362,6 +394,55 @@ add_entrypoint_object(
     roundf128.cpp
   HDRS
     ../roundf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundeven
+  SRCS
+    roundeven.cpp
+  HDRS
+    ../roundeven.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenf
+  SRCS
+    roundevenf.cpp
+  HDRS
+    ../roundevenf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenl
+  SRCS
+    roundevenl.cpp
+  HDRS
+    ../roundevenl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenf128
+  SRCS
+    roundevenf128.cpp
+  HDRS
+    ../roundevenf128.h
   COMPILE_OPTIONS
     -O3
   DEPENDS
@@ -623,7 +704,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -635,7 +716,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -647,7 +728,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  nearbyintf128
+  SRCS
+    nearbyintf128.cpp
+  HDRS
+    ../nearbyintf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_object_library(
@@ -656,8 +750,6 @@ add_object_library(
     exp_utils.h
   SRCS
     exp_utils.cpp
-  DEPENDS
-    .math_utils
 )
 
 add_entrypoint_object(
@@ -673,7 +765,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -688,7 +779,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -724,7 +814,6 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -739,7 +828,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -774,7 +862,6 @@ add_header_library(
     libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
 )
 
 add_entrypoint_object(
@@ -790,6 +877,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp2m1f
+  SRCS
+    exp2m1f.cpp
+  HDRS
+    ../exp2m1f.h
+  DEPENDS
+    .explogxf
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   exp10
   SRCS
     exp10.cpp
@@ -799,7 +907,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -833,7 +940,6 @@ add_header_library(
     libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -860,7 +966,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -896,7 +1001,6 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -913,7 +1017,6 @@ add_entrypoint_object(
     .exp2f_impl
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fenv_impl
@@ -2637,7 +2740,6 @@ add_object_library(
     libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -2807,6 +2909,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atan2f
+  SRCS
+    atan2f.cpp
+  HDRS
+    ../atan2f.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
   scalbn
   SRCS
     scalbn.cpp
@@ -2837,6 +2957,19 @@ add_entrypoint_object(
   HDRS
     ../scalbnl.h
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  scalbnf128
+  SRCS
+    scalbnf128.cpp
+  HDRS
+    ../scalbnf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3

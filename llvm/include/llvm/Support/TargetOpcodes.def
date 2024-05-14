@@ -351,6 +351,9 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUND)
 /// INTRINSIC round to integer intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_LRINT)
 
+/// INTRINSIC long round to integer intrinsic.
+HANDLE_TARGET_OPCODE(G_INTRINSIC_LLRINT)
+
 /// INTRINSIC roundeven intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUNDEVEN)
 
@@ -777,6 +780,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
+
+/// Floating point Tangent.
+HANDLE_TARGET_OPCODE(G_FTAN)
 
 /// Floating point square root.
 HANDLE_TARGET_OPCODE(G_FSQRT)

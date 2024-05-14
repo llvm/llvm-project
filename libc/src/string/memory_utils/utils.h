@@ -14,7 +14,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/endian.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 #include "src/__support/macros/properties/architectures.h"
 
 #include <stddef.h> // size_t
@@ -71,11 +70,11 @@ LIBC_INLINE bool is_disjoint(const void *p1, const void *p2, size_t size) {
   return sdiff >= 0 ? size <= udiff : size <= neg_udiff;
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-#if LIBC_HAS_BUILTIN(__builtin_memset_inline)
+#if __has_builtin(__builtin_memset_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
 #endif
 

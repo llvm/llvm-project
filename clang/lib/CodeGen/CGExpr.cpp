@@ -56,8 +56,13 @@ using namespace CodeGen;
 // Experiment to make sanitizers easier to debug
 static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
     "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check"),
-    llvm::cl::init(false));
+    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."));
+
+// TODO: Introduce frontend options to enabled per sanitizers, similar to
+// `fsanitize-trap`.
+static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+    "ubsan-guard-checks", llvm::cl::Optional,
+    llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
@@ -110,10 +115,16 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
 llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
                                                     const Twine &Name,
                                                     llvm::Value *ArraySize) {
+  llvm::AllocaInst *Alloca;
   if (ArraySize)
-    return Builder.CreateAlloca(Ty, ArraySize, Name);
-  return new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                              ArraySize, Name, AllocaInsertPt);
+    Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
+  else
+    Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
+                                  ArraySize, Name, AllocaInsertPt);
+  if (Allocas) {
+    Allocas->Add(Alloca);
+  }
+  return Alloca;
 }
 
 /// CreateDefaultAlignTempAlloca - This creates an alloca with the
@@ -1616,8 +1627,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
   case Expr::MatrixSubscriptExprClass:
     return EmitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(E));
-  case Expr::OMPArraySectionExprClass:
-    return EmitOMPArraySectionExpr(cast<OMPArraySectionExpr>(E));
+  case Expr::ArraySectionExprClass:
+    return EmitArraySectionExpr(cast<ArraySectionExpr>(E));
   case Expr::ExtVectorElementExprClass:
     return EmitExtVectorElementExpr(cast<ExtVectorElementExpr>(E));
   case Expr::CXXThisExprClass:
@@ -3523,6 +3534,17 @@ void CodeGenFunction::EmitCheck(
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
   }
 
+  if (ClSanitizeGuardChecks) {
+    llvm::Value *Allow =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandler));
+
+    for (llvm::Value **Cond : {&FatalCond, &RecoverableCond, &TrapCond}) {
+      if (*Cond)
+        *Cond = Builder.CreateOr(*Cond, Builder.CreateNot(Allow));
+    }
+  }
+
   if (TrapCond)
     EmitTrapCheck(TrapCond, CheckHandler);
   if (!FatalCond && !RecoverableCond)
@@ -3659,12 +3681,29 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
 // symbol in LTO mode.
 void CodeGenFunction::EmitCfiCheckStub() {
   llvm::Module *M = &CGM.getModule();
-  auto &Ctx = M->getContext();
+  ASTContext &C = getContext();
+  QualType QInt64Ty = C.getIntTypeForBitwidth(64, false);
+
+  FunctionArgList FnArgs;
+  ImplicitParamDecl ArgCallsiteTypeId(C, QInt64Ty, ImplicitParamKind::Other);
+  ImplicitParamDecl ArgAddr(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  ImplicitParamDecl ArgCFICheckFailData(C, C.VoidPtrTy,
+                                        ImplicitParamKind::Other);
+  FnArgs.push_back(&ArgCallsiteTypeId);
+  FnArgs.push_back(&ArgAddr);
+  FnArgs.push_back(&ArgCFICheckFailData);
+  const CGFunctionInfo &FI =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, FnArgs);
+
   llvm::Function *F = llvm::Function::Create(
-      llvm::FunctionType::get(VoidTy, {Int64Ty, Int8PtrTy, Int8PtrTy}, false),
+      llvm::FunctionType::get(VoidTy, {Int64Ty, VoidPtrTy, VoidPtrTy}, false),
       llvm::GlobalValue::WeakAnyLinkage, "__cfi_check", M);
+  CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
+  CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
   F->setAlignment(llvm::Align(4096));
   CGM.setDSOLocal(F);
+
+  llvm::LLVMContext &Ctx = M->getContext();
   llvm::BasicBlock *BB = llvm::BasicBlock::Create(Ctx, "entry", F);
   // CrossDSOCFI pass is not executed if there is no executable code.
   SmallVector<llvm::Value*> Args{F->getArg(2), F->getArg(1)};
@@ -4330,8 +4369,8 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
                                        QualType BaseTy, QualType ElTy,
                                        bool IsLowerBound) {
   LValue BaseLVal;
-  if (auto *ASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParenImpCasts())) {
-    BaseLVal = CGF.EmitOMPArraySectionExpr(ASE, IsLowerBound);
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(Base->IgnoreParenImpCasts())) {
+    BaseLVal = CGF.EmitArraySectionExpr(ASE, IsLowerBound);
     if (BaseTy->isArrayType()) {
       Address Addr = BaseLVal.getAddress(CGF);
       BaseInfo = BaseLVal.getBaseInfo();
@@ -4363,9 +4402,13 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
   return CGF.EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
 }
 
-LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
-                                                bool IsLowerBound) {
-  QualType BaseTy = OMPArraySectionExpr::getBaseOriginalType(E->getBase());
+LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
+                                             bool IsLowerBound) {
+
+  assert(!E->isOpenACCArraySection() &&
+         "OpenACC Array section codegen not implemented");
+
+  QualType BaseTy = ArraySectionExpr::getBaseOriginalType(E->getBase());
   QualType ResultExprTy;
   if (auto *AT = getContext().getAsArrayType(BaseTy))
     ResultExprTy = AT->getElementType();
@@ -4671,7 +4714,7 @@ unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
   for (auto *F : Rec->getDefinition()->fields()) {
     if (I == FieldIndex)
       break;
-    if (F->isUnnamedBitfield())
+    if (F->isUnnamedBitField())
       Skipped++;
     I++;
   }
@@ -5173,6 +5216,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:
@@ -5563,11 +5607,44 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
       break;
     }
 
-    RValue RV = EmitAnyExpr(E->getRHS());
+    // TODO: Can we de-duplicate this code with the corresponding code in
+    // CGExprScalar, similar to the way EmitCompoundAssignmentLValue works?
+    RValue RV;
+    llvm::Value *Previous = nullptr;
+    QualType SrcType = E->getRHS()->getType();
+    // Check if LHS is a bitfield, if RHS contains an implicit cast expression
+    // we want to extract that value and potentially (if the bitfield sanitizer
+    // is enabled) use it to check for an implicit conversion.
+    if (E->getLHS()->refersToBitField()) {
+      llvm::Value *RHS =
+          EmitWithOriginalRHSBitfieldAssignment(E, &Previous, &SrcType);
+      RV = RValue::get(RHS);
+    } else
+      RV = EmitAnyExpr(E->getRHS());
+
     LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+
     if (RV.isScalar())
       EmitNullabilityCheck(LV, RV.getScalarVal(), E->getExprLoc());
-    EmitStoreThroughLValue(RV, LV);
+
+    if (LV.isBitField()) {
+      llvm::Value *Result = nullptr;
+      // If bitfield sanitizers are enabled we want to use the result
+      // to check whether a truncation or sign change has occurred.
+      if (SanOpts.has(SanitizerKind::ImplicitBitfieldConversion))
+        EmitStoreThroughBitfieldLValue(RV, LV, &Result);
+      else
+        EmitStoreThroughBitfieldLValue(RV, LV);
+
+      // If the expression contained an implicit conversion, make sure
+      // to use the value before the scalar conversion.
+      llvm::Value *Src = Previous ? Previous : RV.getScalarVal();
+      QualType DstType = E->getLHS()->getType();
+      EmitBitfieldConversionCheck(Src, SrcType, Result, DstType,
+                                  LV.getBitFieldInfo(), E->getExprLoc());
+    } else
+      EmitStoreThroughLValue(RV, LV);
+
     if (getLangOpts().OpenMP)
       CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(*this,
                                                                 E->getLHS());

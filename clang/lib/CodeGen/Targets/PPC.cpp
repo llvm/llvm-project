@@ -274,7 +274,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
   if (!isa<llvm::GlobalVariable>(GV))
     return;
 
-  auto *GVar = dyn_cast<llvm::GlobalVariable>(GV);
+  auto *GVar = cast<llvm::GlobalVariable>(GV);
   auto GVId = GV->getName();
 
   // Is this a global variable specified by the user as toc-data?

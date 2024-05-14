@@ -266,6 +266,9 @@ def Cos  : DXILOpMapping<12, unary, int_cos,
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Tan  : DXILOpMapping<14, unary, int_tan,
+                         "Returns tangent(theta) for theta in radians.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Exp2 : DXILOpMapping<21, unary, int_exp2,
                          "Returns the base 2 exponential, or 2**x, of the specified value."
                          "exp2(x) = 2**x.",
@@ -273,6 +276,9 @@ def Exp2 : DXILOpMapping<21, unary, int_exp2,
 def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
                          "decimal part of the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Log2 : DXILOpMapping<23, unary, int_log2,
+                         "Returns the base-2 logarithm of the specified value.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Sqrt : DXILOpMapping<24, unary, int_sqrt,
                          "Returns the square root of the specified floating-point"
@@ -282,13 +288,22 @@ def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
                          "Returns the reciprocal of the square root of the specified value."
                          "rsqrt(x) = 1 / sqrt(x).",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Round : DXILOpMapping<26, unary, int_round,
+def Round : DXILOpMapping<26, unary, int_roundeven,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Floor : DXILOpMapping<27, unary, int_floor,
                          "Returns the largest integer that is less than or equal to the input.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Ceil : DXILOpMapping<28, unary, int_ceil,
+                         "Returns the smallest integer that is greater than or equal to the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Trunc : DXILOpMapping<29, unary, int_trunc,
+                         "Returns the specified value truncated to the integer component.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Rbits : DXILOpMapping<30, unary, int_bitreverse,
+                         "Returns the specified value with its bits reversed.",
+                         [llvm_anyint_ty, LLVMMatchType<0>]>;
 def FMax : DXILOpMapping<35, binary, int_maxnum,
                          "Float maximum. FMax(a,b) = a > b ? a : b">;
 def FMin : DXILOpMapping<36, binary, int_minnum,

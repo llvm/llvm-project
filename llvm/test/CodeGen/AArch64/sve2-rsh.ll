@@ -18,8 +18,8 @@ define <vscale x 2 x i64> @neg_urshr_1(<vscale x 2 x i64> %x) {
 define <vscale x 2 x i64> @neg_urshr_2(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
 ; CHECK-LABEL: neg_urshr_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add z0.d, z0.d, #32 // =0x20
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %add = add nuw nsw <vscale x 2 x i64> %x, splat (i64 32)

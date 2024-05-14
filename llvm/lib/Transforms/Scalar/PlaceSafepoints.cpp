@@ -517,7 +517,7 @@ static bool doesNotRequireEntrySafepointBefore(CallBase *Call) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::experimental_gc_statepoint:
     case Intrinsic::experimental_patchpoint_void:
-    case Intrinsic::experimental_patchpoint_i64:
+    case Intrinsic::experimental_patchpoint:
       // The can wrap an actual call which may grow the stack by an unbounded
       // amount or run forever.
       return false;
@@ -591,7 +591,7 @@ static Instruction *findLocationForEntrySafepoint(Function &F,
 const char GCSafepointPollName[] = "gc.safepoint_poll";
 
 static bool isGCSafepointPoll(Function &F) {
-  return F.getName().equals(GCSafepointPollName);
+  return F.getName() == GCSafepointPollName;
 }
 
 /// Returns true if this function should be rewritten to include safepoint

@@ -49,7 +49,7 @@ class LVDWARFReader final : public LVBinaryReader {
 
   // In DWARF v4, the files are 1-indexed.
   // In DWARF v5, the files are 0-indexed.
-  // The ELF reader expects the indexes as 1-indexed.
+  // The DWARF reader expects the indexes as 1-indexed.
   bool IncrementFileIndex = false;
 
   // Address ranges collected for current DIE.

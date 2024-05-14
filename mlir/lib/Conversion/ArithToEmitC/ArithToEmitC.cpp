@@ -39,6 +39,79 @@ public:
   }
 };
 
+class CmpIOpConversion : public OpConversionPattern<arith::CmpIOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  bool needsUnsignedCmp(arith::CmpIPredicate pred) const {
+    switch (pred) {
+    case arith::CmpIPredicate::eq:
+    case arith::CmpIPredicate::ne:
+    case arith::CmpIPredicate::slt:
+    case arith::CmpIPredicate::sle:
+    case arith::CmpIPredicate::sgt:
+    case arith::CmpIPredicate::sge:
+      return false;
+    case arith::CmpIPredicate::ult:
+    case arith::CmpIPredicate::ule:
+    case arith::CmpIPredicate::ugt:
+    case arith::CmpIPredicate::uge:
+      return true;
+    }
+    llvm_unreachable("unknown cmpi predicate kind");
+  }
+
+  emitc::CmpPredicate toEmitCPred(arith::CmpIPredicate pred) const {
+    switch (pred) {
+    case arith::CmpIPredicate::eq:
+      return emitc::CmpPredicate::eq;
+    case arith::CmpIPredicate::ne:
+      return emitc::CmpPredicate::ne;
+    case arith::CmpIPredicate::slt:
+    case arith::CmpIPredicate::ult:
+      return emitc::CmpPredicate::lt;
+    case arith::CmpIPredicate::sle:
+    case arith::CmpIPredicate::ule:
+      return emitc::CmpPredicate::le;
+    case arith::CmpIPredicate::sgt:
+    case arith::CmpIPredicate::ugt:
+      return emitc::CmpPredicate::gt;
+    case arith::CmpIPredicate::sge:
+    case arith::CmpIPredicate::uge:
+      return emitc::CmpPredicate::ge;
+    }
+    llvm_unreachable("unknown cmpi predicate kind");
+  }
+
+  LogicalResult
+  matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = adaptor.getLhs().getType();
+    if (!isa_and_nonnull<IntegerType, IndexType>(type)) {
+      return rewriter.notifyMatchFailure(op, "expected integer or index type");
+    }
+
+    bool needsUnsigned = needsUnsignedCmp(op.getPredicate());
+    emitc::CmpPredicate pred = toEmitCPred(op.getPredicate());
+    Type arithmeticType = type;
+    if (type.isUnsignedInteger() != needsUnsigned) {
+      arithmeticType = rewriter.getIntegerType(type.getIntOrFloatBitWidth(),
+                                               /*isSigned=*/!needsUnsigned);
+    }
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+    if (arithmeticType != type) {
+      lhs = rewriter.template create<emitc::CastOp>(op.getLoc(), arithmeticType,
+                                                    lhs);
+      rhs = rewriter.template create<emitc::CastOp>(op.getLoc(), arithmeticType,
+                                                    rhs);
+    }
+    rewriter.replaceOpWithNewOp<emitc::CmpOp>(op, op.getType(), pred, lhs, rhs);
+    return success();
+  }
+};
+
 template <typename ArithOp, typename EmitCOp>
 class ArithOpConversion final : public OpConversionPattern<ArithOp> {
 public:
@@ -128,6 +201,96 @@ public:
   }
 };
 
+// Floating-point to integer conversions.
+template <typename CastOp>
+class FtoICastOpConversion : public OpConversionPattern<CastOp> {
+public:
+  FtoICastOpConversion(const TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern<CastOp>(typeConverter, context) {}
+
+  LogicalResult
+  matchAndRewrite(CastOp castOp, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type operandType = adaptor.getIn().getType();
+    if (!emitc::isSupportedFloatType(operandType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast source type");
+
+    Type dstType = this->getTypeConverter()->convertType(castOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(castOp, "type conversion failed");
+
+    // Float-to-i1 casts are not supported: any value with 0 < value < 1 must be
+    // truncated to 0, whereas a boolean conversion would return true.
+    if (!emitc::isSupportedIntegerType(dstType) || dstType.isInteger(1))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast destination type");
+
+    // Convert to unsigned if it's the "ui" variant
+    // Signless is interpreted as signed, so no need to cast for "si"
+    Type actualResultType = dstType;
+    if (isa<arith::FPToUIOp>(castOp)) {
+      actualResultType =
+          rewriter.getIntegerType(operandType.getIntOrFloatBitWidth(),
+                                  /*isSigned=*/false);
+    }
+
+    Value result = rewriter.create<emitc::CastOp>(
+        castOp.getLoc(), actualResultType, adaptor.getOperands());
+
+    if (isa<arith::FPToUIOp>(castOp)) {
+      result = rewriter.create<emitc::CastOp>(castOp.getLoc(), dstType, result);
+    }
+    rewriter.replaceOp(castOp, result);
+
+    return success();
+  }
+};
+
+// Integer to floating-point conversions.
+template <typename CastOp>
+class ItoFCastOpConversion : public OpConversionPattern<CastOp> {
+public:
+  ItoFCastOpConversion(const TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern<CastOp>(typeConverter, context) {}
+
+  LogicalResult
+  matchAndRewrite(CastOp castOp, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Vectors in particular are not supported
+    Type operandType = adaptor.getIn().getType();
+    if (!emitc::isSupportedIntegerType(operandType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast source type");
+
+    Type dstType = this->getTypeConverter()->convertType(castOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(castOp, "type conversion failed");
+
+    if (!emitc::isSupportedFloatType(dstType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast destination type");
+
+    // Convert to unsigned if it's the "ui" variant
+    // Signless is interpreted as signed, so no need to cast for "si"
+    Type actualOperandType = operandType;
+    if (isa<arith::UIToFPOp>(castOp)) {
+      actualOperandType =
+          rewriter.getIntegerType(operandType.getIntOrFloatBitWidth(),
+                                  /*isSigned=*/false);
+    }
+    Value fpCastOperand = adaptor.getIn();
+    if (actualOperandType != operandType) {
+      fpCastOperand = rewriter.template create<emitc::CastOp>(
+          castOp.getLoc(), actualOperandType, fpCastOperand);
+    }
+    rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
+
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -148,7 +311,12 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
-    SelectOpConversion
+    CmpIOpConversion,
+    SelectOpConversion,
+    ItoFCastOpConversion<arith::SIToFPOp>,
+    ItoFCastOpConversion<arith::UIToFPOp>,
+    FtoICastOpConversion<arith::FPToSIOp>,
+    FtoICastOpConversion<arith::FPToUIOp>
   >(typeConverter, ctx);
   // clang-format on
 }

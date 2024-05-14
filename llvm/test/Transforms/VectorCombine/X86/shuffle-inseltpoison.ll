@@ -133,8 +133,7 @@ define <2 x i64> @PR35454_1(<2 x i64> %v) {
 ; SSE-NEXT:    ret <2 x i64> [[BC3]]
 ;
 ; AVX-LABEL: @PR35454_1(
-; AVX-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[V:%.*]] to <4 x i32>
-; AVX-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[BC]] to <16 x i8>
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <16 x i8>
 ; AVX-NEXT:    [[BC1:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; AVX-NEXT:    [[ADD:%.*]] = shl <16 x i8> [[BC1]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 ; AVX-NEXT:    [[BC2:%.*]] = bitcast <16 x i8> [[ADD]] to <4 x i32>
@@ -164,8 +163,7 @@ define <2 x i64> @PR35454_2(<2 x i64> %v) {
 ; SSE-NEXT:    ret <2 x i64> [[BC3]]
 ;
 ; AVX-LABEL: @PR35454_2(
-; AVX-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[V:%.*]] to <4 x i32>
-; AVX-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[BC]] to <8 x i16>
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V:%.*]] to <8 x i16>
 ; AVX-NEXT:    [[BC1:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 2, i32 3, i32 0, i32 1>
 ; AVX-NEXT:    [[ADD:%.*]] = shl <8 x i16> [[BC1]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
 ; AVX-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> [[ADD]] to <4 x i32>

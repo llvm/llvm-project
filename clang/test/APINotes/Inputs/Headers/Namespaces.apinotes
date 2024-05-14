@@ -1,0 +1,53 @@
+---
+Name: Namespaces
+Globals:
+  - Name: varInInlineNamespace
+    SwiftName: swiftVarInInlineNamespace
+Functions:
+  - Name: funcInNamespace
+    SwiftName: inWrongContext()
+  - Name: funcInInlineNamespace
+    SwiftName: swiftFuncInInlineNamespace()
+Tags:
+  - Name: char_box
+    SwiftName: InWrongContext
+Namespaces:
+  - Name: Namespace1
+    Typedefs:
+      - Name: my_typedef
+        SwiftName: SwiftTypedef
+      - Name: my_using_decl
+        SwiftName: SwiftUsingDecl
+    Globals:
+      - Name: varInNamespace
+        SwiftName: swiftVarInNamespace
+    Functions:
+      - Name: funcInNamespace
+        SwiftName: swiftFuncInNamespace()
+    Tags:
+      - Name: char_box
+        SwiftName: CharBox
+    Namespaces:
+      - Name: Nested1
+        Globals:
+          - Name: varInNestedNamespace
+            SwiftName: swiftVarInNestedNamespace
+        Functions:
+          - Name: funcInNestedNamespace
+            SwiftName: swiftFuncInNestedNamespace(_:)
+        Tags:
+          - Name: char_box
+            SwiftName: NestedCharBox
+        Namespaces:
+          - Name: Namespace1
+            Tags:
+              - Name: char_box
+                SwiftName: DeepNestedCharBox
+      - Name: Nested2
+        Globals:
+          - Name: varInNestedNamespace
+            SwiftName: swiftAnotherVarInNestedNamespace
+  - Name: InlineNamespace1
+    Functions:
+      - Name: funcInInlineNamespace
+        SwiftName: shouldNotSpellOutInlineNamespaces()

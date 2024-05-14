@@ -11,11 +11,12 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include <errno.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -24,7 +25,8 @@ static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename F, typename I, bool TestModes = false>
-class RoundToIntegerTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class RoundToIntegerTestTemplate
+    : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef I (*RoundToIntegerFunc)(F);
 
@@ -55,12 +57,13 @@ private:
 
     ASSERT_EQ(func(input), expected);
 
+    // TODO: Handle the !expectError case. It used to expect
+    // 0 for errno and exceptions, but this doesn't hold for
+    // all math functions using RoundToInteger test:
+    // https://github.com/llvm/llvm-project/pull/88816
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
-    } else {
-      ASSERT_FP_EXCEPTION(0);
-      ASSERT_MATH_ERRNO(0);
     }
   }
 
@@ -81,6 +84,8 @@ private:
 
 public:
   void SetUp() override {
+    LIBC_NAMESPACE::testing::FEnvSafeTest::SetUp();
+
     if (math_errhandling & MATH_ERREXCEPT) {
       // We will disable all exceptions so that the test will not
       // crash with SIGFPE. We can still use fetestexcept to check

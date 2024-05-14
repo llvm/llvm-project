@@ -19,11 +19,13 @@
 
 namespace Fortran::runtime::io {
 
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS ExternalFileUnit *defaultInput{nullptr}; // unit 5
 RT_VAR_ATTRS ExternalFileUnit *defaultOutput{nullptr}; // unit 6
 RT_VAR_ATTRS ExternalFileUnit *errorOutput{nullptr}; // unit 0 extension
 RT_OFFLOAD_VAR_GROUP_END
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
@@ -206,7 +208,7 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
       if (anyWriteSinceLastPositioning_ && access == Access::Sequential) {
         // Most Fortran implementations allow a READ after a WRITE;
         // the read then just hits an EOF.
-        DoEndfile(handler);
+        DoEndfile<false, Direction::Input>(handler);
       }
       recordLength.reset();
       RUNTIME_CHECK(handler, isUnformatted.has_value());
@@ -482,10 +484,7 @@ bool ExternalFileUnit::SetDirectRec(
 
 void ExternalFileUnit::EndIoStatement() {
   io_.reset();
-  RT_DIAG_PUSH
-  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   u_.emplace<std::monostate>();
-  RT_DIAG_POP
   lock_.Drop();
 }
 
@@ -674,13 +673,23 @@ void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
   impliedEndfile_ = false;
 }
 
+template <bool ANY_DIR, Direction DIR>
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
     furthestPositionInRecord =
         std::max(positionInRecord, furthestPositionInRecord);
     if (leftTabLimit) { // last I/O was non-advancing
       if (access == Access::Sequential && direction_ == Direction::Output) {
-        AdvanceRecord(handler);
+        if constexpr (ANY_DIR || DIR == Direction::Output) {
+          // When DoEndfile() is called from BeginReadingRecord(),
+          // this call to AdvanceRecord() may appear as a recursion
+          // though it may never happen. Expose the call only
+          // under the constexpr direction check.
+          AdvanceRecord(handler);
+        } else {
+          // This check always fails if we are here.
+          RUNTIME_CHECK(handler, direction_ != Direction::Output);
+        }
       } else { // Access::Stream or input
         leftTabLimit.reset();
         ++currentRecordNumber;
@@ -697,6 +706,12 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   impliedEndfile_ = false;
   anyWriteSinceLastPositioning_ = false;
 }
+
+template void ExternalFileUnit::DoEndfile(IoErrorHandler &handler);
+template void ExternalFileUnit::DoEndfile<false, Direction::Output>(
+    IoErrorHandler &handler);
+template void ExternalFileUnit::DoEndfile<false, Direction::Input>(
+    IoErrorHandler &handler);
 
 void ExternalFileUnit::CommitWrites() {
   frameOffsetInFile_ +=
@@ -752,10 +767,7 @@ std::int32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
 
 void ChildIo::EndIoStatement() {
   io_.reset();
-  RT_DIAG_PUSH
-  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   u_.emplace<std::monostate>();
-  RT_DIAG_POP
 }
 
 Iostat ChildIo::CheckFormattingAndDirection(

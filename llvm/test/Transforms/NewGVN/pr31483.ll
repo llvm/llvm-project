@@ -41,7 +41,7 @@ define signext i32 @ham(ptr %arg, ptr %arg1) #0 {
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb23:
-; CHECK-NEXT:    call void @llvm.va_end(ptr [[TMP]])
+; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[TMP]])
 ; CHECK-NEXT:    ret i32 undef
 ;
 bb:

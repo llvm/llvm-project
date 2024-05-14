@@ -12,7 +12,6 @@ define <8 x i16> @haddu_zext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    bic v0.8h, #254, lsl #8
 ; CHECK-NEXT:    ret
   %x0 = zext <8 x i8> %a0 to <8 x i16>
   %x1 = zext <8 x i8> %a1 to <8 x i16>
@@ -27,7 +26,6 @@ define <8 x i16> @rhaddu_zext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    bic v0.8h, #254, lsl #8
 ; CHECK-NEXT:    ret
   %x0 = zext <8 x i8> %a0 to <8 x i16>
   %x1 = zext <8 x i8> %a1 to <8 x i16>
@@ -42,7 +40,6 @@ define <8 x i16> @hadds_zext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    bic v0.8h, #254, lsl #8
 ; CHECK-NEXT:    ret
   %x0 = zext <8 x i8> %a0 to <8 x i16>
   %x1 = zext <8 x i8> %a1 to <8 x i16>
@@ -57,7 +54,6 @@ define <8 x i16> @shaddu_zext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    bic v0.8h, #254, lsl #8
 ; CHECK-NEXT:    ret
   %x0 = zext <8 x i8> %a0 to <8 x i16>
   %x1 = zext <8 x i8> %a1 to <8 x i16>

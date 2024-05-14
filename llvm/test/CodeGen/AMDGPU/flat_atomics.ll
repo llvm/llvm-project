@@ -6741,6 +6741,81 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @atomic_store_bf16_offset(bfloat %in, ptr %out) {
+; GCN1-LABEL: atomic_store_bf16_offset:
+; GCN1:       ; %bb.0:
+; GCN1-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
+; GCN1-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v0, s2
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:    v_mov_b32_e32 v2, s0
+; GCN1-NEXT:    flat_store_short v[0:1], v2
+; GCN1-NEXT:    s_endpgm
+;
+; GCN2-LABEL: atomic_store_bf16_offset:
+; GCN2:       ; %bb.0:
+; GCN2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GCN2-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v0, s2
+; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_mov_b32_e32 v2, s0
+; GCN2-NEXT:    flat_store_short v[0:1], v2
+; GCN2-NEXT:    s_endpgm
+;
+; GCN3-LABEL: atomic_store_bf16_offset:
+; GCN3:       ; %bb.0:
+; GCN3-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GCN3-NEXT:    s_load_dword s4, s[0:1], 0x24
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v0, s2
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:    v_mov_b32_e32 v2, s4
+; GCN3-NEXT:    flat_store_short v[0:1], v2
+; GCN3-NEXT:    s_endpgm
+  %gep = getelementptr bfloat, ptr %out, i64 8
+  store atomic bfloat %in, ptr %out seq_cst, align 2
+  ret void
+}
+
+define amdgpu_kernel void @atomic_store_bf16(bfloat %in, ptr %out) {
+; GCN1-LABEL: atomic_store_bf16:
+; GCN1:       ; %bb.0:
+; GCN1-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
+; GCN1-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v0, s2
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:    v_mov_b32_e32 v2, s0
+; GCN1-NEXT:    flat_store_short v[0:1], v2
+; GCN1-NEXT:    s_endpgm
+;
+; GCN2-LABEL: atomic_store_bf16:
+; GCN2:       ; %bb.0:
+; GCN2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GCN2-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v0, s2
+; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_mov_b32_e32 v2, s0
+; GCN2-NEXT:    flat_store_short v[0:1], v2
+; GCN2-NEXT:    s_endpgm
+;
+; GCN3-LABEL: atomic_store_bf16:
+; GCN3:       ; %bb.0:
+; GCN3-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GCN3-NEXT:    s_load_dword s4, s[0:1], 0x24
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v0, s2
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:    v_mov_b32_e32 v2, s4
+; GCN3-NEXT:    flat_store_short v[0:1], v2
+; GCN3-NEXT:    s_endpgm
+  store atomic bfloat %in, ptr %out seq_cst, align 2
+  ret void
+}
+
 define amdgpu_kernel void @atomic_inc_i32_offset(ptr %out, i32 %in) {
 ; GCN1-LABEL: atomic_inc_i32_offset:
 ; GCN1:       ; %bb.0: ; %entry
@@ -7866,5 +7941,203 @@ entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %val = atomicrmw volatile udec_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst
   store i32 %val, ptr %out2
+  ret void
+}
+
+define amdgpu_kernel void @atomic_load_f16_offset(ptr %in, ptr %out) {
+; GCN1-LABEL: atomic_load_f16_offset:
+; GCN1:       ; %bb.0:
+; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    s_add_u32 s0, s0, 16
+; GCN1-NEXT:    s_addc_u32 s1, s1, 0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s0
+; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    buffer_wbinvl1_vol
+; GCN1-NEXT:    v_mov_b32_e32 v0, s2
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:    flat_store_short v[0:1], v2
+; GCN1-NEXT:    s_endpgm
+;
+; GCN2-LABEL: atomic_load_f16_offset:
+; GCN2:       ; %bb.0:
+; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    s_add_u32 s0, s0, 16
+; GCN2-NEXT:    s_addc_u32 s1, s1, 0
+; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    buffer_wbinvl1_vol
+; GCN2-NEXT:    v_mov_b32_e32 v0, s2
+; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    flat_store_short v[0:1], v2
+; GCN2-NEXT:    s_endpgm
+;
+; GCN3-LABEL: atomic_load_f16_offset:
+; GCN3:       ; %bb.0:
+; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v0, s0
+; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    flat_load_ushort v2, v[0:1] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    buffer_wbinvl1_vol
+; GCN3-NEXT:    v_mov_b32_e32 v0, s2
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:    flat_store_short v[0:1], v2
+; GCN3-NEXT:    s_endpgm
+  %gep = getelementptr half, ptr %in, i64 8
+  %val = load atomic half, ptr %gep  seq_cst, align 2
+  store half %val, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @atomic_load_f16(ptr %in, ptr %out) {
+; GCN1-LABEL: atomic_load_f16:
+; GCN1:       ; %bb.0:
+; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v0, s0
+; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    buffer_wbinvl1_vol
+; GCN1-NEXT:    v_mov_b32_e32 v0, s2
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:    flat_store_short v[0:1], v2
+; GCN1-NEXT:    s_endpgm
+;
+; GCN2-LABEL: atomic_load_f16:
+; GCN2:       ; %bb.0:
+; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    buffer_wbinvl1_vol
+; GCN2-NEXT:    v_mov_b32_e32 v0, s2
+; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    flat_store_short v[0:1], v2
+; GCN2-NEXT:    s_endpgm
+;
+; GCN3-LABEL: atomic_load_f16:
+; GCN3:       ; %bb.0:
+; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v0, s0
+; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    buffer_wbinvl1_vol
+; GCN3-NEXT:    v_mov_b32_e32 v0, s2
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:    flat_store_short v[0:1], v2
+; GCN3-NEXT:    s_endpgm
+  %val = load atomic half, ptr %in seq_cst, align 2
+  store half %val, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @atomic_load_bf16_offset(ptr %in, ptr %out) {
+; GCN1-LABEL: atomic_load_bf16_offset:
+; GCN1:       ; %bb.0:
+; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    s_add_u32 s0, s0, 16
+; GCN1-NEXT:    s_addc_u32 s1, s1, 0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s0
+; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    buffer_wbinvl1_vol
+; GCN1-NEXT:    v_mov_b32_e32 v0, s2
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:    flat_store_short v[0:1], v2
+; GCN1-NEXT:    s_endpgm
+;
+; GCN2-LABEL: atomic_load_bf16_offset:
+; GCN2:       ; %bb.0:
+; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    s_add_u32 s0, s0, 16
+; GCN2-NEXT:    s_addc_u32 s1, s1, 0
+; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    buffer_wbinvl1_vol
+; GCN2-NEXT:    v_mov_b32_e32 v0, s2
+; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    flat_store_short v[0:1], v2
+; GCN2-NEXT:    s_endpgm
+;
+; GCN3-LABEL: atomic_load_bf16_offset:
+; GCN3:       ; %bb.0:
+; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v0, s0
+; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    flat_load_ushort v2, v[0:1] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    buffer_wbinvl1_vol
+; GCN3-NEXT:    v_mov_b32_e32 v0, s2
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:    flat_store_short v[0:1], v2
+; GCN3-NEXT:    s_endpgm
+  %gep = getelementptr bfloat, ptr %in, i64 8
+  %val = load atomic bfloat, ptr %gep  seq_cst, align 2
+  store bfloat %val, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @atomic_load_bf16(ptr %in, ptr %out) {
+; GCN1-LABEL: atomic_load_bf16:
+; GCN1:       ; %bb.0:
+; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v0, s0
+; GCN1-NEXT:    v_mov_b32_e32 v1, s1
+; GCN1-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    buffer_wbinvl1_vol
+; GCN1-NEXT:    v_mov_b32_e32 v0, s2
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:    flat_store_short v[0:1], v2
+; GCN1-NEXT:    s_endpgm
+;
+; GCN2-LABEL: atomic_load_bf16:
+; GCN2:       ; %bb.0:
+; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    v_mov_b32_e32 v1, s1
+; GCN2-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    buffer_wbinvl1_vol
+; GCN2-NEXT:    v_mov_b32_e32 v0, s2
+; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    flat_store_short v[0:1], v2
+; GCN2-NEXT:    s_endpgm
+;
+; GCN3-LABEL: atomic_load_bf16:
+; GCN3:       ; %bb.0:
+; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v0, s0
+; GCN3-NEXT:    v_mov_b32_e32 v1, s1
+; GCN3-NEXT:    flat_load_ushort v2, v[0:1] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    buffer_wbinvl1_vol
+; GCN3-NEXT:    v_mov_b32_e32 v0, s2
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:    flat_store_short v[0:1], v2
+; GCN3-NEXT:    s_endpgm
+  %val = load atomic bfloat, ptr %in seq_cst, align 2
+  store bfloat %val, ptr %out
   ret void
 }

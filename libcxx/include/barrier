@@ -128,7 +128,7 @@ public:
         __expected_adjustment_(0),
         __completion_(std::move(__completion)),
         __phase_(0) {}
-  [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
+  _LIBCPP_NODISCARD _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= __expected_, "update is greater than the expected count for the current barrier phase");
 
@@ -257,7 +257,7 @@ public:
 #  endif // !_LIBCPP_HAS_NO_TREE_BARRIER
 
 template <class _CompletionF = __empty_completion>
-class barrier {
+class _LIBCPP_DEPRECATED_ATOMIC_SYNC barrier {
   __barrier_base<_CompletionF> __b_;
 
 public:
@@ -280,7 +280,7 @@ public:
   barrier(barrier const&)            = delete;
   barrier& operator=(barrier const&) = delete;
 
-  [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
+  _LIBCPP_NODISCARD _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update > 0, "barrier:arrive must be called with a value greater than 0");
     return __b_.arrive(__update);
   }

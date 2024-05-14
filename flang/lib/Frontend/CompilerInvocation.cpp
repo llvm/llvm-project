@@ -145,6 +145,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
@@ -772,6 +773,7 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
+  opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
 
 /// Parses all semantic related arguments and populates the variables
@@ -881,7 +883,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // -x cuda
   auto language = args.getLastArgValue(clang::driver::options::OPT_x);
-  if (language.equals("cuda")) {
+  if (language == "cuda") {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::CUDA);
   }
@@ -973,13 +975,18 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setEnableConformanceChecks();
     res.setEnableUsageChecks();
   }
+
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w))
+    res.setDisableWarnings();
+
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
-    if (standard.equals("f2018")) {
+    if (standard == "f2018") {
       res.setEnableConformanceChecks();
     } else {
       const unsigned diagID =
@@ -1332,20 +1339,21 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
+  if (targetTriple.isPPC()) {
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+  }
+  if (targetTriple.isOSLinux()) {
+    fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  }
+
   switch (targetTriple.getArch()) {
   default:
     break;
   case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
-    break;
-  case llvm::Triple::ArchType::ppc:
-  case llvm::Triple::ArchType::ppcle:
-  case llvm::Triple::ArchType::ppc64:
-  case llvm::Triple::ArchType::ppc64le:
-    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
-    // size.
-    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
     break;
   }
 }
@@ -1400,6 +1408,11 @@ void CompilerInvocation::setFortranOpts() {
 
   if (getEnableUsageChecks())
     fortranOptions.features.WarnOnAllUsage();
+
+  if (getDisableWarnings()) {
+    fortranOptions.features.DisableAllNonstandardWarnings();
+    fortranOptions.features.DisableAllUsageWarnings();
+  }
 }
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>
