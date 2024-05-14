@@ -732,7 +732,7 @@ powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
   APFloatBase::integerPart pow5s[maxPowerOfFiveParts * 2 + 5];
   pow5s[0] = 78125 * 5;
 
-  unsigned int partsCount[16] = { 1 };
+  unsigned int partsCount = 1;
   APFloatBase::integerPart scratch[maxPowerOfFiveParts], *p1, *p2, *pow5;
   unsigned int result;
   assert(power <= maxExponent);
@@ -747,25 +747,20 @@ powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
   pow5 = pow5s;
 
   for (unsigned int n = 0; power; power >>= 1, n++) {
-    unsigned int pc;
-
-    pc = partsCount[n];
-
     /* Calculate pow(5,pow(2,n+3)) if we haven't yet.  */
-    if (pc == 0) {
-      pc = partsCount[n - 1];
-      APInt::tcFullMultiply(pow5, pow5 - pc, pow5 - pc, pc, pc);
-      pc *= 2;
-      if (pow5[pc - 1] == 0)
-        pc--;
-      partsCount[n] = pc;
+    if (n != 0) {
+      APInt::tcFullMultiply(pow5, pow5 - partsCount, pow5 - partsCount,
+                            partsCount, partsCount);
+      partsCount *= 2;
+      if (pow5[partsCount - 1] == 0)
+        partsCount--;
     }
 
     if (power & 1) {
       APFloatBase::integerPart *tmp;
 
-      APInt::tcFullMultiply(p2, p1, pow5, result, pc);
-      result += pc;
+      APInt::tcFullMultiply(p2, p1, pow5, result, partsCount);
+      result += partsCount;
       if (p2[result - 1] == 0)
         result--;
 
@@ -776,7 +771,7 @@ powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
       p2 = tmp;
     }
 
-    pow5 += pc;
+    pow5 += partsCount;
   }
 
   if (p1 != dst)
