@@ -487,6 +487,9 @@ Improvements to Clang's diagnostics
        }
      };
 
+- Clang emits a ``-Wparentheses`` warning for expressions with consecutive comparisons like ``x < y < z``.
+  It was made a ``-Wparentheses`` warning to be consistent with gcc.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
