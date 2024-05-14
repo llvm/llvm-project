@@ -3252,12 +3252,9 @@ bool BinaryFunction::validateCFG() const {
   if (CurrentState == State::CFG_Finalized)
     return true;
 
-  bool Valid = true;
   for (BinaryBasicBlock *BB : BasicBlocks)
-    Valid &= BB->validateSuccessorInvariants();
-
-  if (!Valid)
-    return Valid;
+    if (!BB->validateSuccessorInvariants())
+      return false;
 
   // Make sure all blocks in CFG are valid.
   auto validateBlock = [this](const BinaryBasicBlock *BB, StringRef Desc) {
@@ -3326,7 +3323,7 @@ bool BinaryFunction::validateCFG() const {
     }
   }
 
-  return Valid;
+  return true;
 }
 
 void BinaryFunction::fixBranches() {
