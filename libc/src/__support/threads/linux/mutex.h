@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE {
 // TODO: support shared/recursive/robust mutexes.
 class Mutex final : private internal::RawMutex {
   // reserved timed, may be useful when combined with other flags.
-  [[maybe_unused]] unsigned char timed;
+  unsigned char timed;
   unsigned char recursive;
   unsigned char robust;
   unsigned char pshared;
@@ -28,12 +28,6 @@ class Mutex final : private internal::RawMutex {
   // TLS address may not work across forked processes. Use thread id instead.
   pid_t owner;
   unsigned long long lock_count;
-
-  enum class LockState : FutexWordType {
-    Free = UNLOCKED,
-    Locked = LOCKED,
-    Waiting = CONTENTED,
-  };
 
 public:
   LIBC_INLINE constexpr Mutex(bool is_timed, bool is_recursive, bool is_robust,
@@ -83,7 +77,6 @@ public:
       return MutexError::NONE;
     return MutexError::BUSY;
   }
-  friend struct CndVar;
 };
 
 } // namespace LIBC_NAMESPACE
