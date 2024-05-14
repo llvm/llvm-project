@@ -187,8 +187,8 @@ AsynchronousSymbolQuery::AsynchronousSymbolQuery(
 
   OutstandingSymbolsCount = Symbols.size();
 
-  for (auto &KV : Symbols)
-    ResolvedSymbols[KV.first] = ExecutorSymbolDef();
+  for (auto &[Name, Flags] : Symbols)
+    ResolvedSymbols[Name] = ExecutorSymbolDef();
 }
 
 void AsynchronousSymbolQuery::notifySymbolMetRequiredState(
@@ -271,8 +271,8 @@ void AsynchronousSymbolQuery::dropSymbol(const SymbolStringPtr &Name) {
 void AsynchronousSymbolQuery::detach() {
   ResolvedSymbols.clear();
   OutstandingSymbolsCount = 0;
-  for (auto &KV : QueryRegistrations)
-    KV.first->detachQueryHelper(*this, KV.second);
+  for (auto &[JD, Syms] : QueryRegistrations)
+    JD->detachQueryHelper(*this, Syms);
   QueryRegistrations.clear();
 }
 
@@ -312,8 +312,8 @@ void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
 MaterializationUnit::Interface
 AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
   SymbolFlagsMap Flags;
-  for (const auto &KV : Symbols)
-    Flags[KV.first] = KV.second.getFlags();
+  for (const auto &[Name, Def] : Symbols)
+    Flags[Name] = Def.getFlags();
   return MaterializationUnit::Interface(std::move(Flags), nullptr);
 }
 

@@ -315,6 +315,9 @@ public:
   /// Stack to track the Logical Operator recursion nest for MC/DC.
   SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
 
+  /// Stack to track the controlled convergence tokens.
+  SmallVector<llvm::IntrinsicInst *, 4> ConvergenceTokenStack;
+
   /// Number of nested loop to be consumed by the last surrounding
   /// loop-associated directive.
   int ExpectedOMPLoopDepth = 0;
@@ -636,28 +639,7 @@ public:
   /// Returns true if a loop must make progress, which means the mustprogress
   /// attribute can be added. \p HasConstantCond indicates whether the branch
   /// condition is a known constant.
-  bool checkIfLoopMustProgress(bool HasConstantCond) {
-    if (CGM.getCodeGenOpts().getFiniteLoops() ==
-        CodeGenOptions::FiniteLoopsKind::Always)
-      return true;
-    if (CGM.getCodeGenOpts().getFiniteLoops() ==
-        CodeGenOptions::FiniteLoopsKind::Never)
-      return false;
-
-    // If the containing function must make progress, loops also must make
-    // progress (as in C++11 and later).
-    if (checkIfFunctionMustProgress())
-      return true;
-
-    // Now apply rules for plain C (see  6.8.5.6 in C11).
-    // Loops with constant conditions do not have to make progress in any C
-    // version.
-    if (HasConstantCond)
-      return false;
-
-    // Loops with non-constant conditions must make progress in C11 and later.
-    return getLangOpts().C11;
-  }
+  bool checkIfLoopMustProgress(const Expr *, bool HasEmptyBody);
 
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
@@ -957,7 +939,8 @@ public:
 
   /// PopCleanupBlock - Will pop the cleanup entry on the stack and
   /// process all branch fixups.
-  void PopCleanupBlock(bool FallThroughIsBranchThrough = false);
+  void PopCleanupBlock(bool FallThroughIsBranchThrough = false,
+                       bool ForDeactivation = false);
 
   /// DeactivateCleanupBlock - Deactivates the given cleanup block.
   /// The block cannot be reactivated.  Pops it if it's the top of the
@@ -1647,8 +1630,10 @@ public:
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
-        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
+        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+      auto AL = ApplyDebugLocation::CreateArtificial(*this);
       PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+    }
     PGO.setCurrentStmt(S);
   }
 
@@ -3296,12 +3281,12 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  // Find a struct's flexible array member. It may be embedded inside multiple
-  // sub-structs, but must still be the last field.
-  const FieldDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                                const RecordDecl *RD,
-                                                StringRef Name,
-                                                uint64_t &Offset);
+  // Find a struct's flexible array member and get its offset. It may be
+  // embedded inside multiple sub-structs, but must still be the last field.
+  const FieldDecl *
+  FindFlexibleArrayMemberFieldAndOffset(ASTContext &Ctx, const RecordDecl *RD,
+                                        const FieldDecl *FAMDecl,
+                                        uint64_t &Offset);
 
   /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
   /// \p nullptr if either the attribute or the field doesn't exist.
@@ -4261,8 +4246,8 @@ public:
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
-  LValue EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
-                                 bool IsLowerBound = true);
+  LValue EmitArraySectionExpr(const ArraySectionExpr *E,
+                              bool IsLowerBound = true);
   LValue EmitExtVectorElementExpr(const ExtVectorElementExpr *E);
   LValue EmitMemberExpr(const MemberExpr *E);
   LValue EmitObjCIsaExpr(const ObjCIsaExpr *E);
@@ -5094,7 +5079,11 @@ public:
                                      const llvm::Twine &Name = "");
   // Adds a convergence_ctrl token to |Input| and emits the required parent
   // convergence instructions.
-  llvm::CallBase *addControlledConvergenceToken(llvm::CallBase *Input);
+  template <typename CallType>
+  CallType *addControlledConvergenceToken(CallType *Input) {
+    return cast<CallType>(
+        addConvergenceControlToken(Input, ConvergenceTokenStack.back()));
+  }
 
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|

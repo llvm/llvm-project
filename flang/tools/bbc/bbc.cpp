@@ -204,6 +204,10 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<std::string>
+    enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
+                  llvm::cl::init(""));
+
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
                                      llvm::cl::init(false));
@@ -289,17 +293,20 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // parse the input Fortran
   parsing.Parse(llvm::outs());
-  parsing.messages().Emit(llvm::errs(), parsing.allCooked());
   if (!parsing.consumedWholeFile()) {
+    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
                         "parser FAIL (final position)",
                         "error: ", llvm::raw_ostream::RED);
     return mlir::failure();
-  }
-  if ((!parsing.messages().empty() && (parsing.messages().AnyFatalError())) ||
-      !parsing.parseTree().has_value()) {
+  } else if ((!parsing.messages().empty() &&
+              (parsing.messages().AnyFatalError())) ||
+             !parsing.parseTree().has_value()) {
+    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     llvm::errs() << programPrefix << "could not parse " << path << '\n';
     return mlir::failure();
+  } else {
+    semanticsContext.messages().Annex(std::move(parsing.messages()));
   }
 
   // run semantics
@@ -424,8 +431,9 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
     // Add O2 optimizer pass pipeline.
-    fir::createDefaultFIROptimizerPassPipeline(
-        pm, MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel::O2));
+    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    fir::registerDefaultInlinerPass(config);
+    fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {
@@ -489,6 +497,12 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (enableGPUMode == "managed") {
+    options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
+  } else if (enableGPUMode == "unified") {
+    options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
   }
 
   if (fixedForm) {

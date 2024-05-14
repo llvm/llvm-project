@@ -119,7 +119,7 @@ namespace {
     void printTemplateArguments(llvm::ArrayRef<TemplateArgumentLoc> Args,
                                 const TemplateParameterList *Params);
     enum class AttrPosAsWritten { Default = 0, Left, Right };
-    void
+    bool
     prettyPrintAttributes(const Decl *D,
                           AttrPosAsWritten Pos = AttrPosAsWritten::Default);
     void prettyPrintPragmas(Decl *D);
@@ -252,15 +252,18 @@ static DeclPrinter::AttrPosAsWritten getPosAsWritten(const Attr *A,
   return DeclPrinter::AttrPosAsWritten::Right;
 }
 
-void DeclPrinter::prettyPrintAttributes(const Decl *D,
+// returns true if an attribute was printed.
+bool DeclPrinter::prettyPrintAttributes(const Decl *D,
                                         AttrPosAsWritten Pos /*=Default*/) {
-  if (Policy.PolishForDeclaration)
-    return;
+  bool hasPrinted = false;
 
   if (D->hasAttrs()) {
     const AttrVec &Attrs = D->getAttrs();
     for (auto *A : Attrs) {
       if (A->isInherited() || A->isImplicit())
+        continue;
+      // Print out the keyword attributes, they aren't regular attributes.
+      if (Policy.PolishForDeclaration && !A->isKeywordAttribute())
         continue;
       switch (A->getKind()) {
 #define ATTR(X)
@@ -275,6 +278,7 @@ void DeclPrinter::prettyPrintAttributes(const Decl *D,
           if (Pos != AttrPosAsWritten::Left)
             Out << ' ';
           A->printPretty(Out, Policy);
+          hasPrinted = true;
           if (Pos == AttrPosAsWritten::Left)
             Out << ' ';
         }
@@ -282,6 +286,7 @@ void DeclPrinter::prettyPrintAttributes(const Decl *D,
       }
     }
   }
+  return hasPrinted;
 }
 
 void DeclPrinter::prettyPrintPragmas(Decl *D) {
@@ -822,9 +827,14 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   if (D->isPureVirtual())
     Out << " = 0";
-  else if (D->isDeletedAsWritten())
+  else if (D->isDeletedAsWritten()) {
     Out << " = delete";
-  else if (D->isExplicitlyDefaulted())
+    if (const StringLiteral *M = D->getDeletedMessage()) {
+      Out << "(";
+      M->outputString(Out);
+      Out << ")";
+    }
+  } else if (D->isExplicitlyDefaulted())
     Out << " = default";
   else if (D->doesThisDeclarationHaveABody()) {
     if (!Policy.TerseOutput) {
@@ -1060,12 +1070,15 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // FIXME: add printing of pragma attributes if required.
   if (!Policy.SuppressSpecifiers && D->isModulePrivate())
     Out << "__module_private__ ";
-  Out << D->getKindName();
 
-  prettyPrintAttributes(D);
+  Out << D->getKindName() << ' ';
+
+  // FIXME: Move before printing the decl kind to match the behavior of the
+  // attribute printing for variables and function where they are printed first.
+  if (prettyPrintAttributes(D, AttrPosAsWritten::Left))
+    Out << ' ';
 
   if (D->getIdentifier()) {
-    Out << ' ';
     if (auto *NNS = D->getQualifier())
       NNS->print(Out, Policy);
     Out << *D;
@@ -1082,16 +1095,13 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     }
   }
 
-  if (D->hasDefinition()) {
-    if (D->hasAttr<FinalAttr>()) {
-      Out << " final";
-    }
-  }
+  prettyPrintAttributes(D, AttrPosAsWritten::Right);
 
   if (D->isCompleteDefinition()) {
+    Out << ' ';
     // Print the base classes
     if (D->getNumBases()) {
-      Out << " : ";
+      Out << ": ";
       for (CXXRecordDecl::base_class_iterator Base = D->bases_begin(),
              BaseEnd = D->bases_end(); Base != BaseEnd; ++Base) {
         if (Base != D->bases_begin())
@@ -1110,14 +1120,15 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
         if (Base->isPackExpansion())
           Out << "...";
       }
+      Out << ' ';
     }
 
     // Print the class definition
     // FIXME: Doesn't print access specifiers, e.g., "public:"
     if (Policy.TerseOutput) {
-      Out << " {}";
+      Out << "{}";
     } else {
-      Out << " {\n";
+      Out << "{\n";
       VisitDeclContext(D);
       Indent() << "}";
     }

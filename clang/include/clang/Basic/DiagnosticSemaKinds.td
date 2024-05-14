@@ -87,9 +87,9 @@ def err_expr_not_cce : Error<
   "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument|noexcept specifier argument}0 "
-  "%select{cannot be narrowed from type %2 to %3|"
-  "evaluates to %2, which cannot be narrowed to type %3}1">,
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
+  "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
 def err_ice_not_integral : Error<
   "%select{integer|integral}1 constant expression must have "
@@ -307,6 +307,8 @@ def err_invalid_vector_long_long_decl_spec : Error <
   "POWER7 or later) to be enabled">;
 def err_invalid_vector_long_double_decl_spec : Error<
   "cannot use 'long double' with '__vector'">;
+def err_invalid_vector_complex_decl_spec : Error<
+  "cannot use '_Complex' with '__vector'">;
 def warn_vector_long_decl_spec_combination : Warning<
   "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 
@@ -3669,6 +3671,9 @@ def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
 def warn_attribute_dllexport_explicit_instantiation_def : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
+  "%0 attribute ignored on local class%select{| member}1">,
+  InGroup<IgnoredAttributes>;
 def warn_invalid_initializer_from_system_header : Warning<
   "invalid constructor from class in system header, should not be explicit">,
   InGroup<DiagGroup<"invalid-initializer-from-system-header">>;
@@ -3752,14 +3757,12 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
-  "passing a VL-dependent argument to/from a function that has a different"
-  " streaming-mode. The streaming and non-streaming vector lengths may be"
-  " different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
-  "passing/returning a VL-dependent argument to/from a __arm_locally_streaming"
-  " function. The streaming and non-streaming vector"
-  " lengths may be different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
+  " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
@@ -4683,11 +4686,10 @@ def err_ovl_no_viable_member_function_in_call : Error<
   "no matching member function for call to %0">;
 def err_ovl_ambiguous_call : Error<
   "call to %0 is ambiguous">;
-def err_ovl_deleted_call : Error<"call to deleted function %0">;
+def err_ovl_deleted_call : Error<"call to deleted"
+  "%select{| member}0 function %1%select{|: %3}2">;
 def err_ovl_ambiguous_member_call : Error<
   "call to member function %0 is ambiguous">;
-def err_ovl_deleted_member_call : Error<
-  "call to deleted member function %0">;
 def note_ovl_too_many_candidates : Note<
     "remaining %0 candidate%s0 omitted; "
     "pass -fshow-overloads=all to show them">;
@@ -4915,12 +4917,12 @@ def err_ovl_ambiguous_conversion_in_cast : Error<
   "dynamic_cast|C-style cast|functional-style cast|}0 from %1 to %2">;
 def err_ovl_deleted_conversion_in_cast : Error<
   "%select{|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast|}0 from %1 to %2 uses deleted function">;
+  "functional-style cast|}0 from %1 to %2 uses deleted function%select{|: %4}3">;
 def err_ovl_ambiguous_init : Error<"call to constructor of %0 is ambiguous">;
 def err_ref_init_ambiguous : Error<
   "reference initialization of type %0 with initializer of type %1 is ambiguous">;
 def err_ovl_deleted_init : Error<
-  "call to deleted constructor of %0">;
+  "call to deleted constructor of %0%select{|: %2}1">;
 def err_ovl_deleted_special_init : Error<
   "call to implicitly-deleted %select{default constructor|copy constructor|"
   "move constructor|copy assignment operator|move assignment operator|"
@@ -4946,7 +4948,7 @@ def note_ovl_ambiguous_oper_binary_reversed_candidate : Note<
 def err_ovl_no_viable_oper : Error<"no viable overloaded '%0'">;
 def note_assign_lhs_incomplete : Note<"type %0 is incomplete">;
 def err_ovl_deleted_oper : Error<
-  "overload resolution selected deleted operator '%0'">;
+  "overload resolution selected deleted operator '%0'%select{|: %2}1">;
 def err_ovl_deleted_special_oper : Error<
   "object of type %0 cannot be %select{constructed|copied|moved|assigned|"
   "assigned|destroyed}1 because its %sub{select_special_member_kind}1 is "
@@ -4983,7 +4985,7 @@ def err_ovl_ambiguous_object_call : Error<
 def err_ovl_ambiguous_subscript_call : Error<
   "call to subscript operator of type %0 is ambiguous">;
 def err_ovl_deleted_object_call : Error<
-  "call to deleted function call operator in type %0">;
+  "call to deleted function call operator in type %0%select{|: %2}1">;
 def note_ovl_surrogate_cand : Note<"conversion candidate of type %0">;
 def err_member_call_without_object : Error<
   "call to %select{non-static|explicit}0 member function without an object argument">;
@@ -5434,6 +5436,11 @@ def note_function_template_spec_matched : Note<
     "function template %q0 matches specialization %1">;
 def err_function_template_partial_spec : Error<
     "function template partial specialization is not allowed">;
+
+def err_function_member_spec_ambiguous : Error<
+    "ambiguous member function specialization %q0 of %q1">;
+def note_function_member_spec_matched : Note<
+    "member function specialization matches %0">;
 
 // C++ Template Instantiation
 def err_template_recursion_depth_exceeded : Error<
@@ -7509,6 +7516,9 @@ def err_nested_non_static_member_use : Error<
 def warn_cxx98_compat_non_static_member_use : Warning<
   "use of non-static data member %0 in an unevaluated context is "
   "incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def err_form_ptr_to_member_from_parenthesized_expr : Error<
+  "cannot form pointer to member from a parenthesized expression; "
+  "did you mean to remove the parentheses?">;
 def err_invalid_incomplete_type_use : Error<
   "invalid use of incomplete type %0">;
 def err_builtin_func_cast_more_than_one_arg : Error<
@@ -8284,7 +8294,7 @@ def err_typecheck_nonviable_condition_incomplete : Error<
   "no viable conversion%diff{ from $ to incomplete type $|}0,1">;
 def err_typecheck_deleted_function : Error<
   "conversion function %diff{from $ to $|between types}0,1 "
-  "invokes a deleted function">;
+  "invokes a deleted function%select{|: %3}2">;
 
 def err_expected_class_or_namespace : Error<"%0 is not a class"
   "%select{ or namespace|, namespace, or enumeration}1">;
@@ -8884,7 +8894,7 @@ def err_nontemporal_builtin_must_be_pointer_intfltptr_or_vector : Error<
   "address argument to nontemporal builtin must be a pointer to integer, float, "
   "pointer, or a vector of such types (%0 invalid)">;
 
-def err_deleted_function_use : Error<"attempt to use a deleted function">;
+def err_deleted_function_use : Error<"attempt to use a deleted function%select{|: %1}0">;
 def err_deleted_inherited_ctor_use : Error<
   "constructor inherited by %0 from base class %1 is implicitly deleted">;
 
@@ -9901,6 +9911,9 @@ def warn_format_invalid_annotation : Warning<
 def warn_format_P_no_precision : Warning<
   "using '%%P' format specifier without precision">,
   InGroup<Format>;
+def warn_format_P_with_objc_pointer : Warning<
+  "using '%%P' format specifier with an Objective-C pointer results in dumping runtime object structure, not object value">,
+  InGroup<Format>;
 def warn_printf_ignored_flag: Warning<
   "flag '%0' is ignored when flag '%1' is present">,
   InGroup<Format>;
@@ -9950,6 +9963,8 @@ def warn_ret_stack_addr_ref : Warning<
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
   InGroup<ReturnStackAddress>;
+def err_ret_local_temp_ref : Error<
+  "returning reference to local temporary object">;
 def warn_ret_addr_label : Warning<
   "returning address of label, which is local">,
   InGroup<ReturnStackAddress>;
@@ -10020,12 +10035,6 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
-def warn_unsupported_lifetime_extension : Warning<
-  "lifetime extension of "
-  "%select{temporary|backing array of initializer list}0 created "
-  "by aggregate initialization using a default member initializer "
-  "is not yet supported; lifetime of %select{temporary|backing array}0 "
-  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -10328,9 +10337,13 @@ def err_shufflevector_nonconstant_argument : Error<
 def err_shufflevector_argument_too_large : Error<
   "index for __builtin_shufflevector must be less than the total number "
   "of vector elements">;
+def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
+  "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 not permitted in a constexpr context.">;
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
+def err_convertvector_constexpr_unsupported_vector_cast : Error<
+  "unsupported vector cast from %0 to %1 in a constant expression.">;
 def err_builtin_non_vector_type : Error<
   "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
@@ -11161,7 +11174,7 @@ def err_omp_declare_mapper_redefinition : Error<
   "redefinition of user-defined mapper for type %0 with name %1">;
 def err_omp_invalid_mapper: Error<
   "cannot find a valid user-defined mapper for type %0 with name %1">;
-def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
+def err_array_section_use : Error<"%select{OpenACC sub-array|OpenMP array section}0 is not allowed here">;
 def err_omp_array_shaping_use : Error<"OpenMP array shaping operation is not allowed here">;
 def err_omp_iterator_use : Error<"OpenMP iterator is not allowed here">;
 def err_omp_typecheck_section_value : Error<
@@ -12165,6 +12178,11 @@ def err_hlsl_init_priority_unsupported : Error<
 def err_hlsl_unsupported_register_type : Error<"invalid resource class specifier '%0' used; expected 'b', 's', 't', or 'u'">;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
+def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
+    InGroup<HLSLMixPackOffset>;
+def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
+def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross register boundary">;
+def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 
@@ -12275,4 +12293,59 @@ def note_acc_branch_into_compute_construct
     : Note<"invalid branch into OpenACC Compute Construct">;
 def note_acc_branch_out_of_compute_construct
     : Note<"invalid branch out of OpenACC Compute Construct">;
+def warn_acc_if_self_conflict
+    : Warning<"OpenACC construct 'self' has no effect when an 'if' clause "
+              "evaluates to true">,
+      InGroup<DiagGroup<"openacc-self-if-potential-conflict">>;
+def err_acc_int_expr_requires_integer
+    : Error<"OpenACC %select{clause '%1'|directive '%2'|sub-array bound}0 "
+            "requires expression of integer type (%3 invalid)">;
+def err_acc_int_expr_incomplete_class_type
+    : Error<"OpenACC integer expression has incomplete class type %0">;
+def err_acc_int_expr_explicit_conversion
+    : Error<"OpenACC integer expression type %0 requires explicit conversion "
+            "to %1">;
+def note_acc_int_expr_conversion
+    : Note<"conversion to %select{integral|enumeration}0 type %1">;
+def err_acc_int_expr_multiple_conversions
+    : Error<"multiple conversions from expression type %0 to an integral type">;
+def err_acc_num_gangs_num_args
+    : Error<"%select{no|too many}0 integer expression arguments provided to "
+            "OpenACC 'num_gangs' "
+            "%select{|clause: '%1' directive expects maximum of %2, %3 were "
+            "provided}0">;
+def err_acc_not_a_var_ref
+    : Error<"OpenACC variable is not a valid variable name, sub-array, array "
+            "element, or composite variable member">;
+def err_acc_typecheck_subarray_value
+    : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
+def err_acc_subarray_function_type
+    : Error<"OpenACC sub-array cannot be of function type %0">;
+def err_acc_subarray_incomplete_type
+    : Error<"OpenACC sub-array base is of incomplete type %0">;
+def err_acc_subarray_no_length
+    : Error<"OpenACC sub-array length is unspecified and cannot be inferred "
+            "because the subscripted value is %select{not an array|an array of "
+            "unknown bound}0">;
+def err_acc_subarray_negative
+    : Error<"OpenACC sub-array %select{lower bound|length}0 evaluated to "
+            "negative value %1">;
+def err_acc_subarray_out_of_range
+    : Error<"OpenACC sub-array %select{lower bound|length}0 evaluated to a "
+            "value (%1) that would be out of the range of the subscripted "
+            "array size of %2">;
+def err_acc_subarray_base_plus_length_out_of_range
+    : Error<"OpenACC sub-array specified range [%0:%1] would be out of the "
+            "range of the subscripted array size of %2">;
+def warn_acc_deprecated_alias_name
+    : Warning<"OpenACC clause name '%0' is a deprecated clause name and is "
+              "now an alias for '%1'">,
+      InGroup<DiagGroup<"openacc-deprecated-clause-alias">>;
+def err_acc_var_not_pointer_type
+    : Error<"expected pointer in '%0' clause, type is %1">;
+def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
+def err_acc_clause_after_device_type
+    : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
+            "compute construct">;
+
 } // end of sema component.

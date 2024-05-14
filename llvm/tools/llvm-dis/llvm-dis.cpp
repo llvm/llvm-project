@@ -259,6 +259,8 @@ int main(int argc, char **argv) {
       if (!DontPrint) {
         if (M) {
           ScopedDbgInfoFormatSetter FormatSetter(*M, WriteNewDbgInfoFormat);
+          if (WriteNewDbgInfoFormat)
+            M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         }
         if (Index)

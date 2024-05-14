@@ -36,6 +36,5 @@ void func() {
 // NVIDIA: "omp_target_thread_limit"="45"
 // NVIDIA: "omp_target_thread_limit"="17"
 // NVIDIA: !{ptr @__omp_offloading[[HASH1:.*]]_l16, !"maxntidx", i32 20}
-// NVIDIA: !{ptr @__omp_offloading[[HASH2:.*]]_l18, !"minctasm", i32 90}
-// NVIDIA: !{ptr @__omp_offloading[[HASH2]]_l18, !"maxntidx", i32 45}
+// NVIDIA: !{ptr @__omp_offloading[[HASH2:.*]]_l18, !"maxntidx", i32 45}
 // NVIDIA: !{ptr @__omp_offloading[[HASH3:.*]]_l20, !"maxntidx", i32 17}

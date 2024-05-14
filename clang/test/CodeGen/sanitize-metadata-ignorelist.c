@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALLOW
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALLOW
 // RUN: echo "fun:foo" > %t.fun
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.fun -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=FUN
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.fun -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=FUN
 // RUN: echo "src:*sanitize-metadata-ignorelist.c" > %t.src
-// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.src -triple x86_64-gnu-linux -x c -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=SRC
+// RUN: %clang_cc1 -O -fexperimental-sanitize-metadata=atomics -fexperimental-sanitize-metadata-ignorelist=%t.src -triple x86_64-gnu-linux -x c -emit-llvm %s -o - | FileCheck %s --check-prefixes=SRC
 
 int y;
 

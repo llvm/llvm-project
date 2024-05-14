@@ -799,6 +799,11 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     ProhibitAttributes(PrefixAttrs);
 
     Decl *DeclFromDeclSpec = nullptr;
+    Scope *CurScope = getCurScope();
+    if (CurScope)
+      CurScope->setFlags(Scope::ScopeFlags::TypeAliasScope |
+                         CurScope->getFlags());
+
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
         TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
@@ -1774,9 +1779,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_union,
           tok::kw___is_unsigned,
           tok::kw___is_void,
-          tok::kw___is_volatile,
-          tok::kw___reference_binds_to_temporary,
-          tok::kw___reference_constructs_from_temporary))
+          tok::kw___is_volatile
+      ))
     // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
     // name of struct templates, but some are keywords in GCC >= 4.3
     // and Clang. Therefore, when we see the token sequence "struct
@@ -2092,7 +2096,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   TypeResult TypeResult = true;      // invalid
 
   bool Owned = false;
-  Sema::SkipBodyInfo SkipBody;
+  SkipBodyInfo SkipBody;
   if (TemplateId) {
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
@@ -3397,6 +3401,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
               << 1 /* delete */;
         else
           Diag(ConsumeToken(), diag::err_deleted_non_function);
+        SkipDeletedFunctionBody();
         return ExprError();
       }
     } else if (Tok.is(tok::kw_default)) {
@@ -4543,9 +4548,9 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   case ParsedAttr::AT_Unlikely:
     return true;
   case ParsedAttr::AT_WarnUnusedResult:
-    return !ScopeName && AttrName->getName().equals("nodiscard");
+    return !ScopeName && AttrName->getName() == "nodiscard";
   case ParsedAttr::AT_Unused:
-    return !ScopeName && AttrName->getName().equals("maybe_unused");
+    return !ScopeName && AttrName->getName() == "maybe_unused";
   default:
     return false;
   }

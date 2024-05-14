@@ -222,6 +222,24 @@ struct G {
 // LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:7 IsSigned:1 StorageSize:8 StorageOffset:4
 // CHECK-NEXT: ]>
 
+struct __attribute__((aligned(8))) H {
+  char a;
+  unsigned b : 24; // on expensive alignment we want this to stay 24
+  unsigned c __attribute__((aligned(8))); // Think 'long long' or lp64 ptr
+} h;
+// CHECK-LABEL: LLVMType:%struct.H =
+// LAYOUT-FLEX-SAME: type <{ i8, i32, [3 x i8], i32, [4 x i8] }>
+// LAYOUT-STRICT-SAME: type { i8, [3 x i8], [4 x i8], i32, [4 x i8] }
+// LAYOUT-DWN32-FLEX-SAME: type <{ i8, i32, [3 x i8], i32, [4 x i8] }>
+// LAYOUT-DWN32-STRICT-SAME: type { i8, [3 x i8], [4 x i8], i32, [4 x i8] }
+// CHECK: BitFields:[
+// LAYOUT-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:32 StorageOffset:1
+// LAYOUT-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:24 StorageOffset:1
+
+// LAYOUT-DWN32-FLEX-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:32 StorageOffset:1
+// LAYOUT-DWN32-STRICT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:24 StorageOffset:1
+// CHECK-NEXT: ]>
+
 #if _LP64
 struct A64 {
   int a : 16;

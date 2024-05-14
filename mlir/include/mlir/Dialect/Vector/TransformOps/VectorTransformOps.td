@@ -306,6 +306,20 @@ def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyInterleaveToShufflePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.interleave_to_shuffle",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that 1D vector interleave operations should be rewritten as
+    vector shuffle operations.
+
+    This is motivated by some current codegen backends not handling vector
+    interleave operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.rewrite_narrow_types",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

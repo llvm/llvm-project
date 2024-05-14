@@ -824,8 +824,8 @@ supported for the ``amdgcn`` target.
      Constant                              4               constant    *same as global* 64      0x0000000000000000
      Private                               5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                       6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental)     7               *TODO*
-     Buffer Resource (experimental)        8               *TODO*
+     Buffer Fat Pointer                    7               N/A         N/A              160     0
+     Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1156,6 +1156,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    mode. The raw rounding mode values in the MODE
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
+
+  :ref:`llvm.set.rounding<int_set_rounding>`       Input value expected to be one of the valid results
+                                                   from '``llvm.get.rounding``'. Rounding mode is
+                                                   undefined if not passed a valid input. This should be
+                                                   a wave uniform value. In case of a divergent input
+                                                   value, the first active lane's value will be used.
 
   :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
                                                    This stores information related to the current rounding mode,
@@ -4652,7 +4658,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     351:272 20                                      Reserved, must be 0.
+     351:192 20                                      Reserved, must be 0.
              bytes
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
@@ -5248,14 +5254,14 @@ The fields used by CP for code objects before V3 also match those specified in
      5:0     6 bits  ACCUM_OFFSET                    Offset of a first AccVGPR in the unified register file. Granularity 4.
                                                      Value 0-63. 0 - accum-offset = 4, 1 - accum-offset = 8, ...,
                                                      63 - accum-offset = 256.
-     6:15    10                                      Reserved, must be 0.
+     15:6    10                                      Reserved, must be 0.
              bits
      16      1 bit   TG_SPLIT                        - If 0 the waves of a work-group are
                                                        launched in the same CU.
                                                      - If 1 the waves of a work-group can be
                                                        launched in different CUs. The waves
                                                        cannot use S_BARRIER or LDS.
-     17:31   15                                      Reserved, must be 0.
+     31:17   15                                      Reserved, must be 0.
              bits
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
@@ -16024,7 +16030,7 @@ Additional Documentation
 .. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__
-.. [HRF] `Heterogeneous-race-free Memory Models <http://benedictgaster.org/wp-content/uploads/2014/01/asplos269-FINAL.pdf>`__
+.. [HRF] `Heterogeneous-race-free Memory Models <https://research.cs.wisc.edu/multifacet/papers/asplos14_hrf.pdf>`__
 .. [HSA] `Heterogeneous System Architecture (HSA) Foundation <http://www.hsafoundation.com/>`__
 .. [MsgPack] `Message Pack <http://www.msgpack.org/>`__
 .. [OpenCL] `The OpenCL Specification Version 2.0 <http://www.khronos.org/registry/cl/specs/opencl-2.0.pdf>`__

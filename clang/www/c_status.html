@@ -132,29 +132,22 @@ conformance.</p>
       <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
-    <tr id="complex">
-      <td rowspan="6">complex and imaginary support in &lt;complex.h&gt;</td>
+    <tr>
+      <td>complex and imaginary support in &lt;complex.h&gt;</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n693.ps">N693</a></td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang supports <code>_Complex</code> type specifiers but does not
+          support <code>_Imaginary</code> type specifiers. Support for
+          <code>_Imaginary</code> is optional in C99 and Clang does not claim
+          conformance to Annex G.<br />
+          <br />
+          <code>_Complex</code> support requires an underlying support library
+          such as compiler-rt to provide functions like <code>__divsc3</code>,
+          but compiler-rt is not supported on Windows.
+        </details>
+      </td>
     </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n620.ps">N620</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n638.ps">N638</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n657.ps">N657</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n694.ps">N694</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n809.ps">N809</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
     <tr>
       <td>type-generic math macros in &lt;tgmath.h&gt;</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n693.ps">N693</a></td>
@@ -301,11 +294,6 @@ conformance.</p>
       <td>empty macro arguments</td>
       <td>N570</td>
       <td class="full" align="center">Yes</td>
-    </tr>
-    <tr>
-      <td>new structure type compatibility (tag compatibility)</td>
-      <td>N522</td>
-      <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>additional predefined macro names</td>

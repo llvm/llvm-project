@@ -42,7 +42,7 @@ fenv.h Functions
     - |check|
     - 7.6.6.3
   * - fesetexcept
-    -
+    - |check|
     - 7.6.4.4
   * - fesetexceptflag
     - |check|
@@ -57,7 +57,7 @@ fenv.h Functions
     - |check|
     - 7.6.4.7
   * - fetestexceptflag
-    -
+    - |check|
     - 7.6.4.6
   * - feupdateenv
     - |check|

@@ -342,10 +342,17 @@ func.func @mixed_vect(%arg0: vector<8xf32>, %arg1: vector<4xf32>, %arg2: vector<
   return
 }
 
-// CHECK-LABEL: @experimental_vector_interleave2
-func.func @experimental_vector_interleave2(%vec1: vector<[4]xf16>, %vec2 : vector<[4]xf16>) {
-  // CHECK: = "llvm.intr.experimental.vector.interleave2"({{.*}}) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+// CHECK-LABEL: @vector_interleave2
+func.func @vector_interleave2(%vec1: vector<[4]xf16>, %vec2 : vector<[4]xf16>) {
+  // CHECK: = "llvm.intr.vector.interleave2"({{.*}}) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+  return
+}
+
+// CHECK-LABEL: @vector_deinterleave2
+func.func @vector_deinterleave2(%vec: vector<[8]xf16>) {
+  // CHECK: = "llvm.intr.vector.deinterleave2"({{.*}}) : (vector<[8]xf16>) -> !llvm.struct<(vector<[4]xf16>, vector<[4]xf16>)>
+  %0 = "llvm.intr.vector.deinterleave2"(%vec) : (vector<[8]xf16>) -> !llvm.struct<(vector<[4]xf16>, vector<[4]xf16>)>
   return
 }
 

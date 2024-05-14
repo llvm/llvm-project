@@ -107,9 +107,9 @@ struct SelectOpInterface
     // If trueValue <= falseValue:
     // * result <= falseValue
     // * result >= trueValue
-    if (cstr.compare(trueValue, dim,
+    if (cstr.compare(/*lhs=*/{trueValue, dim},
                      ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     falseValue, dim)) {
+                     /*rhs=*/{falseValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(trueValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(falseValue, dim);
@@ -121,9 +121,9 @@ struct SelectOpInterface
     // If falseValue <= trueValue:
     // * result <= trueValue
     // * result >= falseValue
-    if (cstr.compare(falseValue, dim,
+    if (cstr.compare(/*lhs=*/{falseValue, dim},
                      ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     trueValue, dim)) {
+                     /*rhs=*/{trueValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(falseValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(trueValue, dim);

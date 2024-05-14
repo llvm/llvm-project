@@ -17,7 +17,7 @@ define void @fold_fls(i16 %x) {
 ; AVR-LABEL: @fold_fls(
 ; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
 ; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
-; AVR-NEXT:    [[CTLZ:%.*]] = call addrspace(1) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; AVR-NEXT:    [[CTLZ:%.*]] = call range(i16 0, 17) addrspace(1) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
 ; AVR-NEXT:    [[NX:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
 ; AVR-NEXT:    call addrspace(1) void @sink(i16 [[NX]])
 ; AVR-NEXT:    ret void
@@ -25,7 +25,7 @@ define void @fold_fls(i16 %x) {
 ; MSP430-LABEL: @fold_fls(
 ; MSP430-NEXT:    call void @sink(i16 0)
 ; MSP430-NEXT:    call void @sink(i16 1)
-; MSP430-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; MSP430-NEXT:    [[CTLZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
 ; MSP430-NEXT:    [[NX:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
 ; MSP430-NEXT:    call void @sink(i16 [[NX]])
 ; MSP430-NEXT:    ret void

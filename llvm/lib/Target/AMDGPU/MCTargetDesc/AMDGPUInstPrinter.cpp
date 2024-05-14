@@ -1806,4 +1806,14 @@ void AMDGPUInstPrinter::printEndpgm(const MCInst *MI, unsigned OpNo,
   O << ' ' << formatDec(Imm);
 }
 
+void AMDGPUInstPrinter::printByteSel(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " byte_sel:" << formatDec(Imm);
+}
+
 #include "AMDGPUGenAsmWriter.inc"
