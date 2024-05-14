@@ -36,9 +36,8 @@ public:
   }
 
   bool hasPoisonGeneratingFlags() const {
-    return getFlag(NoUWrap) || getFlag(NoSWrap) || getFlag(IsExact) ||
-           getFlag(Disjoint) || getFlag(NonNeg) || getFlag(FmNoNans) ||
-           getFlag(FmNoInfs);
+    return getFlags() & (NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg |
+                         FmNoNans | FmNoInfs);
   }
 
   void dropPoisonGeneratingFlags() {

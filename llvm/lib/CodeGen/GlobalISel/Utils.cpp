@@ -1749,18 +1749,16 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
     if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
         GMI->hasPoisonGeneratingFlags())
       return true;
-  }
-  // Conservatively return true.
-  else
+  } else {
+    // Conservatively return true.
     return true;
+  }
 
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
     return false;
   default:
-    if (isa<GCastOp>(RegDef) || isa<GBinOp>(RegDef))
-      return false;
-    return true;
+    return !isa<GCastOp>(RegDef) && !isa<GBinOp>(RegDef);
   }
 }
 

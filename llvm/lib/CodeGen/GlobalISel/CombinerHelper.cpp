@@ -229,18 +229,16 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
   Register DstOp = MI.getOperand(0).getReg();
   Register OrigOp = MI.getOperand(1).getReg();
 
-  if (OrigOp.isPhysical() || !MRI.hasOneNonDBGUse(OrigOp))
+  if (!MRI.hasOneNonDBGUse(OrigOp))
     return false;
 
   MachineInstr *OrigDef = MRI.getUniqueVRegDef(OrigOp);
-  // Avoid trying to fold G_PHI, G_UNMERGE_VALUES, G_FREEZE (the latter is
-  // handled by idempotent_prop).
-  if (!OrigDef || OrigDef->isPHI() || isa<GUnmerge>(OrigDef) ||
-      isa<GFreeze>(OrigDef))
+  // Avoid trying to fold G_PHI and G_UNMERGE_VALUES.
+  if (OrigDef->isPHI() || isa<GUnmerge>(OrigDef))
     return false;
 
   if (canCreateUndefOrPoison(OrigOp, MRI,
-                             /*ConsiderFlagsAndMetadata*/ false))
+                             /*ConsiderFlagsAndMetadata=*/false))
     return false;
 
   std::optional<MachineOperand> MaybePoisonOperand;
@@ -254,9 +252,11 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
 
     if (!MaybePoisonOperand)
       MaybePoisonOperand = Operand;
-    // We have more than one maybe-poison operand. Moving the freeze is unsafe.
-    else
+    else {
+      // We have more than one maybe-poison operand. Moving the freeze is
+      // unsafe.
       return false;
+    }
   }
 
   cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
@@ -271,11 +271,11 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
 
   MatchInfo = [=](MachineIRBuilder &B) mutable {
-    auto Reg = MRI.createGenericVirtualRegister(MaybePoisonOperandRegTy);
     B.setInsertPt(*OrigDef->getParent(), OrigDef->getIterator());
-    B.buildFreeze(Reg, MaybePoisonOperandReg);
+    auto Freeze = B.buildFreeze(MaybePoisonOperandRegTy, MaybePoisonOperandReg);
     replaceRegOpWith(
-        MRI, *OrigDef->findRegisterUseOperand(MaybePoisonOperandReg, TRI), Reg);
+        MRI, *OrigDef->findRegisterUseOperand(MaybePoisonOperandReg, TRI),
+        Freeze.getReg(0));
     replaceRegWith(MRI, DstOp, OrigOp);
   };
   return true;
