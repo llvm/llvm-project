@@ -77,8 +77,8 @@ func.func @transfer_read_of_extract_slice_non_leading_rank_reduction(%t : tensor
 
 // CHECK-LABEL: func @masked_transfer_read_of_extract_slice
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
-//       CHECK-DAG: %[[m:.*]] = vector.create_mask{{.*}} : vector<5x6xi1>
-//       CHECK-DAG: %[[a:.*]] = affine.apply {{.*}}[[s1]]
+//   CHECK-DAG: %[[m:.*]] = vector.create_mask{{.*}} : vector<5x6xi1>
+//   CHECK-DAG: %[[a:.*]] = affine.apply {{.*}}[[s1]]
 //       CHECK: vector.mask %[[m]] { vector.transfer_read %[[t]]{{.*}}: tensor<?x?xf32>, vector<5x6xf32> } : vector<5x6xi1> -> vector<5x6xf32>
 func.func @masked_transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2 : index) -> vector<5x6xf32> {
   %c3 = arith.constant 3 : index
