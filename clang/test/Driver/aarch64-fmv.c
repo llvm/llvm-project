@@ -11,8 +11,8 @@
 // RUN: %clang --target=aarch64-linux-android23 --rtlib=compiler-rt  -### -c %s 2>&1 | FileCheck -check-prefix=FMV-ENABLED %s
 
 // FMV is disabled without compiler-rt:
-// RUN: %clang --target=aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=FMV-DISABLED %s
-// RUN: %clang --target=aarch64-linux-gnu -### -c %s 2>&1 | FileCheck -check-prefix=FMV-DISABLED %s
+// RUN: %clang --rtlib=libgcc --target=aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=FMV-DISABLED %s
+// RUN: %clang --rtlib=libgcc --target=aarch64-linux-gnu -### -c %s 2>&1 | FileCheck -check-prefix=FMV-DISABLED %s
 
 // Disabled for older android versions:
 // RUN: %clang --rtlib=compiler-rt --target=aarch64-linux-android               -### -c %s 2>&1 | FileCheck -check-prefix=FMV-DISABLED %s

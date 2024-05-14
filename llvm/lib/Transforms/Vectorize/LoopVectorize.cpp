@@ -8377,10 +8377,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       VPValue *Mask = getBlockInMask(I->getParent());
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
-      auto *SafeRHS =
-         new VPInstruction(Instruction::Select, {Mask, Ops[1], One},
-                           I->getDebugLoc());
-      VPBB->appendRecipe(SafeRHS);
+      auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()));
     }
