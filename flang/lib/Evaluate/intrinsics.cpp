@@ -977,12 +977,6 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
 };
 
-// Collection for some intrinsics with function and subroutine form,
-// in order to pass 
-static const std::string dualIntrinsic[]{
-  {"etime"}
-};
-
 // The following table contains the intrinsic functions listed in
 // Tables 16.2 and 16.3 in Fortran 2018.  The "unrestricted" functions
 // in Table 16.2 can be used as actual arguments, PROCEDURE() interfaces,
@@ -2562,6 +2556,10 @@ bool IntrinsicProcTable::Implementation::IsIntrinsic(
 }
 bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
+  // Collection for some intrinsics with function and subroutine form,
+  // in order to pass the semantic check.
+  static const std::string dualIntrinsic[]{{"etime"}};
+
   return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
              [&name](const std::string &dualName) {
                return dualName == name;
