@@ -2874,10 +2874,21 @@ public:
         return ExprError();
       Base = BaseResult.get();
 
+      // `TranformMaterializeTemporaryExpr()` removes materialized temporaries
+      // from the AST, so we need to re-insert them if needed (since
+      // `BuildFieldRefereneExpr()` doesn't do this).
+      if (!isArrow && Base->isPRValue()) {
+        BaseResult = getSema().TemporaryMaterializationConversion(Base);
+        if (BaseResult.isInvalid())
+          return ExprError();
+        Base = BaseResult.get();
+      }
+
       CXXScopeSpec EmptySS;
       return getSema().BuildFieldReferenceExpr(
           Base, isArrow, OpLoc, EmptySS, cast<FieldDecl>(Member),
-          DeclAccessPair::make(FoundDecl, FoundDecl->getAccess()), MemberNameInfo);
+          DeclAccessPair::make(FoundDecl, FoundDecl->getAccess()),
+          MemberNameInfo);
     }
 
     CXXScopeSpec SS;
