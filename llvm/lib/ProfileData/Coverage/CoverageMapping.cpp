@@ -385,15 +385,18 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   DenseSet<unsigned> TVIdxs;
 #endif
 
+  bool IsVersion11;
+
 public:
   MCDCRecordProcessor(const BitVector &Bitmap,
                       const CounterMappingRegion &Region,
-                      ArrayRef<const CounterMappingRegion *> Branches)
+                      ArrayRef<const CounterMappingRegion *> Branches,
+                      bool IsVersion11)
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded(NumConditions, false), IndependencePairs(NumConditions),
-        ExecVectors(ExecVectorsByCond[false]) {}
+        ExecVectors(ExecVectorsByCond[false]), IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -416,7 +419,9 @@ private:
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
-      if (!Bitmap[DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
+      if (!Bitmap[IsVersion11
+                      ? DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()
+                      : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
@@ -522,9 +527,9 @@ public:
 
 Expected<MCDCRecord> CounterMappingContext::evaluateMCDCRegion(
     const CounterMappingRegion &Region,
-    ArrayRef<const CounterMappingRegion *> Branches) {
+    ArrayRef<const CounterMappingRegion *> Branches, bool IsVersion11) {
 
-  MCDCRecordProcessor MCDCProcessor(Bitmap, Region, Branches);
+  MCDCRecordProcessor MCDCProcessor(Bitmap, Region, Branches, IsVersion11);
   return MCDCProcessor.processMCDCRecord();
 }
 
@@ -611,14 +616,27 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
 }
 
 /// Returns the bit count
-static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
-                                 const CoverageMappingRecord &Record) {
+static unsigned getMaxBitmapSize(const CoverageMappingRecord &Record,
+                                 bool IsVersion11) {
   unsigned MaxBitmapIdx = 0;
+  unsigned NumConditions = 0;
+  // Scan max(BitmapIdx).
+  // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
+  // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
-    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion)
-      MaxBitmapIdx =
-          std::max(MaxBitmapIdx, Region.getDecisionParams().BitmapIdx);
+    if (Region.Kind != CounterMappingRegion::MCDCDecisionRegion)
+      continue;
+    const auto &DecisionParams = Region.getDecisionParams();
+    if (MaxBitmapIdx <= DecisionParams.BitmapIdx) {
+      MaxBitmapIdx = DecisionParams.BitmapIdx;
+      NumConditions = DecisionParams.NumConditions;
+    }
   }
+
+  if (IsVersion11)
+    MaxBitmapIdx = MaxBitmapIdx * CHAR_BIT +
+                   llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
+
   return MaxBitmapIdx;
 }
 
@@ -808,6 +826,9 @@ Error CoverageMapping::loadFunctionRecord(
   }
   Ctx.setCounts(Counts);
 
+  bool IsVersion11 =
+      ProfileReader.getVersion() < IndexedInstrProf::ProfVersion::Version12;
+
   BitVector Bitmap;
   if (Error E = ProfileReader.getFunctionBitmap(Record.FunctionName,
                                                 Record.FunctionHash, Bitmap)) {
@@ -819,7 +840,7 @@ Error CoverageMapping::loadFunctionRecord(
     }
     if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);
-    Bitmap = BitVector(getMaxBitmapSize(Ctx, Record));
+    Bitmap = BitVector(getMaxBitmapSize(Record, IsVersion11));
   }
   Ctx.setBitmap(std::move(Bitmap));
 
@@ -877,7 +898,7 @@ Error CoverageMapping::loadFunctionRecord(
     // DecisionRegion, all of the information is now available to process.
     // This is where the bulk of the MC/DC progressing takes place.
     Expected<MCDCRecord> Record =
-        Ctx.evaluateMCDCRegion(*MCDCDecision, MCDCBranches);
+        Ctx.evaluateMCDCRegion(*MCDCDecision, MCDCBranches, IsVersion11);
     if (auto E = Record.takeError()) {
       consumeError(std::move(E));
       return Error::success();
