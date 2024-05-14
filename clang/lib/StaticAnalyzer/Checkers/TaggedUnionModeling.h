@@ -55,6 +55,15 @@ bool handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
     return false;
 
   auto ArgSVal = Call.getArgSVal(0);
+  llvm::errs() << "Bind this for std::get\n";
+  ArgSVal.dump();
+  llvm::errs() << "\n";
+  auto *CE0 = Call.getArgExpr(0);
+  if (!CE0)
+    return false;
+  llvm::errs() << "The second one\n";
+  C.getState()->getSVal(CE0, C.getLocationContext()).dump();
+
   const auto *ThisRegion = ThisSVal.getAsRegion();
   const auto *ArgMemRegion = ArgSVal.getAsRegion();
   if (!ArgMemRegion)

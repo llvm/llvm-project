@@ -270,10 +270,14 @@ private:
       return false;
 
     QualType RefStoredType = StoredSVal->getType(C.getASTContext());
+    llvm::errs() << "Just dump the stored SVal\n";
+    StoredSVal->dump();
+    llvm::errs() <<"\n The type:\n";
 
     if (RefStoredType->getPointeeType().isNull())
       return false;
     QualType StoredType = RefStoredType->getPointeeType();
+    StoredType->dump();
 
     const CallExpr *CE = cast<CallExpr>(Call.getOriginExpr());
     const FunctionDecl *FD = CE->getDirectCallee();
@@ -310,6 +314,9 @@ private:
       return false;
 
     if (RetrievedCanonicalType == StoredCanonicalType) {
+      llvm::errs() << "Variant Checker stroed sval bind dump:\n";
+      StoredSVal->dump();
+      llvm::errs() << "\n";
       State = State->BindExpr(CE, C.getLocationContext(), *StoredSVal);
       C.addTransition(State);
       return true;

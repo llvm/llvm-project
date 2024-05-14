@@ -686,6 +686,9 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   // Actually evaluate the function call.  We try each of the checkers
   // to see if the can evaluate the function call, and get a callback at
   // defaultEvalCall if all of them fail.
+  llvm::errs() << "Evaluating call\n";
+  Call.dump();
+  llvm::errs() << "\nEvaluating call END\n";
   ExplodedNodeSet dstCallEvaluated;
   getCheckerManager().runCheckersForEvalCall(dstCallEvaluated, dstPreVisit,
                                              Call, *this, EvalCallOptions());

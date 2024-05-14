@@ -300,6 +300,7 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
 
 void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
                            ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  
 
   ExplodedNodeSet dstPreStmt;
   getCheckerManager().runCheckersForPreStmt(dstPreStmt, Pred, CastE, *this);
@@ -350,6 +351,12 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_UserDefinedConversion:
       case CK_FunctionToPointerDecay:
       case CK_BuiltinFnToFnPtr: {
+        llvm::errs() << "-- VisitCast BEGIN --\n";
+        llvm::errs() << "   The cast expr:\n";
+        CastE->dump();
+        llvm::errs() << "   The Expr behind it:\n";
+        Ex->dump();
+        llvm::errs() << "-- VisitCast END --\n";
         // Copy the SVal of Ex to CastE.
         // Point of interest
         state = updateStateAfterSimpleCast(Bldr, Pred, CastE, Ex);
