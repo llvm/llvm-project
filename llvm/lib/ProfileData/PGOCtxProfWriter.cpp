@@ -20,7 +20,7 @@ void PGOCtxProfileWriter::writeCounters(const ContextNode &Node) {
   Writer.EmitCode(bitc::UNABBREV_RECORD);
   Writer.EmitVBR(PGOCtxProfileRecords::Counters, VBREncodingBits);
   Writer.EmitVBR(Node.counters_size(), VBREncodingBits);
-  for (auto I = 0U; I < Node.counters_size(); ++I)
+  for (uint32_t I = 0U; I < Node.counters_size(); ++I)
     Writer.EmitVBR64(Node.counters()[I], VBREncodingBits);
 }
 
@@ -37,7 +37,7 @@ void PGOCtxProfileWriter::writeImpl(std::optional<uint32_t> CallerIndex,
     Writer.EmitRecord(PGOCtxProfileRecords::CalleeIndex,
                       SmallVector<uint64_t, 1>{*CallerIndex});
   writeCounters(Node);
-  for (auto I = 0U; I < Node.callsites_size(); ++I)
+  for (uint32_t I = 0U; I < Node.callsites_size(); ++I)
     for (const auto *Subcontext = Node.subContexts()[I]; Subcontext;
          Subcontext = Subcontext->next())
       writeImpl(I, *Subcontext);

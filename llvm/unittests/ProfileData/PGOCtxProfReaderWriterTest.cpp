@@ -102,7 +102,8 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
     }
   }
   {
-    auto MB = MemoryBuffer::getFile(ProfileFile.path());
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFile(ProfileFile.path());
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     BitstreamCursor Cursor((*MB)->getBuffer());

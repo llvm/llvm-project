@@ -35,12 +35,12 @@ using namespace llvm;
 Expected<PGOContextualProfile &>
 PGOContextualProfile::getOrEmplace(uint32_t Index, GlobalValue::GUID G,
                                    SmallVectorImpl<uint64_t> &&Counters) {
-  auto I = Callsites[Index].insert(
+  auto [Iter, Inserted] = Callsites[Index].insert(
       {G, PGOContextualProfile(G, std::move(Counters))});
-  if (!I.second)
-    return make_error<StringError>(llvm::errc::invalid_argument,
-                                   "Duplicate GUID for same callsite.");
-  return I.first->second;
+  if (!Inserted)
+    return make_error<InstrProfError>(instrprof_error::invalid_prof,
+                                      "Duplicate GUID for same callsite.");
+  return Iter->second;
 }
 
 void PGOContextualProfile::getContainedGuids(
@@ -86,7 +86,11 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
   // We don't prescribe the order in which the records come in, and we are ok
   // if other unsupported records appear. We seek in the current subblock until
   // we get all we know.
-  while (!Guid || !Counters || (ExpectIndex && !CallsiteIndex)) {
+  auto GotAllWeNeed = [&]() {
+    return Guid.has_value() && Counters.has_value() &&
+           (!ExpectIndex || CallsiteIndex.has_value());
+  };
+  while (!GotAllWeNeed()) {
     RecordValues.clear();
     EXPECT_OR_RET(Entry, advance());
     if (Entry->Kind != BitstreamEntry::Record)
@@ -114,8 +118,8 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
       CallsiteIndex = RecordValues[0];
       break;
     default:
-      // OK if we see records we do not understand, like records (profiles)
-      // introduced later.
+      // OK if we see records we do not understand, like records (profile
+      // components) introduced later.
       break;
     }
   }
@@ -124,10 +128,12 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
 
   while (canReadContext()) {
     EXPECT_OR_RET(SC, readContext(true));
-    if (!Ret.callsites()[*SC->first]
-             .insert({SC->second.guid(), std::move(SC->second)})
-             .second)
-      return wrongValue("Duplicate");
+    auto &Targets = Ret.callsites()[*SC->first];
+    auto [_, Inserted] =
+        Targets.insert({SC->second.guid(), std::move(SC->second)});
+    if (!Inserted)
+      return wrongValue(
+          "Unexpected duplicate target (callee) at the same callsite.");
   }
   return std::make_pair(CallsiteIndex, std::move(Ret));
 }
@@ -147,9 +153,9 @@ Error PGOCtxProfileReader::readMetadata() {
   if (*Code != PGOCtxProfileRecords::Version)
     return unsupported("Expected Version record");
   if (Ver.size() != 1 || Ver[0] > PGOCtxProfileWriter::CurrentVersion)
-    return unsupported("Version " + std::to_string(*Code) +
+    return unsupported("Version " + Twine(*Code) +
                        " is higher than supported version " +
-                       std::to_string(PGOCtxProfileWriter::CurrentVersion));
+                       Twine(PGOCtxProfileWriter::CurrentVersion));
   return Error::success();
 }
 
