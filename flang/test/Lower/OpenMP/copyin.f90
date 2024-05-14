@@ -152,10 +152,10 @@ end
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_9]]#0 temporary_lhs : i32, !fir.ref<i32>
 
+! CHECK:             omp.barrier
+
 ! CHECK:             %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "i"
 ! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
-! CHECK:             omp.barrier
 
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
@@ -317,17 +317,14 @@ end subroutine
 ! CHECK:             %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_28]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_30]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_32]] to %[[VAL_26]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             omp.barrier
 
 ! CHECK:             %[[VAL_19:.*]] = fir.alloca i32 {bindc_name = "i"
 ! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
-! CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_32]] to %[[VAL_26]]#0 temporary_lhs : i32, !fir.ref<i32>
-
-! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 temporary_lhs : i32, !fir.ref<i32>
-
-! CHECK:             omp.barrier
 
 ! CHECK:             %[[VAL_34:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_35:.*]] = fir.load %[[VAL_26]]#0 : !fir.ref<i32>

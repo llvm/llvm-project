@@ -43,7 +43,6 @@ private:
   llvm::SetVector<const Fortran::semantics::Symbol *> implicitSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> alreadyPrivatized;
 
   llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::omp::PrivateClauseOp>
       symToPrivatizer;
@@ -52,7 +51,6 @@ private:
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
   Fortran::lower::pft::Evaluation &eval;
-
   bool useDelayedPrivatization;
   Fortran::lower::SymMap *symTable;
 
