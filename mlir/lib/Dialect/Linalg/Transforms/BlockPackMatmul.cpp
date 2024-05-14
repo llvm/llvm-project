@@ -18,6 +18,8 @@
 
 #include <optional>
 
+#define DEBUG_TYPE "block-pack-matmul"
+
 namespace mlir {
 #define GEN_PASS_DEF_LINALGBLOCKPACKMATMUL
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -134,6 +136,24 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   return packTransposedMatmul;
 }
 
+static SmallVector<int64_t> getDefaultBlockFactors(linalg::LinalgOp linalgOp) {
+  // get L1 cache size first.
+  uint32_t L1_cache_size = 4096; // default value
+  uint32_t cpuID = 0;
+  ModuleOp moduleOp = linalgOp->getParentOfType<ModuleOp>();
+  if (std::optional<int64_t> v =
+          DataLayout(moduleOp).getL1CacheSizeInBytes(cpuID)) {
+    L1_cache_size = *v;
+  }
+
+  // block_size = sqrt(L1_cache_size) rounded down to nearest power of 2.
+  int64_t block_size =
+      std::pow(2, std::floor(std::log2(std::sqrt(L1_cache_size))));
+  // we use same block size for all dims.
+  LLVM_DEBUG(llvm::dbgs() << "block_size:" << block_size << "\n");
+  return {block_size, block_size, block_size};
+}
+
 /// Pack a matmul operation into blocked 4D layout.
 FailureOr<PackResult>
 linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
@@ -146,7 +166,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
     return rewriter.notifyMatchFailure(linalgOp, "invalid packing options");
 
   if (options->blockFactors.size() != 3)
-    return rewriter.notifyMatchFailure(linalgOp, "require 3 tile factors");
+    options->blockFactors = getDefaultBlockFactors(linalgOp);
 
   SmallVector<OpFoldResult> mnkTiles =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(options->blockFactors));

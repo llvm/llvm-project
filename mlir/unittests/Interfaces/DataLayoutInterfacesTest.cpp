@@ -197,6 +197,11 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
+  TargetSystemDescSpecInterface getTargetSystemDescSpec() {
+    return getOperation()->getAttrOfType<TargetSystemDescSpecInterface>(
+        kAttrName);
+  }
+
   static llvm::TypeSize getTypeSizeInBits(Type type,
                                           const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) {
@@ -242,6 +247,11 @@ struct OpWith7BitByte
 
   DataLayoutSpecInterface getDataLayoutSpec() {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+  }
+
+  TargetSystemDescSpecInterface getTargetSystemDescSpec() {
+    return getOperation()->getAttrOfType<TargetSystemDescSpecInterface>(
+        kAttrName);
   }
 
   // Bytes are assumed to be 7-bit here.

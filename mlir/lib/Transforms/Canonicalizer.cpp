@@ -23,6 +23,8 @@ namespace mlir {
 
 using namespace mlir;
 
+#define DEBUG_TYPE "canonicalizer"
+
 namespace {
 /// Canonicalize operations in nested regions.
 struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
@@ -48,6 +50,20 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     config.maxIterations = maxIterations;
     config.maxNumRewrites = maxNumRewrites;
 
+    LLVM_DEBUG(llvm::dbgs()
+               << "[CostModel] Canonicalizer MaxIterations (default):"
+               << config.maxIterations << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "[CostModel] Canonicalizer MaxNumRewrites (default):"
+               << config.maxNumRewrites << "\n");
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "[CostModel] Canonicalizer MaxIterations (default):"
+               << config.maxIterations << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "[CostModel] Canonicalizer MaxNumRewrites (default):"
+               << config.maxNumRewrites << "\n");
+
     RewritePatternSet owningPatterns(context);
     for (auto *dialect : context->getLoadedDialects())
       dialect->getCanonicalizationPatterns(owningPatterns);
@@ -59,6 +75,41 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     return success();
   }
   void runOnOperation() override {
+    Operation *op = getOperation();
+    uint32_t cpuID = 0;
+
+    if (isa<ModuleOp>(op)) {
+      if (std::optional<int64_t> v =
+              DataLayout(llvm::dyn_cast<ModuleOp>(*op))
+                  .getCanonicalizerMaxIterations(cpuID)) {
+        config.maxIterations = *v;
+      }
+    } else {
+      ModuleOp moduleOp = op->getParentOfType<ModuleOp>();
+      if (std::optional<int64_t> v =
+              DataLayout(moduleOp).getCanonicalizerMaxIterations(cpuID)) {
+        config.maxIterations = *v;
+      }
+    }
+
+    if (isa<ModuleOp>(op)) {
+      if (std::optional<int64_t> v =
+              DataLayout(llvm::dyn_cast<ModuleOp>(*op))
+                  .getCanonicalizerMaxNumRewrites(cpuID)) {
+        config.maxNumRewrites = *v;
+      }
+    } else {
+      ModuleOp moduleOp = op->getParentOfType<ModuleOp>();
+      if (std::optional<int64_t> v =
+              DataLayout(moduleOp).getCanonicalizerMaxNumRewrites(cpuID)) {
+        config.maxNumRewrites = *v;
+      }
+    }
+    LLVM_DEBUG(llvm::dbgs() << "[CostModel] Canonicalizer MaxIterations (new):"
+                            << config.maxIterations << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "[CostModel] Canonicalizer MaxNumRewrites (new):"
+                            << config.maxNumRewrites << "\n");
+
     LogicalResult converged =
         applyPatternsAndFoldGreedily(getOperation(), *patterns, config);
     // Canonicalization is best-effort. Non-convergence is not a pass failure.

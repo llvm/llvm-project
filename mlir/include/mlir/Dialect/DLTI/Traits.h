@@ -18,6 +18,7 @@ class DataLayoutSpecAttr;
 namespace impl {
 LogicalResult verifyHasDefaultDLTIDataLayoutTrait(Operation *op);
 DataLayoutSpecInterface getDataLayoutSpec(Operation *op);
+TargetSystemDescSpecInterface getTargetSystemDescSpec(Operation *op);
 } // namespace impl
 
 /// Trait to be used by operations willing to use the implementation of the
@@ -36,6 +37,12 @@ public:
   /// specification attribute.
   DataLayoutSpecInterface getDataLayoutSpec() {
     return impl::getDataLayoutSpec(this->getOperation());
+  }
+
+  /// Returns the target system description specification as provided by DLTI
+  /// dialect
+  TargetSystemDescSpecInterface getTargetSystemDescSpec() {
+    return impl::getTargetSystemDescSpec(this->getOperation());
   }
 };
 } // namespace mlir
