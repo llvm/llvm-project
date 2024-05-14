@@ -341,6 +341,7 @@ public:
     VPExpandSCEVSC,
     VPInstructionSC,
     VPInterleaveSC,
+    VPIntermediateStoreSC,
     VPReductionEVLSC,
     VPReductionSC,
     VPReplicateSC,
