@@ -1558,6 +1558,60 @@ define i64 @imm_2reg_1() nounwind {
   ret i64 -1152921504301427080 ; 0xF000_0000_1234_5678
 }
 
+; TODO: Selecting -1 would be better in this case as it can be loaded with a
+; 16 bit instruction when the compressed extension is enabled.
+define void @imm_store_i8_neg1(ptr %p) nounwind {
+; RV32I-LABEL: imm_store_i8_neg1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 255
+; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_store_i8_neg1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 255
+; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm_store_i8_neg1:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    li a1, 255
+; RV64IZBA-NEXT:    sb a1, 0(a0)
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm_store_i8_neg1:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    li a1, 255
+; RV64IZBB-NEXT:    sb a1, 0(a0)
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm_store_i8_neg1:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    li a1, 255
+; RV64IZBS-NEXT:    sb a1, 0(a0)
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm_store_i8_neg1:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    li a1, 255
+; RV64IXTHEADBB-NEXT:    sb a1, 0(a0)
+; RV64IXTHEADBB-NEXT:    ret
+;
+; RV32-REMAT-LABEL: imm_store_i8_neg1:
+; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    li a1, 255
+; RV32-REMAT-NEXT:    sb a1, 0(a0)
+; RV32-REMAT-NEXT:    ret
+;
+; RV64-REMAT-LABEL: imm_store_i8_neg1:
+; RV64-REMAT:       # %bb.0:
+; RV64-REMAT-NEXT:    li a1, 255
+; RV64-REMAT-NEXT:    sb a1, 0(a0)
+; RV64-REMAT-NEXT:    ret
+  store i8 -1, ptr %p
+  ret void
+}
+
 define void @imm_store_i16_neg1(ptr %p) nounwind {
 ; RV32I-LABEL: imm_store_i16_neg1:
 ; RV32I:       # %bb.0:
@@ -2121,8 +2175,8 @@ define i64 @imm_70370820078523() {
 ;
 ; RV64I-POOL-LABEL: imm_70370820078523:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI37_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI37_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI38_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI38_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_70370820078523:
@@ -2266,8 +2320,8 @@ define i64 @imm_neg_9223301666034697285() {
 ;
 ; RV64I-POOL-LABEL: imm_neg_9223301666034697285:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI39_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI39_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI40_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI40_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_neg_9223301666034697285:
@@ -2544,8 +2598,8 @@ define i64 @imm_neg_9223354442718100411() {
 ;
 ; RV64I-POOL-LABEL: imm_neg_9223354442718100411:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI43_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI43_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI44_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI44_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_neg_9223354442718100411:
@@ -3855,8 +3909,8 @@ define i64 @imm64_same_lo_hi_optsize() nounwind optsize {
 ;
 ; RV64I-POOL-LABEL: imm64_same_lo_hi_optsize:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI64_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI64_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI65_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI65_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm64_same_lo_hi_optsize:
@@ -3930,8 +3984,8 @@ define i64 @imm64_same_lo_hi_negative() nounwind {
 ;
 ; RV64I-POOL-LABEL: imm64_same_lo_hi_negative:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI65_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI65_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI66_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI66_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm64_same_lo_hi_negative:
