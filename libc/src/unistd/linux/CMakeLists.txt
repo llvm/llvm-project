@@ -116,6 +116,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    libc.src.unistd.pathconf_utils
 )
 
 add_entrypoint_object(
@@ -292,6 +293,20 @@ add_entrypoint_object(
   pathconf.cpp
   HDRS
     ../pathconf.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.unistd.pathconf_utils
+)
+
+add_entrypoint_object(
+  pathconf_utils
+  SRCS
+  pathconf_utils.cpp
+  HDRS
+    ../pathconf_utils.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall

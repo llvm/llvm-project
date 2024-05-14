@@ -175,6 +175,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pathconf_utils
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pathconf_utils
+)
+
+add_entrypoint_object(
   pipe
   ALIAS
   DEPENDS
