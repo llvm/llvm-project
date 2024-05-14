@@ -593,7 +593,8 @@ TEST(SelectionTest, CommonAncestor) {
         template <typename T, typename K>
         concept D = true;
         template <typename T> void g(D<[[^T]]> auto abc) {}
-      )cpp", "TemplateTypeParmTypeLoc"},
+      )cpp",
+       "TemplateTypeParmTypeLoc"},
   };
 
   for (const Case &C : Cases) {
