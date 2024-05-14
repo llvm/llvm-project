@@ -31,12 +31,12 @@ body: |
 ---
 # Likewise with only SME with a streaming function.
 name: hasBasepointer_sme_streaming
-# SME-LABEL: name: hasBasepointer_sme_streaming
-# SME: bb.0:
-# SME:      $sp = frame-setup SUBXri $sp, 16, 0
-# SME-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
-# SME-NEXT: $x19 = ADDXri $sp, 0, 0
-# SME:      STRXui $x0, $x19, 0
+# CHECK-LABEL: name: hasBasepointer_sme_streaming
+# CHECK: bb.0:
+# CHECK:      $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
+# CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
+# CHECK:      STRXui $x0, $x19, 0
 tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
