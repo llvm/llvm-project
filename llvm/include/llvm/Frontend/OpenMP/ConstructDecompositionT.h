@@ -793,9 +793,14 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // [5.2:340:33]
   auto canMakePrivateCopy = [](llvm::omp::Clause id) {
     switch (id) {
+    // Clauses with "privatization" property:
     case llvm::omp::Clause::OMPC_firstprivate:
+    case llvm::omp::Clause::OMPC_in_reduction:
     case llvm::omp::Clause::OMPC_lastprivate:
+    case llvm::omp::Clause::OMPC_linear:
     case llvm::omp::Clause::OMPC_private:
+    case llvm::omp::Clause::OMPC_reduction:
+    case llvm::omp::Clause::OMPC_task_reduction:
       return true;
     default:
       return false;
