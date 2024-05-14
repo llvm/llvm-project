@@ -40,6 +40,8 @@ struct elements_of {
 };
 
 template <class _Range, class _Allocator = allocator<byte>>
+// This explicit constraint is required because AppleClang 15 might not deduce the correct type for `_Range` without it
+  requires range<_Range&&>
 elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Allocator>;
 
 } // namespace ranges
