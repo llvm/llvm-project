@@ -473,7 +473,7 @@ void OpenACCClausePrinter::VisitDeviceTypeClause(
                           if (Arch.first == nullptr)
                             OS << "*";
                           else
-                            OS << Arch.first;
+                            OS << Arch.first->getName();
                         });
   OS << ")";
 }
