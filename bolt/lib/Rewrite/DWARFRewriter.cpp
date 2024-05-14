@@ -458,32 +458,6 @@ static std::optional<uint64_t> getAsAddress(const DWARFUnit &DU,
   return std::nullopt;
 }
 
-/// Returns DWO Name to be used. Handles case where user specifies output DWO
-/// directory, and there are duplicate names. Assumes DWO ID is unique.
-static std::string
-getDWOName(llvm::DWARFUnit &CU,
-           std::unordered_map<std::string, uint32_t> &NameToIndexMap) {
-  std::optional<uint64_t> DWOId = CU.getDWOId();
-  assert(DWOId && "DWO ID not found.");
-  (void)DWOId;
-
-  std::string DWOName = dwarf::toString(
-      CU.getUnitDIE().find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-      "");
-  assert(!DWOName.empty() &&
-         "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exists.");
-  if (!opts::DwarfOutputPath.empty()) {
-    DWOName = std::string(sys::path::filename(DWOName));
-    auto Iter = NameToIndexMap.find(DWOName);
-    if (Iter == NameToIndexMap.end())
-      Iter = NameToIndexMap.insert({DWOName, 0}).first;
-    DWOName.append(std::to_string(Iter->second));
-    ++Iter->second;
-  }
-  DWOName.append(".dwo");
-  return DWOName;
-}
-
 static std::unique_ptr<DIEStreamer>
 createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   StringRef Swift5ReflectionSegmentName, DIEBuilder &DIEBldr,
@@ -515,7 +489,9 @@ static void emitDWOBuilder(const std::string &DWOName,
                            DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
                            DWARFUnit &SplitCU, DWARFUnit &CU,
                            DWARFRewriter::DWPState &State,
-                           DebugLocWriter &LocWriter) {
+                           DebugLocWriter &LocWriter,
+                           DebugStrOffsetsWriter &StrOffstsWriter,
+                           DebugStrWriter &StrWriter) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
   DWODIEBuilder.generateAbbrevs();
   DWODIEBuilder.finish();
@@ -577,54 +553,10 @@ static void emitDWOBuilder(const std::string &DWOName,
   }
   if (opts::WriteDWP)
     Rewriter.updateDWP(CU, OverriddenSections, CUMI, TUMetaVector, State,
-                       LocWriter);
+                       LocWriter, StrOffstsWriter, StrWriter);
   else
-    Rewriter.writeDWOFiles(CU, OverriddenSections, DWOName, LocWriter);
-}
-
-/// Adds a \p Str to .debug_str section.
-/// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
-/// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
-/// for this contribution of \p Unit.
-static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
-                            DebugStrWriter &StrWriter, DIEBuilder &DIEBldr,
-                            DIE &Die, const DWARFUnit &Unit,
-                            DIEValue &DIEAttrInfo, StringRef Str) {
-  uint32_t NewOffset = StrWriter.addString(Str);
-  if (Unit.getVersion() >= 5) {
-    StrOffstsWriter.updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
-                                     NewOffset);
-    return;
-  }
-  DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
-                       DIEInteger(NewOffset));
-}
-
-static std::string
-updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
-                     DebugStrWriter &StrWriter,
-                     std::unordered_map<std::string, uint32_t> &NameToIndexMap,
-                     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &UnitDIE) {
-  DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
-  if (!DWONameAttrInfo)
-    DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
-  assert(DWONameAttrInfo && "DW_AT_dwo_name is not in Skeleton CU.");
-  std::string ObjectName;
-
-  ObjectName = getDWOName(Unit, NameToIndexMap);
-  addStringHelper(StrOffstsWriter, StrWriter, DIEBldr, UnitDIE, Unit,
-                  DWONameAttrInfo, ObjectName.c_str());
-
-  DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
-  assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
-
-  if (!opts::DwarfOutputPath.empty()) {
-    if (!sys::fs::exists(opts::DwarfOutputPath))
-      sys::fs::create_directory(opts::DwarfOutputPath);
-    addStringHelper(StrOffstsWriter, StrWriter, DIEBldr, UnitDIE, Unit,
-                    CompDirAttrInfo, opts::DwarfOutputPath.c_str());
-  }
-  return ObjectName;
+    Rewriter.writeDWOFiles(CU, OverriddenSections, DWOName, LocWriter,
+                           StrOffstsWriter, StrWriter);
 }
 
 using DWARFUnitVec = std::vector<DWARFUnit *>;
@@ -673,9 +605,8 @@ void DWARFRewriter::updateDebugInfo() {
     return;
 
   ARangesSectionWriter = std::make_unique<DebugARangesSectionWriter>();
-  StrWriter = std::make_unique<DebugStrWriter>(BC);
-
-  StrOffstsWriter = std::make_unique<DebugStrOffsetsWriter>();
+  StrWriter = std::make_unique<DebugStrWriter>(*BC.DwCtx, false);
+  StrOffstsWriter = std::make_unique<DebugStrOffsetsWriter>(BC);
 
   if (!opts::DeterministicDebugInfo) {
     opts::DeterministicDebugInfo = true;
@@ -720,10 +651,6 @@ void DWARFRewriter::updateDebugInfo() {
     return LocListWritersByCU[CUIndex++].get();
   };
 
-  // Unordered maps to handle name collision if output DWO directory is
-  // specified.
-  std::unordered_map<std::string, uint32_t> NameToIndexMap;
-
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
   DWPState State;
@@ -747,13 +674,20 @@ void DWARFRewriter::updateDebugInfo() {
                                Unit);
       DWODIEBuilder.buildDWOUnit(**SplitCU);
       std::string DWOName = "";
+      std::optional<std::string> DwarfOutputPath =
+          opts::DwarfOutputPath.empty()
+              ? std::nullopt
+              : std::optional<std::string>(opts::DwarfOutputPath.c_str());
       {
         std::lock_guard<std::mutex> Lock(AccessMutex);
-        DWOName = updateDWONameCompDir(*StrOffstsWriter, *StrWriter,
-                                       NameToIndexMap, *Unit, *DIEBlder,
-                                       *DIEBlder->getUnitDIEbyUnit(*Unit));
+        DWOName = DIEBlder->updateDWONameCompDir(
+            *StrOffstsWriter, *StrWriter, *Unit, DwarfOutputPath, std::nullopt);
       }
-
+      DebugStrOffsetsWriter DWOStrOffstsWriter(BC);
+      DebugStrWriter DWOStrWriter((*SplitCU)->getContext(), true);
+      DWODIEBuilder.updateDWONameCompDirForTypes(DWOStrOffstsWriter,
+                                                 DWOStrWriter, **SplitCU,
+                                                 DwarfOutputPath, DWOName);
       DebugLoclistWriter DebugLocDWoWriter(*Unit, Unit->getVersion(), true);
       DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
       if (Unit->getVersion() >= 5) {
@@ -771,7 +705,7 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter->finalizeSection();
 
       emitDWOBuilder(DWOName, DWODIEBuilder, *this, **SplitCU, *Unit, State,
-                     DebugLocDWoWriter);
+                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter);
     }
 
     if (Unit->getVersion() >= 5) {
@@ -1736,6 +1670,7 @@ std::optional<StringRef> updateDebugData(
     const DWARFUnitIndex::Entry *CUDWOEntry, uint64_t DWOId,
     std::unique_ptr<DebugBufferVector> &OutputBuffer,
     DebugRangeListsSectionWriter *RangeListsWriter, DebugLocWriter &LocWriter,
+    DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
     const llvm::bolt::DWARFRewriter::OverriddenSectionsMap &OverridenSections) {
 
   using DWOSectionContribution =
@@ -1774,6 +1709,11 @@ std::optional<StringRef> updateDebugData(
     if (SectionName != "debug_str.dwo")
       errs() << "BOLT-WARNING: unsupported debug section: " << SectionName
              << "\n";
+    if (StrWriter.isInitialized()) {
+      OutputBuffer = StrWriter.releaseBuffer();
+      return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
+                       OutputBuffer->size());
+    }
     return SectionContents;
   }
   case DWARFSectionKind::DW_SECT_INFO: {
@@ -1783,6 +1723,11 @@ std::optional<StringRef> updateDebugData(
     return getOverridenSection(DWARFSectionKind::DW_SECT_EXT_TYPES);
   }
   case DWARFSectionKind::DW_SECT_STR_OFFSETS: {
+    if (StrOffstsWriter.isFinalized()) {
+      OutputBuffer = StrOffstsWriter.releaseBuffer();
+      return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
+                       OutputBuffer->size());
+    }
     return getSliceData(CUDWOEntry, SectionContents,
                         DWARFSectionKind::DW_SECT_STR_OFFSETS, DWPOffset);
   }
@@ -1884,7 +1829,9 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
                               const OverriddenSectionsMap &OverridenSections,
                               const DWARFRewriter::UnitMeta &CUMI,
                               DWARFRewriter::UnitMetaVectorType &TUMetaVector,
-                              DWPState &State, DebugLocWriter &LocWriter) {
+                              DWPState &State, DebugLocWriter &LocWriter,
+                              DebugStrOffsetsWriter &StrOffstsWriter,
+                              DebugStrWriter &StrWriter) {
   const uint64_t DWOId = *CU.getDWOId();
   MCSection *const StrOffsetSection = State.MCOFI->getDwarfStrOffDWOSection();
   assert(StrOffsetSection && "StrOffsetSection does not exist.");
@@ -1941,15 +1888,18 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
         TUEntry.Contributions[Index].getLength32();
     State.TypeIndexEntries.insert(std::make_pair(Hash, TUEntry));
   };
+  std::unique_ptr<DebugBufferVector> StrOffsetsOutputData;
+  std::unique_ptr<DebugBufferVector> StrOutputData;
   for (const SectionRef &Section : DWOFile->sections()) {
-    std::unique_ptr<DebugBufferVector> OutputData;
+    std::unique_ptr<DebugBufferVector> OutputData = nullptr;
     StringRef SectionName = getSectionName(Section);
     Expected<StringRef> ContentsExp = Section.getContents();
     assert(ContentsExp && "Invalid contents.");
-    std::optional<StringRef> TOutData = updateDebugData(
-        (*DWOCU)->getContext(), SectionName, *ContentsExp, State.KnownSections,
-        *State.Streamer, *this, CUDWOEntry, DWOId, OutputData,
-        RangeListssWriter, LocWriter, OverridenSections);
+    std::optional<StringRef> TOutData =
+        updateDebugData((*DWOCU)->getContext(), SectionName, *ContentsExp,
+                        State.KnownSections, *State.Streamer, *this, CUDWOEntry,
+                        DWOId, OutputData, RangeListssWriter, LocWriter,
+                        StrOffstsWriter, StrWriter, OverridenSections);
     if (!TOutData)
       continue;
 
@@ -1961,14 +1911,17 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
 
     if (SectionName == "debug_str.dwo") {
       CurStrSection = OutData;
+      StrOutputData = std::move(OutputData);
     } else {
       // Since handleDebugDataPatching returned true, we already know this is
       // a known section.
       auto SectionIter = State.KnownSections.find(SectionName);
-      if (SectionIter->second.second == DWARFSectionKind::DW_SECT_STR_OFFSETS)
+      if (SectionIter->second.second == DWARFSectionKind::DW_SECT_STR_OFFSETS) {
         CurStrOffsetSection = OutData;
-      else
+        StrOffsetsOutputData = std::move(OutputData);
+      } else {
         State.Streamer->emitBytes(OutData);
+      }
       unsigned int Index =
           getContributionIndex(SectionIter->second.second, State.IndexVersion);
       uint64_t Offset = State.ContributionOffsets[Index];
@@ -1992,6 +1945,10 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
     // based on hash.
     if (!StrSectionWrittenOut && !CurStrOffsetSection.empty() &&
         !CurStrSection.empty()) {
+      // If debug_str.dwo section was modified storing it until dwp is written
+      // out. DWPStringPool stores raw pointers to strings.
+      if (StrOutputData)
+        State.StrSections.push_back(std::move(StrOutputData));
       writeStringsAndOffsets(*State.Streamer.get(), *State.Strings.get(),
                              StrOffsetSection, CurStrSection,
                              CurStrOffsetSection, CU.getVersion());
@@ -2017,7 +1974,8 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
 
 void DWARFRewriter::writeDWOFiles(
     DWARFUnit &CU, const OverriddenSectionsMap &OverridenSections,
-    const std::string &DWOName, DebugLocWriter &LocWriter) {
+    const std::string &DWOName, DebugLocWriter &LocWriter,
+    DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter) {
   // Setup DWP code once.
   DWARFContext *DWOCtx = BC.getDWOContext();
   const uint64_t DWOId = *CU.getDWOId();
@@ -2072,10 +2030,11 @@ void DWARFRewriter::writeDWOFiles(
     // have .debug_rnglists so won't be part of the loop below.
     if (!RangeListssWriter->empty()) {
       std::unique_ptr<DebugBufferVector> OutputData;
-      if (std::optional<StringRef> OutData = updateDebugData(
-              (*DWOCU)->getContext(), "debug_rnglists.dwo", "", KnownSections,
-              *Streamer, *this, CUDWOEntry, DWOId, OutputData,
-              RangeListssWriter, LocWriter, OverridenSections))
+      if (std::optional<StringRef> OutData =
+              updateDebugData((*DWOCU)->getContext(), "debug_rnglists.dwo", "",
+                              KnownSections, *Streamer, *this, CUDWOEntry,
+                              DWOId, OutputData, RangeListssWriter, LocWriter,
+                              StrOffstsWriter, StrWriter, OverridenSections))
         Streamer->emitBytes(*OutData);
     }
   }
@@ -2090,7 +2049,7 @@ void DWARFRewriter::writeDWOFiles(
     if (std::optional<StringRef> OutData = updateDebugData(
             (*DWOCU)->getContext(), SectionName, *ContentsExp, KnownSections,
             *Streamer, *this, CUDWOEntry, DWOId, OutputData, RangeListssWriter,
-            LocWriter, OverridenSections))
+            LocWriter, StrOffstsWriter, StrWriter, OverridenSections))
       Streamer->emitBytes(*OutData);
   }
   Streamer->finish();
