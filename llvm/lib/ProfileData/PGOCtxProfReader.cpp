@@ -14,12 +14,15 @@
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
 
+// FIXME(#92054) - these Error handling macros are (re-)invented in a few
+// places.
 #define EXPECT_OR_RET(LHS, RHS)                                                \
   auto LHS = RHS;                                                              \
   if (!LHS)                                                                    \
@@ -53,11 +56,11 @@ Expected<BitstreamEntry> PGOCtxProfileReader::advance() {
 }
 
 Error PGOCtxProfileReader::wrongValue(const Twine &Msg) {
-  return make_error<StringError>(llvm::errc::invalid_argument, Msg);
+  return make_error<InstrProfError>(instrprof_error::invalid_prof, Msg);
 }
 
 Error PGOCtxProfileReader::unsupported(const Twine &Msg) {
-  return make_error<StringError>(llvm::errc::not_supported, Msg);
+  return make_error<InstrProfError>(instrprof_error::unsupported_version, Msg);
 }
 
 bool PGOCtxProfileReader::canReadContext() {
@@ -87,7 +90,7 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
     RecordValues.clear();
     EXPECT_OR_RET(Entry, advance());
     if (Entry->Kind != BitstreamEntry::Record)
-      return unsupported(
+      return wrongValue(
           "Expected records before encountering more subcontexts");
     EXPECT_OR_RET(ReadRecord,
                   Cursor.readRecord(bitc::UNABBREV_RECORD, RecordValues));

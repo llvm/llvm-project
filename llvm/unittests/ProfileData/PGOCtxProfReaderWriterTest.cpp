@@ -100,8 +100,6 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
       for (auto &[_, R] : roots())
         Writer.write(*R);
     }
-    Out.flush();
-    Out.close();
   }
   {
     auto MB = MemoryBuffer::getFile(ProfileFile.path());
@@ -130,8 +128,6 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
       PGOCtxProfileWriter Writer(Out);
       Writer.write(*R);
     }
-    Out.flush();
-    Out.close();
   }
   {
     auto MB = MemoryBuffer::getFile(ProfileFile.path());
@@ -171,8 +167,6 @@ TEST_F(PGOCtxProfRWTest, ValidButEmpty) {
       PGOCtxProfileWriter Writer(Out);
       // don't write anything - this will just produce the metadata subblock.
     }
-    Out.flush();
-    Out.close();
   }
   {
     auto MB = MemoryBuffer::getFile(ProfileFile.path());
@@ -195,8 +189,6 @@ TEST_F(PGOCtxProfRWTest, WrongVersion) {
     {
       PGOCtxProfileWriter Writer(Out, PGOCtxProfileWriter::CurrentVersion + 1);
     }
-    Out.flush();
-    Out.close();
   }
   {
     auto MB = MemoryBuffer::getFile(ProfileFile.path());
@@ -221,8 +213,6 @@ TEST_F(PGOCtxProfRWTest, DuplicateRoots) {
       Writer.write(*createNode(1, 1, 1));
       Writer.write(*createNode(1, 1, 1));
     }
-    Out.flush();
-    Out.close();
   }
   {
     auto MB = MemoryBuffer::getFile(ProfileFile.path());
@@ -250,8 +240,6 @@ TEST_F(PGOCtxProfRWTest, DuplicateTargets) {
       PGOCtxProfileWriter Writer(Out);
       Writer.write(*R);
     }
-    Out.flush();
-    Out.close();
   }
   {
     auto MB = MemoryBuffer::getFile(ProfileFile.path());

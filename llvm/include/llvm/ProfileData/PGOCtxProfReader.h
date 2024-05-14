@@ -66,6 +66,7 @@ public:
   }
 
   const CallTargetMapTy &callsite(uint32_t I) const {
+    assert(hasCallsite(I) && "Callsite not found");
     return Callsites.find(I)->second;
   }
   void getContainedGuids(DenseSet<GlobalValue::GUID> &Guids) const;
