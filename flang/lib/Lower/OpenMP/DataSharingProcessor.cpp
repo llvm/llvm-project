@@ -26,6 +26,7 @@ namespace omp {
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
+  llvm::errs() << ">>>> processStep1\n";
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
@@ -288,6 +289,9 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
         &symbolsInNestedRegions) {
   for (Fortran::lower::pft::Evaluation &nestedEval :
        eval.getNestedEvaluations()) {
+    //llvm::errs() << ">>>> nestedEval: ";
+    //nestedEval.dump();
+    //llvm::errs() << "\n";
     if (nestedEval.hasNestedEvaluations()) {
       if (nestedEval.isConstruct())
         collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
@@ -430,12 +434,17 @@ void DataSharingProcessor::privatize(
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   for (const Fortran::semantics::Symbol *sym : allPrivatizedSymbols) {
+    if (alreadyPrivatized.contains(sym))
+      continue;
+
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
         doPrivatize(&*mem, clauseOps, privateSyms);
     } else
       doPrivatize(sym, clauseOps, privateSyms);
+
+    alreadyPrivatized.insert(sym);
   }
 }
 
@@ -456,6 +465,7 @@ void DataSharingProcessor::doPrivatize(
     const Fortran::semantics::Symbol *sym,
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
+  llvm::errs() << ">>>> doPrivatize: " << *sym << "\n";
   if (!useDelayedPrivatization) {
     cloneSymbol(sym);
     copyFirstPrivateSymbol(sym);

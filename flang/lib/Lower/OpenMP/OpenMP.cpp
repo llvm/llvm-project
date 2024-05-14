@@ -50,7 +50,8 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
                            Fortran::semantics::SemanticsContext &semaCtx,
                            Fortran::lower::pft::Evaluation &eval,
                            mlir::Location loc, const ConstructQueue &queue,
-                           ConstructQueue::iterator item);
+                           ConstructQueue::iterator item,
+                           DataSharingProcessor *dsp = nullptr);
 
 static Fortran::lower::pft::Evaluation *
 getCollapsedLoopEval(Fortran::lower::pft::Evaluation &eval, int collapseValue) {
@@ -594,6 +595,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   if (privatize) {
     if (!info.dsp) {
       tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval);
+      //llvm::errs() << ">>>> 1 processStep1\n";
       tempDsp->processStep1();
     }
   }
@@ -608,8 +610,10 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   }
 
   if (ConstructQueue::iterator next = std::next(item); next != queue.end()) {
+    //llvm::errs() << ">>>> 1 genOMPDispatch\n";
     genOMPDispatch(info.converter, info.symTable, info.semaCtx, info.eval,
-                   info.loc, queue, next);
+                   info.loc, queue, next,
+                   info.dsp ? info.dsp : &tempDsp.value());
   } else {
     // genFIR(Evaluation&) tries to patch up unterminated blocks, causing
     // a lot of complications for our approach if the terminator generation
@@ -761,6 +765,7 @@ static void genBodyOfTargetDataOp(
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 
   if (ConstructQueue::iterator next = std::next(item); next != queue.end()) {
+    //llvm::errs() << ">>>> 2 genOMPDispatch\n";
     genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                    next);
   } else {
@@ -924,6 +929,7 @@ genBodyOfTargetOp(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 
   if (ConstructQueue::iterator next = std::next(item); next != queue.end()) {
+    //llvm::errs() << ">>>> 3 genOMPDispatch\n";
     genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                    next);
   } else {
@@ -1363,8 +1369,11 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   DataSharingProcessor dsp(converter, semaCtx, clauses, eval,
                            /*useDelayedPrivatization=*/true, &symTable);
 
-  if (privatize)
+  if (privatize) {
+    //llvm::errs() << ">>>> 2 processStep1\n";
     dsp.processStep1(&clauseOps, &privateSyms);
+  }
+
 
   auto genRegionEntryCB = [&](mlir::Operation *op) {
     auto parallelOp = llvm::cast<mlir::omp::ParallelOp>(op);
@@ -1439,6 +1448,7 @@ genSectionsOp(Fortran::lower::AbstractConverter &converter,
   // Insert privatizations before SECTIONS
   symTable.pushScope();
   DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  //llvm::errs() << ">>>> 3 processStep1\n";
   dsp.processStep1();
 
   List<Clause> nonDsaClauses;
@@ -1512,6 +1522,7 @@ genSimdOp(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   symTable.pushScope();
   DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  //llvm::errs() << ">>>> 4 processStep1\n";
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
@@ -1832,10 +1843,14 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
             Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
             const List<Clause> &clauses, const ConstructQueue &queue,
-            ConstructQueue::iterator item) {
+            ConstructQueue::iterator item,
+            DataSharingProcessor *existingDSP = nullptr) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  symTable.pushScope();
-  DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  if (existingDSP == nullptr)
+    symTable.pushScope();
+  DataSharingProcessor localDSP(converter, semaCtx, clauses, eval);
+  DataSharingProcessor &dsp = existingDSP == nullptr ? localDSP : *existingDSP;
+  //llvm::errs() << ">>>> 5 processStep1\n";
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
@@ -1876,7 +1891,8 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
                      .setReductions(&reductionSyms, &reductionTypes)
                      .setGenRegionEntryCb(ivCallback),
                  queue, item);
-  symTable.popScope();
+  if (existingDSP == nullptr)
+    symTable.popScope();
   return wsloopOp;
 }
 
@@ -1957,7 +1973,8 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
                            Fortran::semantics::SemanticsContext &semaCtx,
                            Fortran::lower::pft::Evaluation &eval,
                            mlir::Location loc, const ConstructQueue &queue,
-                           ConstructQueue::iterator item) {
+                           ConstructQueue::iterator item,
+                           DataSharingProcessor *dsp) {
   assert(item != queue.end());
   const List<Clause> &clauses = item->clauses;
 
@@ -1967,7 +1984,8 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
                     item);
     break;
   case llvm::omp::Directive::OMPD_do:
-    genWsloopOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
+    genWsloopOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item,
+                dsp);
     break;
   case llvm::omp::Directive::OMPD_loop:
   case llvm::omp::Directive::OMPD_masked:
@@ -2394,6 +2412,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
+  //llvm::errs() << ">>>> 4 genOMPDispatch\n";
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -2455,6 +2474,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
+  //llvm::errs() << ">>>> 5 genOMPDispatch\n";
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -2498,6 +2518,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
+  //llvm::errs() << ">>>> 6 genOMPDispatch\n";
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
