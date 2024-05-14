@@ -80,6 +80,12 @@ struct MaskedArrayExpr {
   void generateNoneElementalCleanupIfAny(fir::FirOpBuilder &builder,
                                          mlir::IRMapping &mapper);
 
+  /// Helper to clone the clean-ups of the masked expr region terminator.
+  /// This is called outside of the loops for the initial mask, and inside
+  /// the loops for the other masked expressions.
+  mlir::Operation *generateMaskedExprCleanUps(fir::FirOpBuilder &builder,
+                                              mlir::IRMapping &mapper);
+
   mlir::Location loc;
   mlir::Region &region;
   /// Set of operations that form the elemental parts of the
@@ -802,8 +808,15 @@ OrderedAssignmentRewriter::generateMaskedEntity(MaskedArrayExpr &maskedExpr) {
   // at the current insertion point (inside the where loops, and any fir.if
   // generated for previous masks).
   builder.restoreInsertionPoint(insertionPoint);
-  return maskedExpr.generateElementalParts(
+  mlir::Value scalar = maskedExpr.generateElementalParts(
       builder, whereLoopNest->oneBasedIndices, mapper);
+  /// Generate cleanups for the elemental parts inside the loops (setting the
+  /// location so that the assignment will be generated before the cleanups).
+  if (!maskedExpr.isOuterMaskExpr)
+    if (mlir::Operation *firstCleanup =
+            maskedExpr.generateMaskedExprCleanUps(builder, mapper))
+      builder.setInsertionPoint(firstCleanup);
+  return scalar;
 }
 
 void OrderedAssignmentRewriter::generateCleanupIfAny(
@@ -1009,6 +1022,33 @@ MaskedArrayExpr::generateElementalParts(fir::FirOpBuilder &builder,
                            mustRecursivelyInline);
 }
 
+mlir::Operation *
+MaskedArrayExpr::generateMaskedExprCleanUps(fir::FirOpBuilder &builder,
+                                            mlir::IRMapping &mapper) {
+  // Clone the clean-ups from the region itself, except for the destroy
+  // of the hlfir.elemental that have been inlined.
+  mlir::Operation &terminator = region.back().back();
+  mlir::Region *cleanupRegion = nullptr;
+  if (auto elementalAddr = mlir::dyn_cast<hlfir::ElementalAddrOp>(terminator)) {
+    cleanupRegion = &elementalAddr.getCleanup();
+  } else {
+    auto yieldOp = mlir::cast<hlfir::YieldOp>(terminator);
+    cleanupRegion = &yieldOp.getCleanup();
+  }
+  if (cleanupRegion->empty())
+    return nullptr;
+  mlir::Operation *firstNewCleanup = nullptr;
+  for (mlir::Operation &op : cleanupRegion->front().without_terminator()) {
+    if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(op))
+      if (elementalParts.contains(destroy.getExpr().getDefiningOp()))
+        continue;
+    mlir::Operation *cleanup = builder.clone(op, mapper);
+    if (!firstNewCleanup)
+      firstNewCleanup = cleanup;
+  }
+  return firstNewCleanup;
+}
+
 void MaskedArrayExpr::generateNoneElementalCleanupIfAny(
     fir::FirOpBuilder &builder, mlir::IRMapping &mapper) {
   if (!isOuterMaskExpr) {
@@ -1024,24 +1064,11 @@ void MaskedArrayExpr::generateNoneElementalCleanupIfAny(
                cleanupRegion.front().without_terminator())
             (void)builder.clone(cleanupOp, mapper);
       }
-  }
-  // Clone the clean-ups from the region itself, except for the destroy
-  // of the hlfir.elemental that have been inlined.
-  mlir::Operation &terminator = region.back().back();
-  mlir::Region *cleanupRegion = nullptr;
-  if (auto elementalAddr = mlir::dyn_cast<hlfir::ElementalAddrOp>(terminator)) {
-    cleanupRegion = &elementalAddr.getCleanup();
   } else {
-    auto yieldOp = mlir::cast<hlfir::YieldOp>(terminator);
-    cleanupRegion = &yieldOp.getCleanup();
-  }
-  if (cleanupRegion->empty())
-    return;
-  for (mlir::Operation &op : cleanupRegion->front().without_terminator()) {
-    if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(op))
-      if (elementalParts.contains(destroy.getExpr().getDefiningOp()))
-        continue;
-    (void)builder.clone(op, mapper);
+    // For the outer mask, the region clean-ups must be generated
+    // outside of the loops since the mask non hlfir.elemental part
+    // is generated before the loops.
+    generateMaskedExprCleanUps(builder, mapper);
   }
 }
 
