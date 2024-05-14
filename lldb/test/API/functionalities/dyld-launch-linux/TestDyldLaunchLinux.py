@@ -40,9 +40,11 @@ class TestLinux64LaunchingViaDynamicLoader(TestBase):
         breakpoint_shared_library = target.BreakpointCreateBySourceRegex(
             "get_signal_crash", lldb.SBFileSpec("signal_file.cpp")
         )
-        inferior_exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
+        inferior_exe_path = lldbutil.install_to_target(
+            self, self.getBuildArtifact("a.out")
+        )
         lldbutil.install_to_target(self, self.getBuildArtifact("libsignal_file.so"))
-        
+
         launch_info = lldb.SBLaunchInfo(
             [
                 "--library-path",
