@@ -2290,7 +2290,6 @@ TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   // but not all as if one is hidden correctly the rest should be.
   EXPECT_EQ(std::string::npos, captured.find("memtag3"));
   EXPECT_EQ(std::string::npos, captured.find("sha1"));
-  EXPECT_EQ(std::string::npos, captured.find("ssbs2"));
 }
 
 struct AArch64ExtensionDependenciesBaseArchTestParams {

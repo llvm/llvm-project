@@ -75,20 +75,13 @@ class FMVOnlyExtension<string FMVBit, string Name, string Deps, int Priority>
 }
 
 def : FMVOnlyExtension<"FEAT_DGH", "dgh", "", 260>;
-def : FMVOnlyExtension<"FEAT_DPB", "dpb", "+ccpp", 190>;
-def : FMVOnlyExtension<"FEAT_DPB2", "dpb2", "+ccpp,+ccdp", 200>;
 def : FMVOnlyExtension<"FEAT_EBF16", "ebf16", "+bf16", 290>;
-def : FMVOnlyExtension<"FEAT_FLAGM2", "flagm2", "+flagm,+altnzcv", 30>;
-def : FMVOnlyExtension<"FEAT_FRINTTS", "frintts", "+fptoint", 250>;
 def : FMVOnlyExtension<"FEAT_LS64_ACCDATA", "ls64_accdata", "+ls64", 540>;
 def : FMVOnlyExtension<"FEAT_LS64_V", "ls64_v", "", 530>;
 def : FMVOnlyExtension<"FEAT_MEMTAG2", "memtag2", "+mte", 450>;
 def : FMVOnlyExtension<"FEAT_MEMTAG3", "memtag3", "+mte", 460>;
-def : FMVOnlyExtension<"FEAT_PMULL", "pmull", "+aes,+fp-armv8,+neon", 160>;
-def : FMVOnlyExtension<"FEAT_RCPC2", "rcpc2", "+rcpc", 240>;
 def : FMVOnlyExtension<"FEAT_RPRES", "rpres", "", 300>;
 def : FMVOnlyExtension<"FEAT_SHA1", "sha1", "+fp-armv8,+neon", 120>;
-def : FMVOnlyExtension<"FEAT_SSBS2", "ssbs2", "+ssbs", 500>;
 def : FMVOnlyExtension<"FEAT_SVE_BF16", "sve-bf16", "+sve,+bf16,+fullfp16,+fp-armv8,+neon", 320>;
 def : FMVOnlyExtension<"FEAT_SVE_EBF16", "sve-ebf16", "+sve,+bf16,+fullfp16,+fp-armv8,+neon", 330>;
 def : FMVOnlyExtension<"FEAT_SVE_I8MM", "sve-i8mm", "+sve,+i8mm,+fullfp16,+fp-armv8,+neon", 340>;
@@ -130,6 +123,9 @@ def FeatureAES : Extension<
     "aes", "AES",
     "Enable AES support (FEAT_AES, FEAT_PMULL)", [FeatureNEON],
     "FEAT_AES", "+fp-armv8,+neon", 150>;
+
+let ArchExtKindSpelling = "AEK_PMULL", Implies = [FeatureAES] in
+def : FMVOnlyExtension<"FEAT_PMULL", "pmull", "+aes,+fp-armv8,+neon", 160>;
 
 // Crypto has been split up and any combination is now valid (see the
 // crypto definitions above). Also, crypto is now context sensitive:
@@ -216,8 +212,10 @@ def FeaturePAN_RWV : SubtargetFeature<
 def FeaturePsUAO : SubtargetFeature< "uaops", "HasPsUAO", "true",
     "Enable v8.2 UAO PState (FEAT_UAO)">;
 
-def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
-    "true", "Enable v8.2 data Cache Clean to Point of Persistence (FEAT_DPB)" >;
+let MArchName = "dpb" in
+def FeatureCCPP : Extension<"ccpp", "CCPP",
+    "Enable v8.2 data Cache Clean to Point of Persistence (FEAT_DPB)", [],
+    "FEAT_DPB", "+ccpp", 190>;
 
 def FeatureSVE : Extension<"sve", "SVE",
   "Enable Scalable Vector Extension (SVE) instructions (FEAT_SVE)", [FeatureFullFP16],
@@ -484,9 +482,10 @@ def FeatureFlagM : Extension<
     "FEAT_FLAGM", "+flagm", 20>;
 
 // 8.4 RCPC enchancements: LDAPR & STLR instructions with Immediate Offset
-def FeatureRCPC_IMMO : SubtargetFeature<"rcpc-immo", "HasRCPC_IMMO", "true",
+let MArchName = "rcpc2" in
+def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO",
     "Enable v8.4-A RCPC instructions with Immediate Offsets (FEAT_LRCPC2)",
-    [FeatureRCPC]>;
+    [FeatureRCPC], "FEAT_RCPC2", "+rcpc,+rcpc-immo", 240>;
 
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "NegativeImmediates", "false",
@@ -518,12 +517,16 @@ def FeatureAggressiveFMA :
                    "true",
                    "Enable Aggressive FMA for floating-point.">;
 
-def FeatureAltFPCmp : SubtargetFeature<"altnzcv", "HasAlternativeNZCV", "true",
-  "Enable alternative NZCV format for floating point comparisons (FEAT_FlagM2)">;
+let MArchName = "flagm2" in
+def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV",
+  "Enable alternative NZCV format for floating point comparisons (FEAT_FlagM2)",
+  [FeatureFlagM], "FEAT_FLAGM2", "+flagm,+altnzcv", 30>;
 
-def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
+let MArchName = "frintts" in
+def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int (FEAT_FRINTTS)" >;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int (FEAT_FRINTTS)",
+  [], "FEAT_FRINTTS", "+fptoint", 250>;
 
 def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
   "true", "Enable architectural speculation restriction (FEAT_CSV2_2)">;
@@ -536,14 +539,18 @@ def FeatureSSBS : Extension<"ssbs", "SSBS",
   "Enable Speculative Store Bypass Safe bit (FEAT_SSBS, FEAT_SSBS2)", [],
   "FEAT_SSBS", "", 490>;
 
+let ArchExtKindSpelling = "AEK_SSBS2", Implies = [FeatureSSBS] in
+def : FMVOnlyExtension<"FEAT_SSBS2", "ssbs2", "+ssbs", 500>;
+
 def FeaturePredRes : Extension<"predres", "PredRes",
   "Enable v8.5a execution and data prediction invalidation instructions (FEAT_SPECRES)", [],
   "FEAT_PREDRES", "+predres", 480>;
 
-def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "CCDP", "true",
-    "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)" >;
+let MArchName = "dpb2" in
+def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP",
+  "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)", [FeatureCCPP],
+  "FEAT_DPB2", "+ccpp,+ccdp", 200>;
 
-let ArchExtKindSpelling = "AEK_NONE" in
 def FeatureBranchTargetId : Extension<"bti", "BTI",
     "Enable Branch Target Identification (FEAT_BTI)", [],
     "FEAT_BTI", "+bti", 510>;
