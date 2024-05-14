@@ -3087,22 +3087,16 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
-      auto verifyPRegZRegSavingOrder =
-          [](SmallVectorImpl<RegPairInfo> &RegPairs) {
-            auto IsPPR = [](const RegPairInfo &c) {
-              return c.Reg1 == RegPairInfo::PPR;
-            };
-            auto PPRBegin =
-                std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
-            auto IsZPR = [](const RegPairInfo &c) {
-              return c.Type == RegPairInfo::ZPR;
-            };
-            auto ZPRBegin =
-                std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
-            assert(!(PPRBegin < ZPRBegin) &&
-                   "Expected callee save predicate to be handled first");
-          };
-      verifyPRegZRegSavingOrder(RegPairs);
+      auto IsPPR = [](const RegPairInfo &c) {
+        return c.Reg1 == RegPairInfo::PPR;
+      };
+      auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+      auto IsZPR = [](const RegPairInfo &c) {
+        return c.Type == RegPairInfo::ZPR;
+      };
+      auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+      assert(!(PPRBegin < ZPRBegin) &&
+             "Expected callee save predicate to be handled first");
 #endif
       if (!PTrueCreated) {
         PTrueCreated = true;
