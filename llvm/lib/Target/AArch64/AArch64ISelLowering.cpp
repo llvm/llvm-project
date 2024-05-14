@@ -2493,6 +2493,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::FIRST_NUMBER:
     break;
     MAKE_CASE(AArch64ISD::EXPAND_ZA_BUFFER)
+    MAKE_CASE(AArch64ISD::INIT_TPIDR2OBJ)
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
     MAKE_CASE(AArch64ISD::VG_SAVE)
     MAKE_CASE(AArch64ISD::VG_RESTORE)
@@ -2993,6 +2994,36 @@ AArch64TargetLowering::EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const {
 }
 
 MachineBasicBlock *
+AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
+                                            MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
+  if (TPIDR2.Uses > 0) {
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    // Store the buffer pointer to the TPIDR2 stack object.
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
+        .addReg(MI.getOperand(0).getReg())
+        .addFrameIndex(TPIDR2.FrameIndex)
+        .addImm(0);
+    // Set the reserved bytes (10-15) to zero
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
+        .addReg(AArch64::WZR)
+        .addFrameIndex(TPIDR2.FrameIndex)
+        .addImm(5);
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRWui))
+        .addReg(AArch64::WZR)
+        .addFrameIndex(TPIDR2.FrameIndex)
+        .addImm(3);
+  } else
+    MFI.RemoveStackObject(TPIDR2.FrameIndex);
+
+  BB->remove_instr(&MI);
+  return BB;
+}
+
+MachineBasicBlock *
 AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
                                           MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
@@ -3005,51 +3036,34 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
   assert(!MF->getSubtarget<AArch64Subtarget>().isTargetWindows() &&
          "Lazy ZA save is not yet supported on Windows");
 
-  std::optional<TPIDR2Object> TPIDR2 = FuncInfo->getTPIDR2Obj();
-  if (!TPIDR2)
-    llvm_unreachable("Cannot ExpandZABuffer without valid TPIDR2 object");
+  TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
 
-  if (TPIDR2->Uses == 0) {
-    BB->remove_instr(&MI);
-    MFI.RemoveStackObject(TPIDR2->FrameIndex);
-    return BB;
+  if (TPIDR2.Uses > 0) {
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+
+    // The SUBXrs below won't always be emitted in a form that accepts SP
+    // directly
+    Register SP = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SP)
+        .addReg(AArch64::SP);
+
+    // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
+    Register BufferAddr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrs), BufferAddr)
+        .addReg(SP)
+        .add(MI.getOperand(1))
+        .addImm(0);
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            AArch64::SP)
+        .addReg(BufferAddr);
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            MI.getOperand(0).getReg())
+        .addReg(BufferAddr);
+
+    // We have just allocated a variable sized object, tell this to PEI.
+    MFI.CreateVariableSizedObject(Align(16), nullptr);
   }
-
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-
-  // The SUBXrs below won't always be emitted in a form that accepts SP directly
-  Register SP = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SP)
-      .addReg(AArch64::SP);
-
-  // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
-  Register BufferAddr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrs), BufferAddr)
-      .addReg(SP)
-      .add(MI.getOperand(0))
-      .addImm(0);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), AArch64::SP)
-      .addReg(BufferAddr);
-
-  // Allocate an additional TPIDR2 object on the stack (16 bytes)
-  unsigned TPIDR2Object = TPIDR2->FrameIndex;
-  MFI.CreateVariableSizedObject(Align(16), nullptr);
-
-  // Store the buffer pointer to the TPIDR2 stack object.
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
-      .addReg(BufferAddr)
-      .addFrameIndex(TPIDR2Object)
-      .addImm(0);
-  // Set the reserved bytes (10-15) to zero
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
-      .addReg(AArch64::WZR)
-      .addFrameIndex(TPIDR2Object)
-      .addImm(5);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRWui))
-      .addReg(AArch64::WZR)
-      .addFrameIndex(TPIDR2Object)
-      .addImm(3);
 
   BB->remove_instr(&MI);
   return BB;
@@ -3085,9 +3099,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MI.dump();
 #endif
     llvm_unreachable("Unexpected instruction for custom inserter!");
+  case AArch64::InitTPIDR2Obj:
+    return EmitInitTPIDR2Object(MI, BB);
   case AArch64::ExpandZABuffer:
     return EmitExpandZABuffer(MI, BB);
-
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
   case TargetOpcode::STATEPOINT:
@@ -7513,14 +7528,25 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // Create a 16 Byte TPIDR2 object. The dynamic buffer
   // will be expanded and stored in the static object later using a pseudonode.
   if (SMEAttrs(MF.getFunction()).hasZAState()) {
-    TPIDR2Object TPIDR2;
+    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
-    FuncInfo->setTPIDR2Obj(TPIDR2);
     SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
                               DAG.getConstant(1, DL, MVT::i32));
     SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-    Chain = DAG.getNode(AArch64ISD::EXPAND_ZA_BUFFER, DL,
-                        DAG.getVTList(MVT::Other), {Chain, Size});
+
+    SDValue Buffer;
+    if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
+      Buffer = DAG.getNode(AArch64ISD::EXPAND_ZA_BUFFER, DL,
+                           DAG.getVTList(MVT::i64, MVT::Other), {Chain, Size});
+    } else {
+      Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
+                           DAG.getVTList(MVT::i64, MVT::Other),
+                           {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+      MFI.CreateVariableSizedObject(Align(1), nullptr);
+    }
+    Chain = DAG.getNode(
+        AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
+        {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
   }
 
   if (CallConv == CallingConv::PreserveNone) {
@@ -8206,7 +8232,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
   if (RequiresLazySave) {
-    const TPIDR2Object TPIDR2 = *FuncInfo->getTPIDR2Obj();
+    const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     MachinePointerInfo MPI =
         MachinePointerInfo::getStack(MF, TPIDR2.FrameIndex);
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
@@ -8753,7 +8779,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (RequiresLazySave) {
     // Conditionally restore the lazy save using a pseudo node.
-    TPIDR2Object TPIDR2 = *FuncInfo->getTPIDR2Obj();
+    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     SDValue RegMask = DAG.getRegisterMask(
         TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
     SDValue RestoreRoutine = DAG.getTargetExternalSymbol(
@@ -8780,7 +8806,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
         DAG.getConstant(0, DL, MVT::i64));
     TPIDR2.Uses++;
-    FuncInfo->setTPIDR2Obj(TPIDR2);
   }
 
   if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0) {

@@ -201,7 +201,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool IsSVECC = false;
 
   /// The frame-index for the TPIDR2 object used for lazy saves.
-  std::optional<TPIDR2Object> TPIDR2;
+  TPIDR2Object TPIDR2;
 
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
@@ -253,8 +253,7 @@ public:
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
 
-  std::optional<TPIDR2Object> getTPIDR2Obj() { return TPIDR2; }
-  void setTPIDR2Obj(TPIDR2Object Obj) { TPIDR2 = Obj; }
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 

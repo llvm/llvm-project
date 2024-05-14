@@ -37,12 +37,19 @@ def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
 def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
                               [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64ExpandZABuffer : SDNode<"AArch64ISD::EXPAND_ZA_BUFFER", SDTypeProfile<0, 1,
-                              [SDTCisInt<0>]>,
-                              [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
-
+def AArch64ExpandZABuffer : SDNode<"AArch64ISD::EXPAND_ZA_BUFFER", SDTypeProfile<1, 1,
+                              [SDTCisInt<0>, SDTCisInt<1>]>,
+                              [SDNPHasChain, SDNPSideEffect]>;
 let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
-  def ExpandZABuffer : Pseudo<(outs), (ins GPR64:$size), [(AArch64ExpandZABuffer GPR64:$size)]>, Sched<[WriteI]> {}
+  def ExpandZABuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
+}
+def : Pat<(i64 (AArch64ExpandZABuffer GPR64:$size)),
+          (ExpandZABuffer $size)>;
+
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
+                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+let usesCustomInserter = 1 in {
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
 }
 
 //===----------------------------------------------------------------------===//
