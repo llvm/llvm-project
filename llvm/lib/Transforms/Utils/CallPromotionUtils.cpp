@@ -170,12 +170,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
-  Instruction *InsertBefore = nullptr;
+  BasicBlock::iterator InsertBefore;
   if (auto *Invoke = dyn_cast<InvokeInst>(&CB))
     InsertBefore =
-        &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
+        SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->begin();
   else
-    InsertBefore = &*std::next(CB.getIterator());
+    InsertBefore = std::next(CB.getIterator());
 
   // Bitcast the return value to the correct type.
   auto *Cast = CastInst::CreateBitOrPointerCast(&CB, RetTy, "", InsertBefore);
@@ -188,8 +188,8 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 }
 
 // Returns the or result of all icmp instructions.
-static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
-                          IRBuilder<> &Builder) {
+static Value *getOrs(const SmallVector<Value *, 2> &ICmps,
+                     IRBuilder<> &Builder) {
   assert(!ICmps.empty() && "Must have at least one icmp instructions");
   if (ICmps.size() == 1)
     return ICmps[0];
@@ -202,7 +202,7 @@ static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
   if (i < NumICmp)
     OrResults.push_back(ICmps[i]);
 
-  return getOrResult(OrResults, Builder);
+  return getOrs(OrResults, Builder);
 }
 
 /// Predicate and clone the given call site.
@@ -615,7 +615,7 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   for (auto &AddressPoint : AddressPoints)
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
 
-  Value *Cond = getOrResult(ICmps, Builder);
+  Value *Cond = getOrs(ICmps, Builder);
 
   // Version the indirect call site. If Cond is true, 'NewInst' will be
   // executed, otherwise the original call site will be executed.

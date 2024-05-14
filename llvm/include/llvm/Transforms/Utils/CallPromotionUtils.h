@@ -65,7 +65,8 @@ CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 ///
 /// This function is expected to be used on virtual calls (a subset of indirect
 /// calls). \p VPtr is the virtual table address stored in the objects, and
-/// \p AddressPoints contains address points of vtables to be compared with.
+/// \p AddressPoints contains vtable address points. A vtable address point is
+/// a location inside the vtable that's referenced by vpointer in C++ objects.
 ///
 /// TODO: sink the address-calculation instructions of indirect callee to the
 /// indirect call fallback after transformation.
