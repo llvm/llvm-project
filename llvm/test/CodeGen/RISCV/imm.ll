@@ -1558,54 +1558,52 @@ define i64 @imm_2reg_1() nounwind {
   ret i64 -1152921504301427080 ; 0xF000_0000_1234_5678
 }
 
-; TODO: Selecting -1 would be better in this case as it can be loaded with a
-; 16 bit instruction when the compressed extension is enabled.
 define void @imm_store_i8_neg1(ptr %p) nounwind {
 ; RV32I-LABEL: imm_store_i8_neg1:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 255
+; RV32I-NEXT:    li a1, -1
 ; RV32I-NEXT:    sb a1, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: imm_store_i8_neg1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 255
+; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    sb a1, 0(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_store_i8_neg1:
 ; RV64IZBA:       # %bb.0:
-; RV64IZBA-NEXT:    li a1, 255
+; RV64IZBA-NEXT:    li a1, -1
 ; RV64IZBA-NEXT:    sb a1, 0(a0)
 ; RV64IZBA-NEXT:    ret
 ;
 ; RV64IZBB-LABEL: imm_store_i8_neg1:
 ; RV64IZBB:       # %bb.0:
-; RV64IZBB-NEXT:    li a1, 255
+; RV64IZBB-NEXT:    li a1, -1
 ; RV64IZBB-NEXT:    sb a1, 0(a0)
 ; RV64IZBB-NEXT:    ret
 ;
 ; RV64IZBS-LABEL: imm_store_i8_neg1:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a1, 255
+; RV64IZBS-NEXT:    li a1, -1
 ; RV64IZBS-NEXT:    sb a1, 0(a0)
 ; RV64IZBS-NEXT:    ret
 ;
 ; RV64IXTHEADBB-LABEL: imm_store_i8_neg1:
 ; RV64IXTHEADBB:       # %bb.0:
-; RV64IXTHEADBB-NEXT:    li a1, 255
+; RV64IXTHEADBB-NEXT:    li a1, -1
 ; RV64IXTHEADBB-NEXT:    sb a1, 0(a0)
 ; RV64IXTHEADBB-NEXT:    ret
 ;
 ; RV32-REMAT-LABEL: imm_store_i8_neg1:
 ; RV32-REMAT:       # %bb.0:
-; RV32-REMAT-NEXT:    li a1, 255
+; RV32-REMAT-NEXT:    li a1, -1
 ; RV32-REMAT-NEXT:    sb a1, 0(a0)
 ; RV32-REMAT-NEXT:    ret
 ;
 ; RV64-REMAT-LABEL: imm_store_i8_neg1:
 ; RV64-REMAT:       # %bb.0:
-; RV64-REMAT-NEXT:    li a1, 255
+; RV64-REMAT-NEXT:    li a1, -1
 ; RV64-REMAT-NEXT:    sb a1, 0(a0)
 ; RV64-REMAT-NEXT:    ret
   store i8 -1, ptr %p
