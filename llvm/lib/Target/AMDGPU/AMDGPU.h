@@ -44,6 +44,7 @@ FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangePass();
 FunctionPass *createSIFixSGPRCopiesPass();
+FunctionPass *createAMDGPUFixLiveRangePreWaveRAPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
@@ -169,6 +170,9 @@ extern char &SIFixSGPRCopiesID;
 
 void initializeSIFixVGPRCopiesPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
+
+void initializeAMDGPUFixLiveRangePreWaveRAPass(PassRegistry &);
+extern char &AMDGPUFixLiveRangePreWaveRAID;
 
 void initializeSILowerWWMCopiesPass(PassRegistry &);
 extern char &SILowerWWMCopiesID;
