@@ -35,7 +35,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
 
 namespace fir {
 #define GEN_PASS_DEF_ADDDEBUGINFO
