@@ -41,6 +41,7 @@
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -202,6 +203,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       CurScope(nullptr), Ident_super(nullptr),
+      CodeCompletionPtr(std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       ObjCPtr(std::make_unique<SemaObjC>(*this)),
@@ -225,8 +227,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context),
-      CodeCompleter(CodeCompleter) {
+      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 

@@ -18,6 +18,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -204,7 +205,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteDesignator(DesignatorCompletion.PreferredBaseType,
+        Actions.CodeCompletion().CodeCompleteDesignator(DesignatorCompletion.PreferredBaseType,
                                        DesignatorCompletion.InitExprs, Desig);
         return ExprError();
       }
@@ -471,7 +472,7 @@ ExprResult Parser::ParseBraceInitializer() {
   auto RunSignatureHelp = [&] {
     QualType PreferredType;
     if (!LikelyType.isNull())
-      PreferredType = Actions.ProduceConstructorSignatureHelp(
+      PreferredType = Actions.CodeCompletion().ProduceConstructorSignatureHelp(
           LikelyType->getCanonicalTypeInternal(), T.getOpenLocation(),
           InitExprs, T.getOpenLocation(), /*Braced=*/true);
     CalledSignatureHelp = true;
