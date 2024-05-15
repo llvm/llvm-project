@@ -15362,14 +15362,10 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // If either expression is type-dependent, always build an
-    // overloaded op.
-    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())
-      return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
-
-    // Otherwise, build an overloaded op if either expression has an
-    // overloadable type.
-    if (LHSExpr->getType()->isOverloadableType() ||
+    // Otherwise, build an overloaded op if either expression is type-dependent
+    // or has an overloadable type.
+    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
+        LHSExpr->getType()->isOverloadableType() ||
         RHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
   }
