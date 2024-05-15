@@ -1,4 +1,4 @@
-;RUN: opt %loadPolly '-passes=polly-prepare,scop(print<polly-ast>)' -disable-output < %s 2>&1 | FileCheck %s
+;RUN: opt %loadPolly -polly-prepare -polly-print-ast -disable-output < %s | FileCheck %s
 
 ;#include <string.h>
 ;int A[1];

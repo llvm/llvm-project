@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; A valid Scop would print the list of it's statements, we check that we do not
 ; see that list.

@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -passes=polly-codegen -polly-parallel -S < %s | FileCheck %s --check-prefix=AUTO
-; RUN: opt %loadPolly -passes=polly-codegen -polly-parallel -polly-num-threads=1 -S < %s | FileCheck %s --check-prefix=ONE
-; RUN: opt %loadPolly -passes=polly-codegen -polly-parallel -polly-num-threads=4 -S < %s | FileCheck %s --check-prefix=FOUR
+; RUN: opt %loadPolly -polly-codegen -polly-parallel -S < %s | FileCheck %s --check-prefix=AUTO
+; RUN: opt %loadPolly -polly-codegen -polly-parallel -polly-num-threads=1 -S < %s | FileCheck %s --check-prefix=ONE
+; RUN: opt %loadPolly -polly-codegen -polly-parallel -polly-num-threads=4 -S < %s | FileCheck %s --check-prefix=FOUR
 
-; RUN: opt %loadPolly -passes=polly-codegen -polly-parallel -polly-omp-backend=LLVM -S < %s | FileCheck %s --check-prefix=LIBOMP-AUTO
-; RUN: opt %loadPolly -passes=polly-codegen -polly-parallel -polly-omp-backend=LLVM -polly-num-threads=1 -S < %s | FileCheck %s --check-prefix=LIBOMP-ONE
-; RUN: opt %loadPolly -passes=polly-codegen -polly-parallel -polly-omp-backend=LLVM -polly-num-threads=4 -S < %s | FileCheck %s --check-prefix=LIBOMP-FOUR
+; RUN: opt %loadPolly -polly-codegen -polly-parallel -polly-omp-backend=LLVM -S < %s | FileCheck %s --check-prefix=LIBOMP-AUTO
+; RUN: opt %loadPolly -polly-codegen -polly-parallel -polly-omp-backend=LLVM -polly-num-threads=1 -S < %s | FileCheck %s --check-prefix=LIBOMP-ONE
+; RUN: opt %loadPolly -polly-codegen -polly-parallel -polly-omp-backend=LLVM -polly-num-threads=4 -S < %s | FileCheck %s --check-prefix=LIBOMP-FOUR
 
 ; Ensure that the provided thread numbers are forwarded to the OpenMP calls.
 ;

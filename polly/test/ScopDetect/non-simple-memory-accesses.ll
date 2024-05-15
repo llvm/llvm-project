@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; Verify that we do not model atomic memory accesses. We did not reason about
 ; how to handle them correctly and the Alias Set Tracker models some of them

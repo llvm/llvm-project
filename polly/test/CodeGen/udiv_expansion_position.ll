@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -passes=polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ; Verify we do not crash when we synthezise code for the udiv in the SCoP.
 ;

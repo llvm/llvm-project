@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -passes=polly-codegen < %s
+; RUN: opt %loadPolly -polly-codegen < %s
 ;
 ; Check we do not crash even though there is a dead load that is referenced by
 ; a parameter and we do not pre-load it (as it is dead).

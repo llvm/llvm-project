@@ -6,9 +6,9 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -passes=polly-opt-isl -disable-output < %s
+; RUN: -polly-opt-isl -disable-output < %s
 ;
-; RUN: opt %loadPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s --check-prefix=DEPENDENCES
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s --check-prefix=DEPENDENCES
 ;
 ;    /* C := A * B + C */
 ;    /* Elements of the matrices A, B, C have the char type. */

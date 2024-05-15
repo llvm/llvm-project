@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -passes=polly-codegen \
+; RUN: opt %loadPolly -polly-codegen \
 ; RUN:     -polly-allow-nonaffine-branches -S -verify-dom-info \
 ; RUN:     < %s | FileCheck %s
 ;
