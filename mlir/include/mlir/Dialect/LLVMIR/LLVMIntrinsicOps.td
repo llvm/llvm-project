@@ -1074,6 +1074,12 @@ def LLVM_vector_interleave2
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 
+def LLVM_vector_deinterleave2
+    : LLVM_OneResultIntrOp<"vector.deinterleave2",
+        /*overloadedResults=*/[], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure]>,
+        Arguments<(ins LLVM_AnyVector:$vec)>;
+
 //
 // LLVM Vector Predication operations.
 //

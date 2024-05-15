@@ -97,6 +97,7 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VMANDN_MM:
     case RISCV::VMNAND_MM:
     case RISCV::VCPOP_M:
+    case RISCV::VFIRST_M:
       Cost += 1;
       break;
     default:
@@ -900,6 +901,26 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
              (LT.first - 1) *
                  getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
     return 1 + (LT.first - 1);
+  }
+  case Intrinsic::experimental_cttz_elts: {
+    Type *ArgTy = ICA.getArgTypes()[0];
+    EVT ArgType = TLI->getValueType(DL, ArgTy, true);
+    if (getTLI()->shouldExpandCttzElements(ArgType))
+      break;
+    InstructionCost Cost = getRISCVInstructionCost(
+        RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind);
+
+    // If zero_is_poison is false, then we will generate additional
+    // cmp + select instructions to convert -1 to EVL.
+    Type *BoolTy = Type::getInt1Ty(RetTy->getContext());
+    if (ICA.getArgs().size() > 1 &&
+        cast<ConstantInt>(ICA.getArgs()[1])->isZero())
+      Cost += getCmpSelInstrCost(Instruction::ICmp, BoolTy, RetTy,
+                                 CmpInst::ICMP_SLT, CostKind) +
+              getCmpSelInstrCost(Instruction::Select, RetTy, BoolTy,
+                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+    return Cost;
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.

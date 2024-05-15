@@ -419,7 +419,7 @@ define void @merge_stores_i32_i64(ptr %p) {
 define void @store_large_constant(ptr %x) {
 ; SLOW-LABEL: store_large_constant:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    li a1, 254
+; SLOW-NEXT:    li a1, -2
 ; SLOW-NEXT:    sb a1, 7(a0)
 ; SLOW-NEXT:    li a1, 220
 ; SLOW-NEXT:    sb a1, 6(a0)

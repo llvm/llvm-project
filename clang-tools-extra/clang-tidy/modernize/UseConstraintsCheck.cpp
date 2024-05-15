@@ -254,7 +254,7 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
         return utils::lexer::findPreviousTokenKind(Init->getSourceLocation(),
                                                    SM, LangOpts, tok::colon);
     }
-    if (Constructor->init_begin() != Constructor->init_end())
+    if (!Constructor->inits().empty())
       return std::nullopt;
   }
   if (Function->isDeleted()) {
