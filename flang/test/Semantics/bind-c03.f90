@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for C1521
 ! If proc-language-binding-spec (bind(c)) is specified, the proc-interface
 ! shall appear, it shall be an interface-name, and interface-name shall be
@@ -24,7 +24,10 @@ module m
   !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
   procedure(proc2), bind(c) :: pc2
 
-  !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
+  !WARNING: An interface name with BIND attribute should be specified if the BIND attribute is specified in a procedure declaration statement
   procedure(integer), bind(c) :: pc3
+
+  !WARNING: An interface name with BIND attribute should be specified if the BIND attribute is specified in a procedure declaration statement
+  procedure(), bind(c) :: pc5
 
 end

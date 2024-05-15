@@ -68,6 +68,7 @@ namespace llvm::omp::target::plugin {
 int PrintKernelTrace = 0;
 } // namespace llvm::omp::target::plugin
 
+
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 struct RecordReplayTy {
 

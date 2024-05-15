@@ -484,7 +484,6 @@ namespace N3 {
   };
 
   template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
-
 } // namespace N3
 
 namespace N4 {
@@ -552,4 +551,5 @@ namespace N4 {
   };
 
   template void D<B>::instantiated(D); // expected-note {{in instantiation of}}
+
 } // namespace N4

@@ -241,6 +241,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 #else
   if (ForceSynchronousTargetRegions || !AsyncInfo) {
 #endif
+
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
   }

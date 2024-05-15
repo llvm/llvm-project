@@ -50,9 +50,11 @@ struct DeviceTy {
   /// This field is used by ompx_get_team_procs(devid).
   int32_t TeamProcs;
 
+
   /// Flag to force synchronous data transfers
   /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
   bool ForceSynchronousTargetRegions = false;
+
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable

@@ -182,6 +182,9 @@ C++23 Feature Support
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
+- Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
+  `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Compiler flags ``-std=c++2c`` and ``-std=gnu++2c`` have been added for experimental C++2c implementation work.
@@ -696,6 +699,7 @@ Bug Fixes to C++ Support
   within initializers for variables that are usable in constant expressions or are constant
   initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
   expression.
+- Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
