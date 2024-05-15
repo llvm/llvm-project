@@ -206,7 +206,7 @@ namespace cwg1814 { // cwg1814: yes
 #endif
 }
 
-namespace cwg1815 { // cwg1815: yes
+namespace cwg1815 { // cwg1815: 19
 #if __cplusplus >= 201402L
   struct A { int &&r = 0; };
   A a = {};
@@ -302,6 +302,32 @@ namespace cwg1822 { // cwg1822: yes
   };
 #endif
 }
+
+namespace cwg1824 { // cwg1824: 2.7
+template<typename T>
+struct A {
+  T t;
+};
+
+struct S {
+  A<S> f() { return A<S>(); }
+};
+} // namespace cwg1824
+
+namespace cwg1832 { // cwg1832: 3.0
+enum E { // #cwg1832-E
+  a = static_cast<int>(static_cast<E>(0))
+  // expected-error@-1 {{'E' is an incomplete type}}
+  //   expected-note@#cwg1832-E {{definition of 'cwg1832::E' is not complete until the closing '}'}}
+};
+
+#if __cplusplus >= 201103L
+enum E2: decltype(static_cast<E2>(0), 0) {};
+// expected-error@-1 {{unknown type name 'E2'}}
+enum class E3: decltype(static_cast<E3>(0), 0) {};
+// expected-error@-1 {{unknown type name 'E3'}}
+#endif
+} // namespace cwg1832
 
 namespace cwg1837 { // cwg1837: 3.3
 #if __cplusplus >= 201103L
