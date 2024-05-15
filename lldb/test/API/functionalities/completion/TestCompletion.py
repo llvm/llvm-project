@@ -107,9 +107,20 @@ class CommandLineCompletionTestCase(TestBase):
             self, "// Break here", lldb.SBFileSpec("main.cpp")
         )
         err = lldb.SBError()
-        self.process().LoadImage(
-            lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err
-        )
+        if lldb.remote_platform:
+            self.process().LoadImage(
+                lldb.SBFileSpec(self.getBuildArtifact("libshared.so")),
+                lldb.SBFileSpec(
+                    lldbutil.append_to_process_working_directory(self, "libshared.so"),
+                    False,
+                ),
+                err,
+            )
+        else:
+            self.process().LoadImage(
+                lldb.SBFileSpec(self.getBuildArtifact("libshared.so")),
+                err,
+            )
         self.assertSuccess(err)
 
         self.complete_from_to("process unload ", "process unload 0")
