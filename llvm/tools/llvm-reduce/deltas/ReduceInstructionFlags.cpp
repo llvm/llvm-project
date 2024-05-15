@@ -42,12 +42,14 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
         if (PDI->isDisjoint() && !O.shouldKeep())
           PDI->setIsDisjoint(false);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-        if (GEP->isInBounds() && !O.shouldKeep())
-          GEP->setIsInBounds(false);
-        if (GEP->hasNoUnsignedSignedWrap() && !O.shouldKeep())
-          GEP->setHasNoUnsignedSignedWrap(false);
-        if (GEP->hasNoUnsignedWrap() && !O.shouldKeep())
-          GEP->setHasNoUnsignedWrap(false);
+        GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+        if (NW.isInBounds() && !O.shouldKeep())
+          NW = NW.withoutInBounds();
+        if (NW.hasNoUnsignedSignedWrap() && !O.shouldKeep())
+          NW = NW.withoutNoUnsignedSignedWrap();
+        if (NW.hasNoUnsignedWrap() && !O.shouldKeep())
+          NW = NW.withoutNoUnsignedWrap();
+        GEP->setNoWrapFlags(NW);
       } else if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
         FastMathFlags Flags = FPOp->getFastMathFlags();
 

@@ -26,6 +26,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/OperandTraits.h"
@@ -1167,17 +1168,16 @@ public:
   /// a constant offset between them.
   bool hasAllConstantIndices() const;
 
+  /// Set nowrap flags for GEP instruction.
+  void setNoWrapFlags(GEPNoWrapFlags NW);
+
   /// Set or clear the inbounds flag on this GEP instruction.
   /// See LangRef.html for the meaning of inbounds on a getelementptr.
+  /// TODO: Remove this method in favor of setNoWrapFlags().
   void setIsInBounds(bool b = true);
 
-  /// Set or clear the nusw flag on this GEP instruction.
-  /// See LangRef.html for the meaning of nusw on a getelementptr.
-  void setHasNoUnsignedSignedWrap(bool B = true);
-
-  /// Set or clear the nuw flag on this GEP instruction.
-  /// See LangRef.html for the meaning of nuw on a getelementptr.
-  void setHasNoUnsignedWrap(bool B = true);
+  /// Get the nowrap flags for the GEP instruction.
+  GEPNoWrapFlags getNoWrapFlags() const;
 
   /// Determine whether the GEP has the inbounds flag.
   bool isInBounds() const;

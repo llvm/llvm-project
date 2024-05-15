@@ -17,6 +17,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -399,50 +400,24 @@ class LShrOperator
 };
 
 class GEPOperator
-  : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
-  friend class GetElementPtrInst;
-  friend class ConstantExpr;
-
-  enum {
-    IsInBounds = (1 << 0),
-    HasNoUnsignedSignedWrap = (1 << 1),
-    HasNoUnsignedWrap = (1 << 2),
-  };
-
-  void setIsInBounds(bool B) {
-    // Also set nusw when inbounds is set.
-    SubclassOptionalData = (SubclassOptionalData & ~IsInBounds) |
-                           (B * (IsInBounds | HasNoUnsignedSignedWrap));
-  }
-
-  void setHasNoUnsignedSignedWrap(bool B) {
-    // Also unset inbounds when nusw is unset.
-    if (B)
-      SubclassOptionalData |= HasNoUnsignedSignedWrap;
-    else
-      SubclassOptionalData &= ~(IsInBounds | HasNoUnsignedSignedWrap);
-  }
-
-  void setHasNoUnsignedWrap(bool B) {
-    SubclassOptionalData =
-        (SubclassOptionalData & ~HasNoUnsignedWrap) | (B * HasNoUnsignedWrap);
-  }
-
+    : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
 public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// Test whether this is an inbounds GEP, as defined by LangRef.html.
-  bool isInBounds() const {
-    return SubclassOptionalData & IsInBounds;
+  GEPNoWrapFlags getNoWrapFlags() const {
+    return GEPNoWrapFlags::fromRaw(SubclassOptionalData);
   }
 
+  /// Test whether this is an inbounds GEP, as defined by LangRef.html.
+  bool isInBounds() const { return getNoWrapFlags().isInBounds(); }
+
   bool hasNoUnsignedSignedWrap() const {
-    return SubclassOptionalData & HasNoUnsignedSignedWrap;
+    return getNoWrapFlags().hasNoUnsignedSignedWrap();
   }
 
   bool hasNoUnsignedWrap() const {
-    return SubclassOptionalData & HasNoUnsignedWrap;
+    return getNoWrapFlags().hasNoUnsignedWrap();
   }
 
   /// Returns the offset of the index with an inrange attachment, or

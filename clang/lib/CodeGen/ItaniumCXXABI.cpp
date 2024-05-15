@@ -1935,10 +1935,8 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
   unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
   llvm::ConstantRange InRange(llvm::APInt(32, -Offset, true),
                               llvm::APInt(32, VTableSize - Offset, true));
-  // TODO(gep_nowrap): Set nuw as well.
   return llvm::ConstantExpr::getGetElementPtr(
-      VTable->getValueType(), VTable, Indices, /*InBounds=*/true, /*NUSW=*/true,
-      /*NUW=*/false, InRange);
+      VTable->getValueType(), VTable, Indices, /*InBounds=*/true, InRange);
 }
 
 llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(

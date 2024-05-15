@@ -4216,7 +4216,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_extractelement: {
     unsigned Opc = Lex.getUIntVal();
     SmallVector<Constant*, 16> Elts;
-    bool InBounds = false, HasNUSW = false, HasNUW = false;
+    GEPNoWrapFlags NW;
     bool HasInRange = false;
     APSInt InRangeStart;
     APSInt InRangeEnd;
@@ -4226,11 +4226,11 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (Opc == Instruction::GetElementPtr) {
       while (true) {
         if (EatIfPresent(lltok::kw_inbounds))
-          InBounds = true;
+          NW |= GEPNoWrapFlags::inBounds();
         else if (EatIfPresent(lltok::kw_nusw))
-          HasNUSW = true;
+          NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
         else if (EatIfPresent(lltok::kw_nuw))
-          HasNUW = true;
+          NW |= GEPNoWrapFlags::noUnsignedWrap();
         else
           break;
       }
@@ -4314,7 +4314,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return error(ID.Loc, "invalid getelementptr indices");
 
       ID.ConstantVal = ConstantExpr::getGetElementPtr(
-          Ty, Elts[0], Indices, InBounds, HasNUSW, HasNUW, InRange);
+          Ty, Elts[0], Indices, NW, InRange);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -8349,15 +8349,15 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Ptr = nullptr;
   Value *Val = nullptr;
   LocTy Loc, EltLoc;
+  GEPNoWrapFlags NW;
 
-  bool InBounds = false, NUSW = false, NUW = false;
   while (true) {
     if (EatIfPresent(lltok::kw_inbounds))
-      InBounds = true;
+      NW |= GEPNoWrapFlags::inBounds();
     else if (EatIfPresent(lltok::kw_nusw))
-      NUSW = true;
+      NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
     else if (EatIfPresent(lltok::kw_nuw))
-      NUW = true;
+      NW |= GEPNoWrapFlags::noUnsignedWrap();
     else
       break;
   }
@@ -8415,12 +8415,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc, "invalid getelementptr indices");
   GetElementPtrInst *GEP = GetElementPtrInst::Create(Ty, Ptr, Indices);
   Inst = GEP;
-  if (InBounds)
-    GEP->setIsInBounds(true);
-  if (NUSW)
-    GEP->setHasNoUnsignedSignedWrap(true);
-  if (NUW)
-    GEP->setHasNoUnsignedWrap(true);
+  GEP->setNoWrapFlags(NW);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

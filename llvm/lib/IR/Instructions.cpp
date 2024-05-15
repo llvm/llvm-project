@@ -2043,16 +2043,21 @@ bool GetElementPtrInst::hasAllConstantIndices() const {
   return true;
 }
 
+void GetElementPtrInst::setNoWrapFlags(GEPNoWrapFlags NW) {
+  SubclassOptionalData = NW.getRaw();
+}
+
 void GetElementPtrInst::setIsInBounds(bool B) {
-  cast<GEPOperator>(this)->setIsInBounds(B);
+  GEPNoWrapFlags NW = cast<GEPOperator>(this)->getNoWrapFlags();
+  if (B)
+    NW |= GEPNoWrapFlags::inBounds();
+  else
+    NW = NW.withoutInBounds();
+  setNoWrapFlags(NW);
 }
 
-void GetElementPtrInst::setHasNoUnsignedSignedWrap(bool B) {
-  cast<GEPOperator>(this)->setHasNoUnsignedSignedWrap(B);
-}
-
-void GetElementPtrInst::setHasNoUnsignedWrap(bool B) {
-  cast<GEPOperator>(this)->setHasNoUnsignedWrap(B);
+GEPNoWrapFlags GetElementPtrInst::getNoWrapFlags() const {
+  return cast<GEPOperator>(this)->getNoWrapFlags();
 }
 
 bool GetElementPtrInst::isInBounds() const {

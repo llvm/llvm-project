@@ -1459,6 +1459,17 @@ unsigned BitcodeReader::getVirtualTypeID(Type *Ty,
   return TypeID;
 }
 
+static GEPNoWrapFlags toGEPNoWrapFlags(uint64_t Flags) {
+  GEPNoWrapFlags NW;
+  if (Flags & (1 << bitc::GEP_INBOUNDS))
+    NW |= GEPNoWrapFlags::inBounds();
+  if (Flags & (1 << bitc::GEP_NUSW))
+    NW |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  if (Flags & (1 << bitc::GEP_NUW))
+    NW |= GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 static bool isConstExprSupported(const BitcodeConstant *BC) {
   uint8_t Opcode = BC->Opcode;
 
@@ -1616,9 +1627,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         case Instruction::GetElementPtr:
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
-              (BC->Flags & (1 << bitc::GEP_INBOUNDS)) != 0,
-              (BC->Flags & (1 << bitc::GEP_NUSW)) != 0,
-              (BC->Flags & (1 << bitc::GEP_NUW)) != 0, BC->getInRange());
+              toGEPNoWrapFlags(BC->Flags), BC->getInRange());
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);
@@ -1702,12 +1711,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         I = GetElementPtrInst::Create(BC->SrcElemTy, Ops[0],
                                       ArrayRef(Ops).drop_front(), "constexpr",
                                       InsertBB);
-        if (BC->Flags & (1 << bitc::GEP_INBOUNDS))
-          cast<GetElementPtrInst>(I)->setIsInBounds();
-        if (BC->Flags & (1 << bitc::GEP_NUSW))
-          cast<GetElementPtrInst>(I)->setHasNoUnsignedSignedWrap();
-        if (BC->Flags & (1 << bitc::GEP_NUW))
-          cast<GetElementPtrInst>(I)->setHasNoUnsignedWrap();
+        cast<GetElementPtrInst>(I)->setNoWrapFlags(toGEPNoWrapFlags(BC->Flags));
         break;
       case Instruction::Select:
         I = SelectInst::Create(Ops[0], Ops[1], Ops[2], "constexpr", InsertBB);
@@ -5072,21 +5076,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       unsigned TyID;
       Type *Ty;
-      bool InBounds = false, NUSW = false, NUW = false;
+      GEPNoWrapFlags NW;
 
       if (BitCode == bitc::FUNC_CODE_INST_GEP) {
-        uint64_t Flags = Record[OpNum++];
-        if (Flags & (1 << bitc::GEP_INBOUNDS))
-          InBounds = true;
-        if (Flags & (1 << bitc::GEP_NUSW))
-          NUSW = true;
-        if (Flags & (1 << bitc::GEP_NUW))
-          NUW = true;
-
+        NW = toGEPNoWrapFlags(Record[OpNum++]);
         TyID = Record[OpNum++];
         Ty = getTypeByID(TyID);
       } else {
-        InBounds = BitCode == bitc::FUNC_CODE_INST_INBOUNDS_GEP_OLD;
+        if (BitCode == bitc::FUNC_CODE_INST_INBOUNDS_GEP_OLD)
+          NW = GEPNoWrapFlags::inBounds();
         TyID = InvalidTypeID;
         Ty = nullptr;
       }
@@ -5140,12 +5138,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         ResTypeID = getVirtualTypeID(I->getType(), ResTypeID);
 
       InstructionList.push_back(I);
-      if (InBounds)
-        GEP->setIsInBounds(true);
-      if (NUSW)
-        GEP->setHasNoUnsignedSignedWrap(true);
-      if (NUW)
-        GEP->setHasNoUnsignedWrap(true);
+      GEP->setNoWrapFlags(NW);
       break;
     }
 
