@@ -31,9 +31,9 @@ modes are:
 - **Debug mode**, which enables all the available checks in the library,
   including heuristic checks that might have significant performance overhead as
   well as internal library assertions. This mode should be used in
-  non-production environments (such as test suites, CI, local development). We
-  don’t commit to a particular level of performance in this mode and it’s *not*
-  intended to be used in production.
+  non-production environments (such as test suites, CI, or local development).
+  We don’t commit to a particular level of performance in this mode and it’s
+  *not* intended to be used in production.
 
 .. note::
 
@@ -101,8 +101,8 @@ easier to reason about the high-level semantics of a hardening mode.
   element, whether through the container object or through an iterator, are
   valid and do not attempt to go out of bounds or otherwise access
   a non-existent element. For iterator checks to work, bounded iterators must be
-  enabled in the ABI. Types like ``optional`` and ``function`` are considered
-  one-element containers for the purposes of this check.
+  enabled in the ABI. Types like ``std::optional`` and ``std::function`` are
+  considered one-element containers for the purposes of this check.
 
 - ``valid-input-range`` -- checks that ranges (whether expressed as an iterator
   pair, an iterator and a sentinel, an iterator and a count, or
@@ -116,13 +116,13 @@ easier to reason about the high-level semantics of a hardening mode.
   Violating assertions in this category leads to an out-of-bounds access.
 
 - ``non-null`` -- checks that the pointer being dereferenced is not null. On
-  most modern platforms zero address does not refer to an actual location in
-  memory, so a null pointer dereference would not compromize the memory security
-  of a program (however, it is still undefined behavior that can result in
-  strange errors due to compiler optimizations).
+  most modern platforms, the zero address does not refer to an actual location
+  in memory, so a null pointer dereference would not compromise the memory
+  security of a program (however, it is still undefined behavior that can result
+  in strange errors due to compiler optimizations).
 
 - ``non-overlapping-ranges`` -- for functions that take several ranges as
-  arguments, checks that the given ranges do not overlap.
+  arguments, checks that those ranges do not overlap.
 
 - ``valid-deallocation`` -- checks that an attempt to deallocate memory is valid
   (e.g. the given object was allocated by the given allocator). Violating this
@@ -133,7 +133,7 @@ easier to reason about the high-level semantics of a hardening mode.
   undefined behavior in an external library (like attempting to unlock an
   unlocked mutex in pthreads). Any API external to the library falls under this
   category (from system calls to compiler intrinsics). We generally don't expect
-  these failures to compromize memory safety or otherwise create an immediate
+  these failures to compromise memory safety or otherwise create an immediate
   security issue.
 
 - ``compatible-allocator`` -- checks any operations that exchange nodes between
@@ -141,14 +141,14 @@ easier to reason about the high-level semantics of a hardening mode.
 
 - ``argument-within-domain`` -- checks that the given argument is within the
   domain of valid arguments for the function. Violating this typically produces
-  an incorrect result (e.g. the clamp algorithm returns the original value
-  without clamping it due to incorrect functors) or puts an object into an
-  invalid state (e.g. a string view where only a subset of elements is possible
-  to access). This category is for assertions violating which doesn't cause any
-  immediate issues in the library -- whatever the consequences are, they will
-  happen in the user code.
+  an incorrect result (e.g. ``std::clamp`` returns the original value without
+  clamping it due to incorrect functors) or puts an object into an invalid state
+  (e.g. a string view where only a subset of elements is accessible). This
+  category is for assertions violating which doesn't cause any immediate issues
+  in the library -- whatever the consequences are, they will happen in the user
+  code.
 
-- ``pedantic`` -- checks prerequisites that are imposed by the Standard, but
+- ``pedantic`` -- checks preconditions that are imposed by the Standard, but
   violating which happens to be benign in our implementation.
 
 - ``semantic-requirement`` -- checks that the given argument satisfies the
@@ -160,8 +160,8 @@ easier to reason about the high-level semantics of a hardening mode.
   assertions don't depend on user input.
 
 - ``uncategorized`` -- for assertions that haven't been properly classified yet.
-  This is an escape hatch used for some existing assertions in the library; all
-  new code should have its assertions properly classified.
+  This category is an escape hatch used for some existing assertions in the
+  library; all new code should have its assertions properly classified.
 
 Mapping between the hardening modes and the assertion categories
 ================================================================
@@ -228,24 +228,25 @@ Mapping between the hardening modes and the assertion categories
   At the moment, each subsequent hardening mode is a strict superset of the
   previous one (in other words, each subsequent mode only enables additional
   assertion categories without disabling any), but this won't necessarily be
-  true for any hardening modes that might potentially be added in the future.
+  true for any hardening modes that might be added in the future.
 
 Hardening assertion failure
 ===========================
 
 In production modes (``fast`` and ``extensive``), a hardening assertion failure
-immediately traps the program. This is the safest approach that also minimizes
-the code size penalty as the failure handler maps to a single instruction. The
-downside is that the failure provides no additional details other than the stack
-trace (which might also be affected by optimizations).
+immediately ``_traps <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>``
+the program. This is the safest approach that also minimizes the code size
+penalty as the failure handler maps to a single instruction. The downside is
+that the failure provides no additional details other than the stack trace
+(which might also be affected by optimizations).
 
 TODO(hardening): describe ``__builtin_verbose_trap`` once we can use it.
 
 In the ``debug`` mode, an assertion failure terminates the program in an
 unspecified manner and also outputs the associated error message to the error
 output. This is less secure and increases the size of the binary (among other
-things, to store the error message strings) but makes the failure easier to
-debug. It also allows us to test the error messages in our test suite.
+things, it has to store the error message strings) but makes the failure easier
+to debug. It also allows us to test the error messages in our test suite.
 
 .. _override-assertion-handler:
 
@@ -277,8 +278,9 @@ additional information in the library classes -- e.g. checking whether an
 iterator is valid upon dereference generally requires storing data about bounds
 inside the iterator object. Using ``std::span`` as an example, setting the
 hardening mode to ``fast`` will always enable the ``valid-element-access``
-checks when accessing elements via a ``span`` object, but whether dereferencing
-a ``span`` iterator does the equivalent check depends on the ABI configuration.
+checks when accessing elements via a ``std::span`` object, but whether
+dereferencing a ``std::span`` iterator does the equivalent check depends on the
+ABI configuration.
 
 ABI options
 -----------
@@ -287,7 +289,7 @@ Vendors can use the following ABI options to enable additional hardening checks:
 
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- changes the iterator type of select
   containers (see below) to a bounded iterator that keeps track of whether it's
-  within the bounds of the original container and asserts it on every
+  within the bounds of the original container and asserts valid bounds on every
   dereference.
 
   ABI impact: changes the iterator type of the relevant containers.
@@ -305,9 +307,10 @@ hardening modes are encoded into the ABI tags might be useful to examine
 a binary and determine whether it was built with hardening enabled.
 
 .. warning::
-  We don't commit to the ABI tags being stable between different releases of
-  libc++. The following describes the state of the latest release and is for
-  informational purposes only.
+  We don't commit to the encoding scheme used by the ABI tags being stable
+  between different releases of libc++. The tags themselves are never stable, by
+  design -- new releases increase the version number. The following describes
+  the state of the latest release and is for informational purposes only.
 
 The first character of an ABI tag encodes the hardening mode:
 
@@ -365,7 +368,39 @@ Testing
 Each hardening assertion should be tested using death tests (via the
 ``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
 feature to make sure the assertion is enabled in (and only in) the intended
-modes. Note that error messages are only tested (matched) if the ``debug``
+modes. The convention is to use `assert.` in the name of the test file to make
+it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+A toy example:
+
+.. code-block:: cpp
+
+  // Note: the following three annotations are currently needed to use the
+  // `TEST_LIBCPP_ASSERT_FAILURE`.
+  // REQUIRES: has-unix-headers
+  // UNSUPPORTED: c++03
+  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+
+  // Example: only run this test in `fast`/`extensive`/`debug` modes.
+  // UNSUPPORTED: libcpp-hardening-mode=none
+  // Example: only run this test in the `debug` mode.
+  // REQUIRES: libcpp-hardening-mode=debug
+  // Example: only run this test in `extensive`/`debug` modes.
+  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+
+  #include <header_being_tested>
+
+  #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
+
+  int main(int, char**) {
+    std::type_being_tested foo;
+    int bad_input = -1;
+    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
+        "The expected assertion message");
+
+    return 0;
+  }
+
+Note that error messages are only tested (matched) if the ``debug``
 hardening mode is used.
 
 Further reading
