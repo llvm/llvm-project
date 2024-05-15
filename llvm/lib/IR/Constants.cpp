@@ -101,7 +101,8 @@ bool Constant::isNullValue() const {
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
   return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
+         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this) ||
+         isa<ConstantAMXNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -391,6 +392,8 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantTokenNone::get(Ty->getContext());
   case Type::TargetExtTyID:
     return ConstantTargetNone::get(cast<TargetExtType>(Ty));
+  case Type::X86_AMXTyID:
+    return ConstantAMXNone::get(Ty);
   default:
     // Function, Label, or Opaque type?
     llvm_unreachable("Cannot create a null constant of that type!");
@@ -1803,6 +1806,23 @@ ConstantTargetNone *ConstantTargetNone::get(TargetExtType *Ty) {
 /// Remove the constant from the constant table.
 void ConstantTargetNone::destroyConstantImpl() {
   getContext().pImpl->CTNConstants.erase(getType());
+}
+
+//---- ConstantAMXNone::get() implementation.
+//
+
+ConstantAMXNone *ConstantAMXNone::get(Type *Ty) {
+  std::unique_ptr<ConstantAMXNone> &Entry =
+      Ty->getContext().pImpl->CAMXConstants[Ty];
+  if (!Entry)
+    Entry.reset(new ConstantAMXNone(Ty));
+
+  return Entry.get();
+}
+
+/// Remove the constant from the constant table.
+void ConstantAMXNone::destroyConstantImpl() {
+  getContext().pImpl->CAMXConstants.erase(getType());
 }
 
 UndefValue *UndefValue::get(Type *Ty) {

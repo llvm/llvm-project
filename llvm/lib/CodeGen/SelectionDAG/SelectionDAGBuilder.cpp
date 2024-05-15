@@ -1885,6 +1885,12 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
+    if (VT == MVT::x86amx) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      return DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT,
+                         DAG.getConstant(0, getCurSDLoc(), MVT::v256i32));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of

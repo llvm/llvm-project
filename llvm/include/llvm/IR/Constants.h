@@ -884,6 +884,27 @@ public:
   }
 };
 
+/// A constant AMX type default initializer
+class ConstantAMXNone final : public ConstantData {
+  friend class Constant;
+
+  explicit ConstantAMXNone(Type *T)
+      : ConstantData(T, Value::ConstantAMXNoneVal) {}
+
+  void destroyConstantImpl();
+
+public:
+  ConstantAMXNone(const ConstantAMXNone &) = delete;
+
+  /// Static factory methods - Return objects of the specified value.
+  static ConstantAMXNone *get(Type *T);
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantAMXNoneVal;
+  }
+};
+
 /// The address of a basic block.
 ///
 class BlockAddress final : public Constant {

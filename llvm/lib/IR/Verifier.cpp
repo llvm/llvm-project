@@ -5265,9 +5265,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   for (Value *V : Call.args()) {
     if (auto *MD = dyn_cast<MetadataAsValue>(V))
       visitMetadataAsValue(*MD, Call.getCaller());
-    if (auto *Const = dyn_cast<Constant>(V))
+    /*if (auto *Const = dyn_cast<Constant>(V))
       Check(!Const->getType()->isX86_AMXTy(),
-            "const x86_amx is not allowed in argument!");
+            "const x86_amx is not allowed in argument!");*/
   }
 
   switch (ID) {

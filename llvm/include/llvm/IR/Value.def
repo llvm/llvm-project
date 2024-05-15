@@ -97,6 +97,7 @@ HANDLE_CONSTANT(ConstantInt)
 HANDLE_CONSTANT(ConstantFP)
 HANDLE_CONSTANT(ConstantTargetNone)
 HANDLE_CONSTANT(ConstantPointerNull)
+HANDLE_CONSTANT(ConstantAMXNone)
 HANDLE_CONSTANT(ConstantTokenNone)
 
 HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)

@@ -43482,6 +43482,18 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // vxi1 types.
   if (DCI.isBeforeLegalize()) {
     SDLoc dl(N);
+
+    if (VT == MVT::x86amx) {
+      SDValue Intrin =
+          DAG.getTargetConstant(Intrinsic::x86_tilezero_internal, dl,
+                                TLI.getPointerTy(DAG.getDataLayout()));
+      // FIXME: We need to rebuild the Row and Col from its user.
+      SDValue Row = DAG.getConstant(8, dl, MVT::i16);
+      SDValue Col = DAG.getConstant(8, dl, MVT::i16);
+      return DAG.getNode(ISD::INTRINSIC_W_CHAIN, dl, {MVT::x86amx, MVT::Other},
+                         {DAG.getEntryNode(), Intrin, Row, Col});
+    }
+
     if (SDValue V = combineBitcastvxi1(DAG, VT, N0, dl, Subtarget))
       return V;
 

@@ -1564,7 +1564,8 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantAggregateZero>(CV) || isa<ConstantTargetNone>(CV)) {
+  if (isa<ConstantAggregateZero>(CV) || isa<ConstantTargetNone>(CV) ||
+      isa<ConstantAMXNone>(CV)) {
     Out << "zeroinitializer";
     return;
   }
