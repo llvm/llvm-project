@@ -882,7 +882,7 @@ StringRef Module::getDarwinTargetVariantTriple() const {
 }
 
 void Module::setDarwinTargetVariantTriple(StringRef T) {
-  addModuleFlag(ModFlagBehavior::Override, "darwin.target_variant.triple",
+  addModuleFlag(ModFlagBehavior::Warning, "darwin.target_variant.triple",
                 MDString::get(getContext(), T));
 }
 
