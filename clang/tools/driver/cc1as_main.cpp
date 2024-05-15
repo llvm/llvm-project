@@ -591,9 +591,6 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Str.get()->emitZeros(1);
   }
 
-  // Assembly to object compilation should leverage assembly info.
-  Str->setUseAssemblerInfoForParsing(true);
-
   // Emit the ptrauth ABI version, if any.
   if (Opts.PointerAuthABIVersionEncoded)
     Str->EmitPtrAuthABIVersion(Opts.PointerAuthABIVersion,
