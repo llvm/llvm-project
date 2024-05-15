@@ -6485,6 +6485,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     updateDAGForMaybeTailCall(MC);
     return;
   }
+  case Intrinsic::memset_pattern_inline: {
+    const auto &MSPII = cast<MemSetPatternInlineInst>(I);
+    SDValue Dst = getValue(I.getArgOperand(0));
+    SDValue Value = getValue(I.getArgOperand(1));
+    SDValue Size = getValue(I.getArgOperand(2));
+    assert(isa<ConstantSDNode>(Size) &&
+           "memset_pattern_inline needs constant size");
+    // @llvm.memset defines 0 and 1 to both mean no alignment.
+    Align DstAlign = MSPII.getDestAlign().valueOrOne();
+    bool isVol = MSPII.isVolatile();
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MC = DAG.getMemsetPatternInline(
+        Root, sdl, Dst, Value, Size, DstAlign, isVol, isTC,
+        MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
+    updateDAGForMaybeTailCall(MC);
+    return;
+  }
   case Intrinsic::memmove: {
     const auto &MMI = cast<MemMoveInst>(I);
     SDValue Op1 = getValue(I.getArgOperand(0));

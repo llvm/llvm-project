@@ -5434,7 +5434,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
   case Intrinsic::memset:
-  case Intrinsic::memset_inline: {
+  case Intrinsic::memset_inline:
+  case Intrinsic::memset_pattern_inline: {
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:

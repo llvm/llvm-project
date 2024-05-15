@@ -8484,6 +8484,47 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   return CallResult.second;
 }
 
+SDValue SelectionDAG::getMemsetPatternInline(SDValue Chain, const SDLoc &dl,
+                                             SDValue Dst, SDValue Src,
+                                             SDValue Size, Align Alignment,
+                                             bool isVol, bool isTailCall,
+                                             MachinePointerInfo DstPtrInfo,
+                                             const AAMDNodes &AAInfo) {
+  ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
+  if (ConstantSize->isZero())
+    return Chain;
+
+  uint64_t SrcWidth = Src.getScalarValueSizeInBits() / 8;
+  unsigned NumFullWidthStores = ConstantSize->getZExtValue() / SrcWidth;
+  unsigned RemainingBytes = ConstantSize->getZExtValue() % SrcWidth;
+  SmallVector<SDValue, 8> OutChains;
+  uint64_t DstOff = 0;
+
+  for (unsigned i = 0; i < ConstantSize->getZExtValue() / SrcWidth; i++) {
+    SDValue Store = getStore(
+        Chain, dl, Src,
+        getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        DstPtrInfo.getWithOffset(DstOff), Alignment,
+        isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
+        AAInfo);
+    OutChains.push_back(Store);
+    DstOff += Src.getValueType().getSizeInBits() / 8;
+  }
+
+  if (RemainingBytes) {
+    EVT IntVT = EVT::getIntegerVT(*getContext(), RemainingBytes * 8);
+    SDValue Store = getTruncStore(
+        Chain, dl, Src,
+        getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        DstPtrInfo.getWithOffset(DstOff), IntVT, Alignment,
+        isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
+        AAInfo);
+    OutChains.push_back(Store);
+  }
+
+  return getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+}
+
 SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
                                       SDValue Dst, SDValue Value, SDValue Size,
                                       Type *SizeTy, unsigned ElemSz,

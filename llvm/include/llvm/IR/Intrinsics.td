@@ -1008,6 +1008,15 @@ def int_memset_inline
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
+// Memset variant that writes a given pattern. Like memset.inline, this is
+// guaranteed not to call any external function.
+def int_memset_pattern_inline
+    : Intrinsic<[],
+      [llvm_anyptr_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_i1_ty],
+      [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+       NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
+       ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>], "llvm.memset_pattern.inline">;
+
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 

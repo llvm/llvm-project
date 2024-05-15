@@ -15234,6 +15234,59 @@ The behavior of '``llvm.memset.inline.*``' is equivalent to the behavior of
 '``llvm.memset.*``', but the generated code is guaranteed not to call any
 external functions.
 
+.. _int_memset_pattern_inline:
+
+'``llvm.memset_pattern.inline``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.memset_pattern.inline`` on
+any integer bit width and for different address spaces. Not all targets
+support all bit widths however.
+
+::
+
+      declare void @llvm.memset_pattern.inline.p0.i64.i128(ptr <dest>, i128 <val>,
+                                                   i64 <len>, i1 <isvolatile>)
+
+Overview:
+"""""""""
+
+The '``llvm.memset_pattern.inline.*``' intrinsics fill a block of memory with
+a particular value and guarantees that no external functions are called.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to the destination to fill, the second
+is the value with which to fill it, the third argument is a constant integer
+argument specifying the number of bytes to fill, and the fourth is a boolean
+indicating a volatile access.
+
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the first argument.
+
+If the ``isvolatile`` parameter is ``true``, the
+``llvm.memset_pattern.inline`` call is a :ref:`volatile operation <volatile>`.
+The detailed access behavior is not very cleanly specified and it is unwise to
+depend on it.
+
+Semantics:
+""""""""""
+
+The '``llvm.memset_pattern.inline.*``' intrinsics fill "len" bytes of memory
+starting at the destination location. If the argument is known to be aligned
+to some boundary, this can be specified as an attribute on the argument.
+
+``len`` must be a constant expression.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, ``<dest>`` should be well-defined, otherwise the
+behavior is undefined.
+
 .. _int_sqrt:
 
 '``llvm.sqrt.*``' Intrinsic
