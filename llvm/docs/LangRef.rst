@@ -24975,6 +24975,85 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+Masked Vector Compress Intrinsic
+--------------------------------
+
+LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
+Semantically, this is similar to :ref:``@llvm.masked.compressstore <_int_compressstore>`` but with weaker assumptions
+and without storing the results to memory, i.e., the data remains in the vector.
+
+.. _int_masked_compress:
+
+'``llvm.masked.compress.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. A number of scalar values of integer, floating point or pointer data type are collected
+from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
+
+:: code-block:: llvm
+
+      declare <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>)
+      declare <16 x float> @llvm.masked.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Selects elements from input vector '``value``' according to the '``mask``'.
+All selected elements are written into adjacent lanes in the result vector, from lower to higher.
+The mask holds a bit for each vector lane, and is used to select elements to be kept.
+The number of valid lanes is equal to the number of active bits in the mask.
+The main difference to :ref:`llvm.masked.compressstore <_int_compressstore>` is that the remainder of the vector may
+contain undefined values.
+This allows for branchless code and better optimization for all targets that do not support the explicit semantics of
+:ref:`llvm.masked.compressstore <_int_compressstore>`.
+The result vector can be written with a similar effect, as all the selected values are at the lower positions of the
+vector, but without requiring branches to avoid writes where the mask is 0.
+
+
+Arguments:
+""""""""""
+
+The first operand is the input vector, from which elements are selected.
+The second operand is the mask, a vector of boolean values.
+The mask and the input vector must have the same number of vector elements.
+
+Semantics:
+""""""""""
+
+The '``llvm.masked.compress``' intrinsic is designed for compressing data within a vector, i.e., ideally within a register.
+It allows to collect elements from possibly non-adjacent lanes of a vector and place them contiguously in the result vector in one IR operation.
+It is useful for targets all that support compress operations (e.g., AVX-512, ARM SVE, RISCV V), which more instruction
+sets do than explicit compressstore, i.e., ``llvm.masked.compress`` may yield better performance on more targets than
+``llvm.masked.compressstore`` due to weaker constraints.
+This intrinsic allows vectorizing loops with cross-iteration dependencies like in the following example:
+
+.. code-block:: c
+
+    // Consecutively store selected values with branchless code.
+    int *in, *out; bool *mask; int pos = 0;
+    for (int i = 0; i < size; ++i) {
+      out[pos] = in[i];
+      // if mask[i] == 0, the current value is overwritten in the next iteration.
+      pos += mask[i];
+    }
+
+
+.. code-block:: llvm
+
+    ; Load elements from `in`.
+    %vec = load <4 x i32>, ptr %inPtr
+    %mask = load <4 x i1>, ptr %maskPtr
+    %compressed = call <4 x i32> @llvm.masked.compress.v4i32(<4 x i32> %vec, <4 x i1> %mask)
+    store <4 x i32> %compressed, ptr %outPtr
+
+    ; %outPtr should be increased in each iteration by the number of '1's in the mask.
+    %iMask = bitcast <4 x i1> %mask to i4
+    %popcnt = call i4 @llvm.ctpop.i4(i4 %iMask)
+    %zextPopcnt = zext i4 %popcnt to i64
+    %nextOut = add i64 %outPos, %zextPopcnt
+
 
 Memory Use Markers
 ------------------
