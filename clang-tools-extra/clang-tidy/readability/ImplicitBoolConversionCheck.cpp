@@ -275,6 +275,10 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
+  auto ComparisonInCall =
+      allOf(hasParent(callExpr()),
+            has(binaryOperator(hasAnyOperatorName("==", "!="))));
+
   Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(
@@ -289,6 +293,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                        stmt(anyOf(ifStmt(), whileStmt()), has(declStmt())))),
                    // Exclude cases common to implicit cast to and from bool.
                    unless(ExceptionCases), unless(has(BoolXor)),
+                   // Exclude C23 cases common to implicit cast to bool.
+                   unless(ComparisonInCall),
                    // Retrieve also parent statement, to check if we need
                    // additional parens in replacement.
                    optionally(hasParent(stmt().bind("parentStmt"))),

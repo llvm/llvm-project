@@ -109,6 +109,27 @@ void implicitConversionFromBoolLiterals() {
   // CHECK-FIXES: functionTakingDouble(1.0);
 }
 
+void implicitConversionFromBoolInComparisons() {
+  bool boolean = true;
+  int integer = 0;
+
+  functionTakingBool(boolean == integer);
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'bool' -> 'int'
+  // CHECK-FIXES: functionTakingBool((int)boolean == integer);
+
+  functionTakingBool(integer != boolean);
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: implicit conversion 'bool' -> 'int'
+  // CHECK-FIXES: functionTakingBool(integer != (int)boolean);
+}
+
+void ignoreBoolComparisons() {
+  bool boolean = true;
+  bool anotherBoolean = false;
+
+  functionTakingBool(boolean == anotherBoolean);
+  functionTakingBool(boolean != anotherBoolean);
+}
+
 void ignoreExplicitCastsFromBool() {
   bool boolean = true;
 
