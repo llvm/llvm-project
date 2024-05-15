@@ -718,7 +718,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
                                      FeatureFP16FML, FeatureSHA3];
-  list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
+  list<SubtargetFeature> AppleA14 = [HasV8_5aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFRInt3264,
                                      FeatureSpecRestrict, FeatureSSBS, FeatureSB,
                                      FeaturePredRes, FeatureCacheDeepPersist,
@@ -967,7 +967,7 @@ def : AArch64Processor<"exynos-m5", HasV8_2aOps, ExynosM5Model, ProcessorFeature
 def : AArch64Processor<"falkor", HasV8_0aOps, FalkorModel, ProcessorFeatures.Falkor,
                      [TuneFalkor],
                      [FeatureAES, FeatureSHA2, FeatureCRC, FeatureRDM]>;
-def : AArch64Processor<"saphira", HasV8_3aOps, FalkorModel, ProcessorFeatures.Saphira,
+def : AArch64Processor<"saphira", HasV8_4aOps, FalkorModel, ProcessorFeatures.Saphira,
                      [TuneSaphira],
                      [FeatureAES, FeatureSHA2, FeatureSPE]>;
 def : AArch64Processor<"kryo", HasV8_0aOps, KryoModel, ProcessorFeatures.A53,
