@@ -24,7 +24,7 @@ Out2<double>::AInner t(1.0);
 // Verify that the require-clause of alias deduction guide is transformed correctly:
 //   - Occurrence T should be replaced with `int`;
 //   - Occurrence V should be replaced with the Y with depth 1
-//   - Depth of cccurrence Y in the __is_deducible constraint should be 1
+//   - Depth of occurrence Y in the __is_deducible constraint should be 1
 //
 // CHECK:      |   `-FunctionTemplateDecl {{.*}} <deduction guide for AInner>
 // CHECK-NEXT: |     |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 Y

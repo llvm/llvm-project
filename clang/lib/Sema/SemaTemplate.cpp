@@ -2790,15 +2790,16 @@ NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
 //
 // The return result is expected to be the require-clause for the synthesized
 // alias deduction guide.
-Expr *transformRequireClause(Sema &SemaRef, FunctionTemplateDecl *F,
-                             TypeAliasTemplateDecl *AliasTemplate,
-                             ArrayRef<DeducedTemplateArgument> DeduceResults,
-                             Expr *IsDeducible) {
+Expr *
+buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
+                           TypeAliasTemplateDecl *AliasTemplate,
+                           ArrayRef<DeducedTemplateArgument> DeduceResults,
+                           Expr *IsDeducible) {
   Expr *RC = F->getTemplateParameters()->getRequiresClause();
   if (!RC)
     return IsDeducible;
 
-  auto &Context = SemaRef.Context;
+  ASTContext &Context = SemaRef.Context;
   LocalInstantiationScope Scope(SemaRef);
 
   // In the clang AST, constraint nodes are deliberately not instantiated unless
@@ -2915,7 +2916,6 @@ Expr *transformRequireClause(Sema &SemaRef, FunctionTemplateDecl *F,
                          BinaryOperatorKind::BO_LAnd, E.get(), IsDeducible);
   if (Conjunction.isInvalid())
     return nullptr;
-  Conjunction.getAs<Expr>()->dump();
   return Conjunction.getAs<Expr>();
 }
 // Build the is_deducible constraint for the alias deduction guides.
@@ -2926,7 +2926,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
                                  TypeAliasTemplateDecl *AliasTemplate,
                                  QualType ReturnType,
                                  SmallVector<NamedDecl *> TemplateParams) {
-  auto &Context = SemaRef.Context;
+  ASTContext &Context = SemaRef.Context;
   // Constraint AST nodes must use uninstantiated depth.
   if (auto *PrimaryTemplate =
           AliasTemplate->getInstantiatedFromMemberTemplate()) {
@@ -3182,8 +3182,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
     Expr *IsDeducible = buildIsDeducibleConstraint(
         SemaRef, AliasTemplate, FPrime->getReturnType(), FPrimeTemplateParams);
-    Expr *RequiresClause = transformRequireClause(SemaRef, F, AliasTemplate,
-                                                  DeduceResults, IsDeducible);
+    Expr *RequiresClause = buildAssociatedConstraints(
+        SemaRef, F, AliasTemplate, DeduceResults, IsDeducible);
 
     // FIXME: implement the is_deducible constraint per C++
     // [over.match.class.deduct]p3.3:
