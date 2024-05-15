@@ -98,7 +98,7 @@ void f(int x, int y, int z) {
   if ((a<y) != -1) {}// expected-warning {{comparison of constant -1 with expression of type 'bool' is always true}}
 
   if ((a<y) == z) {} // no warning
-  if (a>y<z)      {} // no warning
+  if (a>y<z)      {} // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
   if ((a<y) > z)  {} // no warning
   if((a<y)>(z<y)) {} // no warning
   if((a<y)==(z<y)){} // no warning
@@ -159,7 +159,7 @@ void f(int x, int y, int z) {
   if (-1 !=(a<y)) {} // expected-warning {{comparison of constant -1 with expression of type 'bool' is always true}}
 
   if (z ==(a<y))  {} // no warning
-  if (z<a>y)      {} // no warning
+  if (z<a>y)      {} // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
   if (z > (a<y))  {} // no warning
   if((z<y)>(a<y)) {} // no warning
   if((z<y)==(a<y)){} // no warning

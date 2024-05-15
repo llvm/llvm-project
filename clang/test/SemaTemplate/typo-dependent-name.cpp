@@ -20,11 +20,11 @@ struct X : Base<T> {
   bool f(T other) {
     // A pair of comparisons; 'inner' is a dependent name so can't be assumed
     // to be a template.
-    return this->inner < other > ::z;
+    return this->inner < other > ::z; // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
   }
 };
 
-void use_x(X<int> x) { x.f(0); }
+void use_x(X<int> x) { x.f(0); } // expected-note {{requested here}}
 
 template<typename T>
 struct Y {

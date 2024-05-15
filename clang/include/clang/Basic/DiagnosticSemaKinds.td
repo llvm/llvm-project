@@ -6913,7 +6913,7 @@ def note_precedence_conditional_first : Note<
 
 def warn_consecutive_comparison : Warning<
   "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
-  InGroup<Parentheses>, DefaultIgnore;
+  InGroup<Parentheses>;
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
