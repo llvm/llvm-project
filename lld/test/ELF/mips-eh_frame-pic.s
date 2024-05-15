@@ -23,15 +23,20 @@
 # RUN: llvm-dwarfdump --eh-frame %t-nopic32.o | FileCheck %s --check-prefix=ABS32-EH-FRAME
 # RUN: llvm-readobj -r %t-nopic32.o | FileCheck %s --check-prefixes=RELOCS,ABS32-RELOCS
 # RUN: not ld.lld -shared %t-nopic32.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOPIC32-ERR
+# RUN: ld.lld %t-nopic32.o -T %p/Inputs/mips32-kseg0.lds -eh-frame-hdr -static -o /dev/null 2>&1 \
+# RUN:      | FileCheck %s --check-prefix=NOPIC32-ABSPTR
 ## Note: ld.bfd can link this file because it rewrites the .eh_frame section to use
 ## relative addressing.
 # NOPIC32-ERR: ld.lld: error: relocation R_MIPS_32 cannot be used against local symbol
+# NOPIC32-ABSPTR: cannot find entry symbol __start
 
 ## For -fPIC, .eh_frame should contain DW_EH_PE_pcrel | DW_EH_PE_sdata4 values:
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux --position-independent %s -o %t-pic32.o
 # RUN: llvm-readobj -r %t-pic32.o | FileCheck %s --check-prefixes=RELOCS,PIC32-RELOCS
 # RUN: ld.lld -shared %t-pic32.o -o %t-pic32.so
+# RUN: ld.lld -shared -T %p/Inputs/mips32-kseg0.lds %t-pic32.o -o %t-pic32-kseg0.so
 # RUN: llvm-dwarfdump --eh-frame %t-pic32.so | FileCheck %s --check-prefix=PIC32-EH-FRAME
+# RUN: llvm-dwarfdump --eh-frame %t-pic32-kseg0.so | FileCheck %s --check-prefix=PIC32-EH-FRAME
 
 # RELOCS:            .rel{{a?}}.eh_frame {
 # ABS32-RELOCS-NEXT:   0x1C R_MIPS_32 .text
