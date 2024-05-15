@@ -525,7 +525,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
-  if (isCtorOrDtor() || RecordReplay.isReplaying() ||
+  if (RecordReplay.isReplaying() ||
       Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
@@ -649,10 +649,6 @@ void *GenericKernelTy::prepareArgs(
     uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
-
-  if (isCtorOrDtor())
-    return nullptr;
-
   uint32_t KLEOffset = !!KernelLaunchEnvironment;
   NumArgs += KLEOffset;
 

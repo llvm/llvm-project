@@ -860,22 +860,6 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
                                          UnusedAttr::GNU_unused));
 }
 
-void Sema::AddCFAuditedAttribute(Decl *D) {
-  IdentifierInfo *Ident;
-  SourceLocation Loc;
-  std::tie(Ident, Loc) = PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid()) return;
-
-  // Don't add a redundant or conflicting attribute.
-  if (D->hasAttr<CFAuditedTransferAttr>() ||
-      D->hasAttr<CFUnknownTransferAttr>())
-    return;
-
-  AttributeCommonInfo Info(Ident, SourceRange(Loc),
-                           AttributeCommonInfo::Form::Pragma());
-  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
-}
-
 namespace {
 
 std::optional<attr::SubjectMatchRule>

@@ -560,6 +560,16 @@ namespace LocalVLA {
      // both-note@-4 {{function parameter 'size' with unknown value}}
 #endif
   }
+
+  void f (unsigned int m) {
+    int e[2][m];
+#if __cplusplus >= 202002L
+     // both-note@-3 {{declared here}}
+     // both-warning@-3 2{{variable length array}}
+     // both-note@-4 {{function parameter 'm' with unknown value}}
+#endif
+    e[0][0] = 0;
+  }
 }
 
 char melchizedek[2];
@@ -570,3 +580,18 @@ constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[1]; // ok
 /// GH#88018
 const int SZA[] = {};
 void testZeroSizedArrayAccess() { unsigned c = SZA[4]; }
+
+#if __cplusplus >= 202002L
+constexpr int test_multiarray2() { // both-error {{never produces a constant expression}}
+  int multi2[2][1]; // both-note {{declared here}}
+  return multi2[2][0]; // both-note {{cannot access array element of pointer past the end of object}} \
+                       // both-warning {{array index 2 is past the end of the array (that has type 'int[2][1]')}}
+}
+
+/// Same but with a dummy pointer.
+int multi22[2][2]; // both-note {{declared here}}
+int test_multiarray22() {
+  return multi22[2][0]; // both-warning {{array index 2 is past the end of the array (that has type 'int[2][2]')}}
+}
+
+#endif

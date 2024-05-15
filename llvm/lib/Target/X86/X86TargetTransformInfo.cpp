@@ -99,6 +99,7 @@ struct CostKindCosts {
   }
 };
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
+using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
 TargetTransformInfo::PopcntSupportKind
 X86TTIImpl::getPopcntSupport(unsigned TyWidth) {
@@ -2138,811 +2139,803 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](InstructionCost Cost,
-                                InstructionCost N = 1) -> InstructionCost {
-    if (CostKind != TTI::TCK_RecipThroughput)
-      return Cost == 0 ? 0 : N;
-    return Cost * N;
-  };
-
   // The cost tables include both specific, custom (non-legal) src/dst type
   // conversions and generic, legalized types. We test for customs first, before
   // falling back to legalization.
   // FIXME: Need a better design of the cost table to handle non-simple types of
   // potential massive combinations (elem_num x src_type x dst_type).
-  static const TypeConversionCostTblEntry AVX512BWConversionTbl[] {
-    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i8, 1 },
-    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i8, 1 },
+  static const TypeConversionCostKindTblEntry AVX512BWConversionTbl[]{
+    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i8,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i8,  { 1, 1, 1, 1 } },
 
     // Mask sign extend has an instruction.
-    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v32i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v64i8,  MVT::v64i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v64i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v32i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v64i8,  MVT::v64i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v64i1,  { 1, 1, 1, 1 } },
 
     // Mask zero extend is a sext + shift.
-    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v64i8,  MVT::v64i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v64i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v64i8,  MVT::v64i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v64i1,  { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v8i16,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v8i16,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i16,  2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, 2 },
-    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i8,  2 },
-    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i16, 2 },
-    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v64i8,  2 },
-    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v32i16, 2 },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i16, { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v64i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v32i16, { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v32i8,  MVT::v32i16, 2 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 }, // widen to zmm
-    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i16,  2 }, // vpmovwb
-    { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i16,  2 }, // vpmovwb
-    { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i16,  2 }, // vpmovwb
+    { ISD::TRUNCATE,    MVT::v32i8,  MVT::v32i16, { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, { 2, 1, 1, 1 } }, // widen to zmm
+    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i16,  { 2, 1, 1, 1 } }, // vpmovwb
+    { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i16,  { 2, 1, 1, 1 } }, // vpmovwb
+    { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i16,  { 2, 1, 1, 1 } }, // vpmovwb
   };
 
-  static const TypeConversionCostTblEntry AVX512DQConversionTbl[] = {
+  static const TypeConversionCostKindTblEntry AVX512DQConversionTbl[] = {
     // Mask sign extend has an instruction.
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  { 1, 1, 1, 1 } },
 
     // Mask zero extend is a sext + shift.
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v2i1,   { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v16i1,  { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i1,   { 2, 1, 1, 1, } },
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  { 2, 1, 1, 1, } },
 
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i64,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v4i32,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i32,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i64,  2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i32, 2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v8i64,  2 },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i32, { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v8i64,  { 2, 1, 1, 1 } },
 
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  1 },
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  1 },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  { 1, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  1 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  1 },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  { 1, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::v8i64,  MVT::v8f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v8i64,  MVT::v8f64,  1 },
+    { ISD::FP_TO_SINT,  MVT::v8i64,  MVT::v8f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i64,  MVT::v8f64,  { 1, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::v8i64,  MVT::v8f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v8i64,  MVT::v8f64,  1 },
+    { ISD::FP_TO_UINT,  MVT::v8i64,  MVT::v8f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i64,  MVT::v8f64,  { 1, 1, 1, 1 } },
   };
 
   // TODO: For AVX512DQ + AVX512VL, we also have cheap casts for 128-bit and
   // 256-bit wide vectors.
 
-  static const TypeConversionCostTblEntry AVX512FConversionTbl[] = {
-    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,  1 },
-    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32, 3 },
-    { ISD::FP_EXTEND, MVT::v16f64,  MVT::v16f32, 4 }, // 2*vcvtps2pd+vextractf64x4
-    { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,  1 },
+  static const TypeConversionCostKindTblEntry AVX512FConversionTbl[] = {
+    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,   { 1, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32,  { 3, 1, 1, 1 } },
+    { ISD::FP_EXTEND, MVT::v16f64,  MVT::v16f32,  { 4, 1, 1, 1 } }, // 2*vcvtps2pd+vextractf64x4
+    { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,   { 1, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,   3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,   3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i8,   3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i8,  3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i16,  3 }, // sext+vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i16,  3 }, // sext+vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i16,  3 }, // sext+vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i16, 3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i32,  2 }, // zmm vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i32,  2 }, // zmm vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i32,  2 }, // zmm vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i32, 2 }, // vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // zmm vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // zmm vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i64,  2 }, // vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i32,  2 }, // vpmovdb
-    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i32,  2 }, // vpmovdb
-    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 2 }, // vpmovdb
-    { ISD::TRUNCATE,  MVT::v32i8,   MVT::v16i32, 2 }, // vpmovdb
-    { ISD::TRUNCATE,  MVT::v64i8,   MVT::v16i32, 2 }, // vpmovdb
-    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 2 }, // vpmovdw
-    { ISD::TRUNCATE,  MVT::v32i16,  MVT::v16i32, 2 }, // vpmovdw
-    { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i64,  2 }, // vpmovqb
-    { ISD::TRUNCATE,  MVT::v2i16,   MVT::v2i64,  1 }, // vpshufb
-    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 }, // vpmovqb
-    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v8i64,  2 }, // vpmovqb
-    { ISD::TRUNCATE,  MVT::v32i8,   MVT::v8i64,  2 }, // vpmovqb
-    { ISD::TRUNCATE,  MVT::v64i8,   MVT::v8i64,  2 }, // vpmovqb
-    { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  2 }, // vpmovqw
-    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v8i64,  2 }, // vpmovqw
-    { ISD::TRUNCATE,  MVT::v32i16,  MVT::v8i64,  2 }, // vpmovqw
-    { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,  1 }, // vpmovqd
-    { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // zmm vpmovqd
-    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i64, 5 },// 2*vpmovqd+concat+vpmovdb
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i8,   { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i16,   { 3, 1, 1, 1 } }, // sext+vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i16,   { 3, 1, 1, 1 } }, // sext+vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i16,   { 3, 1, 1, 1 } }, // sext+vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i16,  { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i32,   { 2, 1, 1, 1 } }, // zmm vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i32,   { 2, 1, 1, 1 } }, // zmm vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i32,   { 2, 1, 1, 1 } }, // zmm vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i32,  { 2, 1, 1, 1 } }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,   { 2, 1, 1, 1 } }, // zmm vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,   { 2, 1, 1, 1 } }, // zmm vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i64,   { 2, 1, 1, 1 } }, // vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i32,   { 2, 1, 1, 1 } }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i32,   { 2, 1, 1, 1 } }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32,  { 2, 1, 1, 1 } }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v32i8,   MVT::v16i32,  { 2, 1, 1, 1 } }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v64i8,   MVT::v16i32,  { 2, 1, 1, 1 } }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32,  { 2, 1, 1, 1 } }, // vpmovdw
+    { ISD::TRUNCATE,  MVT::v32i16,  MVT::v16i32,  { 2, 1, 1, 1 } }, // vpmovdw
+    { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i64,   { 2, 1, 1, 1 } }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v2i16,   MVT::v2i64,   { 1, 1, 1, 1 } }, // vpshufb
+    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v32i8,   MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v64i8,   MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v32i16,  MVT::v8i64,   { 2, 1, 1, 1 } }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,   { 1, 1, 1, 1 } }, // vpmovqd
+    { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,   { 1, 1, 1, 1 } }, // zmm vpmovqd
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i64,  { 5, 1, 1, 1 } },// 2*vpmovqd+concat+vpmovdb
 
-    { ISD::TRUNCATE,  MVT::v16i8,  MVT::v16i16,  3 }, // extend to v16i32
-    { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  8 },
-    { ISD::TRUNCATE,  MVT::v64i8,  MVT::v32i16,  8 },
+    { ISD::TRUNCATE,  MVT::v16i8,  MVT::v16i16,   { 3, 1, 1, 1 } }, // extend to v16i32
+    { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,   { 8, 1, 1, 1 } },
+    { ISD::TRUNCATE,  MVT::v64i8,  MVT::v32i16,   { 8, 1, 1, 1 } },
 
     // Sign extend is zmm vpternlogd+vptruncdb.
     // Zero extend is zmm broadcast load+vptruncdw.
-    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  3 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  4 },
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  { 4, 1, 1, 1 } },
 
     // Sign extend is zmm vpternlogd+vptruncdw.
     // Zero extend is zmm vpternlogd+vptruncdw+vpsrlw.
-    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  3 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  { 4, 1, 1, 1 } },
 
-    { ISD::SIGN_EXTEND, MVT::v2i32,  MVT::v2i1,   1 }, // zmm vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v2i32,  MVT::v2i1,   2 }, // zmm vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 }, // zmm vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 }, // zmm vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 }, // zmm vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 }, // zmm vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 }, // zmm vpternlogq
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 }, // zmm vpternlogq+psrlq
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // zmm vpternlogq
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 }, // zmm vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v2i32,  MVT::v2i1,   { 1, 1, 1, 1 } }, // zmm vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v2i32,  MVT::v2i1,   { 2, 1, 1, 1 } }, // zmm vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   { 1, 1, 1, 1 } }, // zmm vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   { 2, 1, 1, 1 } }, // zmm vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   { 1, 1, 1, 1 } }, // zmm vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   { 2, 1, 1, 1 } }, // zmm vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   { 1, 1, 1, 1 } }, // zmm vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   { 2, 1, 1, 1 } }, // zmm vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   { 1, 1, 1, 1 } }, // zmm vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   { 2, 1, 1, 1 } }, // zmm vpternlogq+psrlq
 
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  1 }, // vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  2 }, // vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i1,   1 }, // vpternlogq
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i1,   2 }, // vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  { 1, 1, 1, 1 } }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  { 2, 1, 1, 1 } }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i1,   { 1, 1, 1, 1 } }, // vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i1,   { 2, 1, 1, 1 } }, // vpternlogq+psrlq
 
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8,  1 },
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8,  1 },
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 1 },
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 1 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i16,  1 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i16,  1 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i32,  1 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i32,  1 },
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,   { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i32,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i32,  { 1, 1, 1, 1 } },
 
-    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i8,  3 }, // FIXME: May not be right
-    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i8,  3 }, // FIXME: May not be right
+    { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i8,  { 3, 1, 1, 1 } }, // FIXME: May not be right
+    { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i8,  { 3, 1, 1, 1 } }, // FIXME: May not be right
 
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i1,   4 },
-    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i1,  3 },
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v16i8,  2 },
-    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i8,  1 },
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i16,  2 },
-    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i16, 1 },
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  1 },
-    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i32, 1 },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i1,  { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i16, { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v16f32, MVT::v16i32, { 1, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i1,   4 },
-    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i1,  3 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v16i8,  2 },
-    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i8,  1 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i16,  2 },
-    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i16, 1 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  1 },
-    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i32, 1 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i64, 26 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  5 },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i1,  { 3, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i16, { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v16f32, MVT::v16i32, { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  {26, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  { 5, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v16f32, 2 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v16f64, 7 },
-    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v32f64,15 },
-    { ISD::FP_TO_SINT,  MVT::v64i8,  MVT::v64f32,11 },
-    { ISD::FP_TO_SINT,  MVT::v64i8,  MVT::v64f64,31 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v8f64,  3 },
-    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v16f64, 7 },
-    { ISD::FP_TO_SINT,  MVT::v32i16, MVT::v32f32, 5 },
-    { ISD::FP_TO_SINT,  MVT::v32i16, MVT::v32f64,15 },
-    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f64,  1 },
-    { ISD::FP_TO_SINT,  MVT::v16i32, MVT::v16f64, 3 },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v16f32, { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v16f64, { 7, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v32f64, {15, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v64i8,  MVT::v64f32, {11, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v64i8,  MVT::v64f64, {31, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v8f64,  { 3, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v16f64, { 7, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v32i16, MVT::v32f32, { 5, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v32i16, MVT::v32f64, {15, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i32, MVT::v16f64, { 3, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f64,  1 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v8f64,  3 },
-    { ISD::FP_TO_UINT,  MVT::v8i8,   MVT::v8f64,  3 },
-    { ISD::FP_TO_UINT,  MVT::v16i32, MVT::v16f32, 1 },
-    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v16f32, 3 },
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v16f32, 3 },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v8f64,  { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i8,   MVT::v8f64,  { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i32, MVT::v16f32, { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v16f32, { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v16f32, { 3, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry AVX512BWVLConversionTbl[] {
+  static const TypeConversionCostKindTblEntry AVX512BWVLConversionTbl[] {
     // Mask sign extend has an instruction.
-    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v32i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v32i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v64i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v64i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v32i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v32i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v64i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v64i1,  { 1, 1, 1, 1 } },
 
     // Mask zero extend is a sext + shift.
-    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v32i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v64i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v64i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v32i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v64i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v64i1,  { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v8i16,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v8i16,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i16,  2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i8,  2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, 2 },
-    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i8,  2 },
-    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v16i16, 2 },
-    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v32i8,  2 },
-    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v16i16, 2 },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v32i1,  MVT::v16i16, { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v32i8,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v64i1,  MVT::v16i16, { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, { 2, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry AVX512DQVLConversionTbl[] = {
+  static const TypeConversionCostKindTblEntry AVX512DQVLConversionTbl[] = {
     // Mask sign extend has an instruction.
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v2i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i1,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  1 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 },
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v2i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i1,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   { 1, 1, 1, 1 } },
 
     // Mask zero extend is a sext + shift.
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v2i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i1,   2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 },
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v2i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i1,   { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v8i32,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i64,  2 },
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v4i32,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i32,  2 },
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v4i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v8i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v4i64,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  { 2, 1, 1, 1 } },
 
-    { ISD::SINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  1 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  1 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  1 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  1 },
+    { ISD::SINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  { 1, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  1 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  1 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  1 },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  { 1, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::v2i64,  MVT::v4f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v4i64,  MVT::v4f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v2i64,  MVT::v2f64,  1 },
-    { ISD::FP_TO_SINT,  MVT::v4i64,  MVT::v4f64,  1 },
+    { ISD::FP_TO_SINT,  MVT::v2i64,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i64,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v2i64,  MVT::v2f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i64,  MVT::v4f64,  { 1, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::v2i64,  MVT::v4f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v4i64,  MVT::v4f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v2i64,  MVT::v2f64,  1 },
-    { ISD::FP_TO_UINT,  MVT::v4i64,  MVT::v4f64,  1 },
+    { ISD::FP_TO_UINT,  MVT::v2i64,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i64,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v2i64,  MVT::v2f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i64,  MVT::v4f64,  { 1, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry AVX512VLConversionTbl[] = {
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,   3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,   3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i8,   3 }, // sext+vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i8,  8 }, // split+2*v8i8
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i16,  3 }, // sext+vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i16,  3 }, // sext+vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i16,  3 }, // sext+vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i16, 8 }, // split+2*v8i16
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i32,  2 }, // vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i32,  2 }, // vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i32,  2 }, // vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v8i32,  2 }, // vpslld+vptestmd
-    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // vpmovqd
-    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i64,  2 }, // vpmovqb
-    { ISD::TRUNCATE,  MVT::v4i16,   MVT::v4i64,  2 }, // vpmovqw
-    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i32,  2 }, // vpmovwb
+  static const TypeConversionCostKindTblEntry AVX512VLConversionTbl[] = {
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i8,    { 3, 1, 1, 1 } }, // sext+vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i8,   { 8, 1, 1, 1 } }, // split+2*v8i8
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i16,   { 3, 1, 1, 1 } }, // sext+vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i16,   { 3, 1, 1, 1 } }, // sext+vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i16,   { 3, 1, 1, 1 } }, // sext+vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v16i16,  { 8, 1, 1, 1 } }, // split+2*v8i16
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i32,   { 2, 1, 1, 1 } }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i32,   { 2, 1, 1, 1 } }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i32,   { 2, 1, 1, 1 } }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v8i32,   { 2, 1, 1, 1 } }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,   { 2, 1, 1, 1 } }, // vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,   { 2, 1, 1, 1 } }, // vpsllq+vptestmq
+    { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,   { 1, 1, 1, 1 } }, // vpmovqd
+    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i64,   { 2, 1, 1, 1 } }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v4i16,   MVT::v4i64,   { 2, 1, 1, 1 } }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i32,   { 2, 1, 1, 1 } }, // vpmovwb
 
     // sign extend is vpcmpeq+maskedmove+vpmovdw+vpacksswb
     // zero extend is vpcmpeq+maskedmove+vpmovdw+vpsrlw+vpackuswb
-    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   5 },
-    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   6 },
-    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   5 },
-    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   6 },
-    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   5 },
-    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   6 },
-    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1, 10 },
-    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1, 12 },
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   { 5, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   { 6, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   { 5, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   { 6, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   { 5, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   { 6, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  {10, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  {12, 1, 1, 1 } },
 
     // sign extend is vpcmpeq+maskedmove+vpmovdw
     // zero extend is vpcmpeq+maskedmove+vpmovdw+vpsrlw
-    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   4 },
-    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   5 },
-    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   4 },
-    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   5 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   4 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   5 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1, 10 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1, 12 },
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   { 5, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   { 5, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   { 5, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  {10, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  {12, 1, 1, 1 } },
 
-    { ISD::SIGN_EXTEND, MVT::v2i32,  MVT::v2i1,   1 }, // vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v2i32,  MVT::v2i1,   2 }, // vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 }, // vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 }, // vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 }, // vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 }, // vpternlogd+psrld
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  1 }, // vpternlogd
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v2i32,  MVT::v2i1,   { 1, 1, 1, 1 } }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v2i32,  MVT::v2i1,   { 2, 1, 1, 1 } }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   { 1, 1, 1, 1 } }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   { 2, 1, 1, 1 } }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   { 1, 1, 1, 1 } }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   { 2, 1, 1, 1 } }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  { 1, 1, 1, 1 } }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  { 2, 1, 1, 1 } }, // vpternlogd+psrld
 
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 }, // vpternlogq
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 }, // vpternlogq+psrlq
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // vpternlogq
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 }, // vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   { 1, 1, 1, 1 } }, // vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   { 2, 1, 1, 1 } }, // vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   { 1, 1, 1, 1 } }, // vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   { 2, 1, 1, 1 } }, // vpternlogq+psrlq
 
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i8,  1 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i8,  1 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i8,  1 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i8,  1 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  1 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i16,  1 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i16,  1 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  1 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  1 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  { 1, 1, 1, 1 } },
 
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  1 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  1 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  1 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  1 },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  { 1, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    1 },
-    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    1 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  1 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  1 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  1 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  1 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  1 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  5 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  5 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  5 },
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  { 5, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  { 5, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  { 5, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v8f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v16f32, 2 },
-    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v32f32, 5 },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v16f32, { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v32f32, { 5, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    1 },
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    1 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  1 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f64,  1 },
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f64,  1 },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f64,  { 1, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry AVX2ConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   3 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  1 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  1 },
+  static const TypeConversionCostKindTblEntry AVX2ConversionTbl[] = {
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  { 1, 1, 1, 1 } },
 
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i8,  2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i8,  2 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i8,  2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i8,  2 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  2 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i16,  2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i16,  2 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 3 },
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 3 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  2 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  { 2, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 4 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 4 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i16,  1 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  1 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  1 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i32,  4 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i64,  4 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i32,  1 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v2i64,  1 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i64,  5 },
-    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  1 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  2 },
+    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, { 4, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, { 4, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i32,  { 4, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i64,  { 4, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v2i64,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i64,  { 5, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  { 2, 1, 1, 1 } },
 
-    { ISD::FP_EXTEND,   MVT::v8f64,  MVT::v8f32,  3 },
-    { ISD::FP_ROUND,    MVT::v8f32,  MVT::v8f64,  3 },
+    { ISD::FP_EXTEND,   MVT::v8f64,  MVT::v8f32,  { 3, 1, 1, 1 } },
+    { ISD::FP_ROUND,    MVT::v8f32,  MVT::v8f64,  { 3, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v8f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f64,  1 },
-    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f64,  3 },
+    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v8f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f64,  { 3, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    3 },
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    3 },
-    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v8f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  3 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  4 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f64,  4 },
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  3 },
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v4f64,  4 },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v8f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f64,  { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v4f64,  { 4, 1, 1, 1 } },
 
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  2 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  2 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  2 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  2 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  1 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  1 },
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  3 },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  { 3, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  2 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  2 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  2 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  2 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  2 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i32,  1 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  2 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  2 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  2 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  4 },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i32,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  { 4, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry AVXConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
+  static const TypeConversionCostKindTblEntry AVXConversionTbl[] = {
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  { 4, 1, 1, 1 } },
 
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i8,  3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i8,  3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i8,  3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i8,  3 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  3 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  3 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i16,  3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i16,  3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  3 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v8i16,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v8i16,  { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  { 3, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  { 3, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  4 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  5 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, 4 },
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i64,  9 },
-    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i64, 11 },
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i64,  { 4, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  { 5, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, { 4, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i64,  { 9, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i64, {11, 1, 1, 1 } },
 
-    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 6 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 6 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 }, // and+extract+packuswb
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i32,  5 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  5 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i64,  5 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i64,  3 }, // and+extract+2*packusdw
-    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  2 },
+    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, { 6, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, { 6, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, { 2, 1, 1, 1 } }, // and+extract+packuswb
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i32,  { 5, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  { 5, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i64,  { 5, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i64,  { 3, 1, 1, 1 } }, // and+extract+2*packusdw
+    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  { 2, 1, 1, 1 } },
 
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i1,   3 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i1,   3 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i1,   8 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  4 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v16i8,  2 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  4 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v8i16,  2 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  2 },
-    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  2 },
-    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  4 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  5 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  8 },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i1,   { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i1,   { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i1,   { 8, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  { 2, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  { 5, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  { 8, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i1,   7 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i1,   7 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i1,   6 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  4 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v16i8,  2 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  4 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v8i16,  2 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  4 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i32,  4 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  5 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  6 },
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  8 },
-    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i32, 10 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i64, 10 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i64, 18 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  5 },
-    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64, 10 },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i1,   { 7, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i1,   { 7, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i1,   { 6, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i16,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i32,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 5, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  { 6, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  { 8, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i32,  {10, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  {10, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  {18, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  { 5, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  {10, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v8f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v4f64,  2 },
-    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v8f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v4f64,  2 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v8f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v4f64,  2 },
-    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v8f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v4f64,  2 },
-    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f64,  2 },
-    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f64,  5 },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v32i8,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i16, MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i32,  MVT::v8f64,  { 5, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v8f32,  2 },
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v4f64,  2 },
-    { ISD::FP_TO_UINT,  MVT::v32i8,  MVT::v8f32,  2 },
-    { ISD::FP_TO_UINT,  MVT::v32i8,  MVT::v4f64,  2 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v8f32,  2 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v4f64,  2 },
-    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v8f32,  2 },
-    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v4f64,  2 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  3 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  4 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f64,  6 },
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  7 },
-    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v4f64,  7 },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v32i8,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v32i8,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v8f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v4f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  { 3, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f64,  { 6, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  { 7, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v4f64,  { 7, 1, 1, 1 } },
 
-    { ISD::FP_EXTEND,   MVT::v4f64,  MVT::v4f32,  1 },
-    { ISD::FP_ROUND,    MVT::v4f32,  MVT::v4f64,  1 },
+    { ISD::FP_EXTEND,   MVT::v4f64,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_ROUND,    MVT::v4f32,  MVT::v4f64,  { 1, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry SSE41ConversionTbl[] = {
-    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v16i8,   1 },
-    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v16i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v16i8,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v16i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v8i16, MVT::v16i8,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16, MVT::v16i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v8i16,   1 },
-    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v8i16,   1 },
-    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v8i16,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v8i16,   1 },
-    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v4i32,   1 },
-    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v4i32,   1 },
+  static const TypeConversionCostKindTblEntry SSE41ConversionTbl[] = {
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16, MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16, MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v8i16,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v8i16,   { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v8i16,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v8i16,   { 1, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v4i32,   { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v4i32,   { 1, 1, 1, 1 } },
 
     // These truncates end up widening elements.
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   1 }, // PMOVXZBQ
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  1 }, // PMOVXZWQ
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   1 }, // PMOVXZBD
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   { 1, 1, 1, 1 } }, // PMOVXZBQ
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  { 1, 1, 1, 1 } }, // PMOVXZWQ
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   { 1, 1, 1, 1 } }, // PMOVXZBD
 
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  2 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i32,  2 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  2 },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  { 2, 1, 1, 1 } },
 
-    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i32,    1 },
-    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i32,    1 },
-    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i64,    1 },
-    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i64,    1 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  1 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  1 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  1 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  1 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  1 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  1 },
-    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  2 },
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i32,    { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i32,    { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i64,    { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i64,    { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  { 2, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i32,    1 },
-    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i32,    1 },
-    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    4 },
-    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    4 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  1 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  1 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  3 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  3 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  2 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v2i64, 12 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i64, 22 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  4 },
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i32,    { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i32,    { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  { 3, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 3, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  { 2, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  {12, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  {22, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  { 4, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f32,    1 },
-    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f32,    1 },
-    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f64,    1 },
-    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f64,    1 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v4f32,  2 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v2f64,  2 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v4f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v2f64,  1 },
-    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f32,  1 },
-    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v2f64,  1 },
+    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f32,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f32,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f64,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f64,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v4f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v2f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v2f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v2f64,  { 1, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f32,    1 },
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    4 },
-    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f64,    1 },
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    4 },
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v4f32,  2 },
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v2f64,  2 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v4f32,  1 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v2f64,  1 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  4 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  4 },
+    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f32,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f64,    { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v4f32,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v2f64,  { 2, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v4f32,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v2f64,  { 1, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  { 4, 1, 1, 1 } },
   };
 
-  static const TypeConversionCostTblEntry SSE2ConversionTbl[] = {
+  static const TypeConversionCostKindTblEntry SSE2ConversionTbl[] = {
     // These are somewhat magic numbers justified by comparing the
     // output of llvm-mca for our various supported scheduler models
     // and basing it off the worst case scenario.
-    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i32,    3 },
-    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i32,    3 },
-    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i64,    3 },
-    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i64,    3 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  3 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  4 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  3 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  4 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  3 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  4 },
-    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  8 },
-    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  8 },
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i32,    { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i32,    { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i64,    { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i64,    { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 3, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  { 4, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  { 8, 1, 1, 1 } },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  { 8, 1, 1, 1 } },
 
-    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i32,    3 },
-    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i32,    3 },
-    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    8 },
-    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    9 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  4 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  4 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  4 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  4 },
-    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  7 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  7 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  5 },
-    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64, 15 },
-    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v2i64, 18 },
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i32,    { 3, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i32,    { 3, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    { 8, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    { 9, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v8i16,  { 4, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f32,  MVT::v2i32,  { 7, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  { 7, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  { 5, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  {15, 1, 1, 1 } },
+    { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  {18, 1, 1, 1 } },
 
-    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f32,    4 },
-    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f32,    4 },
-    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f64,    4 },
-    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f64,    4 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v4f32,  6 },
-    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v2f64,  6 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v4f32,  5 },
-    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v2f64,  5 },
-    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f32,  4 },
-    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v2f64,  4 },
+    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f32,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f32,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::i32,    MVT::f64,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::i64,    MVT::f64,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v4f32,  { 6, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v16i8,  MVT::v2f64,  { 6, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v4f32,  { 5, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v8i16,  MVT::v2f64,  { 5, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v4f32,  { 4, 1, 1, 1 } },
+    { ISD::FP_TO_SINT,  MVT::v4i32,  MVT::v2f64,  { 4, 1, 1, 1 } },
 
-    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f32,    4 },
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    4 },
-    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f64,    4 },
-    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,   15 },
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v4f32,  6 },
-    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v2f64,  6 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v4f32,  5 },
-    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v2f64,  5 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  8 },
-    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  8 },
+    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f32,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i32,    MVT::f64,    { 4, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    {15, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v4f32,  { 6, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v2f64,  { 6, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v4f32,  { 5, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v2f64,  { 5, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  { 8, 1, 1, 1 } },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v2f64,  { 8, 1, 1, 1 } },
 
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v16i8,  4 },
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v16i8,  4 },
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v16i8,  2 },
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v16i8,  3 },
-    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v16i8,  1 },
-    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v16i8,  2 },
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v8i16,  2 },
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v8i16,  3 },
-    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v8i16,  1 },
-    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v8i16,  2 },
-    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v4i32,  1 },
-    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v4i32,  2 },
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v16i8,  { 4, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v16i8,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v16i8,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v16i8,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v8i16,  { 3, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v8i16,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v8i16,  { 2, 1, 1, 1 } },
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v4i32,  { 1, 1, 1, 1 } },
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v4i32,  { 2, 1, 1, 1 } },
 
     // These truncates are really widening elements.
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i32,  1 }, // PSHUFD
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  2 }, // PUNPCKLWD+DQ
-    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   3 }, // PUNPCKLBW+WD+PSHUFD
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  1 }, // PUNPCKLWD
-    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   2 }, // PUNPCKLBW+WD
-    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   1 }, // PUNPCKLBW
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i32,  { 1, 1, 1, 1 } }, // PSHUFD
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  { 2, 1, 1, 1 } }, // PUNPCKLWD+DQ
+    { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   { 3, 1, 1, 1 } }, // PUNPCKLBW+WD+PSHUFD
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  { 1, 1, 1, 1 } }, // PUNPCKLWD
+    { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   { 2, 1, 1, 1 } }, // PUNPCKLBW+WD
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   { 1, 1, 1, 1 } }, // PUNPCKLBW
 
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i16,  2 }, // PAND+PACKUSWB
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 3 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  3 }, // PAND+2*PACKUSWB
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 7 },
-    { ISD::TRUNCATE,    MVT::v2i16,  MVT::v2i32,  1 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i32,  3 },
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  5 },
-    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32,10 },
-    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  4 }, // PAND+3*PACKUSWB
-    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v2i64,  2 }, // PSHUFD+PSHUFLW
-    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v2i64,  1 }, // PSHUFD
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v8i16,  { 2, 1, 1, 1 } }, // PAND+PACKUSWB
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, { 3, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v4i32,  { 3, 1, 1, 1 } }, // PAND+2*PACKUSWB
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, { 7, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v2i16,  MVT::v2i32,  { 1, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v4i32,  { 3, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  { 5, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, {10, 1, 1, 1 } },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v2i64,  { 4, 1, 1, 1 } }, // PAND+3*PACKUSWB
+    { ISD::TRUNCATE,    MVT::v8i16,  MVT::v2i64,  { 2, 1, 1, 1 } }, // PSHUFD+PSHUFLW
+    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v2i64,  { 1, 1, 1, 1 } }, // PSHUFD
   };
 
   // Attempt to map directly to (simple) MVT types to let us match custom entries.
@@ -2958,56 +2951,66 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       if (ST->hasBWI())
         if (const auto *Entry = ConvertCostTableLookup(
                 AVX512BWConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
-          return AdjustCost(Entry->Cost);
+          if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
 
       if (ST->hasDQI())
         if (const auto *Entry = ConvertCostTableLookup(
                 AVX512DQConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
-          return AdjustCost(Entry->Cost);
+          if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
 
       if (ST->hasAVX512())
         if (const auto *Entry = ConvertCostTableLookup(
                 AVX512FConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
-          return AdjustCost(Entry->Cost);
+          if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
     }
 
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512BWVLConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasDQI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512DQVLConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX512())
       if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX2()) {
       if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
     }
 
     if (ST->hasAVX()) {
       if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
     }
 
     if (ST->hasSSE41()) {
       if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
     }
 
     if (ST->hasSSE2()) {
       if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
     }
   }
 
@@ -3023,53 +3026,63 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512BWConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+        if (auto KindCost = Entry->Cost[CostKind])
+          return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
     if (ST->hasDQI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512DQConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+        if (auto KindCost = Entry->Cost[CostKind])
+          return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
     if (ST->hasAVX512())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512FConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+        if (auto KindCost = Entry->Cost[CostKind])
+          return std::max(LTSrc.first, LTDest.first) * *KindCost;
   }
 
   if (ST->hasBWI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512BWVLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   if (ST->hasDQI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512DQVLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   if (ST->hasAVX512())
     if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   if (ST->hasAVX2())
     if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   if (ST->hasAVX())
     if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   if (ST->hasSSE2())
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
+      if (auto KindCost = Entry->Cost[CostKind])
+        return std::max(LTSrc.first, LTDest.first) * *KindCost;
 
   // Fallback, for i8/i16 sitofp/uitofp cases we need to extend to i32 for
   // sitofp.
@@ -3098,6 +3111,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                             TTI::CastContextHint::None, CostKind);
   }
 
+  // TODO: Allow non-throughput costs that aren't binary.
+  auto AdjustCost = [&CostKind](InstructionCost Cost,
+                                InstructionCost N = 1) -> InstructionCost {
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return Cost == 0 ? 0 : N;
+    return Cost * N;
+  };
   return AdjustCost(
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }

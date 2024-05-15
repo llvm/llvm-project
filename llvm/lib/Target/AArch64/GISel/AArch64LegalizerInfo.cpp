@@ -177,9 +177,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
-      .clampScalar(1, s64, s64)
-      .clampNumElements(0, v2p0, v2p0)
-      .clampNumElements(1, v2s64, v2s64);
+      .clampScalarOrElt(1, s64, s64)
+      .clampNumElements(0, v2p0, v2p0);
 
   getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
 
@@ -495,17 +494,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // FIXME: fix moreElementsToNextPow2
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{s32, s32},
-                 {s32, s64},
-                 {s32, p0},
-                 {v4s32, v4s32},
-                 {v2s32, v2s32},
-                 {v2s64, v2s64},
-                 {v2s64, v2p0},
-                 {v4s16, v4s16},
-                 {v8s16, v8s16},
-                 {v8s8, v8s8},
-                 {v16s8, v16s8}})
+      .legalFor({{s32, s32}, {s32, s64}, {s32, p0}})
       .widenScalarOrEltToNextPow2(1)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s32)
@@ -527,7 +516,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(1, v8s8, v16s8)
       .clampNumElements(1, v4s16, v8s16)
       .clampNumElements(1, v2s32, v4s32)
-      .clampNumElements(1, v2s64, v2s64);
+      .clampNumElements(1, v2s64, v2s64)
+      .customIf(isVector(0));
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor({{s32, MinFPScalar},
@@ -1266,6 +1256,8 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizePrefetch(MI, Helper);
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToCNeg(MI);
+  case TargetOpcode::G_ICMP:
+    return legalizeICMP(MI, MRI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1321,6 +1313,36 @@ bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
                            Cast64.getReg(0)});
     MI.eraseFromParent();
   }
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeICMP(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &MIRBuilder) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg1 = MI.getOperand(2).getReg();
+  Register SrcReg2 = MI.getOperand(3).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg1);
+
+  // Check the vector types are legal
+  if (DstTy.getScalarSizeInBits() != SrcTy.getScalarSizeInBits() ||
+      DstTy.getNumElements() != SrcTy.getNumElements() ||
+      (DstTy.getSizeInBits() != 64 && DstTy.getSizeInBits() != 128))
+    return false;
+
+  // Lowers G_ICMP NE => G_ICMP EQ to allow better pattern matching for
+  // following passes
+  CmpInst::Predicate Pred = (CmpInst::Predicate)MI.getOperand(1).getPredicate();
+  if (Pred != CmpInst::ICMP_NE)
+    return true;
+  Register CmpReg =
+      MIRBuilder
+          .buildICmp(CmpInst::ICMP_EQ, MRI.getType(DstReg), SrcReg1, SrcReg2)
+          .getReg(0);
+  MIRBuilder.buildNot(DstReg, CmpReg);
+
+  MI.eraseFromParent();
   return true;
 }
 
