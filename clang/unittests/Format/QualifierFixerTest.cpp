@@ -1055,7 +1055,9 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_constexpr);
   ConfiguredTokens.push_back(tok::kw_friend);
 
-  auto Tokens = annotate(
+  TestLexer lexer{Allocator, Buffers};
+
+  auto Tokens = lexer.lex(
       "const static inline auto restrict int double long constexpr friend");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
@@ -1081,7 +1083,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   EXPECT_TRUE(isQualifierOrType(Tokens[8]));
   EXPECT_TRUE(isQualifierOrType(Tokens[9]));
 
-  auto NotTokens = annotate("for while do Foo Bar ");
+  auto NotTokens = lexer.lex("for while do Foo Bar ");
   ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
   EXPECT_FALSE(isConfiguredQualifierOrType(NotTokens[0], ConfiguredTokens));
