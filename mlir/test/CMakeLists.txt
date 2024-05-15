@@ -101,6 +101,7 @@ configure_lit_site_cfg(
 set(MLIR_TEST_DEPENDS
   FileCheck count not split-file
   mlir-capi-ir-test
+  mlir-capi-irdl-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test

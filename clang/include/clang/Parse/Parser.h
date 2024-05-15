@@ -18,6 +18,7 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
@@ -445,8 +446,8 @@ class Parser : public CodeCompletionHandler {
   /// True if we are within an Objective-C container while parsing C-like decls.
   ///
   /// This is necessary because Sema thinks we have left the container
-  /// to parse the C-like decls, meaning Actions.getObjCDeclContext() will
-  /// be NULL.
+  /// to parse the C-like decls, meaning Actions.ObjC().getObjCDeclContext()
+  /// will be NULL.
   bool ParsingInObjCContainer;
 
   /// Whether to skip parsing of function bodies.
@@ -497,7 +498,7 @@ public:
   }
 
   ObjCContainerDecl *getObjCDeclContext() const {
-    return Actions.getObjCDeclContext();
+    return Actions.ObjC().getObjCDeclContext();
   }
 
   // Type forwarding.  All of these are statically 'void*', but they may all be
@@ -1083,11 +1084,11 @@ private:
       : P(p), DC(p.getObjCDeclContext()),
         WithinObjCContainer(P.ParsingInObjCContainer, DC != nullptr) {
       if (DC)
-        P.Actions.ActOnObjCTemporaryExitContainerContext(DC);
+        P.Actions.ObjC().ActOnObjCTemporaryExitContainerContext(DC);
     }
     ~ObjCDeclContextSwitch() {
       if (DC)
-        P.Actions.ActOnObjCReenterContainerContext(DC);
+        P.Actions.ObjC().ActOnObjCReenterContainerContext(DC);
     }
   };
 
@@ -3553,6 +3554,23 @@ private:
   OMPClause *ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
                                       OpenMPClauseKind Kind, bool ParseOnly);
 
+  /// Parses a clause consisting of a list of expressions.
+  ///
+  /// \param Kind          The clause to parse.
+  /// \param ClauseNameLoc [out] The location of the clause name.
+  /// \param OpenLoc       [out] The location of '('.
+  /// \param CloseLoc      [out] The location of ')'.
+  /// \param Exprs         [out] The parsed expressions.
+  /// \param ReqIntConst   If true, each expression must be an integer constant.
+  ///
+  /// \return Whether the clause was parsed successfully.
+  bool ParseOpenMPExprListClause(OpenMPClauseKind Kind,
+                                 SourceLocation &ClauseNameLoc,
+                                 SourceLocation &OpenLoc,
+                                 SourceLocation &CloseLoc,
+                                 SmallVectorImpl<Expr *> &Exprs,
+                                 bool ReqIntConst = false);
+
   /// Parses and creates OpenMP 5.0 iterators expression:
   /// <iterators> = 'iterator' '(' { [ <iterator-type> ] identifier =
   /// <range-specification> }+ ')'
@@ -3632,6 +3650,13 @@ private:
     // Wait constructs, we likely want to put that information in here as well.
   };
 
+  struct OpenACCWaitParseInfo {
+    bool Failed = false;
+    Expr *DevNumExpr = nullptr;
+    SourceLocation QueuesLoc;
+    SmallVector<Expr *> QueueIdExprs;
+  };
+
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
   /// whether we can continue parsing, or should give up on the directive.
   enum class OpenACCParseCanContinue { Cannot = 0, Can = 1 };
@@ -3674,7 +3699,8 @@ private:
   /// Parses the clause-list for an OpenACC directive.
   SmallVector<OpenACCClause *>
   ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
-  bool ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective);
+  OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
+                                                bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
   /// an ID expression.
   ExprResult ParseOpenACCBindClauseArgument();
@@ -3695,7 +3721,8 @@ private:
                                SourceLocation Loc,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
-  bool ParseOpenACCDeviceTypeList();
+  bool ParseOpenACCDeviceTypeList(
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs);
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,

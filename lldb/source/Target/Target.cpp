@@ -841,7 +841,7 @@ static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
   if (!num_supported_hardware_watchpoints)
     return true;
 
-  if (num_supported_hardware_watchpoints == 0) {
+  if (*num_supported_hardware_watchpoints == 0) {
     error.SetErrorStringWithFormat(
         "Target supports (%u) hardware watchpoint slots.\n",
         *num_supported_hardware_watchpoints);

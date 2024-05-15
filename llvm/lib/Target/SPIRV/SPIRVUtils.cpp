@@ -133,6 +133,34 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD) {
+  for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
+    auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
+    if (!OpMD)
+      report_fatal_error("Invalid decoration");
+    if (OpMD->getNumOperands() == 0)
+      report_fatal_error("Expect operand(s) of the decoration");
+    ConstantInt *DecorationId =
+        mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(0));
+    if (!DecorationId)
+      report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
+                         "element of the decoration");
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
+                   .addUse(Reg)
+                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
+      if (ConstantInt *OpV =
+              mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
+        MIB.addImm(static_cast<uint32_t>(OpV->getZExtValue()));
+      else if (MDString *OpV = dyn_cast<MDString>(OpMD->getOperand(OpI)))
+        addStringImm(OpV->getString(), MIB);
+      else
+        report_fatal_error("Unexpected operand of the decoration");
+    }
+  }
+}
+
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {

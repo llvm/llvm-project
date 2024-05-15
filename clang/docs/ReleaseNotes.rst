@@ -114,6 +114,9 @@ Clang Frontend Potentially Breaking Changes
     $ clang --target=<your target triple> -print-target-triple
     <the normalized target triple>
 
+- The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
+  existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -181,6 +184,9 @@ C++23 Feature Support
 - Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
+
+- Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
+  `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -703,11 +709,16 @@ Bug Fixes to C++ Support
   within initializers for variables that are usable in constant expressions or are constant
   initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
   expression.
+- Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
+- Correctly treat the compound statement of an ``if consteval`` as an immediate context. Fixes (#GH91509).
+- When partial ordering alias templates against template template parameters,
+  allow pack expansions when the alias has a fixed-size parameter list. Fixes (#GH62529).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
 - The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
+- Fixed malformed AST generated for anonymous union access in templates. (#GH90842)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
