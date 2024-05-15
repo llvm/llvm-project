@@ -57,8 +57,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <queue>
-#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
@@ -3158,7 +3156,6 @@ public:
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
   virtual bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                                SmallVector<Value *> &LeafNodes,
                                                 LoadInst *LI) const {
     return false;
   }
@@ -3170,7 +3167,6 @@ public:
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
   virtual bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                               SmallVector<Value *> &LeafNodes,
                                                StoreInst *SI) const {
     return false;
   }

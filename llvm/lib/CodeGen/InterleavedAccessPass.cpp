@@ -70,7 +70,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
-#include <queue>
 #include <utility>
 
 using namespace llvm;
@@ -489,57 +488,12 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
   LLVM_DEBUG(dbgs() << "IA: Found a deinterleave intrinsic: " << *DI << "\n");
 
-  std::stack<IntrinsicInst *> DeinterleaveTreeQueue;
-  SmallVector<Value *> TempLeafNodes, LeafNodes;
-  std::map<IntrinsicInst *, bool> mp;
-  SmallVector<Instruction *> TempDeadInsts;
-
-  DeinterleaveTreeQueue.push(DI);
-  while (!DeinterleaveTreeQueue.empty()) {
-    auto CurrentDI = DeinterleaveTreeQueue.top();
-    DeinterleaveTreeQueue.pop();
-    TempDeadInsts.push_back(CurrentDI);
-    // iterate over extract users of deinterleave
-    for (auto UserExtract : CurrentDI->users()) {
-      Instruction *Extract = dyn_cast<Instruction>(UserExtract);
-      if (!Extract || Extract->getOpcode() != Instruction::ExtractValue)
-        continue;
-      bool IsLeaf = true;
-      // iterate over deinterleave users of extract
-      for (auto UserDI : UserExtract->users()) {
-        IntrinsicInst *Child_DI = dyn_cast<IntrinsicInst>(UserDI);
-        if (!Child_DI || Child_DI->getIntrinsicID() !=
-                             Intrinsic::vector_deinterleave2)
-          continue;
-        IsLeaf = false;
-        if (mp.count(Child_DI) == 0) {
-          DeinterleaveTreeQueue.push(Child_DI);
-        }
-        continue;
-      }
-      if (IsLeaf) {
-        TempLeafNodes.push_back(UserExtract);
-        TempDeadInsts.push_back(Extract);
-      } else {
-        TempDeadInsts.push_back(Extract);
-      }
-    }
-  }
-  // sort the deinterleaved nodes in the order that
-  // they will be extracted from the target-specific intrinsic.
-  for (unsigned I = 1; I < TempLeafNodes.size(); I += 2)
-    LeafNodes.push_back(TempLeafNodes[I]);
-
-  for (unsigned I = 0; I < TempLeafNodes.size(); I += 2)
-    LeafNodes.push_back(TempLeafNodes[I]);
-
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LeafNodes, LI))
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI))
     return false;
 
   // We now have a target-specific load, so delete the old one.
-  DeadInsts.insert(DeadInsts.end(), TempDeadInsts.rbegin(),
-                   TempDeadInsts.rend());
+  DeadInsts.push_back(DI);
   DeadInsts.push_back(LI);
   return true;
 }
@@ -555,38 +509,13 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
     return false;
 
   LLVM_DEBUG(dbgs() << "IA: Found an interleave intrinsic: " << *II << "\n");
-  std::queue<IntrinsicInst *> IeinterleaveTreeQueue;
-  SmallVector<Value *> TempLeafNodes, LeafNodes;
-  SmallVector<Instruction *> TempDeadInsts;
-
-  IeinterleaveTreeQueue.push(II);
-  while (!IeinterleaveTreeQueue.empty()) {
-    auto node = IeinterleaveTreeQueue.front();
-    TempDeadInsts.push_back(node);
-    IeinterleaveTreeQueue.pop();
-    for (unsigned i = 0; i < 2; i++) {
-      auto op = node->getOperand(i);
-      if (auto CurrentII = dyn_cast<IntrinsicInst>(op)) {
-        if (CurrentII->getIntrinsicID() !=
-            Intrinsic::vector_interleave2)
-          continue;
-        IeinterleaveTreeQueue.push(CurrentII);
-        continue;
-      }
-      TempLeafNodes.push_back(op);
-    }
-  }
-  for (unsigned I = 0; I < TempLeafNodes.size(); I += 2)
-    LeafNodes.push_back(TempLeafNodes[I]);
-  for (unsigned I = 1; I < TempLeafNodes.size(); I += 2)
-    LeafNodes.push_back(TempLeafNodes[I]);
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerInterleaveIntrinsicToStore(II, LeafNodes, SI))
+  if (!TLI->lowerInterleaveIntrinsicToStore(II, SI))
     return false;
 
   // We now have a target-specific store, so delete the old one.
   DeadInsts.push_back(SI);
-  DeadInsts.insert(DeadInsts.end(), TempDeadInsts.begin(), TempDeadInsts.end());
+  DeadInsts.push_back(II);
   return true;
 }
 
@@ -607,8 +536,7 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
       // with a factor of 2.
       if (II->getIntrinsicID() == Intrinsic::vector_deinterleave2)
         Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
-
-      else if (II->getIntrinsicID() == Intrinsic::vector_interleave2)
+      if (II->getIntrinsicID() == Intrinsic::vector_interleave2)
         Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
     }
   }

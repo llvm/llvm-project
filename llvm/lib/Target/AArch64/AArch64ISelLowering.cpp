@@ -16906,18 +16906,74 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   return true;
 }
 
+bool getDeinterleavedValues(Value *DI,
+                            SmallVectorImpl<Value *> &DeinterleavedValues,
+                            SmallVectorImpl<Instruction *> &DeadInsts) {
+  if (!DI->hasNUses(2))
+    return false;
+
+  // make sure that the users of DI are extractValue instructions
+  auto *Extr0 = *(++DI->user_begin());
+  if (!match(Extr0, m_ExtractValue<0>(m_Deinterleave2(m_Value()))))
+    return false;
+  auto *Extr1 = *(DI->user_begin());
+  if (!match(Extr1, m_ExtractValue<1>(m_Deinterleave2(m_Value()))))
+    return false;
+
+  // each extractValue instruction is expected to have a single user,
+  // which should be another DI
+  if (!Extr0->hasOneUser() || !Extr1->hasOneUser())
+    return false;
+  auto *DI1 = *(Extr0->user_begin());
+  if (!match(DI1, m_Deinterleave2(m_Value())))
+    return false;
+  auto *DI2 = *(Extr1->user_begin());
+  if (!match(DI2, m_Deinterleave2(m_Value())))
+    return false;
+
+  if (!DI1->hasNUses(2) || !DI2->hasNUses(2))
+    return false;
+
+  // Leaf nodes of the deinterleave tree
+  auto *A = *(++DI1->user_begin());
+  auto *C = *(DI1->user_begin());
+  auto *B = *(++DI2->user_begin());
+  auto *D = *(DI2->user_begin());
+
+  DeinterleavedValues.push_back(A);
+  DeinterleavedValues.push_back(B);
+  DeinterleavedValues.push_back(C);
+  DeinterleavedValues.push_back(D);
+
+  // These Values will not be used anymre,
+  // DI4 will be created instead of nested DI1 and DI2
+  DeadInsts.push_back(cast<Instruction>(DI1));
+  DeadInsts.push_back(cast<Instruction>(Extr0));
+  DeadInsts.push_back(cast<Instruction>(DI2));
+  DeadInsts.push_back(cast<Instruction>(Extr1));
+
+  return true;
+}
+
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, SmallVector<Value *> &LeafNodes, LoadInst *LI) const {
+    IntrinsicInst *DI, LoadInst *LI) const {
   // Only deinterleave2 supported at present.
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
-  const unsigned Factor = std::max(2, (int)LeafNodes.size());
-
-  VectorType *VTy = (LeafNodes.size() > 0)
-                        ? cast<VectorType>(LeafNodes.front()->getType())
-                        : cast<VectorType>(DI->getType()->getContainedType(0));
+  SmallVector<Value *, 4> DeinterleavedValues;
+  SmallVector<Instruction *, 10> DeadInsts;
   const DataLayout &DL = DI->getModule()->getDataLayout();
+  unsigned Factor = 2;
+  VectorType *VTy = cast<VectorType>(DI->getType()->getContainedType(0));
+
+  if (getDeinterleavedValues(DI, DeinterleavedValues, DeadInsts)) {
+    Factor = DeinterleavedValues.size();
+    VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
+  }
+  assert((Factor == 2 || Factor == 4) &&
+         "Currently supported Factors are 2 or 4");
+
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -16928,7 +16984,6 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
-
   VectorType *LdTy =
       VectorType::get(VTy->getElementType(),
                       VTy->getElementCount().divideCoefficientBy(NumLoads));
@@ -16938,7 +16993,6 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
-
   Value *Pred = nullptr;
   if (UseScalable)
     Pred =
@@ -16947,9 +17001,8 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   Value *BaseAddr = LI->getPointerOperand();
   Value *Result;
   if (NumLoads > 1) {
-    Value *Left = PoisonValue::get(VTy);
-    Value *Right = PoisonValue::get(VTy);
-
+    // Create multiple legal small ldN instead of a wide one.
+    SmallVector<Value *, 4> WideValues(Factor, (PoisonValue::get(VTy)));
     for (unsigned I = 0; I < NumLoads; ++I) {
       Value *Offset = Builder.getInt64(I * Factor);
 
@@ -16959,50 +17012,79 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
         LdN = Builder.CreateCall(LdNFunc, {Pred, Address}, "ldN");
       else
         LdN = Builder.CreateCall(LdNFunc, Address, "ldN");
-
       Value *Idx =
           Builder.getInt64(I * LdTy->getElementCount().getKnownMinValue());
-      Left = Builder.CreateInsertVector(
-          VTy, Left, Builder.CreateExtractValue(LdN, 0), Idx);
-      Right = Builder.CreateInsertVector(
-          VTy, Right, Builder.CreateExtractValue(LdN, 1), Idx);
+      for (int J = 0; J < Factor; ++J) {
+        WideValues[J] = Builder.CreateInsertVector(
+            VTy, WideValues[J], Builder.CreateExtractValue(LdN, J), Idx);
+      }
     }
-
-    Result = PoisonValue::get(DI->getType());
-    Result = Builder.CreateInsertValue(Result, Left, 0);
-    Result = Builder.CreateInsertValue(Result, Right, 1);
+    if (Factor == 2)
+      Result = PoisonValue::get(StructType::get(VTy, VTy));
+    else
+      Result = PoisonValue::get(StructType::get(VTy, VTy, VTy, VTy));
+    // Construct the wide result out of the small results.
+    for (int J = 0; J < Factor; ++J) {
+      Result = Builder.CreateInsertValue(Result, WideValues[J], J);
+    }
   } else {
-    if (UseScalable) {
+    if (UseScalable)
       Result = Builder.CreateCall(LdNFunc, {Pred, BaseAddr}, "ldN");
-      if (Factor == 2) {
-        DI->replaceAllUsesWith(Result);
-        return true;
-      }
-      for (unsigned I = 0; I < LeafNodes.size(); I++) {
-        llvm::Value *CurrentExtract = LeafNodes[I];
-        Value *Newextrct = Builder.CreateExtractValue(Result, I);
-        CurrentExtract->replaceAllUsesWith(Newextrct);
-      }
-      return true;
-    } else
+    else
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
   }
+  if (Factor > 2) {
+    for (unsigned I = 0; I < DeinterleavedValues.size(); I++) {
+      llvm::Value *CurrentExtract = DeinterleavedValues[I];
+      Value *NewExtract = Builder.CreateExtractValue(Result, I);
+      CurrentExtract->replaceAllUsesWith(NewExtract);
+      cast<Instruction>(CurrentExtract)->eraseFromParent();
+    }
 
+    for (auto &dead : DeadInsts)
+      dead->eraseFromParent();
+    return true;
+  }
   DI->replaceAllUsesWith(Result);
   return true;
 }
 
+bool getValuesToInterleaved(Value *II,
+                            SmallVectorImpl<Value *> &ValuesToInterleave) {
+  Value *A, *B, *C, *D;
+  // Try to match interleave of Factor 4
+  if (match(II, m_Interleave2(m_Interleave2(m_Value(A), m_Value(C)),
+                              m_Interleave2(m_Value(B), m_Value(D))))) {
+    ValuesToInterleave.push_back(A);
+    ValuesToInterleave.push_back(B);
+    ValuesToInterleave.push_back(C);
+    ValuesToInterleave.push_back(D);
+    return true;
+  }
+
+  // Try to match interleave of Factor 2
+  if (match(II, m_Interleave2(m_Value(A), m_Value(B)))) {
+    ValuesToInterleave.push_back(A);
+    ValuesToInterleave.push_back(B);
+    return true;
+  }
+
+  return false;
+}
+
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, SmallVector<Value *> &LeafNodes, StoreInst *SI) const {
-  // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
+    IntrinsicInst *II, StoreInst *SI) const {
+  LLVM_DEBUG(dbgs() << "lowerInterleaveIntrinsicToStore\n");
+
+  SmallVector<Value *, 4> ValuesToInterleave;
+  if (!getValuesToInterleaved(II, ValuesToInterleave))
     return false;
-
-  // leaf nodes are the nodes that will be interleaved
-  const unsigned Factor = LeafNodes.size();
-
-  VectorType *VTy = cast<VectorType>(LeafNodes.front()->getType());
+  unsigned Factor = ValuesToInterleave.size();
+  assert((Factor == 2 || Factor == 4) &&
+         "Currently supported Factors are 2 or 4");
+  VectorType *VTy = cast<VectorType>(ValuesToInterleave[0]->getType());
   const DataLayout &DL = II->getModule()->getDataLayout();
+
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -17031,28 +17113,25 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     Pred =
         Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
 
-  Value *L = II->getOperand(0);
-  Value *R = II->getOperand(1);
-
+  auto WideValues = ValuesToInterleave;
+  if (UseScalable)
+    ValuesToInterleave.push_back(Pred);
+  ValuesToInterleave.push_back(BaseAddr);
   for (unsigned I = 0; I < NumStores; ++I) {
     Value *Address = BaseAddr;
     if (NumStores > 1) {
       Value *Offset = Builder.getInt64(I * Factor);
       Address = Builder.CreateGEP(StTy, BaseAddr, {Offset});
-
       Value *Idx =
           Builder.getInt64(I * StTy->getElementCount().getKnownMinValue());
-      L = Builder.CreateExtractVector(StTy, II->getOperand(0), Idx);
-      R = Builder.CreateExtractVector(StTy, II->getOperand(1), Idx);
+      for (int J = 0; J < Factor; J++) {
+        ValuesToInterleave[J] =
+            Builder.CreateExtractVector(StTy, WideValues[J], Idx);
+      }
+      // update the address
+      ValuesToInterleave[ValuesToInterleave.size() - 1] = Address;
     }
-
-    if (UseScalable) {
-      SmallVector<Value *> Args(LeafNodes);
-      Args.push_back(Pred);
-      Args.push_back(Address);
-      Builder.CreateCall(StNFunc, Args);
-    } else
-      Builder.CreateCall(StNFunc, {L, R, Address});
+    Builder.CreateCall(StNFunc, ValuesToInterleave);
   }
 
   return true;
