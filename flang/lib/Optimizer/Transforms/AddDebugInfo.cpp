@@ -57,7 +57,7 @@ public:
   void runOnOperation() override;
 
 private:
-  std::map<std::string, mlir::LLVM::DIModuleAttr> moduleMap;
+  llvm::StringMap<mlir::LLVM::DIModuleAttr> moduleMap;
 
   mlir::LLVM::DIModuleAttr getOrCreateModuleAttr(
       const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
@@ -119,7 +119,7 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   mlir::MLIRContext *context = &getContext();
   mlir::LLVM::DIModuleAttr modAttr;
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end())
-    modAttr = iter->second;
+    modAttr = iter->getValue();
   else {
     modAttr = mlir::LLVM::DIModuleAttr::get(
         context, fileAttr, scope, mlir::StringAttr::get(context, name),
@@ -209,9 +209,8 @@ void AddDebugInfoPass::runOnOperation() {
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel);
 
-  module.walk([&](fir::GlobalOp globalOp) {
+  for (auto globalOp : module.getOps<fir::GlobalOp>())
     handleGlobalOp(globalOp, fileAttr, cuAttr);
-  });
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     mlir::Location l = funcOp->getLoc();
