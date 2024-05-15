@@ -127,6 +127,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
+#include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
@@ -1027,6 +1028,14 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
       Phase != ThinOrFullLTOPhase::ThinLTOPostLink)
     MPM.addPass(SampleProfileProbePass(TM));
+
+  // Instrument function entry and exit before all inlining.
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
+      Phase != ThinOrFullLTOPhase::FullLTOPostLink &&
+      Phase != ThinOrFullLTOPhase::None) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        EntryExitInstrumenterPass(/*PostInlining=*/false)));
+  }
 
   bool HasSampleProfile = PGOOpt && (PGOOpt->Action == PGOOptions::SampleUse);
 
@@ -2044,6 +2053,12 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
         /*RunProfileGen=*/(PGOOpt->Action == PGOOptions::IRInstr),
         /*IsCS=*/false, PGOOpt->AtomicCounterUpdate, PGOOpt->ProfileFile,
         PGOOpt->ProfileRemappingFile, PGOOpt->FS);
+
+  // Instrument function entry and exit before all inlining.
+  if (LTOPreLink) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        EntryExitInstrumenterPass(/*PostInlining=*/false)));
+  }
 
   invokePipelineStartEPCallbacks(MPM, Level);
 

@@ -670,6 +670,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
       !Opt.DisablePartialLibcallInlining)
     addPass(PartiallyInlineLibCallsPass());
 
+  // Instrument function entry and exit, e.g. with calls to mcount().
+  addPass(EntryExitInstrumenterPass(/*PostInlining=*/true));
+
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
   // that stores/loads element one-by-one if the appropriate mask bit is set.

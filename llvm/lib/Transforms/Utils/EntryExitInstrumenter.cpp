@@ -139,19 +139,6 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 }
 
 namespace {
-struct EntryExitInstrumenter : public FunctionPass {
-  static char ID;
-  EntryExitInstrumenter() : FunctionPass(ID) {
-    initializeEntryExitInstrumenterPass(*PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-  bool runOnFunction(Function &F) override { return ::runOnFunction(F, false); }
-};
-char EntryExitInstrumenter::ID = 0;
-
 struct PostInlineEntryExitInstrumenter : public FunctionPass {
   static char ID;
   PostInlineEntryExitInstrumenter() : FunctionPass(ID) {
@@ -168,16 +155,6 @@ char PostInlineEntryExitInstrumenter::ID = 0;
 }
 
 INITIALIZE_PASS_BEGIN(
-    EntryExitInstrumenter, "ee-instrument",
-    "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
-    false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(
-    EntryExitInstrumenter, "ee-instrument",
-    "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
-    false, false)
-
-INITIALIZE_PASS_BEGIN(
     PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
     "Instrument function entry/exit with calls to e.g. mcount() "
     "(post inlining)",
@@ -188,10 +165,6 @@ INITIALIZE_PASS_END(
     "Instrument function entry/exit with calls to e.g. mcount() "
     "(post inlining)",
     false, false)
-
-FunctionPass *llvm::createEntryExitInstrumenterPass() {
-  return new EntryExitInstrumenter();
-}
 
 FunctionPass *llvm::createPostInlineEntryExitInstrumenterPass() {
   return new PostInlineEntryExitInstrumenter();
