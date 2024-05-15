@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S  -passes=polly-codegen < %s | FileCheck %s
+; RUN: opt %loadPolly -S  -polly-codegen < %s | FileCheck %s
 ;
 ;    float f(float *A, int N) {
 ;      float tmp = 0;

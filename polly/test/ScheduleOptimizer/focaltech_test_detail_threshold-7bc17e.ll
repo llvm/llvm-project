@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly "-passes=scop(print<polly-opt-isl>)" -polly-vectorizer=stripmine -polly-invariant-load-hoisting -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-vectorizer=stripmine -polly-invariant-load-hoisting -polly-optimized-scops -polly-print-opt-isl -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-opt-isl>)" -polly-vectorizer=stripmine -polly-invariant-load-hoisting -disable-output < %s | FileCheck %s
 ;
 ; llvm.org/PR46578
 ;

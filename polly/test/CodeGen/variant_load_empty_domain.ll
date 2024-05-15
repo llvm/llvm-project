@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -passes=polly-codegen -disable-output < %s
+; RUN: opt %loadPolly -polly-codegen -disable-output < %s
 ;
 ;
 ;    void f(int *A) {
