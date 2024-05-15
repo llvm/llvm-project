@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -passes=polly-codegen < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
 ; XFAIL: *
 ;
 ; CHECK-LABEL: polly.stmt.if.then:
