@@ -212,10 +212,12 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
 
   if (CB->getCalledFunction()->getIntrinsicID() ==
       Intrinsic::coro_await_suspend_handle) {
-    // Follow the await_suspend by a lowered resume call to the returned
-    // coroutine.
-    if (auto *Invoke = dyn_cast<InvokeInst>(CB))
+    // Follow the lowered await_suspend call above with a lowered resume call
+    // to the returned coroutine.
+    if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
+      // If the await_suspend call is an invoke, we continue in the next block.
       Builder.SetInsertPoint(Invoke->getNormalDest()->getFirstInsertionPt());
+    }
 
     coro::LowererBase LB(*Wrapper->getParent());
     auto *ResumeAddr = LB.makeSubFnCall(NewCall, CoroSubFnInst::ResumeIndex,
