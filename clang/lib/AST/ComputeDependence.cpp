@@ -375,12 +375,19 @@ ExprDependence clang::computeDependence(PackExpansionExpr *E) {
 }
 
 ExprDependence clang::computeDependence(PackIndexingExpr *E) {
+
+  ExprDependence PatternDep = E->getPackIdExpression()->getDependence() &
+                              ~ExprDependence::UnexpandedPack;
+
   ExprDependence D = E->getIndexExpr()->getDependence();
+  if (D & ExprDependence::TypeValueInstantiation)
+    D |= E->getIndexExpr()->getDependence() | PatternDep |
+         ExprDependence::Instantiation;
+
   ArrayRef<Expr *> Exprs = E->getExpressions();
   if (Exprs.empty())
-    D |= (E->getPackIdExpression()->getDependence() |
-          ExprDependence::TypeValueInstantiation) &
-         ~ExprDependence::UnexpandedPack;
+    D |= PatternDep | ExprDependence::Instantiation;
+
   else if (!E->getIndexExpr()->isInstantiationDependent()) {
     std::optional<unsigned> Index = E->getSelectedIndex();
     assert(Index && *Index < Exprs.size() && "pack index out of bound");
@@ -443,12 +450,17 @@ ExprDependence clang::computeDependence(ObjCIndirectCopyRestoreExpr *E) {
   return E->getSubExpr()->getDependence();
 }
 
-ExprDependence clang::computeDependence(OMPArraySectionExpr *E) {
+ExprDependence clang::computeDependence(ArraySectionExpr *E) {
   auto D = E->getBase()->getDependence();
   if (auto *LB = E->getLowerBound())
     D |= LB->getDependence();
   if (auto *Len = E->getLength())
     D |= Len->getDependence();
+
+  if (E->isOMPArraySection()) {
+    if (auto *Stride = E->getStride())
+      D |= Stride->getDependence();
+  }
   return D;
 }
 

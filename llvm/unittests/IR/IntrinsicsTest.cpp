@@ -81,6 +81,7 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   __ISA(InstrProfCoverInst, InstrProfCntrInstBase);
   __ISA(InstrProfIncrementInst, InstrProfCntrInstBase);
   __ISA(InstrProfIncrementInstStep, InstrProfIncrementInst);
+  __ISA(InstrProfCallsite, InstrProfCntrInstBase);
   __ISA(InstrProfTimestampInst, InstrProfCntrInstBase);
   __ISA(InstrProfValueProfileInst, InstrProfCntrInstBase);
   __ISA(InstrProfMCDCBitmapInstBase, InstrProfInstBase);
@@ -94,6 +95,7 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
           {Intrinsic::instrprof_cover, isInstrProfCoverInst},
           {Intrinsic::instrprof_increment, isInstrProfIncrementInst},
           {Intrinsic::instrprof_increment_step, isInstrProfIncrementInstStep},
+          {Intrinsic::instrprof_callsite, isInstrProfCallsite},
           {Intrinsic::instrprof_mcdc_condbitmap_update,
            isInstrProfMCDCCondBitmapUpdate},
           {Intrinsic::instrprof_mcdc_parameters,

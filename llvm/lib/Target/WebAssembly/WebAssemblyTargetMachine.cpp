@@ -512,6 +512,10 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // Eliminate range checks and add default targets to br_table instructions.
   addPass(createWebAssemblyFixBrTableDefaults());
 
+  // unreachable is terminator, non-terminator instruction after it is not
+  // allowed.
+  addPass(createWebAssemblyCleanCodeAfterTrap());
+
   return false;
 }
 

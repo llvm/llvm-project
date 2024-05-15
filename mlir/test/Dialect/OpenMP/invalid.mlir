@@ -2087,7 +2087,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 1, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 1, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -2113,23 +2113,23 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
 
 func.func @omp_distribute_wrapper() -> () {
   // expected-error @below {{op must be a loop wrapper}}
-  "omp.distribute"() ({
+  omp.distribute {
       %0 = arith.constant 0 : i32
       "omp.terminator"() : () -> ()
-    }) : () -> ()
+  }
 }
 
 // -----
 
 func.func @omp_distribute_nested_wrapper(%data_var : memref<i32>) -> () {
   // expected-error @below {{only supported nested wrappers are 'omp.parallel' and 'omp.simd'}}
-  "omp.distribute"() ({
-      "omp.wsloop"() ({
-        %0 = arith.constant 0 : i32
-        "omp.terminator"() : () -> ()
-      }) : () -> ()
+  omp.distribute {
+    "omp.wsloop"() ({
+      %0 = arith.constant 0 : i32
       "omp.terminator"() : () -> ()
     }) : () -> ()
+    "omp.terminator"() : () -> ()
+  }
 }
 
 // -----
@@ -2147,6 +2147,17 @@ omp.private {type = private} @x.privatizer : i32 alloc {
 ^bb0(%arg0: i32):
   // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: None}}
   omp.yield
+}
+
+// -----
+
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} dealloc {
+^bb0(%arg0: f32):
+  // expected-error @below {{Did not expect any values to be yielded.}}
+  omp.yield(%arg0 : f32)
 }
 
 // -----
@@ -2174,6 +2185,17 @@ omp.private {type = firstprivate} @x.privatizer : f32 alloc {
 } copy {
 ^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`dealloc`: expected 1 region arguments, got: 2}}
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} dealloc {
+^bb0(%arg0: f32, %arg1: f32):
+  omp.yield
 }
 
 // -----

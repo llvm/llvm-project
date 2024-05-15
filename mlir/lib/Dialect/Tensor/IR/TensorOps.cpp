@@ -1609,6 +1609,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
             cst.has_value() && cst.value() == static_cast<int64_t>(id);
         continue;
       }
+
+      dynamicNoop = false;
+      break;
     }
 
     if (dynamicNoop)
@@ -1639,6 +1642,46 @@ int64_t ExpandShapeOp::getCorrespondingSourceDim(int64_t resultDim) {
     if (llvm::is_contained(it.value(), resultDim))
       return it.index();
   llvm_unreachable("could not find reassociation group");
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ExpandShapeOp::inferOutputShape(OpBuilder &b, Location loc,
+                                RankedTensorType expandedType,
+                                ArrayRef<ReassociationIndices> reassociation,
+                                ArrayRef<OpFoldResult> inputShape) {
+  std::optional<SmallVector<OpFoldResult>> outputShape =
+      inferExpandShapeOutputShape(b, loc, expandedType, reassociation,
+                                  inputShape);
+  if (!outputShape)
+    return failure();
+  return *outputShape;
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          Type resultType, Value src,
+                          ArrayRef<ReassociationIndices> reassociation,
+                          ArrayRef<OpFoldResult> outputShape) {
+  auto [staticOutputShape, dynamicOutputShape] =
+      decomposeMixedValues(SmallVector<OpFoldResult>(outputShape));
+  build(builder, result, cast<RankedTensorType>(resultType), src,
+        getReassociationIndicesAttribute(builder, reassociation),
+        dynamicOutputShape, staticOutputShape);
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          Type resultType, Value src,
+                          ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<OpFoldResult> inputShape =
+      getMixedSizes(builder, result.location, src);
+  auto tensorResultTy = cast<RankedTensorType>(resultType);
+  FailureOr<SmallVector<OpFoldResult>> outputShape = inferOutputShape(
+      builder, result.location, tensorResultTy, reassociation, inputShape);
+  SmallVector<OpFoldResult> outputShapeOrEmpty;
+  if (succeeded(outputShape)) {
+    outputShapeOrEmpty = *outputShape;
+  }
+  build(builder, result, tensorResultTy, src, reassociation,
+        outputShapeOrEmpty);
 }
 
 SmallVector<AffineMap, 4> CollapseShapeOp::getReassociationMaps() {
@@ -1700,9 +1743,9 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
       llvm::cast<RankedTensorType>(src.getType()),
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b.getContext(), reassociation)));
-  build(b, result, resultType, src, attrs);
   result.addAttribute(getReassociationAttrStrName(),
                       getReassociationIndicesAttribute(b, reassociation));
+  build(b, result, resultType, src, attrs);
 }
 
 template <typename TensorReshapeOp, bool isExpansion = std::is_same<
@@ -1724,7 +1767,24 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  return verifyTensorReshapeOp(*this, getResultType(), getSrcType());
+  auto srcType = getSrcType();
+  auto resultType = getResultType();
+
+  if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
+    return emitOpError("expected number of static shape dims to be equal to "
+                       "the output rank (")
+           << resultType.getRank() << ") but found "
+           << getStaticOutputShape().size() << " inputs instead";
+
+  if ((int64_t)getOutputShape().size() !=
+      llvm::count(getStaticOutputShape(), ShapedType::kDynamic))
+    return emitOpError("mismatch in dynamic dims in output_shape and "
+                       "static_output_shape: static_output_shape has ")
+           << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
+           << " dynamic dims while output_shape has " << getOutputShape().size()
+           << " values";
+
+  return verifyTensorReshapeOp(*this, resultType, srcType);
 }
 
 LogicalResult CollapseShapeOp::verify() {
@@ -1908,23 +1968,25 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<ExpandShapeOp>,
-              ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
-              FoldReshapeWithConstant<ExpandShapeOp>,
-              FoldReshapeWithSplat<ExpandShapeOp>,
-              FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
-              FoldDimOfCollapseShape>(context);
+  results.add<
+      ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      FoldReshapeWithConstant<ExpandShapeOp>,
+      FoldReshapeWithSplat<ExpandShapeOp>,
+      FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
+      FoldDimOfCollapseShape>(context);
 }
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results
-      .add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
-           ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp>,
-           FoldReshapeWithConstant<CollapseShapeOp>,
-           FoldReshapeWithSplat<CollapseShapeOp>,
-           FoldReshapeWithFromElements<CollapseShapeOp>, FoldCollapseOfCastOp>(
-          context);
+  results.add<
+      ComposeReassociativeReshapeOps<CollapseShapeOp, ReshapeOpKind::kCollapse>,
+      ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp,
+                                tensor::DimOp, RankedTensorType>,
+      FoldReshapeWithConstant<CollapseShapeOp>,
+      FoldReshapeWithSplat<CollapseShapeOp>,
+      FoldReshapeWithFromElements<CollapseShapeOp>, FoldCollapseOfCastOp>(
+      context);
 }
 
 OpFoldResult ExpandShapeOp::fold(FoldAdaptor adaptor) {
@@ -1958,7 +2020,8 @@ RankedTensorType ExtractSliceOp::inferResultType(
   assert(static_cast<int64_t>(staticSizes.size()) ==
              sourceTensorType.getRank() &&
          "unexpected staticSizes not equal to rank of source");
-  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType());
+  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType(),
+                               sourceTensorType.getEncoding());
 }
 
 RankedTensorType ExtractSliceOp::inferResultType(
@@ -2037,11 +2100,11 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
     resultType = llvm::cast<RankedTensorType>(ExtractSliceOp::inferResultType(
         sourceRankedTensorType, staticOffsets, staticSizes, staticStrides));
   }
+  result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
         b.getDenseI64ArrayAttr(staticSizes),
         b.getDenseI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
 }
 
 /// Build an ExtractSliceOp with mixed static and dynamic entries and inferred
@@ -2436,11 +2499,11 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  result.addAttributes(attrs);
   build(b, result, dest.getType(), source, dest, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
         b.getDenseI64ArrayAttr(staticSizes),
         b.getDenseI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
 }
 
 /// Build an InsertSliceOp with mixed static and dynamic entries packed into a
@@ -2651,15 +2714,38 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     auto dstType = llvm::dyn_cast<RankedTensorType>(dst.getType());
     if (!srcType || !dstType)
       return failure();
+
+    // The tensor.cast source could have additional static information not seen
+    // in the insert slice op static sizes, so we ignore dynamic dims when
+    // computing the rank reduction mask.
+    SmallVector<int64_t> staticSizes(insertSliceOp.getStaticSizes());
+    auto rankReductionMask = computeRankReductionMask(
+        staticSizes, srcType.getShape(), /*matchDynamic=*/true);
+    if (!rankReductionMask.has_value())
+      return failure();
+    // Replace dimensions in the insert slice op with corresponding static dims
+    // from the cast source type. If the insert slice sizes have static dims
+    // that are not static in the tensor.cast source (i.e., when the cast op
+    // casts a dynamic dim to static), the dim should not be replaced, and the
+    // pattern will fail later in `verifyInsertSliceOp`.
+    SmallVector<OpFoldResult> mixedSizes(insertSliceOp.getMixedSizes());
+    int64_t rankReducedIdx = 0;
+    for (auto [idx, size] : enumerate(staticSizes)) {
+      if (!rankReductionMask.value().contains(idx) &&
+          !srcType.isDynamicDim(rankReducedIdx)) {
+        mixedSizes[idx] = getAsIndexOpFoldResult(
+            rewriter.getContext(), srcType.getDimSize(rankReducedIdx));
+        size = srcType.getDimSize(rankReducedIdx++);
+      }
+    }
     if (verifyInsertSliceOp(srcType, dstType, insertSliceOp.getStaticOffsets(),
-                            insertSliceOp.getStaticSizes(),
-                            insertSliceOp.getStaticStrides()) !=
+                            staticSizes, insertSliceOp.getStaticStrides()) !=
         SliceVerificationResult::Success)
       return failure();
 
     Operation *replacement = rewriter.create<InsertOpTy>(
         insertSliceOp.getLoc(), src, dst, insertSliceOp.getMixedOffsets(),
-        insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
+        mixedSizes, insertSliceOp.getMixedStrides());
 
     // In the parallel case there is no result and so nothing to cast.
     bool isParallelInsert =
@@ -2881,10 +2967,10 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   auto sourceType = llvm::cast<RankedTensorType>(source.getType());
   if (!resultType)
     resultType = inferResultType(sourceType, staticLow, staticHigh);
+  result.addAttributes(attrs);
   build(b, result, resultType, source, low, high,
         b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
-  result.addAttributes(attrs);
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -2914,10 +3000,10 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
     resultType = PadOp::inferResultType(sourceType, staticLow, staticHigh);
   }
   assert(llvm::isa<RankedTensorType>(resultType));
+  result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicLow, dynamicHigh,
         b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
-  result.addAttributes(attrs);
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -3361,11 +3447,11 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  result.addAttributes(attrs);
   build(b, result, {}, source, dest, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
         b.getDenseI64ArrayAttr(staticSizes),
         b.getDenseI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
 }
 
 /// Build an ParallelInsertSliceOp with mixed static and dynamic entries
@@ -3877,7 +3963,7 @@ static SmallVector<int64_t> getPackOpResultTypeShape(
     ArrayRef<int64_t> sourceShape, ArrayRef<int64_t> innerTileSizes,
     ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm) {
   SmallVector<int64_t> resultShape = llvm::to_vector(sourceShape);
-  for (auto tiledDim : llvm::enumerate(innerDimsPos)) {
+  for (auto tiledDim : llvm::enumerate(llvm::to_vector(innerDimsPos))) {
     if (ShapedType::isDynamic(resultShape[tiledDim.value()]))
       continue;
     if (ShapedType::isDynamic(innerTileSizes[tiledDim.index()])) {
@@ -3906,7 +3992,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   AffineExpr s0, s1;
   bindSymbols(builder.getContext(), s0, s1);
   AffineExpr ceilDivExpr = s0.ceilDiv(s1);
-  for (auto tiledDim : llvm::enumerate(innerDimsPos)) {
+  for (auto tiledDim : llvm::enumerate(llvm::to_vector(innerDimsPos))) {
     resultDims[tiledDim.value()] = affine::makeComposedFoldedAffineApply(
         builder, loc, ceilDivExpr,
         {resultDims[tiledDim.value()], innerTileSizes[tiledDim.index()]});

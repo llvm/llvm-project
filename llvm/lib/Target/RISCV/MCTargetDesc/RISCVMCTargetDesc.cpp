@@ -332,10 +332,9 @@ namespace {
 MCStreamer *createRISCVELFStreamer(const Triple &T, MCContext &Context,
                                    std::unique_ptr<MCAsmBackend> &&MAB,
                                    std::unique_ptr<MCObjectWriter> &&MOW,
-                                   std::unique_ptr<MCCodeEmitter> &&MCE,
-                                   bool RelaxAll) {
+                                   std::unique_ptr<MCCodeEmitter> &&MCE) {
   return createRISCVELFStreamer(Context, std::move(MAB), std::move(MOW),
-                                std::move(MCE), RelaxAll);
+                                std::move(MCE));
 }
 } // end anonymous namespace
 

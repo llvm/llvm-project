@@ -41,7 +41,11 @@ namespace dataflow {
 
 const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   auto BlockIt = ACFG.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-  assert(BlockIt != ACFG.getStmtToBlock().end());
+  if (BlockIt == ACFG.getStmtToBlock().end()) {
+    assert(false);
+    // Return null to avoid dereferencing the end iterator in non-assert builds.
+    return nullptr;
+  }
   if (!ACFG.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   if (BlockIt->getSecond()->getBlockID() == CurBlockID)
@@ -63,6 +67,14 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
   if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
     if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
       return Env.makeIff(*LHSBool, *RHSBool);
+
+  if (auto *LHSPtr = dyn_cast_or_null<PointerValue>(LHSValue))
+    if (auto *RHSPtr = dyn_cast_or_null<PointerValue>(RHSValue))
+      // If the storage locations are the same, the pointers definitely compare
+      // the same. If the storage locations are different, they may still alias,
+      // so we fall through to the case below that returns an atom.
+      if (&LHSPtr->getPointeeLoc() == &RHSPtr->getPointeeLoc())
+        return Env.getBoolLiteralValue(true);
 
   return Env.makeAtomicBoolValue();
 }
@@ -552,14 +564,23 @@ public:
 
       copyRecord(*LocSrc, *LocDst, Env);
 
-      // If the expr is a glvalue, we can reasonably assume the operator is
-      // returning T& and thus we can assign it `LocDst`.
-      if (S->isGLValue()) {
-        Env.setStorageLocation(*S, *LocDst);
-      } else if (S->getType()->isRecordType()) {
-        // Assume that the assignment returns the assigned value.
-        copyRecord(*LocDst, Env.getResultObjectLocation(*S), Env);
+      // The assignment operator can have an arbitrary return type. We model the
+      // return value only if the return type is the same as or a base class of
+      // the destination type.
+      if (S->getType().getCanonicalType().getUnqualifiedType() !=
+          LocDst->getType().getCanonicalType().getUnqualifiedType()) {
+        auto ReturnDecl = S->getType()->getAsCXXRecordDecl();
+        auto DstDecl = LocDst->getType()->getAsCXXRecordDecl();
+        if (ReturnDecl == nullptr || DstDecl == nullptr)
+          return;
+        if (!DstDecl->isDerivedFrom(ReturnDecl))
+          return;
       }
+
+      if (S->isGLValue())
+        Env.setStorageLocation(*S, *LocDst);
+      else
+        copyRecord(*LocDst, Env.getResultObjectLocation(*S), Env);
 
       return;
     }

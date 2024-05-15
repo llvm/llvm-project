@@ -577,7 +577,7 @@ static bool isRelroSection(const OutputSection *sec) {
   // for accessing .got as well, .got and .toc need to be close enough in the
   // virtual address space. Usually, .toc comes just after .got. Since we place
   // .got into RELRO, .toc needs to be placed into RELRO too.
-  if (sec->name.equals(".toc"))
+  if (sec->name == ".toc")
     return true;
 
   // .got.plt contains pointers to external function symbols. They are
@@ -1338,9 +1338,11 @@ static bool compareByFilePosition(InputSection *a, InputSection *b) {
   OutputSection *aOut = la->getParent();
   OutputSection *bOut = lb->getParent();
 
-  if (aOut != bOut)
-    return aOut->addr < bOut->addr;
-  return la->outSecOff < lb->outSecOff;
+  if (aOut == bOut)
+    return la->outSecOff < lb->outSecOff;
+  if (aOut->addr == bOut->addr)
+    return aOut->sectionIndex < bOut->sectionIndex;
+  return aOut->addr < bOut->addr;
 }
 
 template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
@@ -1403,13 +1405,18 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
   script->assignAddresses();
+
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
   // do require the relative addresses of OutputSections because linker scripts
   // can assign Virtual Addresses to OutputSections that are not monotonically
-  // increasing.
-  for (Partition &part : partitions)
-    finalizeSynthetic(part.armExidx.get());
-  resolveShfLinkOrder();
+  // increasing. Anything here must be repeatable, since spilling may change
+  // section order.
+  const auto finalizeOrderDependentContent = [this] {
+    for (Partition &part : partitions)
+      finalizeSynthetic(part.armExidx.get());
+    resolveShfLinkOrder();
+  };
+  finalizeOrderDependentContent();
 
   // Converts call x@GDPLT to call __tls_get_addr
   if (config->emachine == EM_HEXAGON)
@@ -1419,6 +1426,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   for (;;) {
     bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
                                        : target->relaxOnce(pass);
+    bool spilled = script->spillSections();
+    changed |= spilled;
     ++pass;
 
     // With Thunk Size much smaller than branch range we expect to
@@ -1464,6 +1473,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
                     " does not converge");
         break;
       }
+    } else if (spilled) {
+      // Spilling can change relative section order.
+      finalizeOrderDependentContent();
     }
   }
   if (!config->relocatable)
@@ -1483,6 +1495,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
              osec->name + " is not a multiple of alignment (" +
              Twine(osec->addralign) + ")");
     }
+
+  // Sizes are no longer allowed to grow, so all allowable spills have been
+  // taken. Remove any leftover potential spills.
+  script->erasePotentialSpillSections();
 }
 
 // If Input Sections have been shrunk (basic block sections) then

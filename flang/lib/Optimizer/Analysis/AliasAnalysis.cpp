@@ -33,7 +33,11 @@ static bool isDummyArgument(mlir::Value v) {
   if (!blockArg)
     return false;
 
-  return blockArg.getOwner()->isEntryBlock();
+  mlir::Block *owner = blockArg.getOwner();
+  if (!owner->isEntryBlock() ||
+      !mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp()))
+    return false;
+  return true;
 }
 
 /// Temporary function to skip through all the no op operations
@@ -68,7 +72,7 @@ bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
   if (!eleTy)
     return false;
 
-  return fir::isPointerType(eleTy) || eleTy.isa<fir::PointerType>();
+  return fir::isPointerType(eleTy) || mlir::isa<fir::PointerType>(eleTy);
 }
 
 bool AliasAnalysis::Source::isTargetOrPointer() const {
@@ -81,7 +85,7 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
   if (!eleTy)
     return false;
   // TO DO: Look for pointer components
-  return eleTy.isa<fir::RecordType>();
+  return mlir::isa<fir::RecordType>(eleTy);
 }
 
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {

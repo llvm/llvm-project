@@ -205,6 +205,7 @@ enum NodeType {
   /// CopyFromReg - This node indicates that the input value is a virtual or
   /// physical register that is defined outside of the scope of this
   /// SelectionDAG.  The register is available from the RegisterSDNode object.
+  /// Note that CopyFromReg is considered as also freezing the value.
   CopyFromReg,
 
   /// UNDEF - An undefined node.
@@ -1400,6 +1401,11 @@ enum NodeType {
   // to glue a convergence control token to a convergent operation in the DAG,
   // which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
+
+  // Experimental vector histogram intrinsic
+  // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
+  // Output: Output Chain
+  EXPERIMENTAL_VECTOR_HISTOGRAM,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

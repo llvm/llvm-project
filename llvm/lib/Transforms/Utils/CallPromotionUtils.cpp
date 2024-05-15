@@ -188,10 +188,9 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
-/// site. The "if" condition compares the call site's called value to the given
-/// callee. The original call site is moved into the "else" block, and a clone
-/// of the call site is placed in the "then" block. The cloned instruction is
-/// returned.
+/// site. The "if" condition is specified by `Cond`. The original call site is
+/// moved into the "else" block, and a clone of the call site is placed in the
+/// "then" block. The cloned instruction is returned.
 ///
 /// For example, the call instruction below:
 ///
@@ -202,7 +201,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -232,7 +231,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -267,7 +266,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replaced by the following:
 ///
 ///   cond_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %orig_bb
 ///
 ///   then_bb:
@@ -280,18 +279,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
-                                MDNode *BranchWeights) {
+static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                         MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;
   BasicBlock *OrigBlock = OrigInst->getParent();
-
-  // Create the compare. The called value and callee must have the same type to
-  // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
-  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
 
   if (OrigInst->isMustTailCall()) {
     // Create an if-then structure. The original instruction stays in its block,
@@ -378,6 +371,22 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   createRetPHINode(OrigInst, NewInst, MergeBlock, Builder);
 
   return *NewInst;
+}
+
+// Predicate and clone the given call site using condition `CB.callee ==
+// Callee`. See the comment `versionCallSiteWithCond` for the transformation.
+CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
+                                MDNode *BranchWeights) {
+
+  IRBuilder<> Builder(&CB);
+
+  // Create the compare. The called value and callee must have the same type to
+  // be compared.
+  if (CB.getCalledOperand()->getType() != Callee->getType())
+    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
+  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
+
+  return versionCallSiteWithCond(CB, Cond, BranchWeights);
 }
 
 bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
