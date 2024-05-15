@@ -1519,9 +1519,6 @@ SDValue VectorLegalizer::ExpandMCOMPRESS(SDNode *Node) {
   EVT ScalarVT = VecVT.getScalarType();
   EVT MaskScalarVT = Mask.getValueType().getScalarType();
 
-  assert(TLI.isTypeLegal(VecVT) &&  TLI.isTypeLegal(ScalarVT) && TLI.isTypeLegal(MaskScalarVT) &&
-         "Need legal vector/mask element types to scalarize masked compress.");
-
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   SDValue Chain = DAG.getEntryNode();
   SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
