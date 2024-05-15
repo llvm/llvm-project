@@ -290,6 +290,7 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
        eval.getNestedEvaluations()) {
     if (nestedEval.hasNestedEvaluations()) {
       if (nestedEval.isConstruct())
+        // Recursively look for OpenMP constructs within `nestedEval`'s region
         collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
       else {
         bool isOrderedConstruct = [&]() {
@@ -369,20 +370,14 @@ void DataSharingProcessor::collectSymbols(
   };
 
   auto shouldCollectSymbol = [&](const Fortran::semantics::Symbol *sym) {
-    if (collectImplicit &&
-        sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
-        !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return true;
+    if (collectImplicit)
+      return sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit);
 
-    if (collectPreDetermined &&
-        sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return true;
+    if (collectPreDetermined)
+      return sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined);
 
-    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
-        !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return true;
-
-    return false;
+    return !sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
+           !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined);
   };
 
   for (const auto *sym : allSymbols) {
@@ -409,9 +404,6 @@ void DataSharingProcessor::collectDefaultSymbols() {
                        defaultSymbols);
     }
   }
-
-  for (auto *sym : defaultSymbols)
-    allPrivatizedSymbols.insert(sym);
 }
 
 void DataSharingProcessor::collectImplicitSymbols() {
