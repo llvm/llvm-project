@@ -43,7 +43,6 @@
 #define EPIPE 32
 #define EDOM 33
 #define ERANGE 34
-#define EILSEQ 35
 #define ENAMETOOLONG 36
 #define EOVERFLOW 75
 
