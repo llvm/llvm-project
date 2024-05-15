@@ -332,6 +332,7 @@
 ; GCN-O1-NEXT:        Peephole Optimizations
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Fold Operands
+; GCN-O1-NEXT:        Bundle indexed load/store with uses
 ; GCN-O1-NEXT:        GCN DPP Combine
 ; GCN-O1-NEXT:        SI Load Store Optimizer
 ; GCN-O1-NEXT:        Remove dead machine instructions
@@ -633,6 +634,7 @@
 ; GCN-O1-OPTS-NEXT:        Peephole Optimizations
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Fold Operands
+; GCN-O1-OPTS-NEXT:        Bundle indexed load/store with uses
 ; GCN-O1-OPTS-NEXT:        GCN DPP Combine
 ; GCN-O1-OPTS-NEXT:        SI Load Store Optimizer
 ; GCN-O1-OPTS-NEXT:        SI Peephole SDWA
@@ -949,6 +951,7 @@
 ; GCN-O2-NEXT:        Peephole Optimizations
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Fold Operands
+; GCN-O2-NEXT:        Bundle indexed load/store with uses
 ; GCN-O2-NEXT:        GCN DPP Combine
 ; GCN-O2-NEXT:        SI Load Store Optimizer
 ; GCN-O2-NEXT:        SI Peephole SDWA
@@ -1278,6 +1281,7 @@
 ; GCN-O3-NEXT:        Peephole Optimizations
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Fold Operands
+; GCN-O3-NEXT:        Bundle indexed load/store with uses
 ; GCN-O3-NEXT:        GCN DPP Combine
 ; GCN-O3-NEXT:        SI Load Store Optimizer
 ; GCN-O3-NEXT:        SI Peephole SDWA

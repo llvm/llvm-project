@@ -45,6 +45,7 @@ private:
 
   const MachineRegisterInfo *MRI;
   const SIInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
 };
 
 } // End anonymous namespace.
@@ -106,7 +107,8 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
   // iterate the MBB bottom-up from the exit to the entry
   int TimeStamp = 0;
   bool Changed = false;
-  for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
+  for (MachineBasicBlock::reverse_instr_iterator I = MBB.instr_rbegin(),
+                                                 E = MBB.instr_rend();
        I != E; ++I) {
     MachineInstr &MI = (*I);
     if (MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
@@ -121,7 +123,10 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
           // find an active setter
           assert(IdxInfo[i].SetIdxMI);
           // simply redirect the indexing operand to the setter
-          IdxOpnd->setReg(IdxInfo[i].SetIdxMI->getOperand(0).getReg());
+          MachineOperand &NewOp = IdxInfo[i].SetIdxMI->getOperand(0);
+          if (MI.isBundled())
+            updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
+          IdxOpnd->setReg(NewOp.getReg());
           IdxInfo[i].UseCnt--;
           IdxInfo[i].UseTS = TimeStamp;
           Found = true;
@@ -145,7 +150,8 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
         FreeIdx = 1;
         int MinTS = IdxInfo[FreeIdx].UseTS;
         for (int i = 1; i < NumIDXReg; ++i) {
-          if (IdxInfo[i].UseCnt <= 0) {
+          // UseCnt is not accurate in a Bundle, but UseTS is still useful
+          if (IdxInfo[i].UseCnt <= 0 && !MI.isBundled()) {
             FreeIdx = i;
             break;
           } else if (IdxInfo[i].UseTS < MinTS) {
@@ -154,7 +160,8 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
           }
         }
         IdxInfo[FreeIdx].SetIdxMI->removeFromParent();
-        MBB.insertAfter(MI.getIterator(), IdxInfo[FreeIdx].SetIdxMI);
+        MBB.insertAfterBundle(MachineBasicBlock::instr_iterator(&MI),
+                              IdxInfo[FreeIdx].SetIdxMI);
       }
       MachineInstr *Setter;
       int Cnt;
@@ -163,7 +170,10 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
       IdxInfo[FreeIdx].IdxSrc = SRegIdx;
       IdxInfo[FreeIdx].UseCnt = Cnt - 1;
       IdxInfo[FreeIdx].UseTS = TimeStamp;
-      IdxOpnd->setReg(IdxInfo[FreeIdx].SetIdxMI->getOperand(0).getReg());
+      MachineOperand &NewOp = IdxInfo[FreeIdx].SetIdxMI->getOperand(0);
+      if (MI.isBundled())
+        updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
+      IdxOpnd->setReg(NewOp.getReg());
     } else if (MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
       // clears the entry when we meet the setter
       for (int i = 0; i < NumIDXReg; ++i) {
@@ -188,6 +198,7 @@ bool AMDGPUIdxRegAlloc::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
+  TRI = &TII->getRegisterInfo();
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)

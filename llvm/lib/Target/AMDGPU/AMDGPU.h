@@ -42,6 +42,7 @@ FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
+FunctionPass *createAMDGPUBundleIdxLdStPass();
 ModulePass *createAMDGPUFixWaveGroupEntryPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
@@ -208,6 +209,9 @@ extern char &SILoadStoreOptimizerLegacyID;
 
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
+
+void initializeAMDGPUBundleIdxLdStPass(PassRegistry &);
+extern char &AMDGPUBundleIdxLdStID;
 
 void initializeAMDGPUFixWaveGroupEntryPass(PassRegistry &);
 extern char &AMDGPUFixWaveGroupEntryID;
