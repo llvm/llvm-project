@@ -170,14 +170,15 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
       shapedType.getContext());
 }
 
-/// Returns true if the value written by `defWrite` could be the same as the
-/// value read by `read`. Note: True is 'could be' not 'definitely' (as this
-/// simply looks at the masks and the value written). For a definite answer use
-/// `checkSameValueRAW()` -- which calls this function.
-static bool couldBeSameValueWithMasking(vector::TransferWriteOp defWrite,
-                                        vector::TransferReadOp read) {
+/// Returns true if both `write` and `read` have no masks, or the write is of a
+/// constant splat and the masks + padding means the read will always be the
+/// same constant splat. Note: This assumes other properties of both `read` and
+/// `write` have already been checked (e.g. indices, source, etc). For a more
+/// general check use `checkSameValueRAW`.
+static bool hasNoMasksOrConsistentSplatAndPadding(vector::TransferWriteOp write,
+                                                  vector::TransferReadOp read) {
   auto readMask = read.getMask();
-  auto writeMask = defWrite.getMask();
+  auto writeMask = write.getMask();
   if (!writeMask && !readMask) {
     // Success: No masks (values could be the same).
     return true;
@@ -191,7 +192,7 @@ static bool couldBeSameValueWithMasking(vector::TransferWriteOp defWrite,
   if (!couldBeSameSplat)
     return false;
   DenseElementsAttr splatAttr;
-  if (!matchPattern(defWrite.getVector(),
+  if (!matchPattern(write.getVector(),
                     m_Constant<DenseElementsAttr>(&splatAttr)) ||
       !splatAttr.isSplat()) {
     return false;
@@ -209,7 +210,7 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
          defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
          defWrite.getPermutationMap() == read.getPermutationMap() &&
-         couldBeSameValueWithMasking(defWrite, read);
+         hasNoMasksOrConsistentSplatAndPadding(defWrite, read);
 }
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
