@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -17,22 +18,31 @@
 namespace mlir {
 namespace polynomial {
 
-void PolynomialAttr::print(AsmPrinter &p) const {
-  p << '<';
-  p << getPolynomial();
-  p << '>';
+void IntPolynomialAttr::print(AsmPrinter &p) const {
+  p << '<' << getPolynomial() << '>';
 }
+
+void FloatPolynomialAttr::print(AsmPrinter &p) const {
+  p << '<' << getPolynomial() << '>';
+}
+
+/// A callable that parses the coefficient using the appropriate method for the
+/// given monomial type, and stores the parsed coefficient value on the
+/// monomial.
+template <typename MonomialType>
+using ParseCoefficientFn = std::function<OptionalParseResult(MonomialType &)>;
 
 /// Try to parse a monomial. If successful, populate the fields of the outparam
 /// `monomial` with the results, and the `variable` outparam with the parsed
 /// variable name. Sets shouldParseMore to true if the monomial is followed by
 /// a '+'.
-ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
-                          llvm::StringRef &variable, bool &isConstantTerm,
-                          bool &shouldParseMore) {
-  APInt parsedCoeff(apintBitWidth, 1);
-  auto parsedCoeffResult = parser.parseOptionalInteger(parsedCoeff);
-  monomial.coefficient = parsedCoeff;
+///
+template <typename Monomial>
+ParseResult
+parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
+              bool &isConstantTerm, bool &shouldParseMore,
+              ParseCoefficientFn<Monomial> parseAndStoreCoefficient) {
+  OptionalParseResult parsedCoeffResult = parseAndStoreCoefficient(monomial);
 
   isConstantTerm = false;
   shouldParseMore = false;
@@ -44,7 +54,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
     if (!parsedCoeffResult.has_value()) {
       return failure();
     }
-    monomial.exponent = APInt(apintBitWidth, 0);
+    monomial.setExponent(APInt(apintBitWidth, 0));
     isConstantTerm = true;
     shouldParseMore = true;
     return success();
@@ -58,7 +68,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
       return failure();
     }
 
-    monomial.exponent = APInt(apintBitWidth, 0);
+    monomial.setExponent(APInt(apintBitWidth, 0));
     isConstantTerm = true;
     return success();
   }
@@ -80,9 +90,9 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
       return failure();
     }
 
-    monomial.exponent = parsedExponent;
+    monomial.setExponent(parsedExponent);
   } else {
-    monomial.exponent = APInt(apintBitWidth, 1);
+    monomial.setExponent(APInt(apintBitWidth, 1));
   }
 
   if (succeeded(parser.parseOptionalPlus())) {
@@ -91,22 +101,21 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   return success();
 }
 
-Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  llvm::SmallVector<Monomial> monomials;
-  llvm::StringSet<> variables;
-
+template <typename PolynoimalAttrTy, typename Monomial>
+LogicalResult
+parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
+                    llvm::StringSet<> &variables,
+                    ParseCoefficientFn<Monomial> parseAndStoreCoefficient) {
   while (true) {
     Monomial parsedMonomial;
     llvm::StringRef parsedVariableRef;
     bool isConstantTerm;
     bool shouldParseMore;
-    if (failed(parseMonomial(parser, parsedMonomial, parsedVariableRef,
-                             isConstantTerm, shouldParseMore))) {
+    if (failed(parseMonomial<Monomial>(
+            parser, parsedMonomial, parsedVariableRef, isConstantTerm,
+            shouldParseMore, parseAndStoreCoefficient))) {
       parser.emitError(parser.getCurrentLocation(), "expected a monomial");
-      return {};
+      return failure();
     }
 
     if (!isConstantTerm) {
@@ -124,7 +133,7 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
     parser.emitError(
         parser.getCurrentLocation(),
         "expected + and more monomials, or > to end polynomial attribute");
-    return {};
+    return failure();
   }
 
   if (variables.size() > 1) {
@@ -133,96 +142,67 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
         parser.getCurrentLocation(),
         "polynomials must have one indeterminate, but there were multiple: " +
             vars);
+    return failure();
   }
 
-  auto result = Polynomial::fromMonomials(monomials);
+  return success();
+}
+
+Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
+  if (failed(parser.parseLess()))
+    return {};
+
+  llvm::SmallVector<IntMonomial> monomials;
+  llvm::StringSet<> variables;
+
+  if (failed(parsePolynomialAttr<IntPolynomialAttr, IntMonomial>(
+          parser, monomials, variables,
+          [&](IntMonomial &monomial) -> OptionalParseResult {
+            APInt parsedCoeff(apintBitWidth, 1);
+            OptionalParseResult result =
+                parser.parseOptionalInteger(parsedCoeff);
+            monomial.setCoefficient(parsedCoeff);
+            return result;
+          }))) {
+    return {};
+  }
+
+  auto result = IntPolynomial::fromMonomials(monomials);
   if (failed(result)) {
     parser.emitError(parser.getCurrentLocation())
         << "parsed polynomial must have unique exponents among monomials";
     return {};
   }
-  return PolynomialAttr::get(parser.getContext(), result.value());
+  return IntPolynomialAttr::get(parser.getContext(), result.value());
 }
 
-void RingAttr::print(AsmPrinter &p) const {
-  p << "#polynomial.ring<coefficientType=" << getCoefficientType()
-    << ", coefficientModulus=" << getCoefficientModulus()
-    << ", polynomialModulus=" << getPolynomialModulus() << '>';
-}
-
-Attribute RingAttr::parse(AsmParser &parser, Type type) {
+Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
-  if (failed(parser.parseKeyword("coefficientType")))
+  llvm::SmallVector<FloatMonomial> monomials;
+  llvm::StringSet<> variables;
+
+  ParseCoefficientFn<FloatMonomial> parseAndStoreCoefficient =
+      [&](FloatMonomial &monomial) -> OptionalParseResult {
+    double coeffValue = 1.0;
+    ParseResult result = parser.parseFloat(coeffValue);
+    monomial.setCoefficient(APFloat(coeffValue));
+    return OptionalParseResult(result);
+  };
+
+  if (failed(parsePolynomialAttr<FloatPolynomialAttr, FloatMonomial>(
+          parser, monomials, variables, parseAndStoreCoefficient))) {
     return {};
-
-  if (failed(parser.parseEqual()))
-    return {};
-
-  Type ty;
-  if (failed(parser.parseType(ty)))
-    return {};
-
-  if (failed(parser.parseComma()))
-    return {};
-
-  IntegerAttr coefficientModulusAttr = nullptr;
-  if (succeeded(parser.parseKeyword("coefficientModulus"))) {
-    if (failed(parser.parseEqual()))
-      return {};
-
-    IntegerType iType = mlir::dyn_cast<IntegerType>(ty);
-    if (!iType) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "coefficientType must specify an integer type");
-      return {};
-    }
-    APInt coefficientModulus(iType.getWidth(), 0);
-    auto result = parser.parseInteger(coefficientModulus);
-    if (failed(result)) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "invalid coefficient modulus");
-      return {};
-    }
-    coefficientModulusAttr = IntegerAttr::get(iType, coefficientModulus);
-
-    if (failed(parser.parseComma()))
-      return {};
   }
 
-  PolynomialAttr polyAttr = nullptr;
-  if (succeeded(parser.parseKeyword("polynomialModulus"))) {
-    if (failed(parser.parseEqual()))
-      return {};
-
-    PolynomialAttr attr;
-    if (failed(parser.parseAttribute<PolynomialAttr>(attr)))
-      return {};
-    polyAttr = attr;
-  }
-
-  Polynomial poly = polyAttr.getPolynomial();
-  APInt root(coefficientModulusAttr.getValue().getBitWidth(), 0);
-  IntegerAttr rootAttr = nullptr;
-  if (succeeded(parser.parseOptionalComma())) {
-    if (failed(parser.parseKeyword("primitiveRoot")) ||
-        failed(parser.parseEqual()))
-      return {};
-
-    ParseResult result = parser.parseInteger(root);
-    if (failed(result)) {
-      parser.emitError(parser.getCurrentLocation(), "invalid primitiveRoot");
-      return {};
-    }
-    rootAttr = IntegerAttr::get(coefficientModulusAttr.getType(), root);
-  }
-
-  if (failed(parser.parseGreater()))
+  auto result = FloatPolynomial::fromMonomials(monomials);
+  if (failed(result)) {
+    parser.emitError(parser.getCurrentLocation())
+        << "parsed polynomial must have unique exponents among monomials";
     return {};
-
-  return RingAttr::get(parser.getContext(), ty, coefficientModulusAttr,
-                       polyAttr, rootAttr);
+  }
+  return FloatPolynomialAttr::get(parser.getContext(), result.value());
 }
 
 } // namespace polynomial

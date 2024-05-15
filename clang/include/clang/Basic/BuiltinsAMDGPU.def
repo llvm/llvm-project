@@ -257,7 +257,7 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2f16, "V2hV2h*3V2h", "t", "atomi
 TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hfIb", "nc", "dot10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_fdot2_f16_f16, "hV2hV2hh", "nc", "dot9-insts")
 TARGET_BUILTIN(__builtin_amdgcn_fdot2_bf16_bf16, "sV2sV2ss", "nc", "dot9-insts")
-TARGET_BUILTIN(__builtin_amdgcn_fdot2_f32_bf16, "fV2sV2sfIb", "nc", "dot9-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2_f32_bf16, "fV2sV2sfIb", "nc", "dot12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot2, "SiV2SsV2SsSiIb", "nc", "dot2-insts")
 TARGET_BUILTIN(__builtin_amdgcn_udot2, "UiV2UsV2UsUiIb", "nc", "dot2-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSiIb", "nc", "dot1-insts")
@@ -669,6 +669,10 @@ TARGET_BUILTIN(__builtin_amdgcn_permlane_up, "iiiii", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_down, "iiiii", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_xor, "iiiii", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_idx_gen, "iiii", "nc", "gfx12-10-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b4_u4, "V2UiUiUiV2Ui", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b6_u4, "V3UiUiULiV2Ui", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b8_u4, "V4UiULiULiV2Ui", "nc", "gfx12-10-insts")
 
 // GFX1210 WMMA builtins
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x4_f64, "V8dIbV2dIbV2dIsV8d", "nc", "gfx12-10-insts,wavefrontsize32")

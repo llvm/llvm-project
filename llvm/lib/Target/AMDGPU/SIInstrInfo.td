@@ -1585,6 +1585,7 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                               !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
                               !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
                               !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
                               !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
                               !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32>,
                               !eq(VT.Size, 16)   : op16,
@@ -1739,6 +1740,7 @@ class getVOP3DPPSrcForVT<ValueType VT> {
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
         !eq(VT, f64)    : VCSrc_f64,
+        !eq(VT, v2i32)  : VCSrc_v2b32,
         1               : VCSrc_b32);
 }
 
@@ -2712,6 +2714,7 @@ def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
 def VOP_I16_I16_I16 : VOPProfile <[i16, i16, i16, untyped]>;
 def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], /*EnableClamp=*/1>;
 def VOP_I16_F16_F16 : VOPProfile <[i16, f16, f16, untyped]>;
+def VOP_BF16_BF16_BF16 : VOPProfile <[bf16, bf16, bf16, untyped]>;
 
 def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
 def VOP_F16_F16_F16_F16 : VOPProfile <[f16, f16, f16, f16, untyped]>;

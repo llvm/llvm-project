@@ -17,6 +17,8 @@
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/OpenACCKinds.h"
 
+#include <utility>
+
 namespace clang {
 /// This is the base type for all OpenACC Clauses.
 class OpenACCClause {
@@ -73,6 +75,63 @@ public:
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
+};
+
+using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+/// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
+/// an identifier. The 'asterisk' means 'the rest'.
+class OpenACCDeviceTypeClause final
+    : public OpenACCClauseWithParams,
+      public llvm::TrailingObjects<OpenACCDeviceTypeClause,
+                                   DeviceTypeArgument> {
+  // Data stored in trailing objects as IdentifierInfo* /SourceLocation pairs. A
+  // nullptr IdentifierInfo* represents an asterisk.
+  unsigned NumArchs;
+  OpenACCDeviceTypeClause(OpenACCClauseKind K, SourceLocation BeginLoc,
+                          SourceLocation LParenLoc,
+                          ArrayRef<DeviceTypeArgument> Archs,
+                          SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
+        NumArchs(Archs.size()) {
+    assert(
+        (K == OpenACCClauseKind::DeviceType || K == OpenACCClauseKind::DType) &&
+        "Invalid clause kind for device-type");
+
+    assert(!llvm::any_of(Archs, [](const DeviceTypeArgument &Arg) {
+      return Arg.second.isInvalid();
+    }) && "Invalid SourceLocation for an argument");
+
+    assert(
+        (Archs.size() == 1 || !llvm::any_of(Archs,
+                                            [](const DeviceTypeArgument &Arg) {
+                                              return Arg.first == nullptr;
+                                            })) &&
+        "Only a single asterisk version is permitted, and must be the "
+        "only one");
+
+    std::uninitialized_copy(Archs.begin(), Archs.end(),
+                            getTrailingObjects<DeviceTypeArgument>());
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DType ||
+           C->getClauseKind() == OpenACCClauseKind::DeviceType;
+  }
+  bool hasAsterisk() const {
+    return getArchitectures().size() > 0 &&
+           getArchitectures()[0].first == nullptr;
+  }
+
+  ArrayRef<DeviceTypeArgument> getArchitectures() const {
+    return ArrayRef<DeviceTypeArgument>(
+        getTrailingObjects<DeviceTypeArgument>(), NumArchs);
+  }
+
+  static OpenACCDeviceTypeClause *
+  Create(const ASTContext &C, OpenACCClauseKind K, SourceLocation BeginLoc,
+         SourceLocation LParenLoc, ArrayRef<DeviceTypeArgument> Archs,
+         SourceLocation EndLoc);
 };
 
 /// A 'default' clause, has the optional 'none' or 'present' argument.
