@@ -3169,11 +3169,12 @@ def TestOpOptionallyImplementingInterface
 }
 
 //===----------------------------------------------------------------------===//
-// Test Mem2Reg
+// Test Mem2Reg & SROA
 //===----------------------------------------------------------------------===//
 
 def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
-    [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>]> {
+    [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>,
+     DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]> {
   let results = (outs Variadic<MemRefOf<[I32]>>:$results);
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
