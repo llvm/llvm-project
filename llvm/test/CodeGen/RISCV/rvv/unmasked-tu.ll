@@ -711,8 +711,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64(<vscale 
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
 ; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1down.vx v10, v9, a0
 ; RV32-NEXT:    vslide1down.vx v8, v10, a1
 ; RV32-NEXT:    ret
@@ -743,8 +743,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1up_vx_nxv1i64_nxv1i64_i64(<vscale x 
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
 ; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
 ; RV32-NEXT:    vslide1up.vx v10, v9, a1
 ; RV32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV32-NEXT:    ret
