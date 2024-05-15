@@ -33,7 +33,6 @@ jobs:
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
       ABI_LIBS: ${{ steps.vars.outputs.ABI_LIBS }}
       BASELINE_VERSION_MAJOR: ${{ steps.vars.outputs.BASELINE_VERSION_MAJOR }}
-      BASELINE_VERSION_MINOR: ${{ steps.vars.outputs.BASELINE_VERSION_MINOR }}
       LLVM_VERSION_MAJOR: ${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
       LLVM_VERSION_MINOR: ${{ steps.version.outputs.LLVM_VERSION_MINOR }}
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.LLVM_VERSION_PATCH }}
@@ -51,7 +50,6 @@ jobs:
         id: vars
         run: |
           remote_repo='https://github.com/llvm/llvm-project'
-          echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
           if [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
             major_version=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
             baseline_ref="llvmorg-$major_version.1.0"
