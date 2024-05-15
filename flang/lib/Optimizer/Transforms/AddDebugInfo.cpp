@@ -197,6 +197,10 @@ void AddDebugInfoPass::runOnOperation() {
         funcFileAttr, line, line, subprogramFlags, subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
 
+    // Don't process variables if user asked for line tables only.
+    if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly)
+      return;
+
     funcOp.walk([&](fir::cg::XDeclareOp declOp) {
       handleDeclareOp(declOp, fileAttr, spAttr, typeGen);
     });
