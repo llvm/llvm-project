@@ -1442,6 +1442,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
   }
 
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
   SkipBodyInfo SkipBody;
@@ -1499,8 +1501,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     Actions.ActOnSkippedFunctionBody(Res);
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
-
-  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   if (Tok.is(tok::kw_try))
     return ParseFunctionTryBlock(Res, BodyScope);
