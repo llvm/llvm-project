@@ -41,8 +41,7 @@ define i1 @length2_eq(ptr %X, ptr %Y) nounwind !prof !14 {
 define i1 @length2_eq_const(ptr %X) nounwind !prof !14 {
 ; X64-LABEL: length2_eq_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    cmpl $12849, %eax # imm = 0x3231
+; X64-NEXT:    cmpw $12849, (%rdi) # imm = 0x3231
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([65 x i8], ptr @.str, i32 0, i32 1), i64 2) nounwind
