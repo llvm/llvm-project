@@ -1743,9 +1743,9 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
       llvm::cast<RankedTensorType>(src.getType()),
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b.getContext(), reassociation)));
-  build(b, result, resultType, src, attrs);
   result.addAttribute(getReassociationAttrStrName(),
                       getReassociationIndicesAttribute(b, reassociation));
+  build(b, result, resultType, src, attrs);
 }
 
 template <typename TensorReshapeOp, bool isExpansion = std::is_same<
@@ -2100,11 +2100,11 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
     resultType = llvm::cast<RankedTensorType>(ExtractSliceOp::inferResultType(
         sourceRankedTensorType, staticOffsets, staticSizes, staticStrides));
   }
+  result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
         b.getDenseI64ArrayAttr(staticSizes),
         b.getDenseI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
 }
 
 /// Build an ExtractSliceOp with mixed static and dynamic entries and inferred
@@ -2499,11 +2499,11 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  result.addAttributes(attrs);
   build(b, result, dest.getType(), source, dest, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
         b.getDenseI64ArrayAttr(staticSizes),
         b.getDenseI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
 }
 
 /// Build an InsertSliceOp with mixed static and dynamic entries packed into a
@@ -2967,10 +2967,10 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   auto sourceType = llvm::cast<RankedTensorType>(source.getType());
   if (!resultType)
     resultType = inferResultType(sourceType, staticLow, staticHigh);
+  result.addAttributes(attrs);
   build(b, result, resultType, source, low, high,
         b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
-  result.addAttributes(attrs);
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -3000,10 +3000,10 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
     resultType = PadOp::inferResultType(sourceType, staticLow, staticHigh);
   }
   assert(llvm::isa<RankedTensorType>(resultType));
+  result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicLow, dynamicHigh,
         b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
-  result.addAttributes(attrs);
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -3447,11 +3447,11 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  result.addAttributes(attrs);
   build(b, result, {}, source, dest, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
         b.getDenseI64ArrayAttr(staticSizes),
         b.getDenseI64ArrayAttr(staticStrides));
-  result.addAttributes(attrs);
 }
 
 /// Build an ParallelInsertSliceOp with mixed static and dynamic entries
