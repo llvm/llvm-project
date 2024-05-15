@@ -51,6 +51,7 @@ private:
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
   Fortran::lower::pft::Evaluation &eval;
+  bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
   Fortran::lower::SymMap *symTable;
 
@@ -99,10 +100,12 @@ public:
                        Fortran::semantics::SemanticsContext &semaCtx,
                        const List<Clause> &clauses,
                        Fortran::lower::pft::Evaluation &eval,
+                       bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization = false,
                        Fortran::lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
         firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
+        shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.

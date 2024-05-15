@@ -593,7 +593,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   std::optional<DataSharingProcessor> tempDsp;
   if (privatize) {
     if (!info.dsp) {
-      tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval);
+      tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval,
+                      Fortran::lower::omp::isLastItemInQueue(item, queue));
       tempDsp->processStep1();
     }
   }
@@ -1361,6 +1362,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
 
   bool privatize = !outerCombined;
   DataSharingProcessor dsp(converter, semaCtx, clauses, eval,
+                           Fortran::lower::omp::isLastItemInQueue(item, queue),
                            /*useDelayedPrivatization=*/true, &symTable);
 
   if (privatize)
@@ -1438,7 +1440,8 @@ genSectionsOp(Fortran::lower::AbstractConverter &converter,
 
   // Insert privatizations before SECTIONS
   symTable.pushScope();
-  DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  DataSharingProcessor dsp(converter, semaCtx, clauses, eval,
+                           Fortran::lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
 
   List<Clause> nonDsaClauses;
@@ -1511,7 +1514,8 @@ genSimdOp(Fortran::lower::AbstractConverter &converter,
           ConstructQueue::iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   symTable.pushScope();
-  DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  DataSharingProcessor dsp(converter, semaCtx, clauses, eval,
+                           Fortran::lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
@@ -1835,7 +1839,8 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
             ConstructQueue::iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   symTable.pushScope();
-  DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  DataSharingProcessor dsp(converter, semaCtx, clauses, eval,
+                           Fortran::lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;

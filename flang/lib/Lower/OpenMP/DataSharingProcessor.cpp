@@ -422,8 +422,9 @@ void DataSharingProcessor::collectImplicitSymbols() {
 }
 
 void DataSharingProcessor::collectPreDeterminedSymbols() {
-  collectSymbols(Fortran::semantics::Symbol::Flag::OmpPreDetermined,
-                 preDeterminedSymbols);
+  if (shouldCollectPreDeterminedSymbols)
+    collectSymbols(Fortran::semantics::Symbol::Flag::OmpPreDetermined,
+                   preDeterminedSymbols);
 }
 
 void DataSharingProcessor::privatize(
