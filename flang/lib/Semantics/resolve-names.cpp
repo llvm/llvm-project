@@ -8940,7 +8940,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
   FinishSpecificationParts(root);
   ResolveExecutionParts(root);
   FinishExecutionParts(root);
-  ResolveAccParts(context(), x);
+  ResolveAccParts(context(), x, /*topScope=*/nullptr);
   ResolveOmpParts(context(), x);
   return false;
 }
