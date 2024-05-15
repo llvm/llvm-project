@@ -97,6 +97,18 @@ set(OPENMP_TEST_FLAGS "" CACHE STRING
 set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
 
+set(ENABLE_LIBOMPTARGET ON)
+# Currently libomptarget cannot be compiled on Windows or MacOS X.
+# Since the device plugins are only supported on Linux anyway,
+# there is no point in trying to compile libomptarget on other OSes.
+# 32-bit systems are not supported either.
+if (APPLE OR WIN32 OR WASM OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES
+    OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(ENABLE_LIBOMPTARGET OFF)
+endif()
+
+option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
+       ${ENABLE_LIBOMPTARGET})
 option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 
 # Header install location
