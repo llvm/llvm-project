@@ -544,15 +544,30 @@ mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
 ConstantIntRanges
 mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+  const APInt &lhsSMin = lhs.smin(), &lhsSMax = lhs.smax(),
+              &lhsUMax = lhs.umax(), &rhsUMin = rhs.umin(),
+              &rhsUMax = rhs.umax();
+
   ConstArithFn shl = [](const APInt &l,
                         const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.shl(r);
   };
+
+  // The minMax inference does not work when there is danger of overflow. In the
+  // signed case, this leads to the obvious problem that the sign bit might
+  // change. In the unsigned case, it also leads to problems because the largest
+  // LHS shifted by the largest RHS does not necessarily result in the largest
+  // result anymore.
+  assert(rhsUMax.isNonNegative() && "Unexpected negative shift count");
+  if (rhsUMax.uge(lhsSMin.getNumSignBits()) ||
+      rhsUMax.uge(lhsSMax.getNumSignBits()))
+    return ConstantIntRanges::maxRange(lhsUMax.getBitWidth());
+
   ConstantIntRanges urange =
-      minMaxBy(shl, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
+      minMaxBy(shl, {lhs.umin(), lhsUMax}, {rhsUMin, rhsUMax},
                /*isSigned=*/false);
   ConstantIntRanges srange =
-      minMaxBy(shl, {lhs.smin(), lhs.smax()}, {rhs.umin(), rhs.umax()},
+      minMaxBy(shl, {lhsSMin, lhsSMax}, {rhsUMin, rhsUMax},
                /*isSigned=*/true);
   return urange.intersection(srange);
 }
