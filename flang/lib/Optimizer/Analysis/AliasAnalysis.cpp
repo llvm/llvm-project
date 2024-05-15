@@ -108,7 +108,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
-  LLVM_DEBUG(llvm::dbgs() << "\n"; llvm::dbgs() << "AliasAnalysis::alias\n";
+  LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
              llvm::dbgs() << "  rhs: " << rhs << "\n";
@@ -173,8 +173,9 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
   }
 
-  // POINTER components may alias with POINTER objects,
-  // as well as other POINTER components
+  // Box for POINTER component inside an object of a derived type
+  // may alias box of a POINTER object, as well as boxes for POINTER
+  // components inside two objects of derived types may alias.
   if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
       (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
       (src1->isRecordWithPointerComponent() &&

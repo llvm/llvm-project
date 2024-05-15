@@ -21,11 +21,13 @@
 // CHECK-DAG: x#0 <-> y#0: MayAlias
 
 // TODO: y is not a pointer object and therefore does not alias with the x%next component. 
+//       Also assigning x to y would not modify x.next
 // CHECK-DAG: y#0 <-> xnext1#0: MayAlias
 // CHECK-DAG: y#0 <-> xnext2#0: MayAlias
 
-// Pointer components may alias with pointer objects, 
-// as well as other pointer components
+// We need to catch the fact that assigning y to x will modify xnext. 
+// The only side-effect between the 2 loads of x.next is the assignment to x, 
+// therefore x needs to alias with x.next to prevent the loads from being merged.
 // CHECK-DAG: x#0 <-> xnext1#0: MayAlias
 // CHECK-DAG: x#0 <-> xnext2#0: MayAlias
 
