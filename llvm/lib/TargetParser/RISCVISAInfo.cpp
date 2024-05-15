@@ -39,6 +39,10 @@ struct RISCVSupportedExtension {
 struct RISCVProfile {
   StringLiteral Name;
   StringLiteral MArch;
+
+  bool operator<(const RISCVProfile &RHS) const {
+    return StringRef(Name) < StringRef(RHS.Name);
+  }
 };
 
 } // end anonymous namespace
@@ -61,6 +65,10 @@ static void verifyTables() {
            "Extensions are not sorted by name");
     assert(llvm::is_sorted(SupportedExperimentalExtensions) &&
            "Experimental extensions are not sorted by name");
+    assert(llvm::is_sorted(SupportedProfiles) &&
+           "Profiles are not sorted by name");
+    assert(llvm::is_sorted(SupportedExperimentalProfiles) &&
+           "Experimental profiles are not sorted by name");
     TableChecked.store(true, std::memory_order_relaxed);
   }
 #endif
