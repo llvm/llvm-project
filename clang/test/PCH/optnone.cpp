@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-pch -DHEADER -x c++-header %s -o %t.pch
-// RUN: %clang_cc1 -emit-llvm -include-pch %t.pch %s -o /dev/null
+// RUN: %clang_cc1 -emit-pch -x c++-header %s -o %t.pch
+// RUN: %clang_cc1 -emit-llvm -DMAIN -include-pch %t.pch %s -o /dev/null
 
-#ifdef HEADER
+#ifndef MAIN
 __attribute__((optnone)) void foo() {}
 #endif
