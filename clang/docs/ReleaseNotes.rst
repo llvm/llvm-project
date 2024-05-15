@@ -713,6 +713,9 @@ Bug Fixes to C++ Support
 - Correctly treat the compound statement of an ``if consteval`` as an immediate context. Fixes (#GH91509).
 - When partial ordering alias templates against template template parameters,
   allow pack expansions when the alias has a fixed-size parameter list. Fixes (#GH62529).
+- Clang now ignores template parameters only used within the exception specification of candidate function
+  templates during partial ordering when deducing template arguments from a function declaration or when
+  taking the address of a function template.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
