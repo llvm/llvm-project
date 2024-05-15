@@ -11,8 +11,10 @@
 #define _LIBCPP_GENERATOR
 
 #include <__assert>
+#include <__concepts/common_reference_with.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__coroutine/coroutine_handle.h>
 #include <__coroutine/coroutine_traits.h>
@@ -23,6 +25,7 @@
 #include <__memory/addressof.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
+#include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/elements_of.h>
 #include <__ranges/view_interface.h>
@@ -34,8 +37,17 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/exchange.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if _LIBCPP_STD_VER >= 23
 
@@ -86,7 +98,7 @@ private:
     __root_data __root;
     __recursive_data __recursive;
 
-    ~__union() noexcept {}
+    _LIBCPP_HIDE_FROM_ABI ~__union() noexcept {}
   } __data_;
 
   // The `__tag_` stores the active member of the `__data_` union:
@@ -370,10 +382,8 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif
+#endif // _LIBCPP_STD_VER >= 23
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+_LIBCPP_POP_MACROS
 
-#endif
+#endif // _LIBCPP_GENERATOR

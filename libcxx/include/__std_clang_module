@@ -104,6 +104,7 @@
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <future>
 #endif
+#include <generator>
 #include <initializer_list>
 #include <inttypes.h>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)

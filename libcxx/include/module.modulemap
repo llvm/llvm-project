@@ -99,6 +99,10 @@ module std_future [system] {
   header "future"
   export *
 }
+module std_generator [system] {
+  header "generator"
+  export *
+}
 module std_initializer_list [system] {
   header "initializer_list"
   export *
