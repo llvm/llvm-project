@@ -873,6 +873,12 @@ struct A {
     f5(lval);
     f6(lval);
   }
+
+  void operator-(this A&, auto&&) = delete;
+  friend void operator-(A&, auto&);
+
+  void operator*(this A&, auto&);
+  friend void operator*(A&, auto&&) = delete;
 };
 
 void g() {
@@ -885,5 +891,7 @@ void g() {
   a.f4(lval);
   a.f5(lval);
   a.f6(lval);
+  a - lval;
+  a * lval;
 }
 }
