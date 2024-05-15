@@ -34,7 +34,7 @@ protected:
   Futex futex;
   LIBC_INLINE_VAR static constexpr FutexWordType UNLOCKED = 0b00;
   LIBC_INLINE_VAR static constexpr FutexWordType LOCKED = 0b01;
-  LIBC_INLINE_VAR static constexpr FutexWordType CONTENTED = 0b10;
+  LIBC_INLINE_VAR static constexpr FutexWordType IN_CONTENTION = 0b10;
 
   LIBC_INLINE FutexWordType spin(uint_fast32_t spin_count) {
     FutexWordType result;
@@ -42,7 +42,7 @@ protected:
       result = futex.load(cpp::MemoryOrder::RELAXED);
       // spin until one of the following conditions is met:
       // - the mutex is unlocked
-      // - the mutex is contented
+      // - the mutex is in contention
       // - the spin count reaches 0
       if (result != LOCKED || spin_count == 0)
         return result;
@@ -56,8 +56,8 @@ protected:
   // Return true if the lock is acquired. Return false if timeout happens before
   // the lock is acquired.
   [[gnu::cold]] LIBC_INLINE bool
-  lock_contented(cpp::optional<Futex::Timeout> timeout, bool is_pshared,
-                 uint_fast32_t spin_count) {
+  lock_slow(cpp::optional<Futex::Timeout> timeout, bool is_pshared,
+            uint_fast32_t spin_count) {
     FutexWordType state = spin(spin_count);
     // Before go into contention state, try to grab the lock.
     if (state == UNLOCKED &&
@@ -69,12 +69,13 @@ protected:
       ensure_monotonicity(*timeout);
 #endif
     for (;;) {
-      // Try to grab the lock if it is unlocked. Mark contented if it is locked.
-      if (state != CONTENTED &&
-          futex.exchange(CONTENTED, cpp::MemoryOrder::ACQUIRE) == UNLOCKED)
+      // Try to grab the lock if it is unlocked. Mark the contention flag if it
+      // is locked.
+      if (state != IN_CONTENTION &&
+          futex.exchange(IN_CONTENTION, cpp::MemoryOrder::ACQUIRE) == UNLOCKED)
         return true;
       // Contention persists. Park the thread and wait for further notification.
-      if (-ETIMEDOUT == futex.wait(CONTENTED, timeout, is_pshared))
+      if (-ETIMEDOUT == futex.wait(IN_CONTENTION, timeout, is_pshared))
         return false;
       // Continue to spin after waking up.
       state = spin(spin_count);
@@ -99,12 +100,12 @@ public:
        bool is_shared = false,
        uint_fast32_t spin_count = LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT) {
     // Timeout will not be checked if immediate lock is possible.
-    return try_lock() || lock_contented(timeout, is_shared, spin_count);
+    return try_lock() || lock_slow(timeout, is_shared, spin_count);
   }
   LIBC_INLINE bool unlock(bool is_pshared = false) {
     FutexWordType prev = futex.exchange(UNLOCKED, cpp::MemoryOrder::RELEASE);
     // if there is someone waiting, wake them up
-    if (prev == CONTENTED)
+    if (prev == IN_CONTENTION)
       wake(is_pshared);
     // Detect invalid unlock operation.
     return prev != UNLOCKED;

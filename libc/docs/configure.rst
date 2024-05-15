@@ -35,7 +35,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_PRINTF_DISABLE_WRITE_INT``: Disable handling of %n in printf format string.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE``: Use large table for better printf long double performance.
 * **"pthread" options**
-    - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is contented.
+    - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention.
     - ``LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY``: Automatically adjust timeout to CLOCK_MONOTONIC.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
