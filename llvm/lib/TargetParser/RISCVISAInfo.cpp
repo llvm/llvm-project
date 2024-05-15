@@ -102,6 +102,10 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &P : SupportedProfiles)
     outs().indent(4) << P.Name << "\n";
 
+  outs() << "\nExperimental Profiles\n";
+  for (const auto &P : SupportedExperimentalProfiles)
+    outs().indent(4) << P.Name << "\n";
+
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
 }
@@ -608,12 +612,25 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     XLen = 64;
   } else {
     // Try parsing as a profile.
-    auto I = llvm::upper_bound(SupportedProfiles, Arch,
-                               [](StringRef Arch, const RISCVProfile &Profile) {
-                                 return Arch < Profile.Name;
-                               });
-
-    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
+    auto ProfileCmp = [](StringRef Arch, const RISCVProfile &Profile) {
+      return Arch < Profile.Name;
+    };
+    auto I = llvm::upper_bound(SupportedProfiles, Arch, ProfileCmp);
+    bool FoundProfile = I != std::begin(SupportedProfiles) &&
+                        Arch.starts_with(std::prev(I)->Name);
+    if (!FoundProfile) {
+      I = llvm::upper_bound(SupportedExperimentalProfiles, Arch, ProfileCmp);
+      FoundProfile = (I != std::begin(SupportedExperimentalProfiles) &&
+                      Arch.starts_with(std::prev(I)->Name));
+      if (FoundProfile && !EnableExperimentalExtension) {
+        return createStringError(errc::invalid_argument,
+                                 "requires '-menable-experimental-extensions' "
+                                 "for profile '" +
+                                     std::prev(I)->Name + "'");
+      }
+    }
+    if (FoundProfile) {
+      --I;
       std::string NewArch = I->MArch.str();
       StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
