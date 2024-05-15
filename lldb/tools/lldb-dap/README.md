@@ -46,6 +46,7 @@ Installing the plug-in is very straightforward and involves just a few steps.
 
 ```bash
 cd /path/to/lldb/tools/lldb-dap
+npm install
 npm run package # This also compiles the extension.
 npm run vscode-install
 ```
@@ -69,6 +70,7 @@ no effect.
 ```bash
 # Bump version in package.json
 cd /path/to/lldb/tools/lldb-dap
+npm install
 npm run package
 npm run vscode-install
 ```
