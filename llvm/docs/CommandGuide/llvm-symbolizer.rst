@@ -211,7 +211,7 @@ Example 8 - Addresses having approximate line info:
 
 .. code-block:: console
 
-  $ llvm-symbolizer --obj=test.elf --approximate-line 0xa
+  $ llvm-symbolizer --obj=test.elf --skip-line-zero 0xa
   main
   /tmp/test/main.c:4:6 (approximate)
 

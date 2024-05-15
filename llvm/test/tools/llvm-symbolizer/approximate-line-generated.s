@@ -14,14 +14,14 @@
 # NO-APPROX:main
 # NO-APPROX-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c:8:2
 
-#APPROX-VERBOSE:main
-#APPROX-VERBOSE-NEXT:  Filename: /tmp/test{{[/|\]}}main.c
-#APPROX-VERBOSE-NEXT:  Function start address: 0x0
-#APPROX-VERBOSE-NEXT:  Line: 4
-#APPROX-VERBOSE-NEXT:  Column: 6
-#APPROX-VERBOSE-NEXT:  Approximate: 1
+# APPROX-VERBOSE:main
+# APPROX-VERBOSE-NEXT:  Filename: /tmp/test{{[/|\]}}main.c
+# APPROX-VERBOSE-NEXT:  Function start address: 0x0
+# APPROX-VERBOSE-NEXT:  Line: 4
+# APPROX-VERBOSE-NEXT:  Column: 6
+# APPROX-VERBOSE-NEXT:  Approximate: 1
 
-#APPROX-JSON:[{"Address":"0xa","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}approximate-line-info.s.tmp.o","Symbol":[{"Approximate":true,"Column":6,"Discriminator":0,"FileName":"{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
+# APPROX-JSON:[{"Address":"0xa","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}approximate-line-generated.s.tmp.o","Symbol":[{"Approximate":true,"Column":6,"Discriminator":0,"FileName":"{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c","FunctionName":"main","Line":4,"StartAddress":"0x0","StartFileName":"","StartLine":0}]}]
 
 ## Generated from C Code
 ##

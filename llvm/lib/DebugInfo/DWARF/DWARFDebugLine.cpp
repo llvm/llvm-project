@@ -1347,12 +1347,15 @@ uint32_t DWARFDebugLine::LineTable::lookupAddressImpl(
 
   // Approximation will only be attempted if a valid RowIndex exists.
   if (Approximation && Approximation->Report) {
+    // Approximation Loop
     for (uint32_t ApproxRowIndex = RowIndex;
          ApproxRowIndex >= It->FirstRowIndex; --ApproxRowIndex) {
       if (Rows[ApproxRowIndex].Line)
         return ApproxRowIndex;
       Approximation->IsApproximateLine = true;
     }
+    // Approximation Loop fails to find the valid ApproxRowIndex
+    Approximation->IsApproximateLine = false;
   }
   return RowIndex;
 }
