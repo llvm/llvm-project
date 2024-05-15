@@ -897,7 +897,7 @@ define double @test_simplify19(double %x) {
 define float @test_libcall_powf_10_f32_noerrno(float %x) {
 ; CHECK-EXP10-LABEL: define float @test_libcall_powf_10_f32_noerrno(
 ; CHECK-EXP10-SAME: float [[X:%.*]]) {
-; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @__exp10f(float [[X]])
+; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @llvm.exp10.f32(float [[X]])
 ; CHECK-EXP10-NEXT:    ret float [[__EXP10F]]
 ;
 ; CHECK-NO-EXP10-LABEL: define float @test_libcall_powf_10_f32_noerrno(
@@ -912,7 +912,7 @@ define float @test_libcall_powf_10_f32_noerrno(float %x) {
 define double @test_libcall_pow_10_f64_noerrno(double %x) {
 ; CHECK-EXP10-LABEL: define double @test_libcall_pow_10_f64_noerrno(
 ; CHECK-EXP10-SAME: double [[X:%.*]]) {
-; CHECK-EXP10-NEXT:    [[__EXP10:%.*]] = call double @__exp10(double [[X]])
+; CHECK-EXP10-NEXT:    [[__EXP10:%.*]] = call double @llvm.exp10.f64(double [[X]])
 ; CHECK-EXP10-NEXT:    ret double [[__EXP10]]
 ;
 ; CHECK-NO-EXP10-LABEL: define double @test_libcall_pow_10_f64_noerrno(
@@ -937,7 +937,7 @@ define half @test_pow_10_f16(half %x) {
 define float @test_pow_10_f32(float %x) {
 ; CHECK-EXP10-LABEL: define float @test_pow_10_f32(
 ; CHECK-EXP10-SAME: float [[X:%.*]]) {
-; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @__exp10f(float [[X]])
+; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @llvm.exp10.f32(float [[X]])
 ; CHECK-EXP10-NEXT:    ret float [[__EXP10F]]
 ;
 ; CHECK-NO-EXP10-LABEL: define float @test_pow_10_f32(
@@ -952,7 +952,7 @@ define float @test_pow_10_f32(float %x) {
 define double @test_pow_10_f64(double %x) {
 ; CHECK-EXP10-LABEL: define double @test_pow_10_f64(
 ; CHECK-EXP10-SAME: double [[X:%.*]]) {
-; CHECK-EXP10-NEXT:    [[__EXP10:%.*]] = call double @__exp10(double [[X]])
+; CHECK-EXP10-NEXT:    [[__EXP10:%.*]] = call double @llvm.exp10.f64(double [[X]])
 ; CHECK-EXP10-NEXT:    ret double [[__EXP10]]
 ;
 ; CHECK-NO-EXP10-LABEL: define double @test_pow_10_f64(
