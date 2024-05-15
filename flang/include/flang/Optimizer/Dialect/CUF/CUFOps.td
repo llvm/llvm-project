@@ -15,7 +15,7 @@
 #define FORTRAN_DIALECT_CUF_CUF_OPS
 
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
-include "flang/Optimizer/Dialect/CUF/CUFAttr.td"
+include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
