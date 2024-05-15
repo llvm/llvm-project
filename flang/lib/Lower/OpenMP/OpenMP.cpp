@@ -2013,13 +2013,6 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_taskyield:
     genTaskyieldOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
-  case llvm::omp::Directive::OMPD_taskwait:
-    genTaskwaitOp(converter, symTable, semaCtx, eval, loc, clauses, queue,
-                  item);
-    break;
-  case llvm::omp::Directive::OMPD_taskyield:
-    genTaskyieldOp(converter, symTable, semaCtx, eval, loc, queue, item);
-    break;
   case llvm::omp::Directive::OMPD_teams:
     genTeamsOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
