@@ -271,9 +271,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         cutOffParsing();
         // Code completion for a nested-name-specifier, where the code
         // completion token follows the '::'.
-        Actions.CodeCompletion().CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
-                                        InUsingDeclaration, ObjectType.get(),
-                                        SavedType.get(SS.getBeginLoc()));
+        Actions.CodeCompletion().CodeCompleteQualifiedId(
+            getCurScope(), SS, EnteringContext, InUsingDeclaration,
+            ObjectType.get(), SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in
@@ -955,8 +955,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         if (Tok.is(tok::code_completion) &&
             !(getLangOpts().ObjC && Tentative)) {
           cutOffParsing();
-          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                               /*AfterAmpersand=*/false);
+          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+              getCurScope(), Intro,
+              /*AfterAmpersand=*/false);
           break;
         }
 
@@ -974,8 +975,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       if (getLangOpts().ObjC && Tentative && First)
         Actions.CodeCompletion().CodeCompleteObjCMessageReceiver(getCurScope());
       else
-        Actions.CodeCompletion().CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                             /*AfterAmpersand=*/false);
+        Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+            getCurScope(), Intro,
+            /*AfterAmpersand=*/false);
       break;
     }
 
@@ -1021,8 +1023,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
         if (Tok.is(tok::code_completion)) {
           cutOffParsing();
-          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                               /*AfterAmpersand=*/true);
+          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+              getCurScope(), Intro,
+              /*AfterAmpersand=*/true);
           break;
         }
       }
@@ -2032,9 +2035,10 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     auto RunSignatureHelp = [&]() {
       QualType PreferredType;
       if (TypeRep)
-        PreferredType = Actions.CodeCompletion().ProduceConstructorSignatureHelp(
-            TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(), Exprs,
-            T.getOpenLocation(), /*Braced=*/false);
+        PreferredType =
+            Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+                TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(),
+                Exprs, T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -2141,7 +2145,8 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), SemaCodeCompletion::PCC_Condition);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Condition);
     return Sema::ConditionError();
   }
 
@@ -3351,10 +3356,12 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         // the passing DeclaratorInfo is valid, e.g. running SignatureHelp on
         // `new decltype(invalid) (^)`.
         if (TypeRep)
-          PreferredType = Actions.CodeCompletion().ProduceConstructorSignatureHelp(
-              TypeRep.get()->getCanonicalTypeInternal(),
-              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen,
-              /*Braced=*/false);
+          PreferredType =
+              Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+                  TypeRep.get()->getCanonicalTypeInternal(),
+                  DeclaratorInfo.getEndLoc(), ConstructorArgs,
+                  ConstructorLParen,
+                  /*Braced=*/false);
         CalledSignatureHelp = true;
         return PreferredType;
       };

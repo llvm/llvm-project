@@ -205,8 +205,9 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteDesignator(DesignatorCompletion.PreferredBaseType,
-                                       DesignatorCompletion.InitExprs, Desig);
+        Actions.CodeCompletion().CodeCompleteDesignator(
+            DesignatorCompletion.PreferredBaseType,
+            DesignatorCompletion.InitExprs, Desig);
         return ExprError();
       }
       if (Tok.isNot(tok::identifier)) {

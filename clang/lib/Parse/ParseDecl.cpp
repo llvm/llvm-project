@@ -219,7 +219,8 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
         break;
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteAttribute(AttributeCommonInfo::Syntax::AS_GNU);
+        Actions.CodeCompletion().CodeCompleteAttribute(
+            AttributeCommonInfo::Syntax::AS_GNU);
         break;
       }
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
@@ -896,7 +897,8 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteAttribute(AttributeCommonInfo::AS_Declspec);
+        Actions.CodeCompletion().CodeCompleteAttribute(
+            AttributeCommonInfo::AS_Declspec);
         return;
       }
 
@@ -2723,7 +2725,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteInitializer(getCurScope(), ThisDecl);
+        Actions.CodeCompletion().CodeCompleteInitializer(getCurScope(),
+                                                         ThisDecl);
         Actions.FinalizeDeclaration(ThisDecl);
         return nullptr;
       }
@@ -2768,10 +2771,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
     auto ThisVarDecl = dyn_cast_or_null<VarDecl>(ThisDecl);
     auto RunSignatureHelp = [&]() {
-      QualType PreferredType = Actions.CodeCompletion().ProduceConstructorSignatureHelp(
-          ThisVarDecl->getType()->getCanonicalTypeInternal(),
-          ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
-          /*Braced=*/false);
+      QualType PreferredType =
+          Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+              ThisVarDecl->getType()->getCanonicalTypeInternal(),
+              ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
+              /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -3635,7 +3639,8 @@ void Parser::ParseDeclarationSpecifiers(
       continue;
 
     case tok::code_completion: {
-      SemaCodeCompletion::ParserCompletionContext CCC = SemaCodeCompletion::PCC_Namespace;
+      SemaCodeCompletion::ParserCompletionContext CCC =
+          SemaCodeCompletion::PCC_Namespace;
       if (DS.hasTypeSpecifier()) {
         bool AllowNonIdentifiers
           = (getCurScope()->getFlags() & (Scope::ControlScope |
@@ -3648,16 +3653,16 @@ void Parser::ParseDeclarationSpecifiers(
             (DSContext == DeclSpecContext::DSC_class && DS.isFriendSpecified());
 
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteDeclSpec(getCurScope(), DS,
-                                     AllowNonIdentifiers,
-                                     AllowNestedNameSpecifiers);
+        Actions.CodeCompletion().CodeCompleteDeclSpec(
+            getCurScope(), DS, AllowNonIdentifiers, AllowNestedNameSpecifiers);
         return;
       }
 
       // Class context can appear inside a function/block, so prioritise that.
       if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate)
-        CCC = DSContext == DeclSpecContext::DSC_class ? SemaCodeCompletion::PCC_MemberTemplate
-                                                      : SemaCodeCompletion::PCC_Template;
+        CCC = DSContext == DeclSpecContext::DSC_class
+                  ? SemaCodeCompletion::PCC_MemberTemplate
+                  : SemaCodeCompletion::PCC_Template;
       else if (DSContext == DeclSpecContext::DSC_class)
         CCC = SemaCodeCompletion::PCC_Class;
       else if (getCurScope()->getFnParent() || getCurScope()->getBlockParent())
@@ -7403,12 +7408,12 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // with the pure-specifier in the same way.
 
       // Parse cv-qualifier-seq[opt].
-      ParseTypeQualifierListOpt(DS, AR_NoAttributesParsed,
-                                /*AtomicAllowed*/ false,
-                                /*IdentifierRequired=*/false,
-                                llvm::function_ref<void()>([&]() {
-                                  Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
-                                }));
+      ParseTypeQualifierListOpt(
+          DS, AR_NoAttributesParsed,
+          /*AtomicAllowed*/ false,
+          /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+            Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
+          }));
       if (!DS.getSourceRange().getEnd().isInvalid()) {
         EndLoc = DS.getSourceRange().getEnd();
       }

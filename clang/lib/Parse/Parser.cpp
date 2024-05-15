@@ -945,9 +945,10 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     cutOffParsing();
     if (CurParsedObjCImpl) {
       // Code-complete Objective-C methods even without leading '-'/'+' prefix.
-      Actions.CodeCompletion().CodeCompleteObjCMethodDecl(getCurScope(),
-                                         /*IsInstanceMethod=*/std::nullopt,
-                                         /*ReturnType=*/nullptr);
+      Actions.CodeCompletion().CodeCompleteObjCMethodDecl(
+          getCurScope(),
+          /*IsInstanceMethod=*/std::nullopt,
+          /*ReturnType=*/nullptr);
     }
 
     SemaCodeCompletion::ParserCompletionContext PCC;
@@ -2281,20 +2282,22 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
     if (S->isFunctionScope()) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(),
-                                       SemaCodeCompletion::PCC_RecoveryInFunction);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(
+          getCurScope(), SemaCodeCompletion::PCC_RecoveryInFunction);
       return PrevTokLocation;
     }
 
     if (S->isClassScope()) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), SemaCodeCompletion::PCC_Class);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(
+          getCurScope(), SemaCodeCompletion::PCC_Class);
       return PrevTokLocation;
     }
   }
 
   cutOffParsing();
-  Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), SemaCodeCompletion::PCC_Namespace);
+  Actions.CodeCompletion().CodeCompleteOrdinaryName(
+      getCurScope(), SemaCodeCompletion::PCC_Namespace);
   return PrevTokLocation;
 }
 
@@ -2305,7 +2308,8 @@ void Parser::CodeCompleteDirective(bool InConditional) {
 }
 
 void Parser::CodeCompleteInConditionalExclusion() {
-  Actions.CodeCompletion().CodeCompleteInPreprocessorConditionalExclusion(getCurScope());
+  Actions.CodeCompletion().CodeCompleteInPreprocessorConditionalExclusion(
+      getCurScope());
 }
 
 void Parser::CodeCompleteMacroName(bool IsDefinition) {
@@ -2319,8 +2323,8 @@ void Parser::CodeCompletePreprocessorExpression() {
 void Parser::CodeCompleteMacroArgument(IdentifierInfo *Macro,
                                        MacroInfo *MacroInfo,
                                        unsigned ArgumentIndex) {
-  Actions.CodeCompletion().CodeCompletePreprocessorMacroArgument(getCurScope(), Macro, MacroInfo,
-                                                ArgumentIndex);
+  Actions.CodeCompletion().CodeCompletePreprocessorMacroArgument(
+      getCurScope(), Macro, MacroInfo, ArgumentIndex);
 }
 
 void Parser::CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) {

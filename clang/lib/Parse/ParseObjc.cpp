@@ -277,7 +277,8 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
     IdentifierInfo *categoryId = nullptr;
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCInterfaceCategory(getCurScope(), nameId, nameLoc);
+      Actions.CodeCompletion().CodeCompleteObjCInterfaceCategory(
+          getCurScope(), nameId, nameLoc);
       return nullptr;
     }
 
@@ -332,7 +333,8 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
     // Code completion of superclass names.
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCSuperclass(getCurScope(), nameId, nameLoc);
+      Actions.CodeCompletion().CodeCompleteObjCSuperclass(getCurScope(), nameId,
+                                                          nameLoc);
       return nullptr;
     }
 
@@ -509,7 +511,8 @@ ObjCTypeParamList *Parser::parseObjCTypeParamListOrProtocolRefs(
         // FIXME: If these aren't protocol references, we'll need different
         // completions.
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteObjCProtocolReferences(protocolIdents);
+        Actions.CodeCompletion().CodeCompleteObjCProtocolReferences(
+            protocolIdents);
 
         // FIXME: Better recovery here?.
         return nullptr;
@@ -682,9 +685,10 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
     // Code completion within an Objective-C interface.
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(),
-                            CurParsedObjCImpl? SemaCodeCompletion::PCC_ObjCImplementation
-                                             : SemaCodeCompletion::PCC_ObjCInterface);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(
+          getCurScope(), CurParsedObjCImpl
+                             ? SemaCodeCompletion::PCC_ObjCImplementation
+                             : SemaCodeCompletion::PCC_ObjCInterface);
       return;
     }
 
@@ -944,9 +948,11 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
         if (IsSetter)
-          Actions.CodeCompletion().CodeCompleteObjCPropertySetter(getCurScope());
+          Actions.CodeCompletion().CodeCompleteObjCPropertySetter(
+              getCurScope());
         else
-          Actions.CodeCompletion().CodeCompleteObjCPropertyGetter(getCurScope());
+          Actions.CodeCompletion().CodeCompleteObjCPropertyGetter(
+              getCurScope());
         return;
       }
 
@@ -1391,8 +1397,9 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteObjCMethodDecl(getCurScope(), mType == tok::minus,
-                                       /*ReturnType=*/nullptr);
+    Actions.CodeCompletion().CodeCompleteObjCMethodDecl(getCurScope(),
+                                                        mType == tok::minus,
+                                                        /*ReturnType=*/nullptr);
     return nullptr;
   }
 
@@ -1410,8 +1417,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteObjCMethodDecl(getCurScope(), mType == tok::minus,
-                                       ReturnType);
+    Actions.CodeCompletion().CodeCompleteObjCMethodDecl(
+        getCurScope(), mType == tok::minus, ReturnType);
     return nullptr;
   }
 
@@ -1473,10 +1480,9 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
       KeyIdents.push_back(SelIdent);
-      Actions.CodeCompletion().CodeCompleteObjCMethodDeclSelector(getCurScope(),
-                                                 mType == tok::minus,
-                                                 /*AtParameterName=*/true,
-                                                 ReturnType, KeyIdents);
+      Actions.CodeCompletion().CodeCompleteObjCMethodDeclSelector(
+          getCurScope(), mType == tok::minus,
+          /*AtParameterName=*/true, ReturnType, KeyIdents);
       return nullptr;
     }
 
@@ -1497,10 +1503,9 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     // Code completion for the next piece of the selector.
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCMethodDeclSelector(getCurScope(),
-                                                 mType == tok::minus,
-                                                 /*AtParameterName=*/false,
-                                                 ReturnType, KeyIdents);
+      Actions.CodeCompletion().CodeCompleteObjCMethodDeclSelector(
+          getCurScope(), mType == tok::minus,
+          /*AtParameterName=*/false, ReturnType, KeyIdents);
       return nullptr;
     }
 
@@ -1584,7 +1589,8 @@ ParseObjCProtocolReferences(SmallVectorImpl<Decl *> &Protocols,
   while (true) {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCProtocolReferences(ProtocolIdents);
+      Actions.CodeCompletion().CodeCompleteObjCProtocolReferences(
+          ProtocolIdents);
       return true;
     }
 
@@ -1682,9 +1688,11 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
       QualType BaseT = Actions.GetTypeFromParser(baseType);
       cutOffParsing();
       if (!BaseT.isNull() && BaseT->acceptsObjCTypeParams()) {
-        Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), SemaCodeCompletion::PCC_Type);
+        Actions.CodeCompletion().CodeCompleteOrdinaryName(
+            getCurScope(), SemaCodeCompletion::PCC_Type);
       } else {
-        Actions.CodeCompletion().CodeCompleteObjCProtocolReferences(identifierLocPairs);
+        Actions.CodeCompletion().CodeCompleteObjCProtocolReferences(
+            identifierLocPairs);
       }
       return;
     }
@@ -1990,8 +1998,8 @@ void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
 
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(),
-                                       SemaCodeCompletion::PCC_ObjCInstanceVariableList);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(
+          getCurScope(), SemaCodeCompletion::PCC_ObjCInstanceVariableList);
       return;
     }
 
@@ -2194,7 +2202,8 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
 
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCImplementationCategory(getCurScope(), nameId, nameLoc);
+      Actions.CodeCompletion().CodeCompleteObjCImplementationCategory(
+          getCurScope(), nameId, nameLoc);
       return nullptr;
     }
 
@@ -2368,7 +2377,8 @@ Decl *Parser::ParseObjCPropertySynthesize(SourceLocation atLoc) {
   while (true) {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCPropertyDefinition(getCurScope());
+      Actions.CodeCompletion().CodeCompleteObjCPropertyDefinition(
+          getCurScope());
       return nullptr;
     }
 
@@ -2386,7 +2396,8 @@ Decl *Parser::ParseObjCPropertySynthesize(SourceLocation atLoc) {
       // property '=' ivar-name
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteObjCPropertySynthesizeIvar(getCurScope(), propertyId);
+        Actions.CodeCompletion().CodeCompleteObjCPropertySynthesizeIvar(
+            getCurScope(), propertyId);
         return nullptr;
       }
 
@@ -2445,7 +2456,8 @@ Decl *Parser::ParseObjCPropertyDynamic(SourceLocation atLoc) {
   while (true) {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteObjCPropertyDefinition(getCurScope());
+      Actions.CodeCompletion().CodeCompleteObjCPropertyDefinition(
+          getCurScope());
       return nullptr;
     }
 
@@ -3209,14 +3221,14 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
     if (SuperLoc.isValid())
-      Actions.CodeCompletion().CodeCompleteObjCSuperMessage(getCurScope(), SuperLoc,
-                                           std::nullopt, false);
+      Actions.CodeCompletion().CodeCompleteObjCSuperMessage(
+          getCurScope(), SuperLoc, std::nullopt, false);
     else if (ReceiverType)
-      Actions.CodeCompletion().CodeCompleteObjCClassMessage(getCurScope(), ReceiverType,
-                                           std::nullopt, false);
+      Actions.CodeCompletion().CodeCompleteObjCClassMessage(
+          getCurScope(), ReceiverType, std::nullopt, false);
     else
-      Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(getCurScope(), ReceiverExpr,
-                                              std::nullopt, false);
+      Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(
+          getCurScope(), ReceiverExpr, std::nullopt, false);
     return ExprError();
   }
 
@@ -3247,17 +3259,17 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
         if (SuperLoc.isValid())
-          Actions.CodeCompletion().CodeCompleteObjCSuperMessage(getCurScope(), SuperLoc,
-                                               KeyIdents,
-                                               /*AtArgumentExpression=*/true);
+          Actions.CodeCompletion().CodeCompleteObjCSuperMessage(
+              getCurScope(), SuperLoc, KeyIdents,
+              /*AtArgumentExpression=*/true);
         else if (ReceiverType)
-          Actions.CodeCompletion().CodeCompleteObjCClassMessage(getCurScope(), ReceiverType,
-                                               KeyIdents,
-                                               /*AtArgumentExpression=*/true);
+          Actions.CodeCompletion().CodeCompleteObjCClassMessage(
+              getCurScope(), ReceiverType, KeyIdents,
+              /*AtArgumentExpression=*/true);
         else
-          Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(getCurScope(), ReceiverExpr,
-                                                  KeyIdents,
-                                                  /*AtArgumentExpression=*/true);
+          Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(
+              getCurScope(), ReceiverExpr, KeyIdents,
+              /*AtArgumentExpression=*/true);
 
         return ExprError();
       }
@@ -3285,17 +3297,17 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
         if (SuperLoc.isValid())
-          Actions.CodeCompletion().CodeCompleteObjCSuperMessage(getCurScope(), SuperLoc,
-                                               KeyIdents,
-                                               /*AtArgumentExpression=*/false);
+          Actions.CodeCompletion().CodeCompleteObjCSuperMessage(
+              getCurScope(), SuperLoc, KeyIdents,
+              /*AtArgumentExpression=*/false);
         else if (ReceiverType)
-          Actions.CodeCompletion().CodeCompleteObjCClassMessage(getCurScope(), ReceiverType,
-                                               KeyIdents,
-                                               /*AtArgumentExpression=*/false);
+          Actions.CodeCompletion().CodeCompleteObjCClassMessage(
+              getCurScope(), ReceiverType, KeyIdents,
+              /*AtArgumentExpression=*/false);
         else
-          Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(getCurScope(), ReceiverExpr,
-                                                  KeyIdents,
-                                                /*AtArgumentExpression=*/false);
+          Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(
+              getCurScope(), ReceiverExpr, KeyIdents,
+              /*AtArgumentExpression=*/false);
         return ExprError();
       }
 
@@ -3662,7 +3674,8 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteObjCSelector(getCurScope(), KeyIdents);
+        Actions.CodeCompletion().CodeCompleteObjCSelector(getCurScope(),
+                                                          KeyIdents);
         return ExprError();
       }
 

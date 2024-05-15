@@ -192,7 +192,8 @@ Retry:
 
   case tok::code_completion:
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), SemaCodeCompletion::PCC_Statement);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Statement);
     return StmtError();
 
   case tok::identifier:
@@ -2041,9 +2042,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(),
-                                     C99orCXXorObjC? SemaCodeCompletion::PCC_ForInit
-                                                   : SemaCodeCompletion::PCC_Expression);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), C99orCXXorObjC ? SemaCodeCompletion::PCC_ForInit
+                                      : SemaCodeCompletion::PCC_Expression);
     return StmtError();
   }
 
@@ -2118,7 +2119,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
         if (Tok.is(tok::code_completion)) {
           cutOffParsing();
-          Actions.CodeCompletion().CodeCompleteObjCForCollection(getCurScope(), DG);
+          Actions.CodeCompletion().CodeCompleteObjCForCollection(getCurScope(),
+                                                                 DG);
           return StmtError();
         }
         Collection = ParseExpression();
@@ -2155,7 +2157,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteObjCForCollection(getCurScope(), nullptr);
+        Actions.CodeCompletion().CodeCompleteObjCForCollection(getCurScope(),
+                                                               nullptr);
         return StmtError();
       }
       Collection = ParseExpression();
@@ -2432,8 +2435,8 @@ StmtResult Parser::ParseReturnStatement() {
     // FIXME: Code completion for co_return.
     if (Tok.is(tok::code_completion) && !IsCoreturn) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteExpression(getCurScope(),
-                                     PreferredType.get(Tok.getLocation()));
+      Actions.CodeCompletion().CodeCompleteExpression(
+          getCurScope(), PreferredType.get(Tok.getLocation()));
       return StmtError();
     }
 

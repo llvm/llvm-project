@@ -169,8 +169,8 @@ Parser::ParseExpressionWithLeadingExtension(SourceLocation ExtLoc) {
 ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteExpression(getCurScope(),
-                                   PreferredType.get(Tok.getLocation()));
+    Actions.CodeCompletion().CodeCompleteExpression(
+        getCurScope(), PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
 
@@ -188,8 +188,8 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
 ExprResult Parser::ParseConditionalExpression() {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteExpression(getCurScope(),
-                                   PreferredType.get(Tok.getLocation()));
+    Actions.CodeCompletion().CodeCompleteExpression(
+        getCurScope(), PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
 
@@ -1812,8 +1812,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   case tok::code_completion: {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteExpression(getCurScope(),
-                                   PreferredType.get(Tok.getLocation()));
+    Actions.CodeCompletion().CodeCompleteExpression(
+        getCurScope(), PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
@@ -2155,8 +2155,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       ExprVector ArgExprs;
       auto RunSignatureHelp = [&]() -> QualType {
-        QualType PreferredType = Actions.CodeCompletion().ProduceCallSignatureHelp(
-            LHS.get(), ArgExprs, PT.getOpenLocation());
+        QualType PreferredType =
+            Actions.CodeCompletion().ProduceCallSignatureHelp(
+                LHS.get(), ArgExprs, PT.getOpenLocation());
         CalledSignatureHelp = true;
         return PreferredType;
       };
@@ -3679,7 +3680,8 @@ bool Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs) {
 void Parser::ParseBlockId(SourceLocation CaretLoc) {
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), SemaCodeCompletion::PCC_Type);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Type);
     return;
   }
 
