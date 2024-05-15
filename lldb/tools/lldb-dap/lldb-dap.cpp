@@ -758,7 +758,7 @@ void request_attach(const llvm::json::Object &request) {
           (port != LLDB_INVALID_PORT_NUMBER)) {
         // If both pid and port numbers are specified.
         error.SetErrorString("The user can't specify both pid and port");
-      } else if ((port != LLDB_INVALID_PORT_NUMBER) && (port < UINT16_MAX)) {
+      } else if (port != LLDB_INVALID_PORT_NUMBER) {
         // If port is specified and pid is not.
         lldb::SBListener listener = g_dap.debugger.GetListener();
 

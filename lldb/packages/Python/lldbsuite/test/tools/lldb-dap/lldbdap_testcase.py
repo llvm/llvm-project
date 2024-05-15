@@ -297,6 +297,9 @@ class DAPTestCaseBase(TestBase):
         sourceMap=None,
         sourceInitFile=False,
         expectFailure=False,
+        port=None,
+        hostname=None,
+        
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
@@ -327,6 +330,8 @@ class DAPTestCaseBase(TestBase):
             coreFile=coreFile,
             postRunCommands=postRunCommands,
             sourceMap=sourceMap,
+            port=port,
+            hostname=hostname,
         )
         if expectFailure:
             return response
@@ -334,37 +339,6 @@ class DAPTestCaseBase(TestBase):
             self.assertTrue(
                 response["success"], "attach failed (%s)" % (response["message"])
             )
-
-    def attach_by_port(
-        self,
-        program=None,
-        pid=None,
-        disconnectAutomatically=True,
-        waitFor=None,
-        sourceInitFile=False,
-        port=None,
-        hostname=None,
-    ):
-        """Build the default Makefile target, create the VSCode debug adaptor,
-        and attach to the process.
-        """
-
-        # This overloaded function helps to request attach by port number
-        # Make sure we disconnect and terminate the VSCode debug adaptor even
-        # if we throw an exception during the test case.
-        def cleanup():
-            if disconnectAutomatically:
-                self.dap_server.request_disconnect(terminateDebuggee=True)
-            self.dap_server.terminate()
-
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
-        # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_attach(
-            program=program, pid=pid, waitFor=waitFor, port=port, hostname=hostname
-        )
-        return response
 
     def launch(
         self,

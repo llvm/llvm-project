@@ -7,6 +7,8 @@ import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbplatformutil
+import lldbgdbserverutils
 import lldbdap_testcase
 import os
 import shutil
@@ -19,13 +21,22 @@ import sys
 
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     def runTargetProgramOnPort(self, port=None, program=None):
-        server_tool = "lldb-server"
-        server_path = self.getBuiltinServerTool(server_tool)
-        if server_path:
-            server_path += " g localhost:" + port + " "
+        server_tool = None
+        if (lldbplatformutil.getPlatform() == "linux"):
+            server_tool = lldbgdbserverutils.get_lldb_server_exe()
+            if server_tool is None:
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+                self.assertIsNotNone(server_tool, "lldb-server not found.")
+            server_tool += " g localhost:" +  port + " "
+        elif (lldbplatformutil.getPlatform() == "macosx"):
+            server_tool = lldbgdbserverutils.get_debugserver_exe()
+            if server_tool is None:
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+                self.assertIsNotNone(server_tool, "debugserver not found.")
+            server_tool += " --listen localhost:" +  port + " "
 
         self.process = subprocess.Popen(
-            [server_path + program],
+            [server_tool + program],
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -61,13 +72,9 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         port = "2345"
         self.process = self.runTargetProgramOnPort(port=port, program=program)
         pid = self.process.pid
-        response = self.attach_by_port(
+        response = self.attach(
             program=program, port=int(port), sourceInitFile=True
         )
-        if not (response and response["success"]):
-            self.assertTrue(
-                response["success"], "attach failed (%s)" % (response["message"])
-            )
         self.set_and_hit_breakpoint(continueToExit=True)
         self.process.kill()
 
@@ -83,8 +90,8 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
         port = "2345"
         self.process = self.runTargetProgramOnPort(port=port, program=program)
-        response = self.attach_by_port(
-            program=program, pid=1234, port=int(port), sourceInitFile=True
+        response = self.attach(
+            program=program, pid=1234, port=int(port), sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
@@ -104,8 +111,8 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
         port = "0"
         self.process = self.runTargetProgramOnPort(port=port, program=program)
-        response = self.attach_by_port(
-            program=program, port=int(port), sourceInitFile=True
+        response = self.attach(
+            program=program, port=int(port), sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
@@ -126,8 +133,8 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
         port = "65536"
         self.process = self.runTargetProgramOnPort(port=port, program=program)
-        response = self.attach_by_port(
-            program=program, port=int(port), sourceInitFile=True
+        response = self.attach(
+            program=program, port=int(port), sourceInitFile=True, expectFailure=True
         )
         if not (response and response["success"]):
             self.assertFalse(
