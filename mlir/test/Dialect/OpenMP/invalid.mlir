@@ -2113,23 +2113,23 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
 
 func.func @omp_distribute_wrapper() -> () {
   // expected-error @below {{op must be a loop wrapper}}
-  "omp.distribute"() ({
+  omp.distribute {
       %0 = arith.constant 0 : i32
       "omp.terminator"() : () -> ()
-    }) : () -> ()
+  }
 }
 
 // -----
 
 func.func @omp_distribute_nested_wrapper(%data_var : memref<i32>) -> () {
   // expected-error @below {{only supported nested wrappers are 'omp.parallel' and 'omp.simd'}}
-  "omp.distribute"() ({
-      "omp.wsloop"() ({
-        %0 = arith.constant 0 : i32
-        "omp.terminator"() : () -> ()
-      }) : () -> ()
+  omp.distribute {
+    "omp.wsloop"() ({
+      %0 = arith.constant 0 : i32
       "omp.terminator"() : () -> ()
     }) : () -> ()
+    "omp.terminator"() : () -> ()
+  }
 }
 
 // -----
