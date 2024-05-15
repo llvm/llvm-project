@@ -6830,7 +6830,8 @@ private:
       const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
       const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
-          OverlappedElements = std::nullopt) const {
+          OverlappedElements = std::nullopt,
+      bool AreBothBasePtrAndPteeMapped = false) const {
     // The following summarizes what has to be generated for each map and the
     // types below. The generated information is expressed in this order:
     // base pointer, section pointer, size, flags
@@ -7006,6 +7007,10 @@ private:
     // &(ps->p), &(ps->p[0]), 33*sizeof(double), MEMBER_OF(4) | PTR_AND_OBJ | TO
     // (*) the struct this entry pertains to is the 4th element in the list
     //     of arguments, hence MEMBER_OF(4)
+    //
+    // map(p, p[:100])
+    // ===> map(p[:100])
+    // &p, &p[0], 100*sizeof(float), TARGET_PARAM | PTR_AND_OBJ | TO | FROM
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
@@ -7029,6 +7034,8 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
+    if (AreBothBasePtrAndPteeMapped && std::next(I) == CE)
+      return;
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
@@ -7071,8 +7078,9 @@ private:
         // can be associated with the combined storage if shared memory mode is
         // active or the base declaration is not global variable.
         const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
-        if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
-            !VD || VD->hasLocalStorage())
+        if (!AreBothBasePtrAndPteeMapped &&
+            (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+             !VD || VD->hasLocalStorage()))
           BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
         else
           FirstPointerInComplexData = true;
@@ -7394,11 +7402,13 @@ private:
           // same expression except for the first one. We also need to signal
           // this map is the first one that relates with the current capture
           // (there is a set of entries for each capture).
-          OpenMPOffloadMappingFlags Flags = getMapTypeBits(
-              MapType, MapModifiers, MotionModifiers, IsImplicit,
-              !IsExpressionFirstInfo || RequiresReference ||
-                  FirstPointerInComplexData || IsMemberReference,
-              IsCaptureFirstInfo && !RequiresReference, IsNonContiguous);
+          OpenMPOffloadMappingFlags Flags =
+              getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
+                             !IsExpressionFirstInfo || RequiresReference ||
+                                 FirstPointerInComplexData || IsMemberReference,
+                             AreBothBasePtrAndPteeMapped ||
+                                 (IsCaptureFirstInfo && !RequiresReference),
+                             IsNonContiguous);
 
           if (!IsExpressionFirstInfo || IsMemberReference) {
             // If we have a PTR_AND_OBJ pair where the OBJ is a pointer as well,
@@ -8492,6 +8502,8 @@ public:
     assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
     const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
+    bool HasMapBasePtr = false;
+    bool HasMapArraySec = false;
     for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->decl_component_lists(VD)) {
@@ -8503,6 +8515,11 @@ public:
         assert(VDecl == VD && "We got information for the wrong declaration??");
         assert(!Components.empty() &&
                "Not expecting declaration with no component lists.");
+        if (VD && E && VD->getType()->isAnyPointerType() && isa<DeclRefExpr>(E))
+          HasMapBasePtr = true;
+        if (VD && E && VD->getType()->isAnyPointerType() &&
+            (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
+          HasMapArraySec = true;
         DeclComponentLists.emplace_back(Components, C->getMapType(),
                                         C->getMapTypeModifiers(),
                                         C->isImplicit(), Mapper, E);
@@ -8685,7 +8702,9 @@ public:
             MapType, MapModifiers, std::nullopt, Components, CombinedInfo,
             StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
             IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
-            /*ForDeviceAddr=*/false, VD, VarRef);
+            /*ForDeviceAddr=*/false, VD, VarRef,
+            /*OverlappedElements*/ std::nullopt,
+            HasMapBasePtr && HasMapArraySec);
       IsFirstComponentList = false;
     }
   }
