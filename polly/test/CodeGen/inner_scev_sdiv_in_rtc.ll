@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen \
+; RUN: opt %loadPolly -passes=polly-codegen \
 ; RUN:     -S < %s | FileCheck %s
 ;
 ; This will just check that we generate valid code here.

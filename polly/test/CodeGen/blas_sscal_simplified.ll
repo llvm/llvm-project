@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen < %s
+; RUN: opt %loadPolly -passes=polly-codegen < %s
 ;
 ; Regression test for a bug in the runtime check generation.
 

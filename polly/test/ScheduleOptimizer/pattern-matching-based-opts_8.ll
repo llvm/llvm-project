@@ -6,7 +6,7 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
 ;
 ;    /* C := A * B + C */
 ;    /* Elements of the matrices B, C have the double type. */
