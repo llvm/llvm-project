@@ -1170,10 +1170,9 @@ static LogicalResult commonOpVerifier(LinalgOp linalgOp) {
                 !sourceType.isDynamicDim(i))
               // For input operands populate affineExprToSize to hold onto the
               // shape for an affineDimExpr if the shape isn't populated
-              // already. For dynamic shape overwrite the shape content (if
-              // needed), this accounts for broadcasting where one input can
-              // have fixed shape but the others can have dynamic shape for the
-              // same dimension
+              // already. Skip dynamic shapes to account for broadcasting where
+              // one input can have fixed shape but the others can have dynamic
+              // shape for the same dimension
               affineExprToSize.try_emplace(affineDimExpr, dimShape);
           } else if (affineExprToSize.contains(affineDimExpr)
                           && affineExprToSize[affineDimExpr] != dimShape)

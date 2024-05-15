@@ -605,19 +605,22 @@ func.func @cast_source(%arg0 : tensor<2x3x4xf32>, %arg1: tensor<2x3x4xf32>) -> t
 
 // -----
 
-#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-LABEL: func @cast_dest
-// CHECK-SAME:  %[[ARG0:.*]]: tensor<1x?x?x1xf32>, %[[ARG1:.*]]: index
-func.func @cast_dest(%arg0: tensor<1x?x?x1xf32>, %arg1: index) -> tensor<?x1x61x1xf32> {
-    %0 = tensor.empty(%arg1) : tensor<?x1x61x1xf32>
+// CHECK-SAME:  %[[ARG0:.*]]: tensor<1x1x61x1xf32>
+func.func @cast_dest(%arg0: tensor<1x1x61x1xf32>) -> tensor<?x1x61x1xf32> {
+    %c0 = arith.constant 0 : index
+    %dim = tensor.dim %arg0, %c0 : tensor<1x1x61x1xf32>
+    %0 = tensor.empty(%dim) : tensor<?x1x61x1xf32>
+    %inserted_slice = tensor.insert_slice %arg0 into %0[0, 0, 0, 0] [1, 1, 61, 1] [1, 1, 1, 1] : tensor<1x1x61x1xf32> into tensor<?x1x61x1xf32>
     %cst = arith.constant dense<1.000000e+00> : tensor<1x1x1x1xf32>
-%1 = linalg.conv_2d_nhwc_hwcf ins(%arg0, %cst : tensor<1x?x?x1xf32>, tensor<1x1x1x1xf32>) outs(%0 : tensor<?x1x61x1xf32>) -> tensor<?x1x61x1xf32>
-return %1 : tensor<?x1x61x1xf32>
-// CHECK:      %[[CONV_OP:.*]] = linalg.conv_2d_nhwc_hwcf 
-// CHECK-SAME: ins(%[[ARG0]], %{{.*}} : tensor<1x?x?x1xf32>, tensor<1x1x1x1xf32>) 
-// CHECK-SAME: outs(%{{.*}} : tensor<1x1x61x1xf32>)
-// CHECK: tensor.cast %[[CONV_OP]] : tensor<1x1x61x1xf32> to tensor<?x1x61x1xf32>
-}
+    %1 = linalg.conv_2d_nhwc_hwcf ins(%inserted_slice, %cst : tensor<?x1x61x1xf32>, tensor<1x1x1x1xf32>) outs(%0 : tensor<?x1x61x1xf32>) -> tensor<?x1x61x1xf32>
+    return %1 : tensor<?x1x61x1xf32>
+    // CHECK:           %[[VAL_1:.*]] = tensor.empty() : tensor<1x1x61x1xf32>
+    // CHECK:           %[[CONV_OUT:.*]] = linalg.conv_2d_nhwc_hwcf 
+    // CHECK-SAME:      ins(%[[ARG0]], %{{.*}} : tensor<1x1x61x1xf32>, tensor<1x1x1x1xf32>) 
+    // CHECK-SAME:      outs(%[[VAL_1]] : tensor<1x1x61x1xf32>)
+    // CHECK:           tensor.cast %[[CONV_OUT]] : tensor<1x1x61x1xf32> to tensor<?x1x61x1xf32>
+  }
 
 // -----
 
@@ -817,10 +820,12 @@ func.func @fold_conv_op_with_cast_consumer(%arg0 : tensor<?x?x?x?xf32>,
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?x?x?xf32>
 //  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?x?x?xf32>)
 //       CHECK:  %[[OUT_CAST:.+]] = tensor.cast %[[ARG2]] : tensor<?x?x?x?xf32> to tensor<4x8x12x16xf32>
+//       CHECK:  %[[IN1_CAST:.+]] = tensor.cast %[[ARG0]] : tensor<?x?x?x?xf32> to tensor<4x?x?x?xf32>
+//       CHECK:  %[[IN2_CAST:.+]] = tensor.cast %[[ARG1]] : tensor<?x?x?x?xf32> to tensor<8x?x?x?xf32>
 //       CHECK:  %[[CONV:.+]] = linalg.conv_2d_nchw_fchw
-//  CHECK-SAME:      ins(%[[ARG0]], %[[ARG1]] :
+//  CHECK-SAME:      ins(%[[IN1_CAST]], %[[IN2_CAST]] :
 //  CHECK-SAME:      outs(%[[OUT_CAST]] :
-//       CHECK:  %[[RESULT_CAST:.+]] = tensor.cast %[[CONV]]
+//       CHECK:  %[[RESULT_CAST:.+]] = tensor.cast %[[CONV]] : tensor<4x8x12x16xf32> to tensor<?x?x?x?xf32>
 //       CHECK:  return %[[CONV]], %[[RESULT_CAST]]
 
 // -----
