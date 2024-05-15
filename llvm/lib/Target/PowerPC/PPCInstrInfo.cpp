@@ -5284,9 +5284,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
         Register SrcReg = MI->getOperand(I).getReg();
         PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
       }
-
-      if (!IsNonSignedExtInstrNeedPromoted)
-        return;
     }
     break;
   case PPC::COPY: {
@@ -5302,19 +5299,15 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
+
     // From here on everything is SVR4ABI. COPY will be eliminated in other
     // pass, we do not need promote COPY pseduo opcode.
 
-    if (MI->getParent()->getBasicBlock() == &MF->getFunction().getEntryBlock())
-      return;
-
-    if (SrcReg != PPC::X3) {
+    if (SrcReg != PPC::X3)
       // If this is a copy from another register, we recursively promote source.
       PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
-      return;
-    }
-  }
     return;
+  }
   case PPC::ORI:
     CheckAndSetNewOpcode(PPC::ORI8);
     [[fallthrough]];
@@ -5333,10 +5326,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
   case PPC::XORIS8: {
     Register SrcReg = MI->getOperand(1).getReg();
     PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
-    // If Opcode is PPC::ORI8, PPC::XORI8, PPC::ORIS8, or PPC::XORIS8,
-    // the instruction does not need to be promoted.
-    if (!IsNonSignedExtInstrNeedPromoted)
-      return;
     break;
   }
   case PPC::AND:
@@ -5348,9 +5337,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       PromoteInstr32To64ForEmliEXTSW(SrcReg1, MRI, BinOpDepth, LV);
       Register SrcReg2 = MI->getOperand(2).getReg();
       PromoteInstr32To64ForEmliEXTSW(SrcReg2, MRI, BinOpDepth, LV);
-      // If Opcode is PPC::AND8, the instruction does not need to be promoted.
-      if (!IsNonSignedExtInstrNeedPromoted)
-        return;
     }
     break;
   }
@@ -5452,7 +5438,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
         .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
     LV->recomputeForSingleDefVirtReg(NewDefinedReg);
-    return;
   }
   return;
 }
