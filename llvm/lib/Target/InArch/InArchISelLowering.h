@@ -71,6 +71,7 @@ private:
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;        
 
   SDValue lowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
 };
 
 } // end namespace llvm

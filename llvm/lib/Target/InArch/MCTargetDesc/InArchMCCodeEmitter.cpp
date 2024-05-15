@@ -68,7 +68,7 @@ public:
   unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
-  unsigned getSImm16OpValue(const MCInst &MI, unsigned OpNo,
+  unsigned getImm16OpValue(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
   unsigned getBranchTarget16OpValue(const MCInst &MI, unsigned OpNo,
@@ -110,7 +110,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 }
 
 unsigned
-InArchMCCodeEmitter::getSImm16OpValue(const MCInst &MI, unsigned OpNo,
+InArchMCCodeEmitter::getImm16OpValue(const MCInst &MI, unsigned OpNo,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
@@ -118,7 +118,7 @@ InArchMCCodeEmitter::getSImm16OpValue(const MCInst &MI, unsigned OpNo,
     return MO.getImm();
 
   assert(MO.isExpr() &&
-         "getSImm16OpValue expects only expressions or an immediate");
+         "getImm16OpValue expects only expressions or an immediate");
 
   const MCExpr *Expr = MO.getExpr();
 

@@ -38,6 +38,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
+  bool SelectAddrFI(SDValue Addr, SDValue &Base);
   bool SelectBaseAddr(SDValue Addr, SDValue &Base);
 
   void Select(SDNode *N) override;
@@ -58,6 +59,14 @@ char InArchDAGToDAGISel::ID = 0;
 /// instruction scheduling.
 FunctionPass *llvm::createInArchISelDag(InArchTargetMachine &TM) {
   return new InArchDAGToDAGISel(TM);
+}
+
+bool InArchDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
+  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i32);
+    return true;
+  }
+  return false;
 }
 
 bool InArchDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {

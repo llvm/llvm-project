@@ -61,7 +61,6 @@ InArchTargetLowering::InArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
 
   setOperationAction(ISD::FRAMEADDR, MVT::i32, Legal);
-  // setOperationAction(ISD::INTRINSIC_VOID, MVT::i32, Custom);
   // setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
   // setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
 }

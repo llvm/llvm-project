@@ -255,8 +255,8 @@ MachineBasicBlock::iterator InArchFrameLowering::eliminateCallFramePseudoInstr(
       // Ensure the stack remains aligned after adjustment.
       Amount = alignSPAdjust(Amount);
 
-      // if (MI->getOpcode() == InArch::ADJCALLSTACKDOWN)
-      //   Amount = -Amount;
+      if (MI->getOpcode() == InArch::ADJCALLSTACKDOWN)
+         Amount = -Amount;
 
       adjustReg(MBB, MI, DL, SPReg, SPReg, Amount, MachineInstr::NoFlags);
     }
