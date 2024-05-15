@@ -1528,11 +1528,11 @@ SDValue VectorLegalizer::ExpandMCOMPRESS(SDNode *Node) {
   for (unsigned I = 0; I < NumElms; I++) {
     SDValue Idx = DAG.getVectorIdxConstant(I, DL);
 
-    SDValue ValI =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec, Idx);
-    SDValue OutPtr =
-        TLI.getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
-    Chain = DAG.getStore(Chain, DL, ValI, OutPtr, MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+    SDValue ValI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec, Idx);
+    SDValue OutPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
+    Chain = DAG.getStore(
+        Chain, DL, ValI, OutPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
 
     // Skip this for last element.
     if (I < NumElms - 1) {

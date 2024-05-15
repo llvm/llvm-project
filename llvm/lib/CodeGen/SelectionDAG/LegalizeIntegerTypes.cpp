@@ -87,7 +87,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MGATHER:     Res = PromoteIntRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
-  case ISD::MCOMPRESS:   Res = PromoteIntRes_MCOMPRESS(N); break;
+  case ISD::MCOMPRESS:
+    Res = PromoteIntRes_MCOMPRESS(N);
+    break;
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::VP_SELECT:
@@ -951,7 +953,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_MCOMPRESS(SDNode *N) {
   SDValue Vec = GetPromotedInteger(N->getOperand(0));
-  return DAG.getNode(ISD::MCOMPRESS, SDLoc(N), Vec.getValueType(), Vec, N->getOperand(1));
+  return DAG.getNode(ISD::MCOMPRESS, SDLoc(N), Vec.getValueType(), Vec,
+                     N->getOperand(1));
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -1861,7 +1864,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                  OpNo); break;
   case ISD::MSCATTER: Res = PromoteIntOp_MSCATTER(cast<MaskedScatterSDNode>(N),
                                                   OpNo); break;
-  case ISD::MCOMPRESS: Res = PromoteIntOp_MCOMPRESS(N, OpNo); break;
+  case ISD::MCOMPRESS:
+    Res = PromoteIntOp_MCOMPRESS(N, OpNo);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::BF16_TO_FP:
