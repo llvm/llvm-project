@@ -12,7 +12,7 @@
 /// General Purpose Registers: W, X.
 def GPRRegBank : RegisterBank<"GPR", [XSeqPairsClass]>;
 
-/// Floating Point/Vector Registers: B, H, S, D, Q.
+/// Floating Point, Vector, Scalable Vector Registers: B, H, S, D, Q, Z.
 def FPRRegBank : RegisterBank<"FPR", [QQQQ, ZPR]>;
 
 /// Conditional register: NZCV.
