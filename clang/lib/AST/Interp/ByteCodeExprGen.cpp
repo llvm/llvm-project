@@ -2498,6 +2498,39 @@ bool ByteCodeExprGen<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   return this->emitGetLocal(PT_Ptr, Offset, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitConvertVectorExpr(
+    const ConvertVectorExpr *E) {
+  assert(Initializing);
+  const auto *VT = E->getType()->castAs<VectorType>();
+  QualType ElemType = VT->getElementType();
+  PrimType ElemT = classifyPrim(ElemType);
+  const Expr *Src = E->getSrcExpr();
+  PrimType SrcElemT =
+      classifyPrim(Src->getType()->castAs<VectorType>()->getElementType());
+
+  unsigned SrcOffset = this->allocateLocalPrimitive(Src, PT_Ptr, true, false);
+  if (!this->visit(Src))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SrcOffset, E))
+    return false;
+
+  for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+    if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(SrcElemT, I, E))
+      return false;
+    if (SrcElemT != ElemT) {
+      if (!this->emitPrimCast(SrcElemT, ElemT, ElemType, E))
+        return false;
+    }
+    if (!this->emitInitElem(ElemT, I, E))
+      return false;
+  }
+
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
@@ -3685,12 +3718,22 @@ bool ByteCodeExprGen<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
       return this->emitCastFP(ToSem, getRoundingMode(E), E);
     }
 
+    if (ToT == PT_IntAP)
+      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(ToQT), E);
+    if (ToT == PT_IntAPS)
+      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(ToQT), E);
+
     // Float to integral.
     if (isIntegralType(ToT) || ToT == PT_Bool)
       return this->emitCastFloatingIntegral(ToT, E);
   }
 
   if (isIntegralType(FromT) || FromT == PT_Bool) {
+    if (ToT == PT_IntAP)
+      return this->emitCastAP(FromT, Ctx.getBitWidth(ToQT), E);
+    if (ToT == PT_IntAPS)
+      return this->emitCastAPS(FromT, Ctx.getBitWidth(ToQT), E);
+
     // Integral to integral.
     if (isIntegralType(ToT) || ToT == PT_Bool)
       return FromT != ToT ? this->emitCast(FromT, ToT, E) : true;

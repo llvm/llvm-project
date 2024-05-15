@@ -139,8 +139,7 @@ define i1 @length2_gt(i8* %X, i8* %Y) nounwind {
 define i1 @length2_eq_const(i8* %X) nounwind {
 ; X64-LABEL: length2_eq_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    cmpl $12849, %eax # imm = 0x3231
+; X64-NEXT:    cmpw $12849, (%rdi) # imm = 0x3231
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 1), i64 2) nounwind
