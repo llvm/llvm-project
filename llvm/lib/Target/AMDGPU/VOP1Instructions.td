@@ -678,50 +678,51 @@ def VOPProfile_Base_CVT_PK_F32_F8_OpSel : VOPProfileI2F <v2f32, i32> {
   let HasExtVOP3DPP = 0;
 }
 
-class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32, untyped, untyped]> {
-  let IsFP8SrcByteSel = 1;
-  let HasOpSel = 0;
-  let HasExtDPP = 1;
-  let HasExtVOP3DPP = 1;
-  let HasExtSDWA = 0;
-  let HasClamp = 0;
-  let HasOMod = 0;
-  let HasModifiers = 0;
+let IsFP8SrcByteSel = 1, HasOpSel = 0, HasExtDPP = 1, HasExtVOP3DPP = 1,
+    HasExtSDWA = 0, HasClamp = 0, HasOMod = 0, HasModifiers = 0 in {
+  class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32, untyped, untyped]> {
+    let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                              HasClamp, HasModifiers, HasSrc2Mods,
+                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                     (ins ByteSel:$byte_sel));
+    let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
+                                          NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
+                                          HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
+                                          Src2ModVOP3DPP, HasOpSel>.ret,
+                           (ins ByteSel:$byte_sel));
+  }
 
-  defvar bytesel = (ins ByteSel:$byte_sel);
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            HasClamp, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   bytesel);
-  let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
-                                        NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
-                                        HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
-                                        Src2ModVOP3DPP, HasOpSel>.ret,
-                         bytesel);
-}
+  // FIXME-TRUE16: True16 versions of these instructions are untested.
+  class VOPProfile_Base_CVT_F_F8_ByteSel_true16<VOPProfile P> : VOPProfile_True16<P> {
+    let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                              HasClamp, HasModifiers, HasSrc2Mods,
+                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                     (ins ByteSel:$byte_sel));
+    let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
+                                          NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
+                                          HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
+                                          Src2ModVOP3DPP, HasOpSel>.ret,
+                           (ins ByteSel:$byte_sel));
+  }
 
-class VOPProfile_Base_CVT_F_F8_ByteSel_fake16<VOPProfile P> : VOPProfile_Fake16<P> {
-  let IsFP8SrcByteSel = 1;
-  let HasOpSel = 0;
-  let HasModifiers = 0;
-  let HasOMod = 0;
-  let HasClamp = 0;
-  let HasExtSDWA = 0;
+  class VOPProfile_Base_CVT_F_F8_ByteSel_fake16<VOPProfile P> : VOPProfile_Fake16<P> {
+    let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                              HasClamp, HasModifiers, HasSrc2Mods,
+                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                     (ins ByteSel:$byte_sel));
+    let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
+                                          NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
+                                          HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
+                                          Src2ModVOP3DPP, HasOpSel>.ret,
+                           (ins ByteSel:$byte_sel));
+  }
+} // End let IsFP8SrcByteSel = 1, ...
 
-  defvar bytesel = (ins ByteSel:$byte_sel);
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            HasClamp, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   bytesel);
-  let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
-                                        NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
-                                        HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
-                                        Src2ModVOP3DPP, HasOpSel>.ret,
-                         bytesel);
-}
-
+def V_CVT_F16_F8_Profile : VOPProfile_Base_CVT_F_F8_ByteSel<f16>;
+def V_CVT_F16_F8_True16_Profile :
+  VOPProfile_Base_CVT_F_F8_ByteSel_true16<V_CVT_F16_F8_Profile>;
 def V_CVT_F16_F8_Fake16_Profile :
-  VOPProfile_Base_CVT_F_F8_ByteSel_fake16<VOPProfile_Base_CVT_F_F8_ByteSel<f16>>;
+  VOPProfile_Base_CVT_F_F8_ByteSel_fake16<V_CVT_F16_F8_Profile>;
 
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
@@ -758,24 +759,26 @@ let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts] 
   }
 }
 
-def VOPProfile_CVT_PK_F16_F8 : VOPProfile_Fake16<VOPProfile<[v2f16, i16, untyped, untyped]>> {
-  let HasExtDPP = 0;
-  let HasExt32BitDPP = 0;
-  let HasExt64BitDPP = 0;
-  let HasExtVOP3DPP = 0;
-  let HasExt = 0;
-  let HasExtSDWA = 0;
-  let HasOpSel = 1;
-  let EmitDstSel = 0;
-  let HasOMod = 0;
+// FIXME-TRUE16: True16 versions of these instructions are untested.
+let HasExtDPP = 0, HasExt32BitDPP = 0, HasExt64BitDPP = 0, HasExtVOP3DPP = 0,
+    HasExt = 0, HasExtSDWA = 0, HasOpSel = 1, EmitDstSel = 0, HasOMod = 0 in {
+def VOPProfile_CVT_PK_F16_F8 : VOPProfile<[v2f16, i16, untyped, untyped]>;
+def VOPProfile_CVT_PK_F16_F8_true16 : VOPProfile_True16<VOPProfile_CVT_PK_F16_F8>;
+def VOPProfile_CVT_PK_F16_F8_fake16 : VOPProfile_Fake16<VOPProfile_CVT_PK_F16_F8>;
 }
 
 let SubtargetPredicate = isGFX12_10Plus in {
   let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
-    defm V_CVT_F16_FP8_fake16 : VOP1Inst<"v_cvt_f16_fp8_fake16", V_CVT_F16_F8_Fake16_Profile>;
-    defm V_CVT_F16_BF8_fake16 : VOP1Inst<"v_cvt_f16_bf8_fake16", V_CVT_F16_F8_Fake16_Profile>;
-    defm V_CVT_PK_F16_FP8 : VOP1Inst<"v_cvt_pk_f16_fp8", VOPProfile_CVT_PK_F16_F8, int_amdgcn_cvt_pk_f16_fp8>;
-    defm V_CVT_PK_F16_BF8 : VOP1Inst<"v_cvt_pk_f16_bf8", VOPProfile_CVT_PK_F16_F8, int_amdgcn_cvt_pk_f16_bf8>;
+    defm V_CVT_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_fp8",
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+    defm V_CVT_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_bf8",
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+    defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
+      VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
+      int_amdgcn_cvt_pk_f16_fp8>;
+    defm V_CVT_PK_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_bf8",
+      VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
+      int_amdgcn_cvt_pk_f16_bf8>;
   }
 
   def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64>;
@@ -1053,7 +1056,7 @@ multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
   VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
 
 multiclass VOP1_Real_NO_DPP_OP_SEL<GFXGen Gen, bits<9> op> :
-  VOP1_Real_NO_DPP_OP_SEL_with_name<Gen, op, NAME, !cast<VOP1_Pseudo>(NAME#"_e32").Mnemonic>;
+  VOP1_Real_NO_DPP_OP_SEL_with_name<Gen, op, NAME, !cast<VOP1_Pseudo>(!subst("_fake16", "", NAME)#"_e32").Mnemonic>;
 
 multiclass VOP1_Real_FULL_t16_gfx1210<bits<9> op> :
   VOP1_Real_FULL_with_name<GFX12_10Gen, op, NAME,
@@ -1134,8 +1137,8 @@ defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_t16_gfx1210<0x072>;
 defm V_SAT_PK_I4_I8_fake16   : VOP1_Real_FULL_t16_gfx1210<0x073>;
 defm V_SAT_PK_U4_U8_fake16   : VOP1_Real_FULL_t16_gfx1210<0x074>;
-defm V_CVT_PK_F16_FP8        : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x075>;
-defm V_CVT_PK_F16_BF8        : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x076>;
+defm V_CVT_PK_F16_FP8_fake16 : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x075>;
+defm V_CVT_PK_F16_BF8_fake16 : VOP1_Real_NO_DPP_OP_SEL<GFX12_10Gen, 0x076>;
 defm V_CVT_F16_FP8_fake16    : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x077, "V_CVT_F16_FP8_fake16", "v_cvt_f16_fp8">;
 defm V_CVT_F16_BF8_fake16    : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x078, "V_CVT_F16_BF8_fake16", "v_cvt_f16_bf8">;
 defm V_RCP_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210<0x079>;
