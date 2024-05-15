@@ -152,8 +152,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   if (std::optional<PrimType> T = Ctx.classify(QT))
     Desc = createDescriptor(VD, *T, std::nullopt, true, false);
   else
-    Desc = createDescriptor(VD, VD->getType().getTypePtr(), std::nullopt, true,
-                            false);
+    Desc = createDescriptor(VD, QT.getTypePtr(), std::nullopt, true, false);
   if (!Desc)
     Desc = allocateDescriptor(VD);
 
