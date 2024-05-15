@@ -1764,9 +1764,9 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
       "ArrayRef<ReassociationIndices>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      build($_builder, $_state, resultType, src, attrs);
       $_state.addAttribute("reassociation",
                           getReassociationIndicesAttribute($_builder, reassociation));
+      build($_builder, $_state, resultType, src, attrs);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
