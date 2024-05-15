@@ -273,3 +273,8 @@ int test3(void) {
 /// This tests that we have full type info, even for values we cannot read.
 int dummyarray[5];
 _Static_assert(&dummyarray[0] < &dummyarray[1], ""); // pedantic-warning {{GNU extension}}
+
+void addrlabelexpr(void) {
+ a0: ;
+  static void *ps[] = { &&a0 }; // pedantic-warning {{use of GNU address-of-label extension}}
+}

@@ -122,6 +122,7 @@ public:
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
   bool VisitRecoveryExpr(const RecoveryExpr *E);
+  bool VisitAddrLabelExpr(const AddrLabelExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
