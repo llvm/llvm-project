@@ -78,14 +78,10 @@ StringRef StripGNUInstallLibDir(StringRef Path) {
   StringRef SecondLevelParentName =
       llvm::sys::path::filename(SecondLevelParentDir);
 
-  if (ParentName == "lib") {
+  if (ParentName == "lib" || ParentName == "lib64") {
     ParentDir = llvm::sys::path::parent_path(ParentDir);
-    ParentName = llvm::sys::path::filename(ParentDir);
-  } else if (ParentName == "lib64") {
-    ParentDir = llvm::sys::path::parent_path(ParentDir);
-    ParentName = llvm::sys::path::filename(ParentDir);
   } else if (SecondLevelParentName == "lib") {
-    ParentDir = SecondLevelParentDir;
+    ParentDir = llvm::sys::path::parent_path(SecondLevelParentDir);
   }
 
   return ParentDir;
