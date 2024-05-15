@@ -134,6 +134,7 @@ class VectorLegalizer {
   SDValue ExpandVSELECT(SDNode *Node);
   SDValue ExpandVP_SELECT(SDNode *Node);
   SDValue ExpandVP_MERGE(SDNode *Node);
+  SDValue ExpandMCOMPRESS(SDNode *Node);
   SDValue ExpandVP_REM(SDNode *Node);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
@@ -442,6 +443,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
+  case ISD::MCOMPRESS:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1101,6 +1103,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
+  case ISD::MCOMPRESS:
+    Results.push_back(ExpandMCOMPRESS(Node));
+    return;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
@@ -1503,6 +1508,51 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
 
   SDValue FullMask = DAG.getNode(ISD::AND, DL, MaskVT, Mask, EVLMask);
   return DAG.getSelect(DL, Node->getValueType(0), FullMask, Op1, Op2);
+}
+
+SDValue VectorLegalizer::ExpandMCOMPRESS(SDNode *Node) {
+  SDLoc DL(Node);
+  SDValue Vec = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Vec.getValueType();
+  EVT ScalarVT = VecVT.getScalarType();
+  EVT MaskScalarVT = Mask.getValueType().getScalarType();
+
+  assert(TLI.isTypeLegal(VecVT) &&  TLI.isTypeLegal(ScalarVT) && TLI.isTypeLegal(MaskScalarVT) &&
+         "Need legal vector/mask element types to scalarize masked compress.");
+
+  SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
+  SDValue Chain = DAG.getEntryNode();
+  SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
+
+  unsigned NumElms = VecVT.getVectorNumElements();
+  // Skip element zero, as we always copy this to the output vector.
+  for (unsigned I = 0; I < NumElms; I++) {
+    SDValue Idx = DAG.getVectorIdxConstant(I, DL);
+
+    SDValue ValI =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec, Idx);
+    SDValue OutPtr =
+        TLI.getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
+    Chain = DAG.getStore(Chain, DL, ValI, OutPtr, MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+
+    // Skip this for last element.
+    if (I < NumElms - 1) {
+      // Get the mask value and add it to the current output position. This
+      // either increments by 1 if MaskI is true or adds 0 otherwise.
+      SDValue MaskI =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskScalarVT, Mask, Idx);
+      MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
+      MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskI);
+      OutPos = DAG.getNode(ISD::ADD, DL, MVT::i32, OutPos, MaskI);
+    }
+  }
+
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+  return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
 }
 
 SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {

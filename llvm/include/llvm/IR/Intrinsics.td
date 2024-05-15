@@ -2362,6 +2362,11 @@ def int_masked_compressstore:
             [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
              NoCapture<ArgIndex<1>>]>;
 
+def int_masked_compress:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+              [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+              [IntrNoMem, IntrWillReturn]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
                               [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;

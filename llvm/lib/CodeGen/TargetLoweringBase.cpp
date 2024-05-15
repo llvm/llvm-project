@@ -956,6 +956,9 @@ void TargetLoweringBase::initActions() {
     // Named vector shuffles default to expand.
     setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
 
+    // Only some target support this vector operation. Most need to expand it.
+    setOperationAction(ISD::MCOMPRESS, VT, Expand);
+
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
     setOperationAction(ISD::SDOPC, VT, Expand);

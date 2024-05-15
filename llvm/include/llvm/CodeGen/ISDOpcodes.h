@@ -1294,6 +1294,11 @@ enum NodeType {
   MLOAD,
   MSTORE,
 
+  // Masked compress - consecutively place vector elements based on mask
+  // e.g., vec = {A, B, C, D} and mask = 1010
+  //         --> {A, C, ?, ?} where ? is undefined
+  MCOMPRESS,
+
   // Masked gather and scatter - load and store operations for a vector of
   // random addresses with additional mask operand that prevents memory
   // accesses to the masked-off lanes.
