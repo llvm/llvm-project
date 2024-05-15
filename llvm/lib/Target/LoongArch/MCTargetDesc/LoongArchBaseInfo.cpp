@@ -25,7 +25,6 @@ namespace LoongArchABI {
 // Check if ABI has been standardized; issue a warning if it hasn't.
 // FIXME: Once all ABIs are standardized, this will be removed.
 static ABI checkABIStandardized(ABI Abi) {
-  bool IsStandardized = false;
   StringRef ABIName;
   switch (Abi) {
   case ABI_ILP32S:
@@ -42,13 +41,11 @@ static ABI checkABIStandardized(ABI Abi) {
     break;
   case ABI_LP64S:
   case ABI_LP64D:
-    IsStandardized = true;
-    break;
+    return Abi;
   default:
     llvm_unreachable("");
   }
-  if (!IsStandardized)
-    errs() << "warning: '" << ABIName << "' has not been standardized\n";
+  errs() << "warning: '" << ABIName << "' has not been standardized\n";
   return Abi;
 }
 
