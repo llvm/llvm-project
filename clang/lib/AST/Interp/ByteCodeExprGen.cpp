@@ -2488,6 +2488,16 @@ bool ByteCodeExprGen<Emitter>::VisitRecoveryExpr(const RecoveryExpr *E) {
   return this->emitError(E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
+  assert(E->getType()->isVoidPointerType());
+
+  unsigned Offset = allocateLocalPrimitive(
+      E->getLabel(), PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+
+  return this->emitGetLocal(PT_Ptr, Offset, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
