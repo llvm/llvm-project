@@ -905,11 +905,12 @@ SubtargetEmitter::FindWriteResources(const CodeGenSchedRW &SchedWrite,
     // If there is no AliasDef and we find a match, we can early exit since
     // there is no need to verify whether there are resources defined for both
     // SchedWrite and its alias.
-    if (!AliasDef && SchedWrite.TheDef == WR->getValueAsDef("WriteType")) {
+    Record *WRDef = WR->getValueAsDef("WriteType");
+    if (!AliasDef && SchedWrite.TheDef == WRDef) {
       ResDef = WR;
       break;
-    } 
-    if (AliasDef == WR->getValueAsDef("WriteType")) {
+    }
+    if (AliasDef == WRDef) {
       if (ResDef) {
         PrintFatalError(WR->getLoc(), "Resources are defined for both "
                                       "SchedWrite and its alias on processor " +
@@ -965,11 +966,12 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
     // If there is no AliasDef and we find a match, we can early exit since
     // there is no need to verify whether there are resources defined for both
     // SchedRead and its alias.
-    if (!AliasDef && SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
+    Record *RADef = RA->getValueAsDef("ReadType");
+    if (!AliasDef && SchedRead.TheDef == RADef) {
       ResDef = RA;
       break;
     }
-    if (AliasDef == RA->getValueAsDef("ReadType")) {
+    if (AliasDef == RADef) {
       if (ResDef) {
         PrintFatalError(RA->getLoc(), "Resources are defined for both "
                                       "SchedRead and its alias on processor " +
