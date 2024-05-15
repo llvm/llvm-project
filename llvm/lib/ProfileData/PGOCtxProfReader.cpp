@@ -169,5 +169,5 @@ PGOCtxProfileReader::loadContexts() {
     if (!Ret.insert({Key, std::move(E->second)}).second)
       return wrongValue("Duplicate roots");
   }
-  return Ret;
+  return std::move(Ret);
 }
