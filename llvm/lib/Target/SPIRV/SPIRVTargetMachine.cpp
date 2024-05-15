@@ -164,6 +164,7 @@ void SPIRVPassConfig::addIRPasses() {
     //  - all loop exits are dominated by the loop pre-header.
     //  - loops have a single back-edge.
     addPass(createLoopSimplifyPass());
+    addPass(createSPIRVMergeRegionExitTargetsPass());
   }
 
   TargetPassConfig::addIRPasses();
