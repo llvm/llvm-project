@@ -371,7 +371,8 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
   if (Component == "builtins") {
     SmallString<128> Path(getDriver().SysRoot);
     llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
-    return std::string(Path);
+    if (getVFS().exists(Path))
+      return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
   std::string CRTBasename =
