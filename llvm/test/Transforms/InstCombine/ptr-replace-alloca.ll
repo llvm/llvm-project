@@ -429,9 +429,13 @@ entry:
 
 declare i8 @readonly_callee(ptr readonly nocapture)
 
+; FIXME: This should be able to fold to call i8 @readonly_callee(ptr nonnull @g1)
 define i8 @call_readonly_remove_alloca() {
 ; CHECK-LABEL: @call_readonly_remove_alloca(
-; CHECK-NEXT:    [[V:%.*]] = call i8 @readonly_callee(ptr nonnull @g1)
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1, addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
+; CHECK-NEXT:    [[P:%.*]] = addrspacecast ptr addrspace(1) [[ALLOCA]] to ptr
+; CHECK-NEXT:    [[V:%.*]] = call i8 @readonly_callee(ptr [[P]])
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
   %alloca = alloca [32 x i8], addrspace(1)
