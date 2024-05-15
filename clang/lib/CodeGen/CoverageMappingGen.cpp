@@ -2177,6 +2177,10 @@ struct CounterCoverageMappingBuilder
     // propagate counts into them.
   }
 
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *AILE) {
+    Visit(AILE->getCommonExpr()->getSourceExpr());
+  }
+
   void VisitPseudoObjectExpr(const PseudoObjectExpr *POE) {
     // Just visit syntatic expression as this is what users actually write.
     VisitStmt(POE->getSyntacticForm());
