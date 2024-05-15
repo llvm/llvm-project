@@ -1012,8 +1012,8 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Documentation<HasDocumentation>;
 
 def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
-  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and 'setuid(getuid())' (CERT: "
-           "POS36-C)">,
+  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+           "'setuid(getuid())' (CERT: POS36-C)">,
   Documentation<HasDocumentation>;
 
 } // end "security"

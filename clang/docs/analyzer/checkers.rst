@@ -1194,18 +1194,31 @@ generated. The checker finds only exactly ``setuid(getuid())`` calls (and the
 GID versions), not for example if the result of ``getuid()`` is stored in a
 variable.
 
-This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
-
 .. code-block:: c
 
  void test1() {
-   if (setuid(getuid()) == -1) {
-     /* handle error condition */
+   // ...
+   // end of section with elevated privileges
+   // reset privileges (user and group) to normal user
+   if (setuid(getuid()) != 0) {
+     handle_error();
+     return;
    }
-   if (setgid(getgid()) == -1) { // warn
-     /* handle error condition */
+   if (setgid(getgid()) != 0) { // warning: A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail
+     handle_error();
+     return;
    }
+   // user-ID and group-ID are reset to normal user now
+   // ...
  }
+
+In the code above the problem is that ``setuid(getuid())`` removes superuser
+privileges before ``setgid(getgid())`` is called. To fix the problem the
+``setgid(getgid())`` should be called first. Further attention is needed to
+avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
+this).
+
+This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
 .. _unix-checkers:
 
