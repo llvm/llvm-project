@@ -278,7 +278,7 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
 
   // We have already completed the type, or we have found its definition and are
   // ready to complete it later (cf. ParseStructureLikeDIE).
-  bool hasDef = m_ast.UseRedeclCompletion()
+  bool hasDef = ast.UseRedeclCompletion()
                     ? tag_decl_ctx->getDefinition() != nullptr
                     : tag_decl_ctx->isCompleteDefinition();
   if (hasDef || tag_decl_ctx->isBeingDefined())
@@ -290,7 +290,7 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
 
   // If this type was not imported from an external AST, there's nothing to do.
   if (ast_importer.CanImport(tag_decl_ctx)) {
-    CompilerType type = m_ast.GetTypeForDecl(tag_decl_ctx);
+    CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
     auto qual_type = ClangUtil::GetQualType(type);
     if (ast_importer.RequireCompleteType(qual_type))
       return;
@@ -302,7 +302,7 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
 
   // We don't have a type definition and/or the import failed. We must
   // forcefully complete the type to avoid crashes.
-  ForcefullyCompleteType(m_ast.GetTypeForDecl(tag_decl_ctx));
+  ForcefullyCompleteType(ast.GetTypeForDecl(tag_decl_ctx));
 }
 
 void DWARFASTParserClang::RegisterDIE(DWARFDebugInfoEntry *die,
@@ -1134,7 +1134,8 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       containing_decl_ctx->getDeclKind();
 
   if (TypeSystemClang::UseRedeclCompletion())
-    PrepareContextToReceiveMembers(containing_decl_ctx, decl_ctx_die, die,
+    PrepareContextToReceiveMembers(m_ast, GetClangASTImporter(),
+                                   containing_decl_ctx, die,
                                    attrs.name.GetCString());
 
   bool is_cxx_method = DeclKindIsCXXClass(containing_decl_kind);
@@ -1800,6 +1801,10 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   SymbolFileDWARF *dwarf = die.GetDWARF();
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
+
+  clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
+
+  const bool should_directly_complete = DirectlyCompleteType(decl_ctx, attrs);
 
   // UniqueDWARFASTType is large, so don't create a local variables on the
   // stack, put it on the heap. This function is often called recursively and
@@ -2499,11 +2504,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
     m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
 
   if (!die)
-    return false;
-  ParsedDWARFTypeAttributes attrs(die);
-  bool is_forward_declaration = IsForwardDeclaration(
-      die, attrs, SymbolFileDWARF::GetLanguage(*die.GetCU()));
-  if (is_forward_declaration)
     return false;
 
   const dw_tag_t tag = die.Tag();
