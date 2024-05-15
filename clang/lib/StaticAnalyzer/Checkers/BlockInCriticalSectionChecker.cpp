@@ -104,10 +104,8 @@ class RAIIMutexDescriptor {
       // this function is called instead of early returning it. To avoid this, a
       // bool variable (IdentifierInfoInitialized) is used and the function will
       // be run only once.
-      if (AnalysisDeclContext *CalleCtx = Call.getCalleeAnalysisDeclContext()) {
-        Guard = &CalleCtx->getASTContext().Idents.get(GuardName);
-        IdentifierInfoInitialized = true;
-      }
+      const auto &ASTCtx = Call.getState()->getStateManager().getContext();
+      Guard = &ASTCtx.Idents.get(GuardName);
     }
   }
 
