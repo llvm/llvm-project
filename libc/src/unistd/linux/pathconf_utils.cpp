@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE {
 
-static long filesizebits(const struct statfs &s) {
+long filesizebits(const struct statfs &s) {
   switch (s.f_type) {
   case JFFS2_SUPER_MAGIC:
   case MSDOS_SUPER_MAGIC:
@@ -25,7 +25,7 @@ static long filesizebits(const struct statfs &s) {
   return 64;
 }
 
-static long link_max(const struct statfs &s) {
+long link_max(const struct statfs &s) {
   switch (s.f_type) {
   case EXT2_SUPER_MAGIC:
     return 32000;
@@ -41,7 +41,7 @@ static long link_max(const struct statfs &s) {
   return LINK_MAX;
 }
 
-static long _2_symlinks(const struct statfs &s) {
+long _2_symlinks(const struct statfs &s) {
   switch (s.f_type) {
   case ADFS_SUPER_MAGIC:
   case BFS_MAGIC:
@@ -54,7 +54,7 @@ static long _2_symlinks(const struct statfs &s) {
   return 1;
 }
 
-static long fpathconfig(const struct fstatfs &s, int name) {
+long pathconfig(const struct fstatfs &s, int name) {
   switch (name) {
   case _PC_LINK_MAX:
     return link_max(s);

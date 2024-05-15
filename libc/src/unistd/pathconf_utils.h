@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_PREAD_H
-#define LLVM_LIBC_SRC_UNISTD_PREAD_H
+#ifndef LLVM_LIBC_SRC_UNISTD_PATHCONF_UTILS_H
+#define LLVM_LIBC_SRC_UNISTD_PATHCONF_UTILS_H
 
 #include <unistd.h>
 
 namespace LIBC_NAMESPACE {
 
-static long filesizebits(const struct statfs &s);
-static long link_max(const struct statfs &s);
-static long _2_symlinks(const struct statfs &s);
-static long pathconfig(const struct fstatfs &s, int name);
+LIBC_INLINE long filesizebits(const struct statfs &s);
+LIBC_INLINE long link_max(const struct statfs &s);
+LIBC_INLINE long _2_symlinks(const struct statfs &s);
+LIBC_INLINE long pathconfig(const struct fstatfs &s, int name);
 
 } // namespace LIBC_NAMESPACE
 

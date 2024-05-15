@@ -301,7 +301,7 @@ add_entrypoint_object(
     libc.src.unistd.pathconf_utils
 )
 
-add_entrypoint_object(
+add_header_library(
   pathconf_utils
   SRCS
   pathconf_utils.cpp
