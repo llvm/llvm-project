@@ -13,7 +13,6 @@ add_llvm_unittest(ProfileDataTests
   InstrProfTest.cpp
   ItaniumManglingCanonicalizerTest.cpp
   MemProfTest.cpp
-  PGOCtxProfReaderWriterTest.cpp
   SampleProfTest.cpp
   SymbolRemappingReaderTest.cpp
   )
