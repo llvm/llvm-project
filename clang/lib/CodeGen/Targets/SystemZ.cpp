@@ -722,23 +722,8 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count >= 2)
         return std::nullopt;
 
-      unsigned MaxAlignOnDecl = FD->getMaxAlignment();
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
-      unsigned MaxAlign =
-          std::max(getMaxAlignFromTypeDefs(FTSingleTy), MaxAlignOnDecl);
-
-      // The first element of a complex type may have an alignment enforced
-      // that is less strict than twice its size, since that would be naturally
-      // enforced by any complex type anyways. The second element may have an
-      // alignment enforced that is less strict than its size.
-      if (Count == 0) {
-        if (MaxAlign > 2 * getContext().getTypeSize(FTSingleTy))
-          return std::nullopt;
-      } else if (Count == 1) {
-        if (MaxAlign > getContext().getTypeSize(FTSingleTy))
-          return std::nullopt;
-      }
 
       if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
         switch (BT->getKind()) {
@@ -764,12 +749,12 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       Count++;
     }
     if (Count == 2) {
-      // The last thing that needs to be checked is the alignment of the struct.
+      // The last thing that needs to be checked is the size of the struct.
       // If we have to emit any padding (eg. because of attribute aligned), this
       // disqualifies the type from being complex.
-      unsigned MaxAlign = RT->getDecl()->getMaxAlignment();
+      unsigned RecordSize = getContext().getTypeSize(RT);
       unsigned ElemSize = getContext().getTypeSize(RetTy);
-      if (MaxAlign > 2 * ElemSize)
+      if (RecordSize > 2 * ElemSize)
         return std::nullopt;
       return RetTy;
     }

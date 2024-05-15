@@ -85,6 +85,28 @@ struct complexlike_longdouble { long double re, im; };
 struct complexlike_longdouble pass_complexlike_longdouble(struct complexlike_longdouble arg) { return arg; }
 // CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } %{{.*}})
 
+// Structures with extra padding are not considered complex types.
+struct complexlike_float_padded1 {
+  float x __attribute__((aligned(8)));
+  float y __attribute__((aligned(8)));
+};
+struct complexlike_float_padded1 pass_complexlike_float_padded1(struct complexlike_float_padded1 arg) { return arg; }
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded1([2 x i64] %{{.*}})
+struct complexlike_float_padded2 {
+  float x;
+  float y;
+} __attribute__((aligned(16)));
+struct complexlike_float_padded2 pass_complexlike_float_padded2(struct complexlike_float_padded2 arg) { return arg; }
+// CHECK-LABEL: define inreg [2 x i64] @pass_complexlike_float_padded2([2 x i64] %{{.*}})
+
+typedef double align32_double __attribute__((aligned(32)));
+struct complexlike_double_padded {
+  align32_double x;
+  double y;
+};
+struct complexlike_double_padded pass_complexlike_double_padded(struct complexlike_double_padded arg) { return arg; }
+// CHECK-LABEL: define void @pass_complexlike_double_padded(ptr {{.*}} sret(%struct.complexlike_double_padded) align 32 %{{.*}}, [4 x i64] %{{.*}})
+
 // Unnamed types
 
 int pass_unnamed_int(int) { return 0; }
