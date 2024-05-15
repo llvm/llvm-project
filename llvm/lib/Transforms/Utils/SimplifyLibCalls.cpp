@@ -2003,10 +2003,7 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
     unsigned BitWidth =
         Op->getType()->getScalarType()->getPrimitiveSizeInBits();
     if (BitWidth < DstWidth || (BitWidth == DstWidth && isa<SIToFPInst>(I2F))) {
-      Type *IntTy = B.getIntNTy(DstWidth);
-      if (VectorType *VT = dyn_cast<VectorType>(I2F->getType()))
-        IntTy = VectorType::get(IntTy, VT->getElementCount());
-
+      Type *IntTy = Op->getType()->getWithNewBitWidth(DstWidth);
       return isa<SIToFPInst>(I2F) ? B.CreateSExt(Op, IntTy)
                                   : B.CreateZExt(Op, IntTy);
     }
