@@ -895,7 +895,7 @@ TEST_P(CoverageMappingTest, decision_before_expansion) {
   addCMR(Counter::getCounter(0), "foo", 3, 23, 5, 2);
 
   // This(4:11) was put after Expansion(4:11) before the fix
-  addMCDCDecisionCMR(0, 2, "foo", 4, 11, 4, 20);
+  addMCDCDecisionCMR(3, 2, "foo", 4, 11, 4, 20);
 
   addExpansionCMR("foo", "A", 4, 11, 4, 12);
   addExpansionCMR("foo", "B", 4, 19, 4, 20);
