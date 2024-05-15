@@ -30,9 +30,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
 }
 
 const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
-  if (CPU == "generic")
-    return &ARMV8A;
-
   // Note: this now takes cpu aliases into account
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)

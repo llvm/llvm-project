@@ -100,7 +100,7 @@ void minusarch() {}
 // CHECK: attributes #3 = { {{.*}} "target-features"="+bf16,+complxnum,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" }
 // CHECK: attributes #4 = { {{.*}} "target-cpu"="cortex-a710" "target-features"="+bf16,+complxnum,+crc,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+ras,+rcpc,+rdm,+sb,+sve,+sve2,+sve2-bitperm" }
 // CHECK: attributes #5 = { {{.*}} "tune-cpu"="cortex-a710" }
-// CHECK: attributes #6 = { {{.*}} "target-cpu"="generic" }
+// CHECK: attributes #6 = { {{.*}} "target-cpu"="generic" "target-features"="+fp-armv8,+neon" }
 // CHECK: attributes #7 = { {{.*}} "tune-cpu"="generic" }
 // CHECK: attributes #8 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs" "tune-cpu"="cortex-a710" }
 // CHECK: attributes #9 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve" "tune-cpu"="cortex-a710" }
