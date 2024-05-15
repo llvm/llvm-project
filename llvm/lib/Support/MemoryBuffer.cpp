@@ -98,7 +98,7 @@ public:
 
   /// Disable sized deallocation for MemoryBufferMem, because it has
   /// tail-allocated data.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *p) { std::free(p); }
 
   StringRef getBufferIdentifier() const override {
     // The name is stored after the class itself.
@@ -315,7 +315,14 @@ WritableMemoryBuffer::getNewUninitMemBuffer(size_t Size,
   size_t RealLen = StringLen + Size + 1 + BufAlign.value();
   if (RealLen <= Size) // Check for rollover.
     return nullptr;
-  char *Mem = static_cast<char*>(operator new(RealLen, std::nothrow));
+  // We use a call to malloc() rather than a call to a non-throwing operator
+  // new() because LLVM unconditionally installs an out of memory new handler
+  // when exceptions are disabled. This new handler intentionally crashes to
+  // aid with debugging, but that makes non-throwing new calls unhelpful.
+  // See MemoryBufferMem::operator delete() for the paired call to free(), and
+  // llvm::install_out_of_memory_new_handler() for the installation of the
+  // custom new handler.
+  char *Mem = static_cast<char *>(std::malloc(RealLen));
   if (!Mem)
     return nullptr;
 
