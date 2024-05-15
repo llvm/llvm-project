@@ -51,7 +51,8 @@ C++ Specific Potentially Breaking Changes
 - The behavior controlled by the `-frelaxed-template-template-args` flag is now
   on by default, and the flag is deprecated. Until the flag is finally removed,
   it's negative spelling can be used to obtain compatibility with previous
-  versions of clang.
+  versions of clang. The deprecation warning for the negative spelling can be
+  disabled with `-Wno-deprecated-no-relaxed-template-template-args`.
 
 - Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
 

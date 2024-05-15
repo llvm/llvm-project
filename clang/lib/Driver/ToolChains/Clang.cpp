@@ -7253,10 +7253,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A =
           Args.getLastArg(options::OPT_frelaxed_template_template_args,
                           options::OPT_fno_relaxed_template_template_args)) {
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << /*hasReplacement=*/false;
-    if (A->getOption().matches(options::OPT_fno_relaxed_template_template_args))
+    if (A->getOption().matches(
+            options::OPT_fno_relaxed_template_template_args)) {
+      D.Diag(diag::warn_drv_deprecated_arg_no_relaxed_template_template_args);
       CmdArgs.push_back("-fno-relaxed-template-template-args");
+    } else {
+      D.Diag(diag::warn_drv_deprecated_arg)
+          << A->getAsString(Args) << /*hasReplacement=*/false;
+    }
   }
 
   // -fsized-deallocation is off by default, as it is an ABI-breaking change for
