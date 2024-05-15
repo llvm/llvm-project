@@ -639,3 +639,238 @@ void test7(void) {
 /// the actual implementation uses analyze_os_log::computeOSLogBufferLayout(), which
 /// is tested elsewhere.
 static_assert(__builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc") != 0, "");
+
+/// Copied from test/Sema/constant_builtins_vector.cpp.
+/// Some tests are missing since we run this for multiple targets,
+/// some of which do not support _BitInt.
+#ifndef __AVR__
+namespace convertvector {
+  typedef _BitInt(128) BitInt128;
+
+  typedef double vector4double __attribute__((__vector_size__(32)));
+  typedef float vector4float __attribute__((__vector_size__(16)));
+  typedef long long vector4long __attribute__((__vector_size__(32)));
+  typedef int vector4int __attribute__((__vector_size__(16)));
+  typedef short vector4short __attribute__((__vector_size__(8)));
+  typedef char vector4char __attribute__((__vector_size__(4)));
+  typedef BitInt128 vector4BitInt128 __attribute__((__vector_size__(64)));
+  typedef double vector8double __attribute__((__vector_size__(64)));
+  typedef float vector8float __attribute__((__vector_size__(32)));
+  typedef long long vector8long __attribute__((__vector_size__(64)));
+  typedef int vector8int __attribute__((__vector_size__(32)));
+  typedef short vector8short __attribute__((__vector_size__(16)));
+  typedef char vector8char __attribute__((__vector_size__(8)));
+  typedef BitInt128 vector8BitInt128 __attribute__((__vector_size__(128)));
+
+  constexpr vector4double from_vector4double_to_vector4double_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4double);
+  constexpr vector4float from_vector4double_to_vector4float_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4float);
+  constexpr vector4long from_vector4double_to_vector4long_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4long);
+  constexpr vector4int from_vector4double_to_vector4int_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4int);
+  constexpr vector4short from_vector4double_to_vector4short_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4short);
+  constexpr vector4char from_vector4double_to_vector4char_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4char);
+  constexpr vector4BitInt128 from_vector4double_to_vector4BitInt128_var =
+      __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4BitInt128);
+  constexpr vector4double from_vector4float_to_vector4double_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4double);
+  constexpr vector4float from_vector4float_to_vector4float_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4float);
+  constexpr vector4long from_vector4float_to_vector4long_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4long);
+  constexpr vector4int from_vector4float_to_vector4int_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4int);
+  constexpr vector4short from_vector4float_to_vector4short_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4short);
+  constexpr vector4char from_vector4float_to_vector4char_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4char);
+  constexpr vector4BitInt128 from_vector4float_to_vector4BitInt128_var =
+      __builtin_convertvector((vector4float){0, 1, 2, 3}, vector4BitInt128);
+  constexpr vector4double from_vector4long_to_vector4double_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4double);
+  constexpr vector4float from_vector4long_to_vector4float_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4float);
+  constexpr vector4long from_vector4long_to_vector4long_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4long);
+  constexpr vector4int from_vector4long_to_vector4int_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4int);
+  constexpr vector4short from_vector4long_to_vector4short_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4short);
+  constexpr vector4char from_vector4long_to_vector4char_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4char);
+  constexpr vector4BitInt128 from_vector4long_to_vector4BitInt128_var =
+      __builtin_convertvector((vector4long){0, 1, 2, 3}, vector4BitInt128);
+  constexpr vector4double from_vector4int_to_vector4double_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4double);
+  constexpr vector4float from_vector4int_to_vector4float_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4float);
+  constexpr vector4long from_vector4int_to_vector4long_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4long);
+  constexpr vector4int from_vector4int_to_vector4int_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4int);
+  constexpr vector4short from_vector4int_to_vector4short_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4short);
+  constexpr vector4char from_vector4int_to_vector4char_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4char);
+  constexpr vector4BitInt128 from_vector4int_to_vector4BitInt128_var =
+      __builtin_convertvector((vector4int){0, 1, 2, 3}, vector4BitInt128);
+  constexpr vector4double from_vector4short_to_vector4double_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4double);
+  constexpr vector4float from_vector4short_to_vector4float_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4float);
+  constexpr vector4long from_vector4short_to_vector4long_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4long);
+  constexpr vector4int from_vector4short_to_vector4int_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4int);
+  constexpr vector4short from_vector4short_to_vector4short_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4short);
+  constexpr vector4char from_vector4short_to_vector4char_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4char);
+  constexpr vector4BitInt128 from_vector4short_to_vector4BitInt128_var =
+      __builtin_convertvector((vector4short){0, 1, 2, 3}, vector4BitInt128);
+  constexpr vector4double from_vector4char_to_vector4double_var =
+      __builtin_convertvector((vector4char){0, 1, 2, 3}, vector4double);
+  constexpr vector4float from_vector4char_to_vector4float_var =
+      __builtin_convertvector((vector4char){0, 1, 2, 3}, vector4float);
+  constexpr vector4long from_vector4char_to_vector4long_var =
+      __builtin_convertvector((vector4char){0, 1, 2, 3}, vector4long);
+  constexpr vector4int from_vector4char_to_vector4int_var =
+      __builtin_convertvector((vector4char){0, 1, 2, 3}, vector4int);
+  constexpr vector4short from_vector4char_to_vector4short_var =
+      __builtin_convertvector((vector4char){0, 1, 2, 3}, vector4short);
+  constexpr vector4char from_vector4char_to_vector4char_var =
+      __builtin_convertvector((vector4char){0, 1, 2, 3}, vector4char);
+  constexpr vector8double from_vector8double_to_vector8double_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8double_to_vector8float_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8float);
+  constexpr vector8long from_vector8double_to_vector8long_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8long);
+  constexpr vector8int from_vector8double_to_vector8int_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8int);
+  constexpr vector8short from_vector8double_to_vector8short_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8short);
+  constexpr vector8char from_vector8double_to_vector8char_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8char);
+  constexpr vector8BitInt128 from_vector8double_to_vector8BitInt128_var =
+      __builtin_convertvector((vector8double){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8BitInt128);
+  constexpr vector8double from_vector8float_to_vector8double_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8float_to_vector8float_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8float);
+  constexpr vector8long from_vector8float_to_vector8long_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8long);
+  constexpr vector8int from_vector8float_to_vector8int_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7}, vector8int);
+  constexpr vector8short from_vector8float_to_vector8short_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8short);
+  constexpr vector8char from_vector8float_to_vector8char_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8char);
+  constexpr vector8BitInt128 from_vector8float_to_vector8BitInt128_var =
+      __builtin_convertvector((vector8float){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8BitInt128);
+  constexpr vector8double from_vector8long_to_vector8double_var =
+      __builtin_convertvector((vector8long){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8long_to_vector8float_var =
+      __builtin_convertvector((vector8long){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8float);
+  constexpr vector8long from_vector8long_to_vector8long_var =
+      __builtin_convertvector((vector8long){0, 1, 2, 3, 4, 5, 6, 7}, vector8long);
+  constexpr vector8int from_vector8long_to_vector8int_var =
+      __builtin_convertvector((vector8long){0, 1, 2, 3, 4, 5, 6, 7}, vector8int);
+  constexpr vector8short from_vector8long_to_vector8short_var =
+      __builtin_convertvector((vector8long){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8short);
+  constexpr vector8char from_vector8long_to_vector8char_var =
+      __builtin_convertvector((vector8long){0, 1, 2, 3, 4, 5, 6, 7}, vector8char);
+  constexpr vector8double from_vector8int_to_vector8double_var =
+      __builtin_convertvector((vector8int){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8int_to_vector8float_var =
+      __builtin_convertvector((vector8int){0, 1, 2, 3, 4, 5, 6, 7}, vector8float);
+  constexpr vector8long from_vector8int_to_vector8long_var =
+      __builtin_convertvector((vector8int){0, 1, 2, 3, 4, 5, 6, 7}, vector8long);
+  constexpr vector8int from_vector8int_to_vector8int_var =
+      __builtin_convertvector((vector8int){0, 1, 2, 3, 4, 5, 6, 7}, vector8int);
+  constexpr vector8short from_vector8int_to_vector8short_var =
+      __builtin_convertvector((vector8int){0, 1, 2, 3, 4, 5, 6, 7}, vector8short);
+  constexpr vector8char from_vector8int_to_vector8char_var =
+      __builtin_convertvector((vector8int){0, 1, 2, 3, 4, 5, 6, 7}, vector8char);
+  constexpr vector8double from_vector8short_to_vector8double_var =
+      __builtin_convertvector((vector8short){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8short_to_vector8float_var =
+      __builtin_convertvector((vector8short){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8float);
+  constexpr vector8long from_vector8short_to_vector8long_var =
+      __builtin_convertvector((vector8short){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8long);
+  constexpr vector8int from_vector8short_to_vector8int_var =
+      __builtin_convertvector((vector8short){0, 1, 2, 3, 4, 5, 6, 7}, vector8int);
+  constexpr vector8short from_vector8short_to_vector8short_var =
+      __builtin_convertvector((vector8short){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8short);
+  constexpr vector8char from_vector8short_to_vector8char_var =
+      __builtin_convertvector((vector8short){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8char);
+
+  constexpr vector8double from_vector8char_to_vector8double_var =
+      __builtin_convertvector((vector8char){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8char_to_vector8float_var =
+      __builtin_convertvector((vector8char){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8float);
+  constexpr vector8long from_vector8char_to_vector8long_var =
+      __builtin_convertvector((vector8char){0, 1, 2, 3, 4, 5, 6, 7}, vector8long);
+  constexpr vector8int from_vector8char_to_vector8int_var =
+      __builtin_convertvector((vector8char){0, 1, 2, 3, 4, 5, 6, 7}, vector8int);
+  constexpr vector8short from_vector8char_to_vector8short_var =
+      __builtin_convertvector((vector8char){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8short);
+  constexpr vector8char from_vector8char_to_vector8char_var =
+      __builtin_convertvector((vector8char){0, 1, 2, 3, 4, 5, 6, 7}, vector8char);
+  constexpr vector8double from_vector8BitInt128_to_vector8double_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8double);
+  constexpr vector8float from_vector8BitInt128_to_vector8float_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8float);
+  constexpr vector8long from_vector8BitInt128_to_vector8long_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8long);
+  constexpr vector8int from_vector8BitInt128_to_vector8int_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8int);
+  constexpr vector8short from_vector8BitInt128_to_vector8short_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8short);
+  constexpr vector8char from_vector8BitInt128_to_vector8char_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8char);
+  constexpr vector8BitInt128 from_vector8BitInt128_to_vector8BitInt128_var =
+      __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
+                              vector8BitInt128);
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[0] == 0, ""); // ref-error {{not an integral constant expression}}
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[1] == 1, ""); // ref-error {{not an integral constant expression}}
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[2] == 2, ""); // ref-error {{not an integral constant expression}}
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[3] == 3, ""); // ref-error {{not an integral constant expression}}
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[4] == 4, ""); // ref-error {{not an integral constant expression}}
+}
+#endif
