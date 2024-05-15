@@ -126,6 +126,6 @@ ConstructQueue buildConstructQueue(
 
 bool isLastItemInQueue(ConstructQueue::iterator item,
                        const ConstructQueue &queue) {
-  return std::prev(queue.end()) == item;
+  return std::next(item) == queue.end();
 }
 } // namespace Fortran::lower::omp
