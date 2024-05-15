@@ -2682,10 +2682,48 @@ bool Fortran::lower::isIntrinsicModuleProcRef(
   return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
 }
 
+static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
+  // The MASK of the outer WHERE is not masked itself.
+  mlir::Operation *op = builder.getRegion().getParentOp();
+  return op && op->getParentOfType<hlfir::WhereOp>();
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  auto &builder = converter.getFirOpBuilder();
+  if (resultType && !procRef.IsElemental() &&
+      isInWhereMaskedExpression(builder) &&
+      !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
+    // Non elemental calls inside a where-assignment-stmt must be executed
+    // exactly once without mask control. Lower them in a special region so that
+    // this can be enforced whenscheduling forall/where expression evaluations.
+    Fortran::lower::StatementContext localStmtCtx;
+    mlir::Type bogusType = builder.getIndexType();
+    auto exactlyOnce = builder.create<hlfir::ExactlyOnceOp>(loc, bogusType);
+    mlir::Block *block = builder.createBlock(&exactlyOnce.getBody());
+    builder.setInsertionPointToStart(block);
+    CallContext callContext(procRef, resultType, loc, converter, symMap,
+                            localStmtCtx);
+    std::optional<hlfir::EntityWithAttributes> res =
+        genProcedureRef(callContext);
+    assert(res.has_value() && "must be a function");
+    auto yield = builder.create<hlfir::YieldOp>(loc, *res);
+    Fortran::lower::genCleanUpInRegionIfAny(loc, builder, yield.getCleanup(),
+                                            localStmtCtx);
+    builder.setInsertionPointAfter(exactlyOnce);
+    exactlyOnce->getResult(0).setType(res->getType());
+    if (hlfir::isFortranValue(exactlyOnce.getResult()))
+      return hlfir::EntityWithAttributes{exactlyOnce.getResult()};
+    // Create hlfir.declare for the result to satisfy
+    // hlfir::EntityWithAttributes requirements.
+    auto [exv, cleanup] = hlfir::translateToExtendedValue(
+        loc, builder, hlfir::Entity{exactlyOnce});
+    assert(!cleanup && "resut is a variable");
+    return hlfir::genDeclare(loc, builder, exv, ".func.pointer.result",
+                             fir::FortranVariableFlagsAttr{});
+  }
   CallContext callContext(procRef, resultType, loc, converter, symMap, stmtCtx);
   return genProcedureRef(callContext);
 }

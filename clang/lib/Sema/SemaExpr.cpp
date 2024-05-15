@@ -13955,8 +13955,8 @@ static QualType CheckCommaOperands(Sema &S, ExprResult &LHS, ExprResult &RHS,
 static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
                                                ExprValueKind &VK,
                                                ExprObjectKind &OK,
-                                               SourceLocation OpLoc,
-                                               bool IsInc, bool IsPrefix) {
+                                               SourceLocation OpLoc, bool IsInc,
+                                               bool IsPrefix) {
   if (Op->isTypeDependent())
     return S.Context.DependentTy;
 
@@ -14040,7 +14040,6 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     return ResType.getUnqualifiedType();
   }
 }
-
 
 /// getPrimaryDecl - Helper function for CheckAddressOfOperand().
 /// This routine allows us to typecheck complex/recursive expressions
@@ -15472,12 +15471,10 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   case UO_PreDec:
   case UO_PostInc:
   case UO_PostDec:
-    resultType = CheckIncrementDecrementOperand(*this, Input.get(), VK, OK,
-                                                OpLoc,
-                                                Opc == UO_PreInc ||
-                                                Opc == UO_PostInc,
-                                                Opc == UO_PreInc ||
-                                                Opc == UO_PreDec);
+    resultType =
+        CheckIncrementDecrementOperand(*this, Input.get(), VK, OK, OpLoc,
+                                       Opc == UO_PreInc || Opc == UO_PostInc,
+                                       Opc == UO_PreInc || Opc == UO_PreDec);
     CanOverflow = isOverflowingIntegerType(Context, resultType);
     break;
   case UO_AddrOf:
@@ -15487,7 +15484,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     break;
   case UO_Deref: {
     Input = DefaultFunctionArrayLvalueConversion(Input.get());
-    if (Input.isInvalid()) return ExprError();
+    if (Input.isInvalid())
+      return ExprError();
     resultType =
         CheckIndirectionOperand(*this, Input.get(), VK, OpLoc, IsAfterAmp);
     break;
@@ -15497,7 +15495,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     CanOverflow = Opc == UO_Minus &&
                   isOverflowingIntegerType(Context, Input.get()->getType());
     Input = UsualUnaryConversions(Input.get());
-    if (Input.isInvalid()) return ExprError();
+    if (Input.isInvalid())
+      return ExprError();
     // Unary plus and minus require promoting an operand of half vector to a
     // float vector and truncating the result back to a half vector. For now, we
     // do this only when HalfArgsAndReturns is set (that is, when the target is
@@ -15521,12 +15520,11 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
       break;
     else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
-             Opc == UO_Plus &&
-             resultType->isPointerType())
+             Opc == UO_Plus && resultType->isPointerType())
       break;
 
     return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-      << resultType << Input.get()->getSourceRange());
+                     << resultType << Input.get()->getSourceRange());
 
   case UO_Not: // bitwise complement
     Input = UsualUnaryConversions(Input.get());
@@ -15548,7 +15546,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       QualType T = resultType->castAs<ExtVectorType>()->getElementType();
       if (!T->isIntegerType())
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-                          << resultType << Input.get()->getSourceRange());
+                         << resultType << Input.get()->getSourceRange());
     } else {
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                        << resultType << Input.get()->getSourceRange());
@@ -15558,12 +15556,14 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   case UO_LNot: // logical negation
     // Unlike +/-/~, integer promotions aren't done here (C99 6.5.3.3p5).
     Input = DefaultFunctionArrayLvalueConversion(Input.get());
-    if (Input.isInvalid()) return ExprError();
+    if (Input.isInvalid())
+      return ExprError();
     resultType = Input.get()->getType();
 
     // Though we still have to promote half FP to float...
     if (resultType->isHalfType() && !Context.getLangOpts().NativeHalfType) {
-      Input = ImpCastExprToType(Input.get(), Context.FloatTy, CK_FloatingCast).get();
+      Input = ImpCastExprToType(Input.get(), Context.FloatTy, CK_FloatingCast)
+                  .get();
       resultType = Context.FloatTy;
     }
 
@@ -15615,7 +15615,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       break;
     } else {
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-        << resultType << Input.get()->getSourceRange());
+                       << resultType << Input.get()->getSourceRange());
     }
 
     // LNot always has type int. C99 6.5.3.3p5.
@@ -15627,7 +15627,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     resultType = CheckRealImagOperand(*this, Input, OpLoc, Opc == UO_Real);
     // _Real maps ordinary l-values into ordinary l-values. _Imag maps ordinary
     // complex l-values to ordinary l-values and all other values to r-values.
-    if (Input.isInvalid()) return ExprError();
+    if (Input.isInvalid())
+      return ExprError();
     if (Opc == UO_Real || Input.get()->getType()->isAnyComplexType()) {
       if (Input.get()->isGLValue() &&
           Input.get()->getObjectKind() == OK_Ordinary)
@@ -15646,8 +15647,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     // It's unnecessary to represent the pass-through operator co_await in the
     // AST; just return the input expression instead.
     assert(!Input.get()->getType()->isDependentType() &&
-                   "the co_await expression must be non-dependant before "
-                   "building operator co_await");
+           "the co_await expression must be non-dependant before "
+           "building operator co_await");
     return Input;
   }
   if (resultType.isNull() || Input.isInvalid())
