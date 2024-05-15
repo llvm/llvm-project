@@ -18,9 +18,7 @@ int main() {
   int *ptr2;
   ptr2 = (int *)malloc(sizeof(int) * 100);
 #pragma omp target map(ptr1, ptr1[ : 100])
-  {
-    ptr1[1] = 6;
-  }
+  { ptr1[1] = 6; }
   // CHECK: 6
   printf(" %d \n", ptr1[1]);
 #pragma omp target data map(ptr1[ : 5])
@@ -36,9 +34,7 @@ int main() {
   printf(" %d %d %d \n", ptr2[2], ptr1[2], ptr1[3]);
   free(ptr1);
 #pragma omp target map(ptr2, ptr2[ : 100])
-  {
-    ptr2[1] = 6;
-  }
+  { ptr2[1] = 6; }
   // CHECK: 6
   printf(" %d \n", ptr2[1]);
   free(ptr2);
