@@ -191,7 +191,7 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     else
       OS << Offset << ", ";
 
-    if (isBlockPointer() && PointeeStorage.BS.Pointee)
+    if (PointeeStorage.BS.Pointee)
       OS << PointeeStorage.BS.Pointee->getSize();
     else
       OS << "nullptr";
