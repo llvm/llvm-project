@@ -33,7 +33,11 @@ static bool isDummyArgument(mlir::Value v) {
   if (!blockArg)
     return false;
 
-  return blockArg.getOwner()->isEntryBlock();
+  mlir::Block *owner = blockArg.getOwner();
+  if (!owner->isEntryBlock() ||
+      !mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp()))
+    return false;
+  return true;
 }
 
 /// Temporary function to skip through all the no op operations
