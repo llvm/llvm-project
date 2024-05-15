@@ -176,17 +176,17 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
 /// `checkSameValueRAW()` -- which calls this function.
 static bool couldBeSameValueWithMasking(vector::TransferWriteOp defWrite,
                                         vector::TransferReadOp read) {
-  if (!defWrite.getMask() && !read.getMask()) {
+  auto readMask = read.getMask();
+  auto writeMask = defWrite.getMask();
+  if (!writeMask && !readMask) {
     // Success: No masks (values could be the same).
     return true;
   }
   // Check for constant splats. These will be the same value if the read is
   // masked (and padded with the splat value), and the write is unmasked or has
   // the same mask.
-  bool couldBeSameSplatValue =
-      read.getMask() &&
-      (!defWrite.getMask() || defWrite.getMask() == read.getMask());
-  if (!couldBeSameSplatValue)
+  bool couldBeSameSplat = readMask && (!writeMask || writeMask == readMask);
+  if (!couldBeSameSplat)
     return false;
   DenseElementsAttr splatAttr;
   if (!matchPattern(defWrite.getVector(),
