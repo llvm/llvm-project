@@ -670,7 +670,7 @@ static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
   // See table in FormatProviders.h.
 
   auto type_info = valobj.GetTypeInfo();
-  if (type_info & eTypeIsInteger && LLVMFormatPattern.match(options)) {
+  if ((type_info & eTypeIsInteger) && LLVMFormatPattern.match(options)) {
     if (type_info & eTypeIsSigned) {
       bool success = false;
       int64_t integer = valobj.GetValueAsSigned(0, &success);
