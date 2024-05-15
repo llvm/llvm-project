@@ -14,62 +14,36 @@
 
 extern "C" {
 
-/**
-    Initialise radsan interceptors. A call to this method is added to the
-    preinit array on Linux systems.
+/**  Initialise radsan interceptors. 
 
-    @warning Do not call this method as a user.
+  A call to this method is added to the preinit array on Linux systems.
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_init();
 
 /** Enter real-time context.
 
-    When in a real-time context, RADSan interceptors will error if realtime
-    violations are detected. Calls to this method are injected at the code
-    generation stage when RADSan is enabled.
-
-    @warning Do not call this method as a user
+  When in a real-time context, RADSan interceptors will error if realtime
+  violations are detected. Calls to this method are injected at the code
+  generation stage when RADSan is enabled.
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_enter();
 
 /** Exit the real-time context.
 
-    When not in a real-time context, RADSan interceptors will simply forward
-    intercepted method calls to the real methods.
-
-    @warning Do not call this method as a user
+  When not in a real-time context, RADSan interceptors will simply forward
+  intercepted method calls to the real methods.
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_exit();
 
 /** Disable all RADSan error reporting.
 
-    This method might be useful to you if RADSan is presenting you with an error
-    for some code you are confident is realtime safe. For example, you might
-    know that a mutex is never contested, and that locking it will never block
-    on your particular system. Be careful!
-
-    A call to `radsan_off()` MUST be paired with a corresponding `radsan_on()`
-    to reactivate interception after the code in question. If you don't, radsan
-    will cease to work.
-
-    Example:
-
-        float process (float x) [[clang::nonblocking]] 
-        {
-            auto const y = 2.0f * x;
-
-            radsan_off();
-            i_know_this_method_is_realtime_safe_but_radsan_complains_about_it();
-            radsan_on();
-        }
-
+  Injected into the code if "nosanitize(realtime)" is on a function.
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_off();
 
 /** Re-enable all RADSan error reporting.
 
-    The counterpart to `radsan_off`. See the description for `radsan_off` for
-    details about how to use this method.
+  The counterpart to `radsan_off`. 
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_on();
 
