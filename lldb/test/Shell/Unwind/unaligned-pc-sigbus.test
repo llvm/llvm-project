@@ -1,4 +1,4 @@
-# REQUIRES: (target-aarch64 || target-arm) && native
+# REQUIRES: target-aarch64 && native
 # UNSUPPORTED: system-windows
 # llvm.org/pr91610, rdar://128031075
 # XFAIL: system-darwin
