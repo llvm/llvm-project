@@ -64,7 +64,6 @@ find_unique(Container &&container, Predicate &&pred) {
     return first;
   return container.end();
 }
-
 } // namespace detail
 
 namespace tomp {
@@ -108,7 +107,7 @@ struct ConstructDecompositionT {
     // with the input clauses, and the internal representation uses
     // clause addresses.
     for (auto &leaf : leafs) {
-      output.push_back({leaf.id});
+      output.push_back({leaf.id, {}});
       auto &out = output.back();
       for (const ClauseTy *c : leaf.clauses)
         out.clauses.push_back(*c);
@@ -139,7 +138,7 @@ private:
 
   template <typename S>
   ClauseTy *makeClause(llvm::omp::Clause clauseId, S &&specific) {
-    implicit.push_back(ClauseTy{clauseId, std::move(specific)});
+    implicit.push_back(typename ClauseTy::BaseT{clauseId, std::move(specific)});
     return &implicit.back();
   }
 

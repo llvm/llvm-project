@@ -18,7 +18,8 @@
 using namespace clang;
 
 bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
-  return OpenACCClauseWithCondition::classof(C) ||
+  return OpenACCDeviceTypeClause::classof(C) ||
+         OpenACCClauseWithCondition::classof(C) ||
          OpenACCClauseWithExprs::classof(C);
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
@@ -298,6 +299,17 @@ OpenACCCreateClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                                        VarList, EndLoc);
 }
 
+OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
+    const ASTContext &C, OpenACCClauseKind K, SourceLocation BeginLoc,
+    SourceLocation LParenLoc, ArrayRef<DeviceTypeArgument> Archs,
+    SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCDeviceTypeClause::totalSizeToAlloc<DeviceTypeArgument>(
+          Archs.size()));
+  return new (Mem)
+      OpenACCDeviceTypeClause(K, BeginLoc, LParenLoc, Archs, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -450,4 +462,18 @@ void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
                           [&](const Expr *E) { printExpr(E); });
     OS << ")";
   }
+}
+
+void OpenACCClausePrinter::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {
+  OS << C.getClauseKind();
+  OS << "(";
+  llvm::interleaveComma(C.getArchitectures(), OS,
+                        [&](const DeviceTypeArgument &Arch) {
+                          if (Arch.first == nullptr)
+                            OS << "*";
+                          else
+                            OS << Arch.first->getName();
+                        });
+  OS << ")";
 }

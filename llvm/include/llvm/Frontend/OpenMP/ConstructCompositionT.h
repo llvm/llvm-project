@@ -55,7 +55,7 @@ private:
 
   template <typename S>
   ClauseTy makeClause(llvm::omp::Clause clauseId, S &&specific) {
-    return ClauseTy{clauseId, std::move(specific)};
+    return typename ClauseTy::BaseT{clauseId, std::move(specific)};
   }
 
   llvm::omp::Directive
@@ -297,7 +297,7 @@ template <typename C> void ConstructCompositionT<C>::mergeDSA() {
   };
 
   // Use ordered containers to avoid non-deterministic output.
-  llvm::SmallVector<std::pair<ObjectTy, int>> objectDsa;
+  llvm::SmallVector<std::pair<ObjectTy, int>, 8> objectDsa;
 
   auto getDsa = [&](const ObjectTy &object) -> std::pair<ObjectTy, int> & {
     auto found = llvm::find_if(objectDsa, [&](std::pair<ObjectTy, int> &p) {

@@ -250,6 +250,8 @@ using ClauseBase = tomp::ClauseT<TypeTy, IdTy, ExprTy,
                                  MemoryOrder, Threadprivate>;
 
 struct Clause : public ClauseBase {
+  Clause(ClauseBase &&base, const parser::CharBlock source = {})
+      : ClauseBase(std::move(base)), source(source) {}
   // "source" will be ignored by tomp::type::operator==.
   parser::CharBlock source;
 };
@@ -257,7 +259,7 @@ struct Clause : public ClauseBase {
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
                   parser::CharBlock source = {}) {
-  return Clause{{id, specific}, source};
+  return Clause(typename Clause::BaseT{id, specific}, source);
 }
 
 Clause makeClause(const Fortran::parser::OmpClause &cls,

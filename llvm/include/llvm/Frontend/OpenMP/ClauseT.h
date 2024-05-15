@@ -1281,12 +1281,18 @@ using type::operator==;
 //
 // The member Clause::u will be a variant containing all specific clauses
 // defined above, plus MyClause1 and MyClause2.
+//
+// Note: Any derived class must be constructible from the base class
+// ClauseT<...>.
 template <typename TypeType, typename IdType, typename ExprType,
           typename... Extras>
 struct ClauseT {
   using TypeTy = TypeType;
   using IdTy = IdType;
   using ExprTy = ExprType;
+
+  // Type of "self" to specify this type given a derived class type.
+  using BaseT = ClauseT<TypeType, IdType, ExprType, Extras...>;
 
   using VariantTy = typename type::Union<
       clause::UnionOfAllClausesT<TypeType, IdType, ExprType>,
