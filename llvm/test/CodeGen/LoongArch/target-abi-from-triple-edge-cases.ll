@@ -32,6 +32,23 @@
 ; 32ON64: 32-bit ABIs are not supported for 64-bit targets, ignoring target-abi and using triple-implied ABI
 ; 64ON32: 64-bit ABIs are not supported for 32-bit targets, ignoring target-abi and using triple-implied ABI
 
+;; Check that target-abi is invalid but triple-implied ABI is valid, use triple-implied ABI
+; RUN: llc --mtriple=loongarch64-linux-gnusf --target-abi=lp64f --mattr=-f < %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64S-LP64F-NOF
+; RUN: llc --mtriple=loongarch64-linux-gnusf --target-abi=lp64d --mattr=-d < %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64S-LP64D-NOD
+
+; LP64S-LP64F-NOF: 'lp64f' ABI can't be used for a target that doesn't support the 'F' instruction set, ignoring target-abi and using triple-implied ABI
+; LP64S-LP64D-NOD: 'lp64d' ABI can't be used for a target that doesn't support the 'D' instruction set, ignoring target-abi and using triple-implied ABI
+
+;; Check that both target-abi and triple-implied ABI are invalid, use feature-implied ABI
+; RUN: llc --mtriple=loongarch64-linux-gnuf64 --target-abi=lp64f --mattr=-f < %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64D-LP64F-NOF
+; RUN: llc --mtriple=loongarch64 --target-abi=lp64f --mattr=-f < %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64D-LP64F-NOF
+
+; LP64D-LP64F-NOF: The target-abi and triple-implied ABI are invalid, ignoring them and using feature-implied ABI
+
 define float @f(float %a) {
 ; ILP32D-LABEL: f:
 ; ILP32D:       # %bb.0:
@@ -48,6 +65,9 @@ define float @f(float %a) {
 ; LP64D-NEXT:    ffint.s.w $fa1, $fa1
 ; LP64D-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; LP64D-NEXT:    ret
+;
+; LP64S-LABEL: f:
+; LP64S:         bl %plt(__addsf3)
   %1 = fadd float %a, 1.0
   ret float %1
 }
@@ -69,6 +89,9 @@ define double @g(double %a) {
 ; LP64D-NEXT:    ffint.d.l $fa1, $fa1
 ; LP64D-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LP64D-NEXT:    ret
+;
+; LP64S-LABEL: g:
+; LP64S:         bl %plt(__adddf3)
   %1 = fadd double %a, 1.0
   ret double %1
 }
