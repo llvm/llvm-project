@@ -497,8 +497,7 @@ public:
       : HasError(true)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
-        ,
-        Unchecked(true)
+        , Unchecked(true)
 #endif
   {
     assert(Err && "Cannot create Expected<T> from Error success value.");
