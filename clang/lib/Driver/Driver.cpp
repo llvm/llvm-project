@@ -4486,7 +4486,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
 
     // Add or remove the seen architectures in order of appearance. If an
     // invalid architecture is given we simply exit.
-    if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
+    if (Arg->getOption().matches(options::OPT_offload_arch_EQ)||
+        Arg->getOption().matches(options::OPT_march_EQ)) {
       for (StringRef Arch : llvm::split(Arg->getValue(), ",")) {
         if (Arch == "native" || Arch.empty()) {
           auto GPUsOrErr = TC->getSystemGPUArchs(Args);
