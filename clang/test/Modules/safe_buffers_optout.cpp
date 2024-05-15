@@ -6,12 +6,8 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodule-file=%t/safe_buffers_test_optout.pcm -I %S/Inputs/SafeBuffers %s\
 // RUN:     -std=c++20 -Wunsafe-buffer-usage
 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodules-cache-path=%t -fmodule-name=safe_buffers_test_base -x c++\
-// RUN:     %S/Inputs/SafeBuffers/safe_buffers_test.modulemap -std=c++20 -Wunsafe-buffer-usage
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodules-cache-path=%t -fmodule-name=safe_buffers_test_optout -x c++\
-// RUN:     %S/Inputs/SafeBuffers/safe_buffers_test.modulemap -std=c++20 -Wunsafe-buffer-usage
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs/SafeBuffers %s -x c++\
-// RUN:     -std=c++20 -Wunsafe-buffer-usage
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -fmodule-map-file=%S/Inputs/SafeBuffers/safe_buffers_test.modulemap -I %S/Inputs/SafeBuffers %s\
+// RUN:     -x c++ -std=c++20 -Wunsafe-buffer-usage
 
 #include "test_sub1.h"
 #include "test_sub2.h"
