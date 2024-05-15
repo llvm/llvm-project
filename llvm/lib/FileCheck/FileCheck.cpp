@@ -2468,6 +2468,9 @@ FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
 
 static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
                              ArrayRef<StringRef> SuppliedPrefixes) {
+  static const char *Suffixes[] = {"-NEXT",  "-SAME", "-EMPTY", "-NOT",
+                                   "-COUNT", "-DAG",  "-LABEL"};
+
   for (StringRef Prefix : SuppliedPrefixes) {
     if (Prefix.empty()) {
       errs() << "error: supplied " << Kind << " prefix must not be the empty "
@@ -2486,6 +2489,14 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
       errs() << "error: supplied " << Kind << " prefix must be unique among "
              << "check and comment prefixes: '" << Prefix << "'\n";
       return false;
+    }
+    for (StringRef Directive : Suffixes) {
+      if (Prefix.ends_with(Directive)) {
+        errs() << "error: supplied " << Kind << " prefix must not end with "
+               << "directive: '" << Directive << "', prefix: '" << Prefix
+               << "'\n";
+        return false;
+      }
     }
   }
   return true;
