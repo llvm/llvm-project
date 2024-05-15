@@ -287,7 +287,7 @@ define <4 x i32> @bit_ceil_v4i32(<4 x i32> %x) {
 define i32 @pr91691(i32 %0) {
 ; CHECK-LABEL: @pr91691(
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 -2, [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP2]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[TMP2]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw i32 0, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 31
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i32 1, [[TMP5]]
@@ -305,7 +305,7 @@ define i32 @pr91691(i32 %0) {
 define i32 @pr91691_keep_nsw(i32 %0) {
 ; CHECK-LABEL: @pr91691_keep_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 -2, [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP2]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[TMP2]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw i32 0, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 31
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i32 1, [[TMP5]]
