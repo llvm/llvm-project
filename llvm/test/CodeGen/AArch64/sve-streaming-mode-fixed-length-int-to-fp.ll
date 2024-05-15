@@ -177,18 +177,19 @@ define void @ucvtf_v8i16_v8f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z2.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z3.d, z0.s
+; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #8
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    ucvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    ucvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    ucvtf z1.d, p0/m, z1.d
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-NEXT:    stp q2, q1, [x1]
-; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    ucvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    stp q1, q3, [x1]
+; CHECK-NEXT:    stp q2, q0, [x1, #32]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x double>
@@ -750,18 +751,19 @@ define void @scvtf_v8i16_v8f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z2.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z3.d, z0.s
+; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    sunpklo z2.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z1.b, #8
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    scvtf z2.d, p0/m, z2.d
 ; CHECK-NEXT:    scvtf z1.d, p0/m, z1.d
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
-; CHECK-NEXT:    stp q2, q1, [x1]
-; CHECK-NEXT:    stp q3, q0, [x1, #32]
+; CHECK-NEXT:    scvtf z3.d, p0/m, z3.d
+; CHECK-NEXT:    stp q1, q3, [x1]
+; CHECK-NEXT:    stp q2, q0, [x1, #32]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x double>
