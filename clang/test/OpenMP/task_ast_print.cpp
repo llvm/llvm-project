@@ -218,7 +218,12 @@ implicit_firstprivate() {
     int i = 0;
     // DUMP: OMPTaskDirective 
     // DUMP-NEXT: OMPFirstprivateClause
-    // DUMP-NEXT: DeclRefExpr {{.+}} 'i' 'int' refers_to_enclosing_variable_or_capture
+    // DUMP-NOT: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated
+    // DUMP: DeclRefExpr {{.+}} 'i' 'int' refers_to_enclosing_variable_or_capture
+    // DUMP: CapturedStmt
+    // DUMP: BinaryOperator {{.+}} 'int' lvalue '='
+    // DUMP-NEXT: DeclRefExpr {{.+}} 'j' 'int'
+    // DUMP: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated
     #pragma omp task
     {
 	int j = sizeof(i);
