@@ -132,11 +132,11 @@ static std::string ModFileName(const SourceName &name,
 
 // Write the module file for symbol, which must be a module or submodule.
 void ModFileWriter::Write(const Symbol &symbol) {
-  auto &module{symbol.get<ModuleDetails>()};
+  const auto &module{symbol.get<ModuleDetails>()};
   if (module.moduleFileHash()) {
     return; // already written
   }
-  auto *ancestor{module.ancestor()};
+  const auto *ancestor{module.ancestor()};
   isSubmodule_ = ancestor != nullptr;
   auto ancestorName{ancestor ? ancestor->GetName().value().ToString() : ""s};
   auto path{context_.moduleDirectory() + '/' +
@@ -149,6 +149,21 @@ void ModFileWriter::Write(const Symbol &symbol) {
         symbol.name(), "Error writing %s: %s"_err_en_US, path, error.message());
   }
   const_cast<ModuleDetails &>(module).set_moduleFileHash(checkSum);
+}
+
+void ModFileWriter::WriteClosure(llvm::raw_ostream &out, const Symbol &symbol,
+    UnorderedSymbolSet &nonIntrinsicModulesWritten) {
+  if (!symbol.has<ModuleDetails>() || symbol.owner().IsIntrinsicModules() ||
+      !nonIntrinsicModulesWritten.insert(symbol).second) {
+    return;
+  }
+  PutSymbols(DEREF(symbol.scope()));
+  needsBuf_.clear(); // omit module checksums
+  auto str{GetAsString(symbol)};
+  for (auto depRef : std::move(usedNonIntrinsicModules_)) {
+    WriteClosure(out, *depRef, nonIntrinsicModulesWritten);
+  }
+  out << std::move(str);
 }
 
 // Return the entire body of the module file
@@ -710,6 +725,7 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
     uses_ << "use,intrinsic::";
   } else {
     uses_ << "use ";
+    usedNonIntrinsicModules_.insert(module);
   }
   uses_ << module.name() << ",only:";
   PutGenericName(uses_, symbol);
