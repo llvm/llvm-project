@@ -493,7 +493,7 @@ private:
 
 public:
   /// Create an Expected<T> error value from the given Error.
-  Expected(Error Err)
+  Expected(Error &&Err)
       : HasError(true)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
