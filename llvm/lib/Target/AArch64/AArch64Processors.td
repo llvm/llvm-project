@@ -829,10 +829,9 @@ class AArch64Processor<
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
 // optimizations.
-def : AArch64Processor<"generic", HasV9_0aOps, CortexA510Model, ProcessorFeatures.Generic,
+def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
-                      FeatureEnableSelectOptimize],
-                     [/*FIXME what are the default features for generic?*/]>;
+                      FeatureEnableSelectOptimize]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
