@@ -9,13 +9,6 @@
 # Build a plugin for a CUDA machine if available.
 #
 ##===----------------------------------------------------------------------===##
-set(LIBOMPTARGET_BUILD_CUDA_PLUGIN TRUE CACHE BOOL
-  "Whether to build CUDA plugin")
-if (NOT LIBOMPTARGET_BUILD_CUDA_PLUGIN)
-  libomptarget_say("Not building CUDA NextGen offloading plugin: LIBOMPTARGET_BUILD_CUDA_PLUGIN is false")
-  return()
-endif()
-
 if (NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building CUDA NextGen offloading plugin: only support CUDA in Linux x86_64, ppc64le, or aarch64 hosts.")
   return()
@@ -51,8 +44,3 @@ else()
   libomptarget_say("Not generating NVIDIA tests, no supported devices detected."
                    " Use 'LIBOMPTARGET_FORCE_NVIDIA_TESTS' to override.")
 endif()
-
-# Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.cuda PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")

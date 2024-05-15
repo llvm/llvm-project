@@ -15,6 +15,8 @@
 # PREAGG: B X:0 #chain.cold.0# 1 0
 # RUN: perf2bolt %t.bolt -p %t.preagg --pa -o %t.bat.fdata -w %t.bat.yaml -v=1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-REGISTER
+# RUN: FileCheck --input-file %t.bat.fdata --check-prefix=CHECK-FDATA %s
+# RUN: FileCheck --input-file %t.bat.yaml --check-prefix=CHECK-YAML %s
 
 # CHECK-SYMS: l df *ABS*          [[#]] chain.s
 # CHECK-SYMS: l  F .bolt.org.text [[#]] chain
@@ -23,6 +25,9 @@
 # CHECK-SYMS: l df *ABS*          [[#]] bolt-pseudo.o
 
 # CHECK-REGISTER: BOLT-INFO: marking chain.cold.0/1(*2) as a fragment of chain/2(*2)
+
+# CHECK-FDATA: 0 [unknown] 0 1 chain/chain.s/2 10 0 1
+# CHECK-YAML: - name: 'chain/chain.s/2'
 
 .file "chain.s"
         .text

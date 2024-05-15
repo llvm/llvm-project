@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -773,9 +774,19 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
+  bool IsReturn = false;
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
+      if (IsFrom) {
+        auto checkReturn = [&](auto MaybeInst) {
+          IsReturn = MaybeInst && BC->MIB->isReturn(*MaybeInst);
+        };
+        if (Func->hasInstructions())
+          checkReturn(Func->getInstructionAtOffset(Addr));
+        else
+          checkReturn(Func->disassembleInstructionAtOffset(Addr));
+      }
 
       if (BAT)
         Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
@@ -792,6 +803,9 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  // Ignore returns.
+  if (IsReturn)
+    return true;
   BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
@@ -1986,7 +2000,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
     if (FileMMapInfo.second.PID == -1)
       continue;
-    if (FileMMapInfo.first.equals("(deleted)"))
+    if (FileMMapInfo.first == "(deleted)")
       continue;
 
     // Consider only the first mapping of the file for any given PID
@@ -2326,7 +2340,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
-      YamlBF.Name = FuncName.str();
+      YamlBF.Name = getLocationName(*BF);
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
@@ -2341,54 +2355,48 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
         YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
 
-      auto getSuccessorInfo = [&](uint32_t SuccOffset, unsigned SuccDataIdx) {
-        const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
-        yaml::bolt::SuccessorInfo SI;
-        SI.Index = BlockMap.getBBIndex(SuccOffset);
-        SI.Count = BI.Branches;
-        SI.Mispreds = BI.Mispreds;
-        return SI;
-      };
-
-      auto getCallSiteInfo = [&](Location CallToLoc, unsigned CallToIdx,
-                                 uint32_t Offset) {
-        const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
-        yaml::bolt::CallSiteInfo CSI;
-        CSI.DestId = 0; // designated for unknown functions
-        CSI.EntryDiscriminator = 0;
-        CSI.Count = BI.Branches;
-        CSI.Mispreds = BI.Mispreds;
-        CSI.Offset = Offset;
-        if (BinaryData *BD = BC.getBinaryDataByName(CallToLoc.Name))
-          YAMLProfileWriter::setCSIDestination(BC, CSI, BD->getSymbol(), BAT,
-                                               CallToLoc.Offset);
-        return CSI;
-      };
-
-      for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
-        if (!BlockMap.isInputBlock(FromOffset))
-          continue;
-        const unsigned Index = BlockMap.getBBIndex(FromOffset);
-        yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[Index];
-        for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
-          if (BlockMap.isInputBlock(SuccOffset))
-            YamlBB.Successors.emplace_back(
-                getSuccessorInfo(SuccOffset, SuccDataIdx));
-      }
-      for (const auto &[FromOffset, CallTo] : Branches.InterIndex) {
-        auto BlockIt = BlockMap.upper_bound(FromOffset);
+      // Lookup containing basic block offset and index
+      auto getBlock = [&BlockMap](uint32_t Offset) {
+        auto BlockIt = BlockMap.upper_bound(Offset);
+        if (LLVM_UNLIKELY(BlockIt == BlockMap.begin())) {
+          errs() << "BOLT-ERROR: invalid BAT section\n";
+          exit(1);
+        }
         --BlockIt;
-        const unsigned BlockOffset = BlockIt->first;
-        const unsigned BlockIndex = BlockIt->second.getBBIndex();
-        yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
-        const uint32_t Offset = FromOffset - BlockOffset;
-        for (const auto &[CallToLoc, CallToIdx] : CallTo)
-          YamlBB.CallSites.emplace_back(
-              getCallSiteInfo(CallToLoc, CallToIdx, Offset));
-        llvm::sort(YamlBB.CallSites, [](yaml::bolt::CallSiteInfo &A,
-                                        yaml::bolt::CallSiteInfo &B) {
-          return A.Offset < B.Offset;
-        });
+        return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
+      };
+
+      for (const llvm::bolt::BranchInfo &BI : Branches.Data) {
+        using namespace yaml::bolt;
+        const auto &[BlockOffset, BlockIndex] = getBlock(BI.From.Offset);
+        BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
+        if (BI.To.IsSymbol && BI.To.Name == BI.From.Name && BI.To.Offset != 0) {
+          // Internal branch
+          const unsigned SuccIndex = getBlock(BI.To.Offset).second;
+          auto &SI = YamlBB.Successors.emplace_back(SuccessorInfo{SuccIndex});
+          SI.Count = BI.Branches;
+          SI.Mispreds = BI.Mispreds;
+        } else {
+          // Call
+          const uint32_t Offset = BI.From.Offset - BlockOffset;
+          auto &CSI = YamlBB.CallSites.emplace_back(CallSiteInfo{Offset});
+          CSI.Count = BI.Branches;
+          CSI.Mispreds = BI.Mispreds;
+          if (const BinaryData *BD = BC.getBinaryDataByName(BI.To.Name))
+            YAMLProfileWriter::setCSIDestination(BC, CSI, BD->getSymbol(), BAT,
+                                                 BI.To.Offset);
+        }
+      }
+      // Set entry counts, similar to DataReader::readProfile.
+      for (const llvm::bolt::BranchInfo &BI : Branches.EntryData) {
+        if (!BlockMap.isInputBlock(BI.To.Offset)) {
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: Unexpected EntryData in " << FuncName
+                   << " at 0x" << Twine::utohexstr(BI.To.Offset) << '\n';
+          continue;
+        }
+        const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
+        YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,

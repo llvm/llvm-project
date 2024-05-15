@@ -315,6 +315,9 @@ public:
   /// Stack to track the Logical Operator recursion nest for MC/DC.
   SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
 
+  /// Stack to track the controlled convergence tokens.
+  SmallVector<llvm::IntrinsicInst *, 4> ConvergenceTokenStack;
+
   /// Number of nested loop to be consumed by the last surrounding
   /// loop-associated directive.
   int ExpectedOMPLoopDepth = 0;
@@ -636,28 +639,7 @@ public:
   /// Returns true if a loop must make progress, which means the mustprogress
   /// attribute can be added. \p HasConstantCond indicates whether the branch
   /// condition is a known constant.
-  bool checkIfLoopMustProgress(bool HasConstantCond) {
-    if (CGM.getCodeGenOpts().getFiniteLoops() ==
-        CodeGenOptions::FiniteLoopsKind::Always)
-      return true;
-    if (CGM.getCodeGenOpts().getFiniteLoops() ==
-        CodeGenOptions::FiniteLoopsKind::Never)
-      return false;
-
-    // If the containing function must make progress, loops also must make
-    // progress (as in C++11 and later).
-    if (checkIfFunctionMustProgress())
-      return true;
-
-    // Now apply rules for plain C (see  6.8.5.6 in C11).
-    // Loops with constant conditions do not have to make progress in any C
-    // version.
-    if (HasConstantCond)
-      return false;
-
-    // Loops with non-constant conditions must make progress in C11 and later.
-    return getLangOpts().C11;
-  }
+  bool checkIfLoopMustProgress(const Expr *, bool HasEmptyBody);
 
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
@@ -1648,8 +1630,10 @@ public:
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
-        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
+        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+      auto AL = ApplyDebugLocation::CreateArtificial(*this);
       PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+    }
     PGO.setCurrentStmt(S);
   }
 
@@ -5095,7 +5079,11 @@ public:
                                      const llvm::Twine &Name = "");
   // Adds a convergence_ctrl token to |Input| and emits the required parent
   // convergence instructions.
-  llvm::CallBase *addControlledConvergenceToken(llvm::CallBase *Input);
+  template <typename CallType>
+  CallType *addControlledConvergenceToken(CallType *Input) {
+    return cast<CallType>(
+        addConvergenceControlToken(Input, ConvergenceTokenStack.back()));
+  }
 
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|

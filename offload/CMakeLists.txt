@@ -151,6 +151,11 @@ if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
 endif()
 
+if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR 
+   DEFINED LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
+  message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
+endif()
+
 set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
 set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
     "Semicolon-separated list of plugins to use: cuda, amdgpu, host or \"all\".")
@@ -158,6 +163,7 @@ set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
+message("Building with support for ${LIBOMPTARGET_PLUGINS_TO_BUILD} plugins")
 
 set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS "")
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
@@ -267,11 +273,6 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
-# Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
-  include(LLVMCheckCompilerLinkerFlag)
-  if(NOT APPLE)
-    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  endif()
 
   macro(pythonize_bool var)
   if (${var})
@@ -280,6 +281,14 @@ if(OPENMP_STANDALONE_BUILD)
     set(${var} False)
   endif()
   endmacro()
+endif()
+
+if(OPENMP_STANDALONE_BUILD OR TARGET omp)
+  # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
+  include(LLVMCheckCompilerLinkerFlag)
+  if(NOT APPLE)
+    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  endif()
 endif()
 
 # OMPT support for libomptarget
