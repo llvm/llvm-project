@@ -184,7 +184,9 @@ static bool couldBeSameValueWithMasking(vector::TransferWriteOp defWrite,
   }
   // Check for constant splats. These will be the same value if the read is
   // masked (and padded with the splat value), and the write is unmasked or has
-  // the same mask.
+  // the same mask. Note this does not allow the case where the write is masked
+  // and the read is unmasked, as then the read could be of more elements than
+  // the write (which may not be the same value).
   bool couldBeSameSplat = readMask && (!writeMask || writeMask == readMask);
   if (!couldBeSameSplat)
     return false;
@@ -194,6 +196,7 @@ static bool couldBeSameValueWithMasking(vector::TransferWriteOp defWrite,
       !splatAttr.isSplat()) {
     return false;
   }
+  // The padding of the read and the constant splat value must be the same.
   Attribute padAttr;
   if (!matchPattern(read.getPadding(), m_Constant(&padAttr)))
     return false;
