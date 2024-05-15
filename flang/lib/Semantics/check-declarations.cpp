@@ -1357,6 +1357,15 @@ bool CheckHelper::IsResultOkToDiffer(const FunctionResult &result) {
 
 void CheckHelper::CheckSubprogram(
     const Symbol &symbol, const SubprogramDetails &details) {
+  // Evaluate a procedure definition's characteristics to flush out
+  // any errors that analysis might expose, in case this subprogram hasn't
+  // had any calls in this compilation unit that would have validated them.
+  if (!context_.HasError(symbol) && !details.isDummy() &&
+      !details.isInterface() && !details.stmtFunction()) {
+    if (!Procedure::Characterize(symbol, foldingContext_)) {
+      context_.SetError(symbol);
+    }
+  }
   if (const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
     SubprogramMatchHelper{*this}.Check(symbol, *iface);
   }
