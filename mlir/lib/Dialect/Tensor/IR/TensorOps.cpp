@@ -4200,12 +4200,6 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     return success();
   }
 
-  // Fold away packing an empty source tensor.
-  if (auto emptyTensor = packOp.getSource().getDefiningOp<tensor::EmptyOp>()) {
-    rewriter.replaceOp(packOp, packOp.getDest());
-    return success();
-  }
-
   // Insert tensor.cast ops if static shape inference is available..
   SmallVector<int64_t> srcShape, destShape;
   if (inferStaticShape(packOp, srcShape, destShape)) {
@@ -4280,6 +4274,8 @@ OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getDestType(), paddingValue))
     return reshapedSource;
+  if (getSource().getDefiningOp<tensor::EmptyOp>())
+    return getDest();
   return {};
 }
 
@@ -4441,13 +4437,6 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
     return success();
   }
 
-  // Fold away unpacking an empty source tensor.
-  if (auto emptyTensor =
-          unPackOp.getSource().getDefiningOp<tensor::EmptyOp>()) {
-    rewriter.replaceOp(unPackOp, unPackOp.getDest());
-    return success();
-  }
-
   // Insert tensor.cast ops if static shape inference is available..
   SmallVector<int64_t> srcShape, destShape;
   if (inferStaticShape(unPackOp, srcShape, destShape)) {
@@ -4485,6 +4474,8 @@ OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getResult().getType()))
     return reshapedSource;
+  if (getSource().getDefiningOp<tensor::EmptyOp>())
+    return getDest();
   return {};
 }
 
