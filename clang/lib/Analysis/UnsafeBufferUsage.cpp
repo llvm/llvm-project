@@ -492,6 +492,8 @@ public:
 #endif
 
   virtual bool isWarningGadget() const = 0;
+  // TODO remove this method from WarningGadget interface. It's only used for
+  // debug prints in FixableGadget.
   virtual SourceLocation getSourceLoc() const = 0;
 
   /// Returns the list of pointer-type variables on which this gadget performs
