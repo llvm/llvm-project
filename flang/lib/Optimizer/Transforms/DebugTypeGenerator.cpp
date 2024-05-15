@@ -24,17 +24,17 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 }
 
-static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
-  return mlir::LLVM::DIBasicTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_base_type, "void", 32, 1);
-}
-
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
                                            mlir::StringAttr name,
                                            unsigned bitSize,
                                            unsigned decoding) {
   return mlir::LLVM::DIBasicTypeAttr::get(
       context, llvm::dwarf::DW_TAG_base_type, name, bitSize, decoding);
+}
+
+static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
+  return genBasicType(context, mlir::StringAttr::get(context, "integer"), 32,
+                      llvm::dwarf::DW_ATE_signed);
 }
 
 mlir::LLVM::DITypeAttr
