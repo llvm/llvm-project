@@ -727,6 +727,10 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  bool isAddressOfOperand,
                            const TemplateArgumentListInfo *TemplateArgs) {
   if (SS.isEmpty()) {
+    // FIXME: This codepath is only used by dependent unqualified names
+    // (e.g. a dependent conversion-function-id, or operator= once we support
+    // it). It doesn't quite do the right thing, and it will silently fail if
+    // getCurrentThisType() returns null.
     QualType ThisType = getCurrentThisType();
     if (ThisType.isNull())
       return ExprError();
@@ -735,8 +739,8 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
         Context, /*Base=*/nullptr, ThisType,
         /*IsArrow=*/!Context.getLangOpts().HLSL,
         /*OperatorLoc=*/SourceLocation(),
-        /*QualifierLoc*/ NestedNameSpecifierLoc(), TemplateKWLoc,
-        /*FirstQualifierFoundInScope*/ nullptr, NameInfo, TemplateArgs);
+        /*QualifierLoc=*/NestedNameSpecifierLoc(), TemplateKWLoc,
+        /*FirstQualifierFoundInScope=*/nullptr, NameInfo, TemplateArgs);
   }
   return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 }
