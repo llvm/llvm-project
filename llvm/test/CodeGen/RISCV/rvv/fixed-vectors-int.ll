@@ -1155,8 +1155,8 @@ define void @mulhu_v8i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a1, 1048568
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v11, 1

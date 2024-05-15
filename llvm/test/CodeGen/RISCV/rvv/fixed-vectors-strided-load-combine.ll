@@ -168,8 +168,8 @@ define void @strided_constant_0(ptr %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 4
 ; CHECK-NEXT:    vse16.v v9, (a1)
 ; CHECK-NEXT:    ret
