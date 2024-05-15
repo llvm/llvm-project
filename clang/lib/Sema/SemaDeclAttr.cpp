@@ -2714,11 +2714,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  if (IsStrict && AL.getEnvironment()) {
-    S.Diag(AL.getStrictLoc(),
-           diag::warn_availability_strict_not_supported_with_environment);
-    return;
-  }
+  if (S.getLangOpts().HLSL && IsStrict)
+    S.Diag(AL.getStrictLoc(), diag::warn_availability_hlsl_unavailable_strict);
 
   int PriorityModifier = AL.isPragmaClangAttribute()
                              ? Sema::AP_PragmaClangAttribute
@@ -2727,12 +2724,17 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const IdentifierLoc *EnvironmentLoc = AL.getEnvironment();
   IdentifierInfo *IIEnvironment = nullptr;
   if (EnvironmentLoc) {
-    IIEnvironment = EnvironmentLoc->Ident;
-    if (AvailabilityAttr::getEnvironmentType(
-            EnvironmentLoc->Ident->getName()) ==
-        llvm::Triple::EnvironmentType::UnknownEnvironment)
-      S.Diag(Platform->Loc, diag::warn_availability_unknown_environment)
-          << EnvironmentLoc->Ident;
+    if (S.getLangOpts().HLSL) {
+      IIEnvironment = EnvironmentLoc->Ident;
+      if (AvailabilityAttr::getEnvironmentType(
+              EnvironmentLoc->Ident->getName()) ==
+          llvm::Triple::EnvironmentType::UnknownEnvironment)
+        S.Diag(EnvironmentLoc->Loc, diag::warn_availability_unknown_environment)
+            << EnvironmentLoc->Ident;
+    } else {
+      S.Diag(EnvironmentLoc->Loc,
+             diag::warn_availability_environment_only_in_hlsl);
+    }
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(

@@ -1596,7 +1596,7 @@ replacement=\ *string-literal*
 environment=\ *identifier*
   Target environment in which this declaration is available. If present,
   the availability attribute applies only to targets with the same platform
-  and environment.
+  and environment. The parameter is currently supported only in HLSL.
 
 Multiple availability attributes can be placed on a declaration, which may
 correspond to different platforms. For most platforms, the availability

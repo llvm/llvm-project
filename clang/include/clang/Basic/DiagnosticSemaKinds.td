@@ -3862,8 +3862,11 @@ def note_protocol_method : Note<
 def warn_availability_fuchsia_unavailable_minor : Warning<
   "Fuchsia API Level prohibits specifying a minor or sub-minor version">,
   InGroup<Availability>;
-def warn_availability_strict_not_supported_with_environment: Warning<
-  "strict parameter with environment is not yet supported">,
+def warn_availability_hlsl_unavailable_strict: Warning<
+  "strict parameter is not supported in HLSL">,
+  InGroup<Availability>;
+def warn_availability_environment_only_in_hlsl: Warning<
+  "environment parameter is supported only in HLSL">,
   InGroup<Availability>;
 
 def warn_unguarded_availability :

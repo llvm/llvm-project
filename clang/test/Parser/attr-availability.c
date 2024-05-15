@@ -30,9 +30,7 @@ void f11(void) __attribute__((availability(macosx,message=u"b"))); // expected-w
 
 void f12(void) __attribute__((availability(macosx,message="a" u"b"))); // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect}}
 
-void f13(void) __attribute__((availability(shadermodel, introduced = 6.0, environment="pixel"))); // expected-error {{expected an environment name, e.g., 'compute'}}
-
-void f14(void) __attribute__((availability(shadermodel, introduced = 6.0, environment=pixel, environment=compute))); // expected-error {{redundant 'environment' availability change; only the last specified change will be used}}
+void f13(void) __attribute__((availability(shadermodel, introduced = 6.0, environment=pixel))); // expected-warning {{environment parameter is supported only in HLSL}}
 
 enum E{
     gorf __attribute__((availability(macosx,introduced=8.5, message = 10.0))), // expected-error {{expected string literal for optional message in 'availability' attribute}}

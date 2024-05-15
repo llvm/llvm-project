@@ -36,7 +36,7 @@ __attribute__((availability(shadermodel, introduced = 5.0, environment = compute
 __attribute__((availability(shadermodel, introduced = 6.0, environment = mesh)))
 unsigned f8();
 
-// expected-warning@#f9_attr {{strict parameter with environment is not yet supported}}
+// expected-warning@#f9_attr {{strict parameter is not supported in HLSL}}
 __attribute__((availability(shadermodel, strict, introduced = 6.0, environment = mesh)))  // #f9_attr
 unsigned f9();
 
@@ -72,8 +72,6 @@ int main() {
     unsigned G = f7(); // #f7_call
 
     unsigned H = f8();
-
-    unsigned I = f9();
 
     return 0;
 }
