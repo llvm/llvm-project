@@ -65,11 +65,14 @@ struct check_derived_from {
   static A a;
   // FIXME: all 3 examples should be rejected in all language modes.
   // FIXME: we should test this in 98 mode.
+  // FIXME: we accept this when MSVC triple is used
   static constexpr B *p = &a;
-  // cxx11-14-error@-1 {{cannot initialize a variable of type 'cwg2310::X *const' with an rvalue of type 'cwg2310::Z *'}}
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // cxx11-14-error@-2 {{cannot initialize a variable of type 'cwg2310::X *const' with an rvalue of type 'cwg2310::Z *'}}
   //   cxx11-14-note@#cwg2310-X {{in instantiation of template class 'cwg2310::check_derived_from<cwg2310::Z, cwg2310::X>' requested here}}
-  // cxx11-14-error@-3 {{cannot initialize a variable of type 'cwg2310::Y *const' with an rvalue of type 'cwg2310::Z *'}}
+  // cxx11-14-error@-4 {{cannot initialize a variable of type 'cwg2310::Y *const' with an rvalue of type 'cwg2310::Z *'}}
   //   cxx11-14-note@#cwg2310-Y {{in instantiation of template class 'cwg2310::check_derived_from<cwg2310::Z, cwg2310::Y>' requested here}}
+#endif
 };
 
 struct W {};
