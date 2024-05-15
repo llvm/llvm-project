@@ -1217,23 +1217,6 @@ static void postSplitCleanup(Function &F) {
 #endif
 }
 
-// Assuming we arrived at the block NewBlock from Prev instruction, store
-// PHI's incoming values in the ResolvedValues map.
-static void
-scanPHIsAndUpdateValueMap(Instruction *Prev, BasicBlock *NewBlock,
-                          DenseMap<Value *, Value *> &ResolvedValues) {
-  auto *PrevBB = Prev->getParent();
-  for (PHINode &PN : NewBlock->phis()) {
-    auto V = PN.getIncomingValueForBlock(PrevBB);
-    // See if we already resolved it.
-    auto VI = ResolvedValues.find(V);
-    if (VI != ResolvedValues.end())
-      V = VI->second;
-    // Remember the value.
-    ResolvedValues[&PN] = V;
-  }
-}
-
 // Coroutine has no suspend points. Remove heap allocation for the coroutine
 // frame if possible.
 static void handleNoSuspendCoroutine(coro::Shape &Shape) {
