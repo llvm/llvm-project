@@ -14574,9 +14574,17 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   default:
     return false;
 
+  case Builtin::BI__builtin_frexpl:
+    // AIX library function `frexpl` has 'long double' type and not
+    // PPCDoubleDouble type. To make sure we generate the right value, don't
+    // constant evaluate it and instead defer to a libcall.
+    if (Info.Ctx.getTargetInfo().getTriple().isPPC() &&
+        (&Info.Ctx.getTargetInfo().getLongDoubleFormat() !=
+         &llvm::APFloat::PPCDoubleDouble()))
+      return false;
+    LLVM_FALLTHROUGH;
   case Builtin::BI__builtin_frexp:
-  case Builtin::BI__builtin_frexpf:
-  case Builtin::BI__builtin_frexpl: {
+  case Builtin::BI__builtin_frexpf: {
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
@@ -14590,6 +14598,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     StoreExponent(Pointer, FrexpExp);
     return true;
   }
+
   case Builtin::BI__builtin_huge_val:
   case Builtin::BI__builtin_huge_valf:
   case Builtin::BI__builtin_huge_vall:
@@ -14663,9 +14672,6 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
-  case Builtin::BIfmax:
-  case Builtin::BIfmaxf:
-  case Builtin::BIfmaxl:
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:
@@ -14684,9 +14690,6 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
-  case Builtin::BIfmin:
-  case Builtin::BIfminf:
-  case Builtin::BIfminl:
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
