@@ -3444,6 +3444,46 @@ def int_amdgcn_swmmac_i32_16x16x64_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm
 def int_amdgcn_swmmac_i32_16x16x64_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_swmmac_i32_16x16x128_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
 
+class FmaFromTensor<LLVMType outAccTy, LLVMType residualTy, LLVMType scaleTy> :
+  DefaultAttrsIntrinsic<
+    [outAccTy],         // %out
+    [
+      outAccTy,         // %accumulator
+      residualTy,       // %residual 1
+      residualTy,       // %residual 2
+      scaleTy,          // %scale
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty        // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]
+  >;
+
+def int_amdgcn_fma_from_tensor_f32_i4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_u4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_i8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_u8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_fp8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_bf8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_f16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2f16_ty, llvm_float_ty>;
+def int_amdgcn_fma_from_tensor_f32_bf16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2bf16_ty, llvm_float_ty>;
+
+def int_amdgcn_fma_from_tensor_f16_i4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_u4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_i8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_u8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_fp8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_bf8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_f16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2f16_ty, llvm_v2f16_ty>;
+def int_amdgcn_fma_from_tensor_f16_bf16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2bf16_ty, llvm_v2f16_ty>;
+
+def int_amdgcn_fma_from_tensor_bf16_i4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_u4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_i8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_u8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_fp8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_bf8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_f16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2f16_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_bf16_bf16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2bf16_ty, llvm_v2bf16_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
