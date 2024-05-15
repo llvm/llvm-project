@@ -402,9 +402,6 @@ private:
 
   // Serialise a binary operator.
   void serialiseBinOperator(Instruction::BinaryOps BO) {
-    // operand kind:
-    // OutStreamer.emitInt8(OperandKind::OpKindBinOp);
-    // the operator:
     switch (BO) {
     case Instruction::BinaryOps::Add:
       OutStreamer.emitInt8(BinOp::BinOpAdd);
