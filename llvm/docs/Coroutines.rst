@@ -1922,7 +1922,7 @@ Example:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare ptr @llvm.coro.await.suspend.handle(
+  declare void @llvm.coro.await.suspend.handle(
                 ptr <awaiter>,
                 ptr <handle>,
                 ptr <await_suspend_function>)
@@ -1967,7 +1967,9 @@ The intrinsic must be used between corresponding `coro.save`_ and
 `await_suspend_function` call during `CoroSplit`_ pass.
 
 `await_suspend_function` must return a pointer to a valid
-coroutine frame, which is immediately resumed
+coroutine frame. The intrinsic will be lowered to a tail call resuming the
+returned coroutine frame. It will be marked `musttail` on targets that support
+that. Instructions following the intrinsic will become unreachable.
 
 Example:
 """"""""
@@ -1977,11 +1979,10 @@ Example:
   ; before lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    %next = call ptr @llvm.coro.await.suspend.handle(
-                ptr %awaiter,
-                ptr %hdl,
-                ptr @await_suspend_function)
-    call void @llvm.coro.resume(%next)
+    call void @llvm.coro.await.suspend.handle(
+        ptr %awaiter,
+        ptr %hdl,
+        ptr @await_suspend_function)
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     ...
 
@@ -1992,8 +1993,8 @@ Example:
     %next = call ptr @await_suspend_function(
                 ptr %awaiter,
                 ptr %hdl)
-    call void @llvm.coro.resume(%next)
-    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    musttail call void @llvm.coro.resume(%next)
+    ret void
     ...
 
   ; wrapper function example
