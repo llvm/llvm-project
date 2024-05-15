@@ -6,7 +6,7 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-opt-isl -disable-output < %s
+; RUN: -passes=polly-opt-isl -disable-output < %s
 ;
 ; Test whether isolation works as expected.
 ;

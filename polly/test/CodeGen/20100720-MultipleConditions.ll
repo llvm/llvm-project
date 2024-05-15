@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -disable-output < %s
+; RUN: opt %loadPolly '-passes=print<polly-ast>' -disable-output < %s
 
 ;int bar1();
 ;int bar2();
