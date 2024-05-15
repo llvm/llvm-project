@@ -75,11 +75,6 @@ CallBase &promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
                                    ArrayRef<Constant *> AddressPoints,
                                    MDNode *BranchWeights);
 
-/// Returns a constant representing the vtable's address point specified by the
-/// offset. Caller should ensure \p AddressPointOffset is valid.
-Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
-                                      uint32_t AddressPointOffset);
-
 /// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
 /// success.
 ///

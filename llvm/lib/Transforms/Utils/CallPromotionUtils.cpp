@@ -589,26 +589,6 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
   return promoteCall(NewInst, Callee);
 }
 
-Constant *llvm::getVTableAddressPointOffset(GlobalVariable *VTable,
-                                            uint32_t AddressPointOffset) {
-  Module &M = *VTable->getParent();
-  const DataLayout &DL = M.getDataLayout();
-  LLVMContext &Context = M.getContext();
-  Type *VTableType = VTable->getValueType();
-  assert(AddressPointOffset < DL.getTypeAllocSize(VTableType) &&
-         "Out-of-bound access");
-  APInt AddressPointOffsetAPInt(32, AddressPointOffset, false);
-  SmallVector<APInt> Indices =
-      DL.getGEPIndicesForOffset(VTableType, AddressPointOffsetAPInt);
-  SmallVector<llvm::Constant *> GEPIndices;
-  for (const auto &Index : Indices)
-    GEPIndices.push_back(llvm::ConstantInt::get(Type::getInt32Ty(Context),
-                                                Index.getZExtValue()));
-
-  return ConstantExpr::getInBoundsGetElementPtr(VTable->getValueType(), VTable,
-                                                GEPIndices);
-}
-
 CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
                                          Function *Callee,
                                          ArrayRef<Constant *> AddressPoints,
@@ -619,7 +599,7 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   for (auto &AddressPoint : AddressPoints)
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
 
-  Value *Cond = getOrs(ICmps, Builder);
+  Value *Cond = Builder.CreateOr(ICmps);
 
   // Version the indirect call site. If Cond is true, 'NewInst' will be
   // executed, otherwise the original call site will be executed.

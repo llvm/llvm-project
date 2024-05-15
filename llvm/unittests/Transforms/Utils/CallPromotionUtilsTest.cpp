@@ -27,6 +27,21 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   return Mod;
 }
 
+// Returns a constant representing the vtable's address point specified by the
+// offset.
+static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
+                                             uint32_t AddressPointOffset) {
+  Module &M = *VTable->getParent();
+  LLVMContext &Context = M.getContext();
+  assert(AddressPointOffset <
+             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+         "Out-of-bound access");
+
+  return ConstantExpr::getInBoundsGetElementPtr(
+      Type::getInt8Ty(Context), VTable,
+      llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
+}
+
 TEST(CallPromotionUtilsTest, TryPromoteCall) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
@@ -370,37 +385,6 @@ declare %struct2 @_ZN4Impl3RunEv(%class.Impl* %this)
   ASSERT_FALSE(CI->getCalledFunction());
   bool IsPromoted = tryPromoteCall(*CI);
   EXPECT_FALSE(IsPromoted);
-}
-
-TEST(CallPromotionUtilsTest, getVTableAddressPointOffset) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"IR(
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
-@_ZTV8Derived2 = constant { [3 x ptr], [3 x ptr], [4 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base35func3Ev], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN5Base25func2Ev], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev] }
-
-declare i32 @_ZN5Base15func1Ev(ptr)
-declare i32 @_ZN5Base25func2Ev(ptr)
-declare i32 @_ZN5Base15func0Ev(ptr)
-declare void @_ZN5Base35func3Ev(ptr)
-)IR");
-  GlobalVariable *GV = M->getGlobalVariable("_ZTV8Derived2");
-
-  for (auto [AddressPointOffset, Index] :
-       {std::pair{16, 0}, {40, 1}, {64, 2}}) {
-    Constant *AddressPoint =
-        getVTableAddressPointOffset(GV, AddressPointOffset);
-
-    SmallVector<Constant *> Indices = {
-        llvm::ConstantInt::get(Type::getInt32Ty(C), 0U),
-        llvm::ConstantInt::get(Type::getInt32Ty(C), Index),
-        llvm::ConstantInt::get(Type::getInt32Ty(C), 2U)};
-    EXPECT_EQ(dyn_cast<ConstantExpr>(AddressPoint),
-              ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
-                                                     Indices));
-  }
 }
 
 TEST(CallPromotionUtilsTest, promoteCallWithVTableCmp) {
