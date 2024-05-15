@@ -233,9 +233,6 @@ class LValue {
   // this lvalue.
   bool Nontemporal : 1;
 
-  // The pointer is known not to be null.
-  bool IsKnownNonNull : 1;
-
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
 
@@ -263,7 +260,6 @@ private:
     this->ImpreciseLifetime = false;
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
-    this->IsKnownNonNull = false;
     this->BaseIvarExp = nullptr;
   }
 
@@ -349,11 +345,9 @@ public:
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
-  KnownNonNull_t isKnownNonNull() const {
-    return (KnownNonNull_t)IsKnownNonNull;
-  }
+  KnownNonNull_t isKnownNonNull() const { return Addr.isKnownNonNull(); }
   LValue setKnownNonNull() {
-    IsKnownNonNull = true;
+    Addr.setKnownNonNull();
     return *this;
   }
 

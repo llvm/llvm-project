@@ -2728,7 +2728,9 @@ public:
   /// an l-value with the natural pointee alignment of T.
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);
 
-  LValue MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T);
+  LValue
+  MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
+                             KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// Same as MakeNaturalAlignPointeeAddrLValue except that the pointer is known
   /// to be unsigned.

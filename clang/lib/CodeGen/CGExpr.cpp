@@ -1941,6 +1941,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
                               NotKnownNonNull);
 
+  if (!CGM.getCodeGenOpts().NullPointerIsValid)
+    Addr = Addr.setKnownNonNull();
+
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
     // Boolean vectors use `iN` as storage type.
     if (ClangVecTy->isExtVectorBoolType()) {
@@ -2089,6 +2092,9 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     if (GV->isThreadLocal())
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
                               NotKnownNonNull);
+
+  if (!CGM.getCodeGenOpts().NullPointerIsValid)
+    Addr = Addr.setKnownNonNull();
 
   llvm::Type *SrcTy = Value->getType();
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
@@ -2791,9 +2797,9 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
   llvm::LoadInst *Load =
       Builder.CreateLoad(RefLVal.getAddress(), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
-  return makeNaturalAddressForPointer(Load, RefLVal.getType()->getPointeeType(),
-                                      CharUnits(), /*ForPointeeType=*/true,
-                                      PointeeBaseInfo, PointeeTBAAInfo);
+  return makeNaturalAddressForPointer(
+      Load, RefLVal.getType()->getPointeeType(), CharUnits(),
+      /*ForPointeeType=*/true, PointeeBaseInfo, PointeeTBAAInfo, KnownNonNull);
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(LValue RefLVal) {
@@ -4706,7 +4712,8 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
     }
   } else {
     QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
-    LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);
+    LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType,
+                                          KnownNonNull);
   }
   return EmitLValueForField(LambdaLV, Field);
 }

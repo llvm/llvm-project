@@ -253,6 +253,9 @@ public:
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
   LValue LV = CGF.EmitLValue(E);
 
+  if (!CGF.CGM.getCodeGenOpts().NullPointerIsValid)
+    LV = LV.setKnownNonNull();
+
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
     CGF.EmitAtomicLoad(LV, E->getExprLoc(), Dest);
