@@ -155,9 +155,11 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   // declared. We are using a best guess of line - 1 where line is the source
   // line of the first member of the module that we encounter.
 
-  if (!result.second.modules.empty())
-    scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
-                                  line - 1, !globalOp.hasInitializationBody());
+  if (result.second.modules.empty())
+    return;
+
+  scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
+                                line - 1, !globalOp.hasInitializationBody());
 
   auto diType = typeGen.convertType(globalOp.getType(), fileAttr, scope,
                                     globalOp.getLoc());
