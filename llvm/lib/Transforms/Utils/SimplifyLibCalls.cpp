@@ -2389,12 +2389,21 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
       hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
     if (Value *Exp = getIntToFPVal(Op, B, TLI->getIntSize())) {
+      Constant *One = ConstantFP::get(Ty, 1.0);
+
+      // TODO: Emitting the intrinsic should not depend on whether the libcall
+      // is available.
+      if (CI->doesNotAccessMemory()) {
+        return copyFlags(*CI, B.CreateIntrinsic(Intrinsic::ldexp,
+                                                {Ty, Exp->getType()},
+                                                {One, Exp}, CI));
+      }
+
       IRBuilderBase::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
-      return copyFlags(
-          *CI, emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), Exp, TLI,
-                                     LibFunc_ldexp, LibFunc_ldexpf,
-                                     LibFunc_ldexpl, B, AttributeList()));
+      return copyFlags(*CI, emitBinaryFloatFnCall(
+                                One, Exp, TLI, LibFunc_ldexp, LibFunc_ldexpf,
+                                LibFunc_ldexpl, B, AttributeList()));
     }
   }
 
