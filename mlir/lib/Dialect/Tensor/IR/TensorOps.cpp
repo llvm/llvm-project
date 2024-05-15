@@ -4200,6 +4200,12 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     return success();
   }
 
+  // Fold away packing an empty source tensor.
+  if (auto emptyTensor = packOp.getSource().getDefiningOp<tensor::EmptyOp>()) {
+    rewriter.replaceOp(packOp, packOp.getDest());
+    return success();
+  }
+
   // Insert tensor.cast ops if static shape inference is available..
   SmallVector<int64_t> srcShape, destShape;
   if (inferStaticShape(packOp, srcShape, destShape)) {
@@ -4432,6 +4438,13 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
     Value newDest = dstStyleOp.getDpsInits()[destValue.getResultNumber()];
     rewriter.modifyOpInPlace(unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });
+    return success();
+  }
+
+  // Fold away unpacking an empty source tensor.
+  if (auto emptyTensor =
+          unPackOp.getSource().getDefiningOp<tensor::EmptyOp>()) {
+    rewriter.replaceOp(unPackOp, unPackOp.getDest());
     return success();
   }
 
