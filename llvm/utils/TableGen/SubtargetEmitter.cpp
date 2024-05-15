@@ -965,11 +965,11 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
     // If there is no AliasDef and we find a match, we can early exit since
     // there is no need to verify whether there are resources defined for both
     // SchedWrite and its alias.
-    if (!AliasDef && AliasDef == RA->getValueAsDef("ReadType")) {
+    if (!AliasDef && SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
       ResDef = RA;
       break;
-    } 
-    if (SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
+    }
+    if (AliasDef == RA->getValueAsDef("ReadType")) {
       if (ResDef) {
         PrintFatalError(RA->getLoc(), "Resources are defined for both "
                                       "SchedRead and its alias on processor " +
