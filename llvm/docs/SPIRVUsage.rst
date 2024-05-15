@@ -253,6 +253,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Vararg]`
      - Assigns names to types or values, enhancing readability and debuggability of SPIR-V code. Not emitted directly but used for metadata enrichment.
+   * - `int_spv_assign_decoration`
+     - None
+     - `[Type, Metadata]`
+     - Assigns decoration to values by associating them with metadatas. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
