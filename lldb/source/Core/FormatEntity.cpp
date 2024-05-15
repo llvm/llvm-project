@@ -659,15 +659,14 @@ static char ConvertValueObjectStyleToChar(
   return '\0';
 }
 
+/// Options supported by format_provider<T> for integral arithmetic types.
+/// See table in FormatProviders.h.
 static llvm::Regex LLVMFormatPattern{"x[-+]?\\d*|n|d", llvm::Regex::IgnoreCase};
 
 static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
                                     ValueObject &valobj) {
   std::string formatted;
   std::string llvm_format = ("{0:" + options + "}").str();
-
-  // Options supported by format_provider<T> for integral arithmetic types.
-  // See table in FormatProviders.h.
 
   auto type_info = valobj.GetTypeInfo();
   if ((type_info & eTypeIsInteger) && LLVMFormatPattern.match(options)) {
