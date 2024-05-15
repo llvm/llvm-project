@@ -39,6 +39,10 @@ struct RISCVSupportedExtension {
 struct RISCVProfile {
   StringLiteral Name;
   StringLiteral MArch;
+
+  bool operator<(const RISCVProfile &RHS) const {
+    return StringRef(Name) < StringRef(RHS.Name);
+  }
 };
 
 } // end anonymous namespace
@@ -61,6 +65,10 @@ static void verifyTables() {
            "Extensions are not sorted by name");
     assert(llvm::is_sorted(SupportedExperimentalExtensions) &&
            "Experimental extensions are not sorted by name");
+    assert(llvm::is_sorted(SupportedProfiles) &&
+           "Profiles are not sorted by name");
+    assert(llvm::is_sorted(SupportedExperimentalProfiles) &&
+           "Experimental profiles are not sorted by name");
     TableChecked.store(true, std::memory_order_relaxed);
   }
 #endif
@@ -100,6 +108,10 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
 
   outs() << "\nSupported Profiles\n";
   for (const auto &P : SupportedProfiles)
+    outs().indent(4) << P.Name << "\n";
+
+  outs() << "\nExperimental Profiles\n";
+  for (const auto &P : SupportedExperimentalProfiles)
     outs().indent(4) << P.Name << "\n";
 
   outs() << "\nUse -march to specify the target's extension.\n"
@@ -608,12 +620,25 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     XLen = 64;
   } else {
     // Try parsing as a profile.
-    auto I = llvm::upper_bound(SupportedProfiles, Arch,
-                               [](StringRef Arch, const RISCVProfile &Profile) {
-                                 return Arch < Profile.Name;
-                               });
-
-    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
+    auto ProfileCmp = [](StringRef Arch, const RISCVProfile &Profile) {
+      return Arch < Profile.Name;
+    };
+    auto I = llvm::upper_bound(SupportedProfiles, Arch, ProfileCmp);
+    bool FoundProfile = I != std::begin(SupportedProfiles) &&
+                        Arch.starts_with(std::prev(I)->Name);
+    if (!FoundProfile) {
+      I = llvm::upper_bound(SupportedExperimentalProfiles, Arch, ProfileCmp);
+      FoundProfile = (I != std::begin(SupportedExperimentalProfiles) &&
+                      Arch.starts_with(std::prev(I)->Name));
+      if (FoundProfile && !EnableExperimentalExtension) {
+        return createStringError(errc::invalid_argument,
+                                 "requires '-menable-experimental-extensions' "
+                                 "for profile '" +
+                                     std::prev(I)->Name + "'");
+      }
+    }
+    if (FoundProfile) {
+      --I;
       std::string NewArch = I->MArch.str();
       StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
@@ -758,12 +783,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 }
 
 Error RISCVISAInfo::checkDependency() {
+  bool HasE = Exts.count("e") != 0;
+  bool HasI = Exts.count("i") != 0;
   bool HasC = Exts.count("c") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
+
+  if (HasI && HasE)
+    return createStringError(errc::invalid_argument,
+                             "'I' and 'E' extensions are incompatible");
 
   if (HasF && HasZfinx)
     return createStringError(errc::invalid_argument,
@@ -851,6 +882,9 @@ void RISCVISAInfo::updateImplication() {
     auto Version = findDefaultVersion("i");
     addExtension("i", Version.value());
   }
+
+  if (HasE && HasI)
+    Exts.erase("i");
 
   assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
 

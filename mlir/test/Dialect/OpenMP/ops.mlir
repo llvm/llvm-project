@@ -521,13 +521,13 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
 // CHECK-LABEL: omp_simd
 func.func @omp_simd(%lb : index, %ub : index, %step : index) -> () {
   // CHECK: omp.simd
-  "omp.simd" () ({
+  omp.simd {
     "omp.loop_nest" (%lb, %ub, %step) ({
     ^bb1(%iv2: index):
       "omp.yield"() : () -> ()
     }) : (index, index, index) -> ()
     "omp.terminator"() : () -> ()
-  }) : () -> ()
+  }
 
   return
 }

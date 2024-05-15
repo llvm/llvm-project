@@ -72,7 +72,9 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
       // are reserved for HINT instructions.
       const MCInstrDesc &Desc = MI.getDesc();
       if (!Desc.mayLoad() && !Desc.mayStore() &&
-          !Desc.hasUnmodeledSideEffects())
+          !Desc.hasUnmodeledSideEffects() &&
+          MI.getOpcode() != RISCV::PseudoVSETVLI &&
+          MI.getOpcode() != RISCV::PseudoVSETIVLI)
         continue;
       // For PseudoVSETVLIX0, Rd = X0 has special meaning.
       if (MI.getOpcode() == RISCV::PseudoVSETVLIX0)
