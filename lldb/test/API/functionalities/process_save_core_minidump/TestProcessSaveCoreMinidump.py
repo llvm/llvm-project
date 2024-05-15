@@ -47,16 +47,17 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             err = process.GetMemoryRegionInfo(sp, sp_region)
             self.assertTrue(err.Success(), err.GetCString())
             error = lldb.SBError()
-            # Try to read at the end of the stack red zone and succeed
-            process.ReadMemory(sp_region.GetRegionEnd() - 1, 1, error)
-            self.assertTrue(error.Success(), error.GetCString())
-            # Try to read just past the red zone and fail
-            process.ReadMemory(sp_region.GetRegionEnd() + 1, 1, error)
-            # Try to read from the base of the stack
-            self.assertTrue(error.Fail(), error.GetCString())
-            self.assertTrue(stacks_to_sps_map.__contains__(thread_id), "stacks_to_sps_map does not contain thread_idx: %d" % thread_idx)
+            # Ensure thread_id is in the saved map
+            self.assertIn(thread_id, stacks_to_sps_map)
             # Ensure the SP is correct
             self.assertEqual(stacks_to_sps_map[thread_id], sp)
+            # Try to read at the end of the stack red zone and succeed
+            process.ReadMemory(sp - red_zone, 1, error)
+            self.assertTrue(error.Success(), error.GetCString())
+            # Try to read just past the red zone and fail
+            process.ReadMemory(sp - red_zone - 1, 1, error)
+            self.assertTrue(error.Fail(), "No failure when reading past the red zone")
+
 
 
         self.dbg.DeleteTarget(target)

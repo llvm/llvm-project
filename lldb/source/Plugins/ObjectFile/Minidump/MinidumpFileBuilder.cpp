@@ -14,6 +14,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -490,9 +491,12 @@ findStackHelper(const lldb::ProcessSP &process_sp, uint64_t rsp) {
     return llvm::createStringError(
         std::errc::not_supported,
         "unable to load stack segment of the process");
-
-  const addr_t addr = range_info.GetRange().GetRangeBase();
-  const addr_t size = range_info.GetRange().GetByteSize();
+  // This is a duplicate of the logic in Process::SaveOffRegionsWithStackPointers
+  // but ultimately, we need to only save up from the start of `the stack down to the stack pointer.
+  const addr_t range_end = range_info.GetRange().GetRangeEnd();
+  const size_t red_zone = process_sp->GetABI()->GetRedZoneSize();
+  const addr_t addr = rsp - red_zone;
+  const addr_t size = range_end - addr;
 
   if (size == 0)
     return llvm::createStringError(std::errc::not_supported,
