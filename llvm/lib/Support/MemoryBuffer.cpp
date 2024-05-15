@@ -79,8 +79,16 @@ void *operator new(size_t N, const NamedBufferAlloc &Alloc) {
   SmallString<256> NameBuf;
   StringRef NameRef = Alloc.Name.toStringRef(NameBuf);
 
-  char *Mem = static_cast<char *>(operator new(N + sizeof(size_t) +
-                                               NameRef.size() + 1));
+  // We use malloc() and manually handle it returning null instead of calling
+  // operator new because we need all uses of NamedBufferAlloc to be
+  // deallocated with a call to free() due to needing to use malloc() in
+  // WritableMemoryBuffer::getNewUninitMemBuffer() to work around the out-of-
+  // memory handler installed by default in LLVM. See operator delete() member
+  // functions within this file for the paired call to free().
+  char *Mem =
+      static_cast<char *>(std::malloc(N + sizeof(size_t) + NameRef.size() + 1));
+  if (!Mem)
+    llvm::report_bad_alloc_error("Allocation failed");
   *reinterpret_cast<size_t *>(Mem + N) = NameRef.size();
   CopyStringRef(Mem + N + sizeof(size_t), NameRef);
   return Mem;
@@ -225,7 +233,7 @@ public:
 
   /// Disable sized deallocation for MemoryBufferMMapFile, because it has
   /// tail-allocated data.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *p) { std::free(p); }
 
   StringRef getBufferIdentifier() const override {
     // The name is stored after the class itself.
