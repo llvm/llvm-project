@@ -5385,7 +5385,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
     // respectively.
     DenseMap<unsigned, Register> PromoteRegs;
-    DenseMap<unsigned, Register> ReCalRegs;
     for (unsigned i = 1; i < MI->getNumOperands(); i++) {
       MachineOperand &Operand = MI->getOperand(i);
       if (Operand.isReg()) {
@@ -5408,9 +5407,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
               .addReg(OperandReg)
               .addImm(PPC::sub_32);
           PromoteRegs[i] = DstTmpReg;
-          ReCalRegs[i] = DstTmpReg;
-        } else {
-          ReCalRegs[i] = OperandReg;
         }
       }
     }
@@ -5420,15 +5416,24 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewDefinedReg);
     MachineBasicBlock::instr_iterator Iter(MI);
     --Iter;
-    for (unsigned i = 1; i < MI->getNumOperands(); i++)
+    MachineInstrBuilder  MIBuilder(*Iter->getMF(), Iter);
+    for (unsigned i = 1; i < MI->getNumOperands(); i++) {
       if (PromoteRegs.find(i) != PromoteRegs.end())
-        MachineInstrBuilder(*Iter->getMF(), Iter)
-            .addReg(PromoteRegs[i], RegState::Kill);
+        MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
       else
         Iter->addOperand(MI->getOperand(i));
+    }
 
-    for (auto Iter = ReCalRegs.begin(); Iter != ReCalRegs.end(); Iter++)
-      LV->recomputeForSingleDefVirtReg(Iter->second);
+    for (unsigned i = 1; i < Iter->getNumOperands(); i++) {
+      MachineOperand &Operand = Iter->getOperand(i);
+      if (Operand.isReg()) {
+        Register OperandReg = Operand.getReg();
+        if (!OperandReg.isVirtual())
+          continue;
+        LV->recomputeForSingleDefVirtReg(OperandReg);
+      }
+    }
+
     MI->eraseFromParent();
 
     // A defined register may be used by other instructions that are 32-bit.
