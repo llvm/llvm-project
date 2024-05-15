@@ -5263,11 +5263,6 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     }
   };
 
-  auto SetNewOpcode = [&](int NewOpc) {
-    NewOpcode = NewOpc;
-    IsNonSignedExtInstrNeedPromoted = true;
-  };
-
   switch (Opcode) {
   case PPC::OR:
     CheckAndSetNewOpcode(PPC::OR8);
@@ -5359,33 +5354,13 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     }
     break;
   }
-  case PPC::RLWINM:
-    SetNewOpcode(PPC::RLWINM8);
-    break;
-  case PPC::RLWINM_rec:
-    SetNewOpcode(PPC::RLWINM8_rec);
-    break;
-  case PPC::RLWNM:
-    SetNewOpcode(PPC ::RLWNM8);
-    break;
-  case PPC::RLWNM_rec:
-    SetNewOpcode(PPC::RLWNM8_rec);
-    break;
-  case PPC::ANDC_rec:
-    SetNewOpcode(PPC::ANDC8_rec);
-    break;
-  case PPC::ANDIS_rec:
-    SetNewOpcode(PPC::ANDIS8_rec);
-    break;
   default:
     break;
   }
 
   const PPCInstrInfo *TII =
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-  if ((definedBySignExtendingOp(Reg, MRI) && !TII->isZExt32To64(Opcode) &&
-       !isOpZeroOfSubwordPreincLoad(Opcode)) ||
-      IsNonSignedExtInstrNeedPromoted) {
+  if (TII->isSExt32To64(Opcode) || IsNonSignedExtInstrNeedPromoted) {
 
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 

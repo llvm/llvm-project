@@ -256,7 +256,7 @@ body:             |
     %3 = IMPLICIT_DEF
     %2 = LI 170
     %4 = RLWNM killed %1, %2, 20, 27
-    ; CHECK: RLWINM8 killed %6, 10, 20, 27
+    ; CHECK: RLWINM killed %1, 10, 20, 27
     ; CHECK-LATE: rlwinm 3, 3, 10, 20, 27
     $x3 = EXTSW_32_64 %4
     BLR8 implicit $lr8, implicit $rm, implicit $x3
