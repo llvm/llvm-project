@@ -160,6 +160,13 @@ func.func @load_unsupported_type(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i33' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i33
+}
+
+// -----
+
 func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
   // expected-error@below {{expected alignment for atomic access}}
   %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
@@ -191,6 +198,13 @@ func.func @store_unsupported_type(%val : f80, %ptr : !llvm.ptr) {
 func.func @store_unsupported_type(%val : i1, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i1' for atomic access}}
   llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i1, !llvm.ptr
+}
+
+// -----
+
+func.func @store_unsupported_type(%val : i48, %ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i48' for atomic access}}
+  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i48, !llvm.ptr
 }
 
 // -----
