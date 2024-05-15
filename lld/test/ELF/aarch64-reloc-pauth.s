@@ -45,10 +45,10 @@
 
 # RELR:      Section Headers:
 # RELR-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
-# RELR:      .rela.dyn RELA {{0*}}[[ADDR1:.*]] {{0*}}[[ADDR1]] 000090 18 A 1 0 8
-# RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.*]] {{0*}}[[ADDR2]] 000018 08 A 0 0 8
+# RELR:      .rela.dyn RELA {{0*}}[[ADDR1:.+]] {{0*}}[[ADDR1]] 000090 18 A 1 0 8
+# RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.+]] {{0*}}[[ADDR2]] 000018 08 A 0 0 8
 
-# RELR:      Dynamic section at offset {{.*}} contains 16 entries
+# RELR:      Dynamic section at offset {{.+}} contains 16 entries
 # RELR:      0x0000000070000012 (AARCH64_AUTH_RELR) 0x[[ADDR2]]
 # RELR-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 24 (bytes)
 # RELR-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
@@ -149,10 +149,10 @@
 
 # EMPTY-RELR:      Section Headers:
 # EMPTY-RELR-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
-# EMPTY-RELR:      .rela.dyn RELA {{0*}}[[ADDR1:.*]] {{0*}}[[ADDR1]] 000018 18 A 0 0 8
-# EMPTY-RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.*]] {{0*}}[[ADDR2]] 000000 08 A 0 0 8
+# EMPTY-RELR:      .rela.dyn RELA {{0*}}[[ADDR1:.+]] {{0*}}[[ADDR1]] 000018 18 A 0 0 8
+# EMPTY-RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.+]] {{0*}}[[ADDR2]] 000000 08 A 0 0 8
 
-# EMPTY-RELR:      Dynamic section at offset {{.*}} contains 12 entries
+# EMPTY-RELR:      Dynamic section at offset {{.+}} contains 12 entries
 # EMPTY-RELR-NOT:  (AARCH64_AUTH_RELR)
 # EMPTY-RELR-NOT:  (AARCH64_AUTH_RELRSZ)
 # EMPTY-RELR-NOT:  (AARCH64_AUTH_RELRENT)
@@ -160,11 +160,11 @@
 # EMPTY-RELR-NEXT: 0x0000000000000008 (RELASZ) 24 (bytes)
 # EMPTY-RELR-NEXT: 0x0000000000000009 (RELAENT) 24 (bytes)
 
-# EMPTY-RELR:      Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
+# EMPTY-RELR:      Relocation section '.rela.dyn' at offset {{.+}} contains 1 entries:
 # EMPTY-RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # EMPTY-RELR-NEXT: 0000000000030320  0000000000000411 R_AARCH64_AUTH_RELATIVE           8003031f
 # EMPTY-RELR-EMPTY:
-# EMPTY-RELR-NEXT: Relocation section '.relr.auth.dyn' at offset {{.*}} contains 0 entries:
+# EMPTY-RELR-NEXT: Relocation section '.relr.auth.dyn' at offset {{.+}} contains 0 entries:
 # EMPTY-RELR-NEXT: Index: Entry Address Symbolic Address
 
 .section .test, "aw"
@@ -183,10 +183,10 @@
 
 # EMPTY-RELA:      Section Headers:
 # EMPTY-RELA-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
-# EMPTY-RELA:      .rela.dyn RELA {{0*}}[[ADDR1:.*]] {{0*}}[[ADDR1]] 000000 18 A 0 0 8
-# EMPTY-RELA:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.*]] {{0*}}[[ADDR2]] 000008 08 A 0 0 8
+# EMPTY-RELA:      .rela.dyn RELA {{0*}}[[ADDR1:.+]] {{0*}}[[ADDR1]] 000000 18 A 0 0 8
+# EMPTY-RELA:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.+]] {{0*}}[[ADDR2]] 000008 08 A 0 0 8
 
-# EMPTY-RELA:      Dynamic section at offset {{.*}} contains 12 entries
+# EMPTY-RELA:      Dynamic section at offset {{.+}} contains 12 entries
 # EMPTY-RELA-NOT:  (RELR)
 # EMPTY-RELA-NOT:  (RELRSZ)
 # EMPTY-RELA-NOT:  (RELRENT)
@@ -194,10 +194,10 @@
 # EMPTY-RELA-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 8 (bytes)
 # EMPTY-RELA-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
 
-# EMPTY-RELA:      Relocation section '.rela.dyn' at offset {{.*}} contains 0 entries:
+# EMPTY-RELA:      Relocation section '.rela.dyn' at offset {{.+}} contains 0 entries:
 # EMPTY-RELA-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
 # EMPTY-RELA-EMPTY:
-# EMPTY-RELA-NEXT: Relocation section '.relr.auth.dyn' at offset {{.*}} contains 1 entries:
+# EMPTY-RELA-NEXT: Relocation section '.relr.auth.dyn' at offset {{.+}} contains 1 entries:
 # EMPTY-RELA-NEXT: Index: Entry Address Symbolic Address
 # EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d.0
 
