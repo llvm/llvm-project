@@ -26,7 +26,6 @@ namespace LoongArchABI {
 // Check if ABI has been standardized; issue a warning if it hasn't.
 // FIXME: Once all ABIs are standardized, this will be removed.
 static ABI checkABIStandardized(ABI Abi) {
-  bool IsStandardized = false;
   StringRef ABIName;
   switch (Abi) {
   case ABI_ILP32S:
@@ -43,13 +42,11 @@ static ABI checkABIStandardized(ABI Abi) {
     break;
   case ABI_LP64S:
   case ABI_LP64D:
-    IsStandardized = true;
-    break;
+    return Abi;
   default:
     llvm_unreachable("");
   }
-  if (!IsStandardized)
-    errs() << "warning: '" << ABIName << "' has not been standardized\n";
+  errs() << "warning: '" << ABIName << "' has not been standardized\n";
   return Abi;
 }
 
@@ -85,7 +82,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
       return Is64Bit ? ABI_LP64F : ABI_ILP32F;
     return Is64Bit ? ABI_LP64S : ABI_ILP32S;
   };
-  auto IsValidABI = [=](ABI Abi) {
+  auto IsABIValidForFeature = [=](ABI Abi) {
     switch (Abi) {
     default:
       return false;
@@ -105,7 +102,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   };
 
   // 1. If the '-target-abi' is valid, use it.
-  if (IsValidABI(ArgProvidedABI)) {
+  if (IsABIValidForFeature(ArgProvidedABI)) {
     if (TT.hasEnvironment() && ArgProvidedABI != TripleABI)
       errs()
           << "warning: triple-implied ABI conflicts with provided target-abi '"
@@ -114,25 +111,25 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   }
 
   // 2. If the triple-implied ABI is valid, use it.
-  if (IsValidABI(TripleABI)) {
-    // If not specifie target-abi, use the valid triple-implied ABI.
+  if (IsABIValidForFeature(TripleABI)) {
+    // If target-abi is not specified, use the valid triple-implied ABI.
     if (ABIName.empty())
       return checkABIStandardized(TripleABI);
 
     switch (ArgProvidedABI) {
     case ABI_Unknown:
-      // Fallback to the triple-implied ABI if ABI name is specified and
+      // Fallback to the triple-implied ABI if ABI name is specified but
       // invalid.
-      errs() << "'" << ABIName
-             << "' is not a recognized ABI for this target, ignoring and using "
-                "triple-implied ABI\n";
+      errs() << "warning: the '" << ABIName
+             << "' is not a recognized ABI for this target, ignoring and "
+                "using triple-implied ABI\n";
       return checkABIStandardized(TripleABI);
     case ABI_ILP32S:
     case ABI_ILP32F:
     case ABI_ILP32D:
       if (Is64Bit) {
-        errs() << "32-bit ABIs are not supported for 64-bit targets, ignoring "
-                  "target-abi and using triple-implied ABI\n";
+        errs() << "warning: 32-bit ABIs are not supported for 64-bit targets, "
+                  "ignoring and using triple-implied ABI\n";
         return checkABIStandardized(TripleABI);
       }
       break;
@@ -140,8 +137,8 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     case ABI_LP64F:
     case ABI_LP64D:
       if (!Is64Bit) {
-        errs() << "64-bit ABIs are not supported for 32-bit targets, ignoring "
-                  "target-abi and using triple-implied ABI\n";
+        errs() << "warning: 64-bit ABIs are not supported for 32-bit targets, "
+                  "ignoring and using triple-implied ABI\n";
         return checkABIStandardized(TripleABI);
       }
       break;
@@ -150,17 +147,15 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     switch (ArgProvidedABI) {
     case ABI_ILP32F:
     case ABI_LP64F:
-      errs() << "'" << ABIName
+      errs() << "warning: the '" << ABIName
              << "' ABI can't be used for a target that doesn't support the 'F' "
-                "instruction set, ignoring target-abi and using triple-implied "
-                "ABI\n";
+                "instruction set, ignoring and using triple-implied ABI\n";
       break;
     case ABI_ILP32D:
     case ABI_LP64D:
-      errs() << "'" << ABIName
+      errs() << "warning: the '" << ABIName
              << "' ABI can't be used for a target that doesn't support the 'D' "
-                "instruction set, ignoring target-abi and using triple-implied "
-                "ABI\n";
+                "instruction set, ignoring and using triple-implied ABI\n";
       break;
     default:
       llvm_unreachable("");
@@ -170,11 +165,11 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
 
   // 3. Parse the 'feature-abi', and use it.
   if (ABIName.empty())
-    errs() << "The triple-implied ABI is invalid, ignoring triple-implied ABI "
-              "and using feature-implied ABI\n";
+    errs() << "warning: the triple-implied ABI is invalid, ignoring and using "
+              "feature-implied ABI\n";
   else
-    errs() << "The target-abi and triple-implied ABI are invalid, ignoring "
-              "them and using feature-implied ABI\n";
+    errs() << "warning: both target-abi and the triple-implied ABI are "
+              "invalid, ignoring and using feature-implied ABI\n";
   return checkABIStandardized(GetFeatureABI());
 }
 
