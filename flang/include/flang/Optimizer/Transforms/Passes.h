@@ -67,9 +67,8 @@ std::unique_ptr<mlir::Pass> createAnnotateConstantOperandsPass();
 std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
-std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
 
-std::unique_ptr<mlir::Pass> createOMPDescriptorMapInfoGenPass();
+std::unique_ptr<mlir::Pass> createOMPMapInfoFinalizationPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();

@@ -883,7 +883,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // -x cuda
   auto language = args.getLastArgValue(clang::driver::options::OPT_x);
-  if (language.equals("cuda")) {
+  if (language == "cuda") {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::CUDA);
   }
@@ -975,13 +975,18 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setEnableConformanceChecks();
     res.setEnableUsageChecks();
   }
+
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w))
+    res.setDisableWarnings();
+
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
-    if (standard.equals("f2018")) {
+    if (standard == "f2018") {
       res.setEnableConformanceChecks();
     } else {
       const unsigned diagID =
@@ -1403,6 +1408,11 @@ void CompilerInvocation::setFortranOpts() {
 
   if (getEnableUsageChecks())
     fortranOptions.features.WarnOnAllUsage();
+
+  if (getDisableWarnings()) {
+    fortranOptions.features.DisableAllNonstandardWarnings();
+    fortranOptions.features.DisableAllUsageWarnings();
+  }
 }
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>

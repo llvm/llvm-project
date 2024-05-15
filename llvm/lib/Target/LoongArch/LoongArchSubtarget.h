@@ -32,7 +32,7 @@ class StringRef;
 class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   virtual void anchor();
 
-#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "LoongArchGenSubtargetInfo.inc"
 
@@ -83,7 +83,7 @@ public:
     return &TSInfo;
   }
 
-#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "LoongArchGenSubtargetInfo.inc"
 
