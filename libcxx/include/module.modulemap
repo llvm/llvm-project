@@ -1701,6 +1701,7 @@ module std_private_ranges_dangling                   [system] { header "__ranges
 module std_private_ranges_data                       [system] { header "__ranges/data.h" }
 module std_private_ranges_drop_view                  [system] { header "__ranges/drop_view.h" }
 module std_private_ranges_drop_while_view            [system] { header "__ranges/drop_while_view.h" }
+module std_private_ranges_elements_of                [system] { header "__ranges/elements_of.h" }
 module std_private_ranges_elements_view              [system] { header "__ranges/elements_view.h" }
 module std_private_ranges_empty                      [system] { header "__ranges/empty.h" }
 module std_private_ranges_empty_view                 [system] { header "__ranges/empty_view.h" }
