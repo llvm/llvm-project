@@ -6,10 +6,6 @@
 // RUN: %clang_cc1 -std=c++23 -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
-#if __cplusplus < 202002L
-// expected-no-diagnostics
-#endif
-
 namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
@@ -66,6 +62,30 @@ void B<int>::g() requires true;
 #endif
 
 } // namespace cwg2847
+
+namespace cwg2857 { // cwg2857: no
+struct A {};
+template <typename>
+struct D;
+namespace N {
+  struct B {};
+  void adl_only(A*, D<int>*); // #cwg2857-adl_only
+}
+
+void f(A* a, D<int>* d) {
+  adl_only(a, d);
+  // expected-error@-1 {{use of undeclared identifier 'adl_only'; did you mean 'N::adl_only'?}}
+  //   expected-note@#cwg2857-adl_only {{'N::adl_only' declared here}}
+}
+
+#if __cplusplus >= 201103L
+template <typename>
+struct D : N::B {
+  // FIXME: ADL shouldn't associate it's base B and N since D is not complete here
+  decltype(adl_only((A*) nullptr, (D*) nullptr)) f;
+};
+#endif
+} // namespace cwg2857
 
 namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
 
