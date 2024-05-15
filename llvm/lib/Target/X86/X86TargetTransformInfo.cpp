@@ -4192,6 +4192,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::v4i32,   { 16, 20, 11, 21 } },
     { ISD::BITREVERSE, MVT::v8i16,   { 16, 20, 11, 21 } },
     { ISD::BITREVERSE, MVT::v16i8,   { 11, 12, 10, 16 } },
+    { ISD::BITREVERSE, MVT::i16,     {  5,  6,  6, 10 } }, // AND+PCMPEQB+PMOVMSKB
+    { ISD::BITREVERSE, MVT::i8,      {  4,  4,  7,  8 } }, // AND+PCMPEQB+PMOVMSKB
     { ISD::BSWAP,      MVT::v2i64,   {  2,  3,  1,  5 } },
     { ISD::BSWAP,      MVT::v4i32,   {  2,  3,  1,  5 } },
     { ISD::BSWAP,      MVT::v8i16,   {  2,  3,  1,  5 } },
