@@ -861,6 +861,13 @@ let SubtargetPredicate = HasPermlane32Swap in
 defm : PermlaneSwapPat<int_amdgcn_permlane32_swap,
                        "V_PERMLANE32_SWAP_B32">;
 
+def V_CONSUME_POWER_Profile : VOPProfile <[untyped, i32, untyped, untyped]> {
+  let Src0RC32 = VCSrc_b32;
+}
+
+let SubtargetPredicate = HasConsumePowerInst in
+def V_CONSUME_POWER : VOP1_Pseudo<"v_consume_power", V_CONSUME_POWER_Profile, [], 1>;
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -1171,6 +1178,7 @@ defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x00b, "v_cv
 
 defm V_TANH_F32              : VOP1_Real_FULL_gfx1210_gfx13<0x01e>;
 defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x01f>;
+defm V_CONSUME_POWER         : VOP1Only_Real<GFX13Gen, 0x045>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1210_gfx13<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1210_gfx13<0x04b>;
@@ -1310,7 +1318,7 @@ defm V_RNDNE_F64      : VOP1_Real_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12
 defm V_FLOOR_F64      : VOP1_Real_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12<0x01a>;
 
 //===----------------------------------------------------------------------===//
-// GFX6, GFX7, GFX10, GFX11, GFX12
+// GFX6, GFX7, GFX10, GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
@@ -1416,6 +1424,10 @@ defm V_CLREXCP           : VOP1_Real_gfx6_gfx7_gfx10<0x041>;
 defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x042>;
 defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x043>;
 defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x044>;
+
+def : AMDGPUMnemonicAlias<"v_brev_b32", "v_bfrev_b32"> {
+  let AssemblerPredicate = isGFX13Plus;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).

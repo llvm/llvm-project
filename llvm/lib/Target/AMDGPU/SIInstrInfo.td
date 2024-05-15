@@ -2134,7 +2134,7 @@ class getOutsSDWA <bit HasDst, ValueType DstVT, RegisterOperand DstRCSDWA> {
 // instruction.
 class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
   string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
-  string src0 = ", $src0";
+  string src0 = !if(HasDst, ", ", " ") # "$src0";
   string src1 = ", $src1";
   string src2 = ", $src2";
   string ret = !if(HasDst, dst, "") #
@@ -2215,7 +2215,7 @@ class getAsmDPP <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT =
                    !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
                                            " $src1_modifiers,"));
   string args = !if(!not(HasModifiers),
-                     getAsm32<0, NumSrcArgs, DstVT>.ret,
+                     ","#getAsm32<0, NumSrcArgs, DstVT>.ret,
                      ", "#src0#src1);
   string ret = dst#args#" $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
 }
