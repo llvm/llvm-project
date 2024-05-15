@@ -32,6 +32,25 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask) {
     ret <4 x i32> %out
 }
 
+define <2 x double> @test_compress_v2f64(<2 x double> %vec, <2 x i1> %mask) {
+; CHECK-LABEL: test_compress_v2f64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ushll.2d v1, v1, #0
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str d0, [sp]
+; CHECK-NEXT:    shl.2d v1, v1, #63
+; CHECK-NEXT:    cmlt.2d v1, v1, #0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    bfi x8, x9, #3, #1
+; CHECK-NEXT:    st1.d { v0 }[1], [x8]
+; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    ret
+    %out = call <2 x double> @llvm.masked.compress.v2f64(<2 x double> %vec, <2 x i1> %mask)
+    ret <2 x double> %out
+}
+
 define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-LABEL: test_compress_v16i8:
 ; CHECK:       ; %bb.0:
