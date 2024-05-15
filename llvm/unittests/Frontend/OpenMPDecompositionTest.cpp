@@ -289,7 +289,7 @@ std::string stringify(const omp::DirectiveWithClauses &DWC) {
 // --- Tests ----------------------------------------------------------
 
 namespace red {
-// Make is easier to construct reduction operators from built-in intrinsics.
+// Make it easier to construct reduction operators from built-in intrinsics.
 omp::clause::ReductionOperator
 makeOp(omp::clause::DefinedOperator::IntrinsicOperator Op) {
   return omp::clause::ReductionOperator{omp::clause::DefinedOperator{Op}};
