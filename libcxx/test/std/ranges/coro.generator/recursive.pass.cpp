@@ -8,11 +8,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// std::generator
+// <generator>
+
+// template<class Ref, class V = void, class Allocator = void>
+//   class generator;
 
 #include <generator>
 
 #include <cassert>
+#include <numeric>
 #include <ranges>
 #include <utility>
 #include <vector>
@@ -81,6 +85,7 @@ bool test() {
     tree_node* tree_root = build_tree(10);
     auto node_vec        = traversal(tree_root) | std::ranges::to<std::vector<int>>();
     assert(node_vec.size() == 1023);
+    assert(std::reduce(node_vec.cbegin(), node_vec.cend()) == 2036);
     delete tree_root;
   }
   return true;

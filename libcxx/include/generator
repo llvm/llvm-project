@@ -206,11 +206,10 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI __gen_promise_base() noexcept
-      : __data_{.__root =
-                    {
-                        .__value_ptr = nullptr,
-                        .__active    = coroutine_handle<__gen_promise_base>::from_promise(*this),
-                    }},
+      : __data_{.__root{
+            .__value_ptr{nullptr},
+            .__active{coroutine_handle<__gen_promise_base>::from_promise(*this)},
+        }},
         __tag_{false} {}
 
   _LIBCPP_HIDE_FROM_ABI ~__gen_promise_base() noexcept {
@@ -230,11 +229,12 @@ public:
     return {};
   }
 
-  _LIBCPP_HIDE_FROM_ABI auto yield_value(const remove_reference_t<_Yielded>& __value)
+  _LIBCPP_HIDE_FROM_ABI auto yield_value(const remove_reference_t<_Yielded>& __value) noexcept(
+      is_nothrow_constructible_v<remove_cvref_t<_Yielded>, const remove_reference_t<_Yielded>&>)
     requires is_rvalue_reference_v<_Yielded> &&
              constructible_from<remove_cvref_t<_Yielded>, const remove_reference_t<_Yielded>&>
   {
-    return __element_awaiter{.__value = __value};
+    return __element_awaiter{.__value{__value}};
   }
 
   template <class _Ref2, class _Val2, class _Allocator2, class _Unused>
@@ -304,7 +304,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator++(int) { ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const noexcept { return __coroutine_.done(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend bool operator==(const __gen_iter& __iter, default_sentinel_t) noexcept {
+    return __iter.__coroutine_.done();
+  }
 
 private:
   coroutine_handle<__gen_promise_base<__gen_yielded<_Ref, _Val>>> __coroutine_;
@@ -363,7 +365,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit generator(coroutine_handle<promise_type> __coroutine) noexcept
       : __coroutine_{__coroutine} {}
 
-  coroutine_handle<promise_type> __coroutine_ = nullptr;
+  coroutine_handle<promise_type> __coroutine_;
 };
 
 _LIBCPP_END_NAMESPACE_STD

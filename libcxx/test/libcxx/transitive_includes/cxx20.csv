@@ -386,6 +386,15 @@ future thread
 future type_traits
 future typeinfo
 future version
+generator compare
+generator cstddef
+generator cstdint
+generator cstdlib
+generator cstring
+generator initializer_list
+generator limits
+generator new
+generator typeinfo
 initializer_list cstddef
 iomanip istream
 iomanip version

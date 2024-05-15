@@ -8,7 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// std::generator
+// <generator>
+
+// template<class Ref, class V = void, class Allocator = void>
+//   class generator;
 
 #include <generator>
 
@@ -25,11 +28,24 @@ std::generator<int> fib() {
   }
 }
 
+std::generator<const int&> range_fib() {
+  co_yield std::ranges::elements_of(std::vector<int>{0, 1});
+  co_yield std::ranges::elements_of(std::vector<int>{1, 2});
+  co_yield std::ranges::elements_of(std::vector<int>{3, 5});
+  co_yield std::ranges::elements_of(std::vector<int>{5, 8});
+}
+
 bool test() {
   {
     std::vector<int> expected_fib_vec = {0, 1, 1, 2, 3};
-    auto fib_vec                      = fib() | std::views::take(5) | std::ranges::to<std::vector<int>>();
-    assert(fib_vec == expected_fib_vec);
+    {
+      auto fib_vec = fib() | std::views::take(5) | std::ranges::to<std::vector<int>>();
+      assert(fib_vec == expected_fib_vec);
+    }
+    {
+      auto fib_vec = range_fib() | std::views::take(5) | std::ranges::to<std::vector<int>>();
+      assert(fib_vec == expected_fib_vec);
+    }
   }
   return true;
 }
