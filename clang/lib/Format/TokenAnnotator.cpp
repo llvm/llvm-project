@@ -5405,6 +5405,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   }
 
+  const auto *BeforeLeft = Left.Previous;
+  const auto *AfterRight = Right.Next;
+
   if (Style.isCSharp()) {
     if (Left.is(TT_FatArrow) && Right.is(tok::l_brace) &&
         Style.BraceWrapping.AfterFunction) {
@@ -5416,7 +5419,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     }
     if (Right.is(TT_CSharpGenericTypeConstraint))
       return true;
-    if (Right.Next && Right.Next->is(TT_FatArrow) &&
+    if (AfterRight && AfterRight->is(TT_FatArrow) &&
         (Right.is(tok::numeric_constant) ||
          (Right.is(tok::identifier) && Right.TokenText == "_"))) {
       return true;
@@ -5433,15 +5436,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         Left.is(tok::r_square) && Right.is(tok::l_square)) {
       return true;
     }
-
   } else if (Style.isJavaScript()) {
     // FIXME: This might apply to other languages and token kinds.
-    if (Right.is(tok::string_literal) && Left.is(tok::plus) && Left.Previous &&
-        Left.Previous->is(tok::string_literal)) {
+    if (Right.is(tok::string_literal) && Left.is(tok::plus) && BeforeLeft &&
+        BeforeLeft->is(tok::string_literal)) {
       return true;
     }
     if (Left.is(TT_DictLiteral) && Left.is(tok::l_brace) && Line.Level == 0 &&
-        Left.Previous && Left.Previous->is(tok::equal) &&
+        BeforeLeft && BeforeLeft->is(tok::equal) &&
         Line.First->isOneOf(tok::identifier, Keywords.kw_import, tok::kw_export,
                             tok::kw_const) &&
         // kw_var/kw_let are pseudo-tokens that are tok::identifier, so match
@@ -5460,8 +5462,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       // instead of bin-packing.
       return true;
     }
-    if (Right.is(tok::r_brace) && Left.is(tok::l_brace) && Left.Previous &&
-        Left.Previous->is(TT_FatArrow)) {
+    if (Right.is(tok::r_brace) && Left.is(tok::l_brace) && BeforeLeft &&
+        BeforeLeft->is(TT_FatArrow)) {
       // JS arrow function (=> {...}).
       switch (Style.AllowShortLambdasOnASingleLine) {
       case FormatStyle::SLS_All:
@@ -5489,8 +5491,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                   FormatStyle::SFS_InlineOnly);
     }
   } else if (Style.Language == FormatStyle::LK_Java) {
-    if (Right.is(tok::plus) && Left.is(tok::string_literal) && Right.Next &&
-        Right.Next->is(tok::string_literal)) {
+    if (Right.is(tok::plus) && Left.is(tok::string_literal) && AfterRight &&
+        AfterRight->is(tok::string_literal)) {
       return true;
     }
   } else if (Style.isVerilog()) {
@@ -5543,8 +5545,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       }
       return Style.BreakArrays;
     }
-  }
-  if (Style.isTableGen()) {
+  } else if (Style.isTableGen()) {
     // Break the comma in side cond operators.
     // !cond(case1:1,
     //       case2:0);
@@ -5600,8 +5601,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
-      Right.Next->is(tok::string_literal)) {
+  if (Right.is(tok::lessless) && AfterRight && Left.is(tok::string_literal) &&
+      AfterRight->is(tok::string_literal)) {
     return true;
   }
   if (Right.is(TT_RequiresClause)) {
@@ -5678,8 +5679,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // string literal accordingly. Thus, we try keep existing line breaks.
     return Right.IsMultiline && Right.NewlinesBefore > 0;
   }
-  if ((Left.is(tok::l_brace) || (Left.is(tok::less) && Left.Previous &&
-                                 Left.Previous->is(tok::equal))) &&
+  if ((Left.is(tok::l_brace) ||
+       (Left.is(tok::less) && BeforeLeft && BeforeLeft->is(tok::equal))) &&
       Right.NestingLevel == 1 && Style.Language == FormatStyle::LK_Proto) {
     // Don't put enums or option definitions onto single lines in protocol
     // buffers.
@@ -5793,7 +5794,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   //
   // We ensure elsewhere that extensions are always on their own line.
   if (Style.isProto() && Right.is(TT_SelectorName) &&
-      Right.isNot(tok::r_square) && Right.Next) {
+      Right.isNot(tok::r_square) && AfterRight) {
     // Keep `@submessage` together in:
     // @submessage { key: value }
     if (Left.is(tok::at))
@@ -5802,7 +5803,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // selector { ...
     // selector: { ...
     // selector: @base { ...
-    FormatToken *LBrace = Right.Next;
+    const auto *LBrace = AfterRight;
     if (LBrace && LBrace->is(tok::colon)) {
       LBrace = LBrace->Next;
       if (LBrace && LBrace->is(tok::at)) {

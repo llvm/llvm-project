@@ -13,7 +13,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cerrno>
 
-#if defined(__linux__) && !defined(__ANDROID__)
+#ifdef __linux__
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -24,6 +24,15 @@ namespace llvm {
 namespace exegesis {
 
 #if defined(__linux__) && !defined(__ANDROID__)
+
+// The SYS_* macros for system calls are provided by the libc whereas the
+// __NR_* macros are from the linux headers. This means that sometimes
+// SYS_* macros might not be available for certain system calls depending
+// upon the libc. This happens with the gettid syscall and bionic for
+// example, so we use __NR_gettid when no SYS_gettid is available.
+#ifndef SYS_gettid
+#define SYS_gettid __NR_gettid
+#endif
 
 long SubprocessMemory::getCurrentTID() {
   // We're using the raw syscall here rather than the gettid() function provided
