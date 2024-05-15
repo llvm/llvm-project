@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
-  ORCJIT
+  MC
+  MCJIT
+  RuntimeDyld
   Support
   Target
   nativecodegen
