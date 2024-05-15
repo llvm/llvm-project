@@ -167,9 +167,11 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
                                   LastParamListWasEmpty);
 
   // Parse the actual template declaration.
-  if (Tok.is(tok::kw_concept))
-    return Actions.ConvertDeclToDeclGroup(
-        ParseConceptDefinition(TemplateInfo, DeclEnd));
+  if (Tok.is(tok::kw_concept)) {
+    Decl *ConceptDecl = ParseConceptDefinition(TemplateInfo, DeclEnd);
+    ParsingTemplateParams.complete(ConceptDecl);
+    return Actions.ConvertDeclToDeclGroup(ConceptDecl);
+  }
 
   return ParseDeclarationAfterTemplate(
       Context, TemplateInfo, ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
@@ -316,7 +318,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   const IdentifierInfo *Id = Result.Identifier;
   SourceLocation IdLoc = Result.getBeginLoc();
 
-  DiagnoseAndSkipCXX11Attributes();
+  ParsedAttributes Attrs(AttrFactory);
+  MaybeParseCXX11Attributes(Attrs);
 
   if (!TryConsumeToken(tok::equal)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
@@ -335,8 +338,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   Expr *ConstraintExpr = ConstraintExprResult.get();
   return Actions.ActOnConceptDefinition(getCurScope(),
-                                        *TemplateInfo.TemplateParams,
-                                        Id, IdLoc, ConstraintExpr);
+                                        *TemplateInfo.TemplateParams, Id, IdLoc,
+                                        ConstraintExpr, Attrs);
 }
 
 /// ParseTemplateParameters - Parses a template-parameter-list enclosed in

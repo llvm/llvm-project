@@ -9356,7 +9356,8 @@ public:
   Decl *ActOnConceptDefinition(Scope *S,
                                MultiTemplateParamsArg TemplateParameterLists,
                                const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr);
+                               SourceLocation NameLoc, Expr *ConstraintExpr,
+                               const ParsedAttributesView &Attrs);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);

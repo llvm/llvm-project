@@ -45,6 +45,34 @@ void fallthrough(int n) {
 #endif
 }
 
+namespace cwg2428 { // cwg2428: 19
+#if __cplusplus >= 202002L
+template <typename>
+concept C [[deprecated]] = true; // #C
+
+template <typename T>
+concept C3 = C<T>;
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+
+template <typename T, C U>
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+requires C<T>
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+void f() {
+  bool b = C<int>;
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+};
+
+void g(C auto a) {};
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+#endif
+} // namespace cwg2428
+
 namespace cwg2450 { // cwg2450: 18
 #if __cplusplus >= 202302L
 struct S {int a;};
