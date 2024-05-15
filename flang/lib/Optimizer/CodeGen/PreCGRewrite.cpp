@@ -12,8 +12,8 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
+#include "CGOps.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
-#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -270,43 +270,13 @@ public:
 };
 
 class DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
-  bool preserveDeclare;
-
 public:
   using OpRewritePattern::OpRewritePattern;
-  DeclareOpConversion(mlir::MLIRContext *ctx, bool preserveDecl)
-      : OpRewritePattern(ctx), preserveDeclare(preserveDecl) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
-    if (!preserveDeclare) {
-      rewriter.replaceOp(declareOp, declareOp.getMemref());
-      return mlir::success();
-    }
-    auto loc = declareOp.getLoc();
-    llvm::SmallVector<mlir::Value> shapeOpers;
-    llvm::SmallVector<mlir::Value> shiftOpers;
-    if (auto shapeVal = declareOp.getShape()) {
-      if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
-        populateShape(shapeOpers, shapeOp);
-      else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
-        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
-      else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
-        populateShift(shiftOpers, shiftOp);
-      else
-        return mlir::failure();
-    }
-    // FIXME: Add FortranAttrs and CudaAttrs
-    auto xDeclOp = rewriter.create<fir::cg::XDeclareOp>(
-        loc, declareOp.getType(), declareOp.getMemref(), shapeOpers, shiftOpers,
-        declareOp.getTypeparams(), declareOp.getDummyScope(),
-        declareOp.getUniqName());
-    LLVM_DEBUG(llvm::dbgs()
-               << "rewriting " << declareOp << " to " << xDeclOp << '\n');
-    rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());
+    rewriter.replaceOp(declareOp, declareOp.getMemref());
     return mlir::success();
   }
 };
@@ -327,7 +297,6 @@ public:
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
-  CodeGenRewrite(fir::CodeGenRewriteOptions opts) : Base(opts) {}
   void runOnOperation() override final {
     mlir::ModuleOp mod = getOperation();
 
@@ -345,7 +314,7 @@ public:
                    mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
     });
     mlir::RewritePatternSet patterns(&context);
-    fir::populatePreCGRewritePatterns(patterns, preserveDeclare);
+    fir::populatePreCGRewritePatterns(patterns);
     if (mlir::failed(
             mlir::applyPartialConversion(mod, target, std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
@@ -361,14 +330,12 @@ public:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass>
-fir::createFirCodeGenRewritePass(fir::CodeGenRewriteOptions Options) {
-  return std::make_unique<CodeGenRewrite>(Options);
+std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
+  return std::make_unique<CodeGenRewrite>();
 }
 
-void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
-                                       bool preserveDeclare) {
+void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns) {
   patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
-                  DummyScopeOpConversion>(patterns.getContext());
-  patterns.add<DeclareOpConversion>(patterns.getContext(), preserveDeclare);
+                  DeclareOpConversion, DummyScopeOpConversion>(
+      patterns.getContext());
 }

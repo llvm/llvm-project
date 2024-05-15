@@ -169,11 +169,9 @@ inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
-inline void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
-  fir::CodeGenRewriteOptions options;
-  options.preserveDeclare = preserveDeclare;
-  addPassConditionally(pm, disableCodeGenRewrite,
-      [&]() { return fir::createFirCodeGenRewritePass(options); });
+inline void addCodeGenRewritePass(mlir::PassManager &pm) {
+  addPassConditionally(
+      pm, disableCodeGenRewrite, fir::createFirCodeGenRewritePass);
 }
 
 inline void addTargetRewritePass(mlir::PassManager &pm) {
@@ -355,8 +353,7 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     MLIRToLLVMPassPipelineConfig config, llvm::StringRef inputFilename = {}) {
   fir::addBoxedProcedurePass(pm);
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
-  fir::addCodeGenRewritePass(
-      pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
+  fir::addCodeGenRewritePass(pm);
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
