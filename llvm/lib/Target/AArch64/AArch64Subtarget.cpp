@@ -75,6 +75,9 @@ static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
     "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
+static cl::opt<bool> EnableSubRegLiveness(
+    "aarch64-enable-subreg-liveness", cl::init(true), cl::Hidden);
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -573,7 +576,7 @@ AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
 }
 
 bool AArch64Subtarget::enableSubRegLiveness() const {
-  return hasSME() && isStreaming();
+  return EnableSubRegLiveness;
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

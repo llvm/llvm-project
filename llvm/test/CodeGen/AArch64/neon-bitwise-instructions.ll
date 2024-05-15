@@ -1349,18 +1349,14 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: vselect_equivalent_shuffle_v8i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    adrp x8, .LCPI92_0
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI92_0]
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vselect_equivalent_shuffle_v8i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI92_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI92_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
@@ -1386,9 +1382,8 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16_zero(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_equivalent_shuffle_v8i16_zero:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI93_0
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    adrp x8, .LCPI93_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI93_0]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
@@ -1422,9 +1417,8 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16_zeroswap(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_equivalent_shuffle_v8i16_zeroswap:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI94_0
 ; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
+; CHECK-GI-NEXT:    adrp x8, .LCPI94_0
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI94_0]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
@@ -1466,9 +1460,7 @@ define <4 x i32> @vselect_equivalent_shuffle_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-LABEL: vselect_equivalent_shuffle_v4i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI96_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI96_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
   %c = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 5, i32 3>
