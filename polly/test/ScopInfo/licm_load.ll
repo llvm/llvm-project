@@ -1,6 +1,6 @@
-; RUN: opt %loadNPMPolly -passes='loop(loop-rotate,indvars),polly-prepare,print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 \
+; RUN: opt %loadPolly -passes='loop(loop-rotate,indvars),polly-prepare,print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 \
 ; RUN: | FileCheck %s
-; RUN: opt %loadNPMPolly -passes='loop-mssa(loop-rotate,indvars,licm),polly-prepare,print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 \
+; RUN: opt %loadPolly -passes='loop-mssa(loop-rotate,indvars,licm),polly-prepare,print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 \
 ; RUN: | FileCheck %s
 ;
 ;    void foo(int n, float A[static const restrict n],

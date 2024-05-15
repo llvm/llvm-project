@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen < %s
+; RUN: opt %loadPolly -passes=polly-codegen < %s
 
 ; We just check that this compilation does not crash.
 
