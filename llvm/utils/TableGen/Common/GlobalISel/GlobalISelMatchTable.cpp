@@ -1037,12 +1037,16 @@ void RuleMatcher::emit(MatchTable &Table) {
   if (!CustomCXXAction.empty()) {
     /// Handle combiners relying on custom C++ code instead of actions.
     assert(Table.isCombiner() && "CustomCXXAction is only for combiners!");
-    assert(Actions.empty() &&
-           "Cannot provide both MatchActions and a CustomCXXAction!");
+    // We cannot have actions other than debug comments.
+    assert(none_of(Actions, [](auto &A) {
+      return A->getKind() != MatchAction::AK_DebugComment;
+    }));
     Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
           << MatchTable::Comment("Fn")
           << MatchTable::NamedValue(2, CustomCXXAction)
           << MatchTable::LineBreak;
+    for (const auto &MA : Actions)
+      MA->emitActionOpcodes(Table, *this);
   } else {
     // Emit all actions except the last one, then emit coverage and emit the
     // final action.
