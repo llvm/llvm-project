@@ -371,6 +371,22 @@ private:
                                    unsigned &InstIdx) {
     assert(I->getNumOperands() == 2);
 
+    // We don't yet support:
+    //  - fast math flags (for float operations).
+    //  - the `exact` keyword
+    //  - vector variants
+    if ((isa<FPMathOperator>(I) && (I->getFastMathFlags().any())) ||
+        (isa<PossiblyExactOperator>(I) && I->isExact()) ||
+        I->getType()->isVectorTy()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
+    // Note that we do nothing with the `nsw` and `nuw` (no {signed,unsigned}
+    // wrap) keywords, which may generate poison values. If they do, the rules
+    // of deferred UB allow us to make any value we wish, including (as
+    // we do) the wrapped value.
+
     // opcode:
     serialiseOpcode(OpCodeBinOp);
     // left-hand side:
@@ -386,9 +402,6 @@ private:
 
   // Serialise a binary operator.
   void serialiseBinOperator(Instruction::BinaryOps BO) {
-    // operand kind:
-    // OutStreamer.emitInt8(OperandKind::OpKindBinOp);
-    // the operator:
     switch (BO) {
     case Instruction::BinaryOps::Add:
       OutStreamer.emitInt8(BinOp::BinOpAdd);
