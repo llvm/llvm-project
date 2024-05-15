@@ -9198,8 +9198,21 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     // Since the loop is finite, an invariant RHS cannot include the boundary
     // value, otherwise it would loop forever.
     if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
-        !isLoopInvariant(RHS, L))
-      break;
+        !isLoopInvariant(RHS, L)) {
+      // Otherwise, perform the addition in a wider type, to avoid overflow.
+      auto *OldType = dyn_cast<IntegerType>(LHS->getType());
+      if (!OldType)
+        break;
+      auto *NewType =
+          Type::getIntNTy(OldType->getContext(), OldType->getBitWidth() * 2);
+      if (ICmpInst::isSigned(Pred)) {
+        LHS = getSignExtendExpr(LHS, NewType);
+        RHS = getSignExtendExpr(RHS, NewType);
+      } else {
+        LHS = getZeroExtendExpr(LHS, NewType);
+        RHS = getZeroExtendExpr(RHS, NewType);
+      }
+    }
     RHS = getAddExpr(getOne(RHS->getType()), RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_SLT:
