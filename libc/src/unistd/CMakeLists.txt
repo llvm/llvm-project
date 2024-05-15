@@ -174,7 +174,7 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.pathconf
 )
 
-add_header_library(
+add_entrypoint_object(
   pathconf_utils
   ALIAS
   DEPENDS
