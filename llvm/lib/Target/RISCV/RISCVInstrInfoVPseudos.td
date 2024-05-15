@@ -6181,7 +6181,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0,
 //===----------------------------------------------------------------------===//
 
 // Pseudos.
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 // Due to rs1=X0 having special meaning, we need a GPRNoX0 register class for
 // the when we aren't using one of the special X0 encodings. Otherwise it could
 // be accidentally be made X0 by MachineIR optimizations. To satisfy the

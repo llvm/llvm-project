@@ -1125,22 +1125,22 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    slli a3, a1, 3
-; CHECK-NEXT:    add a5, a2, a3
+; CHECK-NEXT:    srli a3, a1, 3
+; CHECK-NEXT:    slli a5, a1, 3
+; CHECK-NEXT:    add a6, a2, a5
+; CHECK-NEXT:    vl8re64.v v8, (a6)
+; CHECK-NEXT:    csrr a6, vlenb
+; CHECK-NEXT:    slli a6, a6, 4
+; CHECK-NEXT:    add a6, sp, a6
+; CHECK-NEXT:    addi a6, a6, 16
+; CHECK-NEXT:    vs8r.v v8, (a6) # Unknown-size Folded Spill
+; CHECK-NEXT:    sub a6, a4, a1
+; CHECK-NEXT:    sltu a7, a4, a6
+; CHECK-NEXT:    addi a7, a7, -1
+; CHECK-NEXT:    and a6, a7, a6
+; CHECK-NEXT:    vsetvli a7, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    add a5, a0, a5
 ; CHECK-NEXT:    vl8re64.v v8, (a5)
-; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    slli a5, a5, 4
-; CHECK-NEXT:    add a5, sp, a5
-; CHECK-NEXT:    addi a5, a5, 16
-; CHECK-NEXT:    vs8r.v v8, (a5) # Unknown-size Folded Spill
-; CHECK-NEXT:    sub a5, a4, a1
-; CHECK-NEXT:    sltu a6, a4, a5
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    and a5, a6, a5
-; CHECK-NEXT:    srli a6, a1, 3
-; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    vl8re64.v v8, (a3)
 ; CHECK-NEXT:    vl8re64.v v16, (a2)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
@@ -1150,8 +1150,8 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    vl8re64.v v16, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v0, a6
-; CHECK-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a3
+; CHECK-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    mul a0, a0, a2
