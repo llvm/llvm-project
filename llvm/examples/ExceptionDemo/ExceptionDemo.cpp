@@ -49,8 +49,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -83,6 +84,8 @@
 #ifndef USE_GLOBAL_STR_CONSTS
 #define USE_GLOBAL_STR_CONSTS true
 #endif
+
+llvm::ExitOnError ExitOnErr;
 
 //
 // Example types
@@ -142,6 +145,7 @@ static llvm::ConstantInt *ourExceptionCaughtState;
 
 typedef std::vector<std::string> ArgNames;
 typedef std::vector<llvm::Type*> ArgTypes;
+typedef llvm::ArrayRef<llvm::Type *> TypeArray;
 
 //
 // Code Generation Utilities
@@ -892,13 +896,10 @@ void generateStringPrint(llvm::LLVMContext &context,
 ///        generated, and is used to hold the constant string. A value of
 ///        false indicates that the constant string will be stored on the
 ///        stack.
-void generateIntegerPrint(llvm::LLVMContext &context,
-                          llvm::Module &module,
+void generateIntegerPrint(llvm::LLVMContext &context, llvm::Module &module,
                           llvm::IRBuilder<> &builder,
-                          llvm::Function &printFunct,
-                          llvm::Value &toPrint,
-                          std::string format,
-                          bool useGlobal = true) {
+                          llvm::Function &printFunct, llvm::Value *toPrint,
+                          std::string format, bool useGlobal = true) {
   llvm::Constant *stringConstant =
     llvm::ConstantDataArray::getString(context, format);
   llvm::Value *stringVar;
@@ -920,9 +921,8 @@ void generateIntegerPrint(llvm::LLVMContext &context,
 
   llvm::Value *cast = builder.CreateBitCast(stringVar,
                                             builder.getPtrTy());
-  builder.CreateCall(&printFunct, {&toPrint, cast});
+  builder.CreateCall(&printFunct, {toPrint, cast});
 }
-
 
 /// Generates code to handle finally block type semantics: always runs
 /// regardless of whether a thrown exception is passing through or the
@@ -997,10 +997,10 @@ static llvm::BasicBlock *createFinallyBlock(llvm::LLVMContext &context,
                       bufferToPrint.str(),
                       USE_GLOBAL_STR_CONSTS);
 
-  llvm::SwitchInst *theSwitch = builder.CreateSwitch(builder.CreateLoad(
-                                                       *exceptionCaughtFlag),
-                                                     &terminatorBlock,
-                                                     2);
+  llvm::SwitchInst *theSwitch = builder.CreateSwitch(
+      builder.CreateLoad(ourExceptionNotThrownState->getType(),
+                         *exceptionCaughtFlag),
+      &terminatorBlock, 2);
   theSwitch->addCase(ourExceptionCaughtState, &terminatorBlock);
   theSwitch->addCase(ourExceptionThrownState, &unwindResumeBlock);
 
@@ -1186,7 +1186,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
 
   // Note: function handles NULL exceptions
   builder.CreateCall(deleteOurException,
-                     builder.CreateLoad(exceptionStorage));
+                     builder.CreateLoad(builder.getPtrTy(), exceptionStorage));
   builder.CreateRetVoid();
 
   // Normal Block
@@ -1206,7 +1206,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
 
   builder.SetInsertPoint(unwindResumeBlock);
 
-  builder.CreateResume(builder.CreateLoad(caughtResultStorage));
+  builder.CreateResume(
+      builder.CreateLoad(ourCaughtResultType, caughtResultStorage));
 
   // Exception Block
 
@@ -1241,8 +1242,9 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // Retrieve exception_class member from thrown exception
   // (_Unwind_Exception instance). This member tells us whether or not
   // the exception is foreign.
-  llvm::Value *unwindExceptionClass =
-      builder.CreateLoad(builder.CreateStructGEP(
+  llvm::Value *unwindExceptionClass = builder.CreateLoad(
+      builder.getInt64Ty(),
+      builder.CreateStructGEP(
           ourUnwindExceptionType,
           builder.CreatePointerCast(unwindException,
                                     ourUnwindExceptionType->getPointerTo()),
@@ -1278,9 +1280,9 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   //
   // Note: ourBaseFromUnwindOffset is usually negative
   llvm::Value *typeInfoThrown = builder.CreatePointerCast(
-                                  builder.CreateConstGEP1_64(unwindException,
-                                                       ourBaseFromUnwindOffset),
-                                  ourExceptionType->getPointerTo());
+      builder.CreateConstGEP1_64(builder.getPtrTy(), unwindException,
+                                 ourBaseFromUnwindOffset),
+      ourExceptionType->getPointerTo());
 
   // Retrieve thrown exception type info type
   //
@@ -1289,17 +1291,15 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   typeInfoThrown = builder.CreateStructGEP(ourExceptionType, typeInfoThrown, 0);
 
   llvm::Value *typeInfoThrownType =
-      builder.CreateStructGEP(builder.getPtrTy(), typeInfoThrown, 0);
+      builder.CreateStructGEP(ourTypeInfoType, typeInfoThrown, 0);
 
-  generateIntegerPrint(context,
-                       module,
-                       builder,
-                       *toPrint32Int,
-                       *(builder.CreateLoad(typeInfoThrownType)),
+  llvm::Value *ti8 =
+      builder.CreateLoad(builder.getInt8Ty(), typeInfoThrownType);
+  generateIntegerPrint(context, module, builder, *toPrint32Int,
+                       builder.CreateZExt(ti8, builder.getInt32Ty()),
                        "Gen: Exception type <%d> received (stack unwound) "
                        " in " +
-                       ourId +
-                       ".\n",
+                           ourId + ".\n",
                        USE_GLOBAL_STR_CONSTS);
 
   // Route to matched type info catch block or run cleanup finally block
@@ -1311,8 +1311,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
 
   for (unsigned i = 1; i <= numExceptionsToCatch; ++i) {
     nextTypeToCatch = i - 1;
-    switchToCatchBlock->addCase(llvm::ConstantInt::get(
-                                   llvm::Type::getInt32Ty(context), i),
+    switchToCatchBlock->addCase(llvm::ConstantInt::get(builder.getInt32Ty(), i),
                                 catchBlocks[nextTypeToCatch]);
   }
 
@@ -1387,14 +1386,10 @@ createThrowExceptionFunction(llvm::Module &module, llvm::IRBuilder<> &builder,
   builder.SetInsertPoint(entryBlock);
 
   llvm::Function *toPrint32Int = module.getFunction("print32Int");
-  generateIntegerPrint(context,
-                       module,
-                       builder,
-                       *toPrint32Int,
-                       *exceptionType,
-                       "\nGen: About to throw exception type <%d> in " +
-                       ourId +
-                       ".\n",
+  generateIntegerPrint(context, module, builder, *toPrint32Int,
+                       builder.CreateZExt(exceptionType, builder.getInt32Ty()),
+                       "\nGen: About to throw exception type <%d> in " + ourId +
+                           ".\n",
                        USE_GLOBAL_STR_CONSTS);
 
   // Switches on runtime type info type value to determine whether or not
@@ -1546,15 +1541,13 @@ typedef void (*OurExceptionThrowFunctType) (int32_t typeToThrow);
 /// @param function generated test function to run
 /// @param typeToThrow type info type of generated exception to throw, or
 ///        indicator to cause foreign exception to be thrown.
-static
-void runExceptionThrow(llvm::ExecutionEngine *engine,
-                       llvm::Function *function,
-                       int32_t typeToThrow) {
+static void runExceptionThrow(llvm::orc::LLJIT *JIT, std::string function,
+                              int32_t typeToThrow) {
 
   // Find test's function pointer
   OurExceptionThrowFunctType functPtr =
-    reinterpret_cast<OurExceptionThrowFunctType>(
-       reinterpret_cast<intptr_t>(engine->getPointerToFunction(function)));
+      reinterpret_cast<OurExceptionThrowFunctType>(reinterpret_cast<uintptr_t>(
+          ExitOnErr(JIT->lookup(function)).getValue()));
 
   try {
     // Run test
@@ -1582,8 +1575,6 @@ void runExceptionThrow(llvm::ExecutionEngine *engine,
 //
 // End test functions
 //
-
-typedef llvm::ArrayRef<llvm::Type*> TypeArray;
 
 /// This initialization routine creates type info globals and
 /// adds external function declarations to module.
@@ -1894,93 +1885,73 @@ int main(int argc, char *argv[]) {
     return(0);
   }
 
-  // If not set, exception handling will not be turned on
-  llvm::TargetOptions Opts;
-
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
-  llvm::LLVMContext Context;
-  llvm::IRBuilder<> theBuilder(Context);
+  auto Context = std::make_unique<llvm::LLVMContext>();
+  llvm::IRBuilder<> theBuilder(*Context);
 
   // Make the module, which holds all the code.
   std::unique_ptr<llvm::Module> Owner =
-      std::make_unique<llvm::Module>("my cool jit", Context);
+      std::make_unique<llvm::Module>("my cool jit", *Context);
   llvm::Module *module = Owner.get();
 
-  std::unique_ptr<llvm::RTDyldMemoryManager> MemMgr(new llvm::SectionMemoryManager());
+  // Build LLJIT
+  std::unique_ptr<llvm::orc::LLJIT> JIT =
+      ExitOnErr(llvm::orc::LLJITBuilder().create());
 
-  // Build engine with JIT
-  llvm::EngineBuilder factory(std::move(Owner));
-  factory.setEngineKind(llvm::EngineKind::JIT);
-  factory.setTargetOptions(Opts);
-  factory.setMCJITMemoryManager(std::move(MemMgr));
-  llvm::ExecutionEngine *executionEngine = factory.create();
+  // Set up the optimizer pipeline.
+  llvm::legacy::FunctionPassManager fpm(module);
 
-  {
-    llvm::legacy::FunctionPassManager fpm(module);
-
-    // Set up the optimizer pipeline.
-    // Start with registering info about how the
-    // target lays out data structures.
-    module->setDataLayout(executionEngine->getDataLayout());
-
-    // Optimizations turned on
+  // Optimizations turned on
 #ifdef ADD_OPT_PASSES
 
-    // Basic AliasAnslysis support for GVN.
-    fpm.add(llvm::createBasicAliasAnalysisPass());
+  // Basic AliasAnslysis support for GVN.
+  fpm.add(llvm::createBasicAliasAnalysisPass());
 
-    // Promote allocas to registers.
-    fpm.add(llvm::createPromoteMemoryToRegisterPass());
+  // Promote allocas to registers.
+  fpm.add(llvm::createPromoteMemoryToRegisterPass());
 
-    // Do simple "peephole" optimizations and bit-twiddling optzns.
-    fpm.add(llvm::createInstructionCombiningPass());
+  // Do simple "peephole" optimizations and bit-twiddling optzns.
+  fpm.add(llvm::createInstructionCombiningPass());
 
-    // Reassociate expressions.
-    fpm.add(llvm::createReassociatePass());
+  // Reassociate expressions.
+  fpm.add(llvm::createReassociatePass());
 
-    // Eliminate Common SubExpressions.
-    fpm.add(llvm::createGVNPass());
+  // Eliminate Common SubExpressions.
+  fpm.add(llvm::createGVNPass());
 
-    // Simplify the control flow graph (deleting unreachable
-    // blocks, etc).
-    fpm.add(llvm::createCFGSimplificationPass());
+  // Simplify the control flow graph (deleting unreachable
+  // blocks, etc).
+  fpm.add(llvm::createCFGSimplificationPass());
 #endif  // ADD_OPT_PASSES
 
-    fpm.doInitialization();
+  fpm.doInitialization();
 
-    // Generate test code using function throwCppException(...) as
-    // the function which throws foreign exceptions.
-    llvm::Function *toRun =
-    createUnwindExceptionTest(*module,
-                              theBuilder,
-                              fpm,
-                              "throwCppException");
+  // Generate test code using function throwCppException(...) as
+  // the function which throws foreign exceptions.
+  createUnwindExceptionTest(*module, theBuilder, fpm, "throwCppException");
 
-    executionEngine->finalizeObject();
+  ExitOnErr(JIT->addIRModule(
+      llvm::orc::ThreadSafeModule(std::move(Owner), std::move(Context))));
 
 #ifndef NDEBUG
-    fprintf(stderr, "\nBegin module dump:\n\n");
+  fprintf(stderr, "\nBegin module dump:\n\n");
 
-    module->dump();
+  module->print(llvm::errs(), nullptr);
 
-    fprintf(stderr, "\nEnd module dump:\n");
+  fprintf(stderr, "\nEnd module dump:\n");
 #endif
 
-    fprintf(stderr, "\n\nBegin Test:\n");
+  fprintf(stderr, "\n\nBegin Test:\n");
+  std::string toRun = "outerCatchFunct";
 
-    for (int i = 1; i < argc; ++i) {
-      // Run test for each argument whose value is the exception
-      // type to throw.
-      runExceptionThrow(executionEngine,
-                        toRun,
-                        (unsigned) strtoul(argv[i], NULL, 10));
-    }
-
-    fprintf(stderr, "\nEnd Test:\n\n");
+  for (int i = 1; i < argc; ++i) {
+    // Run test for each argument whose value is the exception
+    // type to throw.
+    runExceptionThrow(JIT.get(), toRun, (unsigned)strtoul(argv[i], NULL, 10));
   }
 
-  delete executionEngine;
+  fprintf(stderr, "\nEnd Test:\n\n");
 
   return 0;
 }
