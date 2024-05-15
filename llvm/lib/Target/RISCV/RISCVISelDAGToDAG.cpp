@@ -902,6 +902,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     int64_t Imm = ConstNode->getSExtValue();
+    // If only the lower 8 bits are used, try to convert this to a simm6 by
+    // sign-extending bit 7. This is neutral without the C extension, and
+    // allows C.LI to be used if C is present.
+    if (isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) && hasAllBUsers(Node))
+      Imm = SignExtend64<8>(Imm);
     // If the upper XLen-16 bits are not used, try to convert this to a simm12
     // by sign extending bit 15.
     if (isUInt<16>(Imm) && isInt<12>(SignExtend64<16>(Imm)) &&

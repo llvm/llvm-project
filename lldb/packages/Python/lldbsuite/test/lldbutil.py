@@ -1654,6 +1654,22 @@ def skip_if_library_missing(test, target, library):
     )
 
 
+def install_to_target(test, path):
+    if lldb.remote_platform:
+        filename = os.path.basename(path)
+        remote_path = append_to_process_working_directory(test, filename)
+        err = lldb.remote_platform.Install(
+            lldb.SBFileSpec(path, True), lldb.SBFileSpec(remote_path, False)
+        )
+        if err.Fail():
+            raise Exception(
+                "remote_platform.Install('%s', '%s') failed: %s"
+                % (path, remote_path, err)
+            )
+        path = remote_path
+    return path
+
+
 def read_file_on_target(test, remote):
     if lldb.remote_platform:
         local = test.getBuildArtifact("file_from_target")

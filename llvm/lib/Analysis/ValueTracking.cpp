@@ -1137,6 +1137,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (FPClasses & fcZero)
           Known = Known.intersectWith(KnownBits::makeConstant(
               APInt::getZero(FPType->getScalarSizeInBits())));
+
+        Known.Zero.clearSignBit();
+        Known.One.clearSignBit();
       }
 
       if (Result.SignBit) {
@@ -1144,13 +1147,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.makeNegative();
         else
           Known.makeNonNegative();
-      } else {
-        Known.Zero.clearSignBit();
-        Known.One.clearSignBit();
       }
 
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-
       break;
     }
 
