@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadPolly -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadPolly -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
 ;
 ; Check that Polly's default pipeline works from detection to code generation
 ; with either pass manager.

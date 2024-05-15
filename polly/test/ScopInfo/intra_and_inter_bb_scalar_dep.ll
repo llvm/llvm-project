@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -aa-pipeline=basic-aa '-passes=print<polly-function-scops>' -disable-output \
-; RUN: -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; void f(long A[], int N, int *init_ptr) {
 ;   long i, j;

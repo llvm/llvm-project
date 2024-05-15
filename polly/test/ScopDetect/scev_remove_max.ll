@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly '-passes=print<polly-detect>' < %s
+; RUN: opt %loadPolly -polly-detect < %s
 
 ; This test case helps to determine wether SCEVRemoveMax::remove produces
 ; an infinite loop and a segmentation fault, if it processes, for example,
