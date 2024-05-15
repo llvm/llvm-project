@@ -6,7 +6,7 @@
 !CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_incEi"}
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:      %[[I_MEM:.*]] = fir.alloca i32 {bindc_name = "i"
+!CHECK:      %[[I_MEM:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK:      %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:      %[[LB:.*]] = arith.constant 4 : i32
@@ -44,7 +44,7 @@ end subroutine
 !CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_decEi"}
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:      %[[I_MEM:.*]] = fir.alloca i32 {bindc_name = "i"
+!CHECK:      %[[I_MEM:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK:      %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:      %[[LB:.*]] = arith.constant 10 : i32

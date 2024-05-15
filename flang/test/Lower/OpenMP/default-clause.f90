@@ -358,7 +358,7 @@ end subroutine
 !CHECK: %[[X_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_test5Ex"}
 !CHECK: %[[X_DECLARE:.*]]:2 = hlfir.declare %[[X_ALLOCA]] {{.*}}
 
-!CHECK: %[[LOOP_VAR_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i"
+!CHECK: %[[LOOP_VAR_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
 
 !CHECK: %[[CONST_LB:.*]] = arith.constant 1 : i32
@@ -395,7 +395,7 @@ end subroutine
 !CHECK: %[[Z_VAR:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFnested_default_clause_test6Ez"}
 !CHECK: %[[Z_VAR_DECLARE:.*]]:2 = hlfir.declare %[[Z_VAR]] {{.*}}
 
-!CHECK: %[[LOOP_VAR:.*]] = fir.alloca i32 {bindc_name = "i"
+!CHECK: %[[LOOP_VAR:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
 
 !CHECK: %[[CONST_LB:.*]] = arith.constant 1 : i32
@@ -551,10 +551,10 @@ subroutine nested_constructs
 !CHECK: %[[INNER_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFnested_constructsEz"}
 !CHECK: %[[INNER_Z_DECL:.*]]:2 = hlfir.declare %[[INNER_Z]] {{.*}}
 
-!CHECK: %[[INNER_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name
+!CHECK: %[[INNER_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK: %[[INNER_I_DECL:.*]]:2 = hlfir.declare %[[INNER_I]] {{.*}}
 
-!CHECK: %[[INNER_J:.*]] = fir.alloca i32 {bindc_name = "j", pinned, uniq_name
+!CHECK: %[[INNER_J:.*]] = fir.alloca i32 {bindc_name = "j", pinned, {{.*}}}
 !CHECK: %[[INNER_J_DECL:.*]]:2 = hlfir.declare %[[INNER_J]] {{.*}}
     !$omp parallel default(private) firstprivate(y)
 !CHECK: {{.*}} = fir.do_loop {{.*}} {

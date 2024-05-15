@@ -126,7 +126,7 @@ subroutine wsloop_variable_sub
   integer(kind=16) :: i16_lb
   real :: x
 
-!CHECK:           %[[VAL_2:.*]] = fir.alloca i16 {bindc_name = "i2", pinned
+!CHECK:           %[[VAL_2:.*]] = fir.alloca i16 {bindc_name = "i2", pinned, {{.*}}}
 !CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFwsloop_variable_subEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 
 !CHECK:           %[[VAL_22:.*]] = arith.constant 1 : i32
@@ -176,7 +176,7 @@ subroutine wsloop_variable_sub
 !CHECK:           %[[VAL_49:.*]] = arith.constant 5 : i8
 !CHECK:           hlfir.assign %[[VAL_49]] to %[[VAL_19]]#0 : i8, !fir.ref<i8>
 
-!CHECK:           %[[VAL_0:.*]] = fir.alloca i8 {bindc_name = "i1", pinned
+!CHECK:           %[[VAL_0:.*]] = fir.alloca i8 {bindc_name = "i1", pinned, {{.*}}}
 !CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFwsloop_variable_subEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 
 !CHECK:           %[[VAL_50:.*]] = arith.constant 1 : i32

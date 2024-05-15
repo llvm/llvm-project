@@ -38,13 +38,13 @@ program wsloop_collapse
 !CHECK:           %[[VAL_23:.*]] = arith.constant 0 : i32
 !CHECK:           hlfir.assign %[[VAL_23]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 
-!CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", pinned
+!CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 !CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "j", pinned
+!CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "j", pinned, {{.*}}}
 !CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "k", pinned
+!CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "k", pinned, {{.*}}}
 !CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   integer :: i, j, k

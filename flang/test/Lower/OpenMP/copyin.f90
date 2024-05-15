@@ -154,7 +154,7 @@ end
 
 ! CHECK:             omp.barrier
 
-! CHECK:             %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "i"
+! CHECK:             %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
@@ -323,7 +323,7 @@ end subroutine
 ! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
 
-! CHECK:             %[[VAL_19:.*]] = fir.alloca i32 {bindc_name = "i"
+! CHECK:             %[[VAL_19:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:             %[[VAL_34:.*]] = arith.constant 1 : i32

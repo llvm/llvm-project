@@ -80,7 +80,7 @@ end
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_stop_in_region4Ex"}
 ! CHECK:         %[[VAL_2_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_stop_in_region4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i"
+! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:         %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32

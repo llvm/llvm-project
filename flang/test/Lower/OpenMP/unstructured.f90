@@ -68,7 +68,7 @@ end
 ! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
 ! CHECK:   ^bb2:  // pred: ^bb1
 
-! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned
+! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
 ! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
@@ -81,7 +81,7 @@ end
 ! CHECK:       omp.terminator
 ! CHECK:     }
 
-! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned
+! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
 ! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:     omp.wsloop {
