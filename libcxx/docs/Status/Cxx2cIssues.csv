@@ -64,4 +64,5 @@
 "","","","","",""
 "`3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""
 "XXXX","","The sys_info range should be affected by save","Not Yet Adopted","|Complete|","19.0"
+"`4071 <https://wg21.link/LWG4071>`__","","``reference_wrapper`` comparisons are not SFINAE-friendly","Not Yet Adopted","|Complete|","19.0"
 "","","","","",""

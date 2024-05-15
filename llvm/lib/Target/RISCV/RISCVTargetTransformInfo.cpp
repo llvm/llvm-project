@@ -97,6 +97,7 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VMANDN_MM:
     case RISCV::VMNAND_MM:
     case RISCV::VCPOP_M:
+    case RISCV::VFIRST_M:
       Cost += 1;
       break;
     default:
@@ -901,6 +902,26 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                  getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
     return 1 + (LT.first - 1);
   }
+  case Intrinsic::experimental_cttz_elts: {
+    Type *ArgTy = ICA.getArgTypes()[0];
+    EVT ArgType = TLI->getValueType(DL, ArgTy, true);
+    if (getTLI()->shouldExpandCttzElements(ArgType))
+      break;
+    InstructionCost Cost = getRISCVInstructionCost(
+        RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind);
+
+    // If zero_is_poison is false, then we will generate additional
+    // cmp + select instructions to convert -1 to EVL.
+    Type *BoolTy = Type::getInt1Ty(RetTy->getContext());
+    if (ICA.getArgs().size() > 1 &&
+        cast<ConstantInt>(ICA.getArgs()[1])->isZero())
+      Cost += getCmpSelInstrCost(Instruction::ICmp, BoolTy, RetTy,
+                                 CmpInst::ICMP_SLT, CostKind) +
+              getCmpSelInstrCost(Instruction::Select, RetTy, BoolTy,
+                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+    return Cost;
+  }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
     unsigned Cost = 5;
@@ -1619,29 +1640,59 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant())
     ConstantMatCost += getConstantMatCost(1, Op2Info);
 
+  unsigned Op;
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR:
+    Op = RISCV::VADD_VV;
+    break;
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
+    Op = RISCV::VSLL_VV;
+    break;
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+    Op = (Ty->getScalarSizeInBits() == 1) ? RISCV::VMAND_MM : RISCV::VAND_VV;
+    break;
   case ISD::MUL:
   case ISD::MULHS:
   case ISD::MULHU:
+    Op = RISCV::VMUL_VV;
+    break;
+  case ISD::SDIV:
+  case ISD::UDIV:
+    Op = RISCV::VDIV_VV;
+    break;
+  case ISD::SREM:
+  case ISD::UREM:
+    Op = RISCV::VREM_VV;
+    break;
   case ISD::FADD:
   case ISD::FSUB:
+    // TODO: Address FP16 with VFHMIN
+    Op = RISCV::VFADD_VV;
+    break;
   case ISD::FMUL:
-  case ISD::FNEG: {
-    return ConstantMatCost + TLI->getLMULCost(LT.second) * LT.first * 1;
-  }
+    // TODO: Address FP16 with VFHMIN
+    Op = RISCV::VFMUL_VV;
+    break;
+  case ISD::FDIV:
+    Op = RISCV::VFDIV_VV;
+    break;
+  case ISD::FNEG:
+    Op = RISCV::VFSGNJN_VV;
+    break;
   default:
-    return ConstantMatCost +
-           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+    // Assuming all other instructions have the same cost until a need arises to
+    // differentiate them.
+    return ConstantMatCost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
+                                                           Op1Info, Op2Info,
+                                                           Args, CxtI);
   }
+  return ConstantMatCost +
+         LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.

@@ -12,7 +12,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "CGOps.h"
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -169,6 +169,28 @@ genAllocationScaleSize(OP op, mlir::Type ity,
   }
   return nullptr;
 }
+
+namespace {
+struct DeclareOpConversion : public fir::FIROpConversion<fir::cg::XDeclareOp> {
+public:
+  using FIROpConversion::FIROpConversion;
+  mlir::LogicalResult
+  matchAndRewrite(fir::cg::XDeclareOp declareOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto memRef = adaptor.getOperands()[0];
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(declareOp.getLoc())) {
+      if (auto varAttr =
+              mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
+                  fusedLoc.getMetadata())) {
+        rewriter.create<mlir::LLVM::DbgDeclareOp>(memRef.getLoc(), memRef,
+                                                  varAttr, nullptr);
+      }
+    }
+    rewriter.replaceOp(declareOp, memRef);
+    return mlir::success();
+  }
+};
+} // namespace
 
 namespace {
 /// convert to LLVM IR dialect `alloca`
@@ -3497,7 +3519,7 @@ public:
     rewriter.startOpModification(op);
     auto callee = op.getCallee();
     if (callee)
-      if (callee->equals("hypotf"))
+      if (*callee == "hypotf")
         op.setCalleeAttr(mlir::SymbolRefAttr::get(op.getContext(), "_hypotf"));
 
     rewriter.finalizeOpModification(op);
@@ -3514,7 +3536,7 @@ public:
   matchAndRewrite(mlir::LLVM::LLVMFuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startOpModification(op);
-    if (op.getSymName().equals("hypotf"))
+    if (op.getSymName() == "hypotf")
       op.setSymNameAttr(rewriter.getStringAttr("_hypotf"));
     rewriter.finalizeOpModification(op);
     return mlir::success();
@@ -3629,11 +3651,11 @@ public:
             auto callee = op.getCallee();
             if (!callee)
               return true;
-            return !callee->equals("hypotf");
+            return *callee != "hypotf";
           });
       target.addDynamicallyLegalOp<mlir::LLVM::LLVMFuncOp>(
           [](mlir::LLVM::LLVMFuncOp op) {
-            return !op.getSymName().equals("hypotf");
+            return op.getSymName() != "hypotf";
           });
     }
 
@@ -3714,19 +3736,19 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
-      CoordinateOpConversion, DTEntryOpConversion, DivcOpConversion,
-      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-      HasValueOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
-      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
-      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion,
+      CoordinateOpConversion, DTEntryOpConversion, DeclareOpConversion,
+      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
+      GlobalOpConversion, HasValueOpConversion, InsertOnRangeOpConversion,
+      InsertValueOpConversion, IsPresentOpConversion, LenParamIndexOpConversion,
+      LoadOpConversion, MulcOpConversion, NegcOpConversion,
+      NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
+      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
       UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
       XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
                                                                 options);

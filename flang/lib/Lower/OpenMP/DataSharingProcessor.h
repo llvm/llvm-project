@@ -39,10 +39,11 @@ private:
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
+  llvm::SetVector<const Fortran::semantics::Symbol *> implicitSymbols;
   llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::omp::PrivateClauseOp>
       symToPrivatizer;
   Fortran::lower::AbstractConverter &converter;
+  Fortran::semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
   Fortran::lower::pft::Evaluation &eval;
@@ -50,7 +51,9 @@ private:
   Fortran::lower::SymMap *symTable;
 
   bool needBarrier();
-  void collectSymbols(Fortran::semantics::Symbol::Flag flag);
+  void
+  collectSymbols(Fortran::semantics::Symbol::Flag flag,
+                 llvm::SetVector<const Fortran::semantics::Symbol *> &symbols);
   void collectSymbolsInNestedRegions(
       Fortran::lower::pft::Evaluation &eval,
       Fortran::semantics::Symbol::Flag flag,
@@ -62,10 +65,14 @@ private:
   void collectSymbolsForPrivatization();
   void insertBarrier();
   void collectDefaultSymbols();
+  void collectImplicitSymbols();
   void privatize(
       mlir::omp::PrivateClauseOps *clauseOps,
       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
   void defaultPrivatize(
+      mlir::omp::PrivateClauseOps *clauseOps,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
+  void implicitPrivatize(
       mlir::omp::PrivateClauseOps *clauseOps,
       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
   void doPrivatize(
@@ -89,7 +96,7 @@ public:
                        Fortran::lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization = false,
                        Fortran::lower::SymMap *symTable = nullptr)
-      : hasLastPrivateOp(false), converter(converter),
+      : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
         firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 

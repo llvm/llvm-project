@@ -198,7 +198,7 @@ mlir::Value hlfir::Entity::getFirBase() const {
 fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
-                  fir::FortranVariableFlagsAttr flags,
+                  fir::FortranVariableFlagsAttr flags, mlir::Value dummyScope,
                   fir::CUDADataAttributeAttr cudaAttr) {
 
   mlir::Value base = fir::getBase(exv);
@@ -229,7 +229,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
       },
       [](const auto &) {});
   auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, base, name, shapeOrShift, lenParams, flags, cudaAttr);
+      loc, base, name, shapeOrShift, lenParams, dummyScope, flags, cudaAttr);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
@@ -844,10 +844,9 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
   return loopNest;
 }
 
-static fir::ExtendedValue
-translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                 hlfir::Entity variable,
-                                 bool forceHlfirBase = false) {
+static fir::ExtendedValue translateVariableToExtendedValue(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
+    bool forceHlfirBase = false, bool contiguousHint = false) {
   assert(variable.isVariable() && "must be a variable");
   /// When going towards FIR, use the original base value to avoid
   /// introducing descriptors at runtime when they are not required.
@@ -858,7 +857,8 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 fir::MutableProperties{});
 
   if (mlir::isa<fir::BaseBoxType>(base.getType())) {
-    if (!variable.isSimplyContiguous() || variable.isPolymorphic() ||
+    bool contiguous = variable.isSimplyContiguous() || contiguousHint;
+    if (!contiguous || variable.isPolymorphic() ||
         variable.isDerivedWithLengthParameters() || variable.isOptional()) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds =
           getNonDefaultLowerBounds(loc, builder, variable);
@@ -907,9 +907,10 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                hlfir::Entity entity) {
+                                hlfir::Entity entity, bool contiguousHint) {
   if (entity.isVariable())
-    return {translateVariableToExtendedValue(loc, builder, entity),
+    return {translateVariableToExtendedValue(loc, builder, entity, false,
+                                             contiguousHint),
             std::nullopt};
 
   if (entity.isProcedure()) {
@@ -1095,8 +1096,9 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                                     /*shape=*/std::nullopt, lenParams);
     isHeapAlloc = builder.createBool(loc, false);
   }
-  auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape,
-                                                    lenParams, declAttrs);
+  auto declareOp =
+      builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape, lenParams,
+                                       /*dummy_scope=*/nullptr, declAttrs);
   if (mold.isPolymorphic()) {
     int rank = mold.getRank();
     // TODO: should probably read rank from the mold.
@@ -1133,8 +1135,9 @@ hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
     alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
                                     /*shape=*/std::nullopt, lenParams);
   }
-  auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape,
-                                                    lenParams, declAttrs);
+  auto declareOp =
+      builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape, lenParams,
+                                       /*dummy_scope=*/nullptr, declAttrs);
   return hlfir::Entity{declareOp.getBase()};
 }
 
@@ -1152,7 +1155,7 @@ hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
   return hlfir::EntityWithAttributes{builder.create<hlfir::DeclareOp>(
       loc, res.getAddr(), ".temp.kindconvert", /*shape=*/nullptr,
       /*typeparams=*/mlir::ValueRange{res.getLen()},
-      fir::FortranVariableFlagsAttr{})};
+      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{})};
 }
 
 std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
@@ -1224,7 +1227,8 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
         builder.create<fir::ShapeShiftOp>(loc, shapeShiftType, lbAndExtents);
     auto declareOp = builder.create<hlfir::DeclareOp>(
         loc, associate.getFirBase(), *associate.getUniqName(), shapeShift,
-        associate.getTypeparams(), /*flags=*/fir::FortranVariableFlagsAttr{});
+        associate.getTypeparams(), /*dummy_scope=*/nullptr,
+        /*flags=*/fir::FortranVariableFlagsAttr{});
     hlfir::Entity castWithLbounds =
         mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
     fir::FirOpBuilder *bldr = &builder;

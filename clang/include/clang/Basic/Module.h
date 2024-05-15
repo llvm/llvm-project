@@ -284,9 +284,10 @@ public:
   /// found on the file system.
   SmallVector<UnresolvedHeaderDirective, 1> MissingHeaders;
 
-  /// An individual requirement: a feature name and a flag indicating
-  /// the required state of that feature.
-  using Requirement = std::pair<std::string, bool>;
+  struct Requirement {
+    std::string FeatureName;
+    bool RequiredState;
+  };
 
   /// The set of language features required to use this module.
   ///

@@ -169,9 +169,11 @@ inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
-inline void addCodeGenRewritePass(mlir::PassManager &pm) {
-  addPassConditionally(
-      pm, disableCodeGenRewrite, fir::createFirCodeGenRewritePass);
+inline void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
+  fir::CodeGenRewriteOptions options;
+  options.preserveDeclare = preserveDeclare;
+  addPassConditionally(pm, disableCodeGenRewrite,
+      [&]() { return fir::createFirCodeGenRewritePass(options); });
 }
 
 inline void addTargetRewritePass(mlir::PassManager &pm) {
@@ -335,7 +337,7 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
-  pm.addPass(fir::createOMPDescriptorMapInfoGenPass());
+  pm.addPass(fir::createOMPMapInfoFinalizationPass());
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(fir::createOMPFunctionFilteringPass());
@@ -353,7 +355,8 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     MLIRToLLVMPassPipelineConfig config, llvm::StringRef inputFilename = {}) {
   fir::addBoxedProcedurePass(pm);
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
-  fir::addCodeGenRewritePass(pm);
+  fir::addCodeGenRewritePass(
+      pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);

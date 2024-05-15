@@ -197,7 +197,7 @@ declare i32 @__gxx_personality_v0(...)
 
 define ptr @lookup_bit(ptr %q, i32 %bitno) readnone nounwind {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define nonnull ptr @lookup_bit
+; FNATTRS-LABEL: define ptr @lookup_bit
 ; FNATTRS-SAME: (ptr [[Q:%.*]], i32 [[BITNO:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP:%.*]] = ptrtoint ptr [[Q]] to i32
 ; FNATTRS-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP]], [[BITNO]]

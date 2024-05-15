@@ -2,7 +2,9 @@
 
 void foo() {
   int i;
+  int *iPtr;
   float array[5];
+  float *arrayPtr[5];
 // CHECK: #pragma acc parallel default(none)
 // CHECK-NEXT: while (true)
 #pragma acc parallel default(none)
@@ -64,6 +66,69 @@ void foo() {
 
 // CHECK: #pragma acc parallel create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
 #pragma acc parallel create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
+  while(true);
+
+  // CHECK: #pragma acc serial attach(iPtr, arrayPtr[0])
+#pragma acc serial attach(iPtr, arrayPtr[0])
+  while(true);
+
+  // CHECK: #pragma acc kernels deviceptr(iPtr, arrayPtr[0])
+#pragma acc kernels deviceptr(iPtr, arrayPtr[0])
+  while(true);
+
+  // CHECK: #pragma acc kernels async(*iPtr)
+#pragma acc kernels async(*iPtr)
+  while(true);
+
+  // CHECK: #pragma acc kernels async
+#pragma acc kernels async
+  while(true);
+
+// CHECK: #pragma acc parallel wait
+#pragma acc parallel wait
+  while(true);
+
+// CHECK: #pragma acc parallel wait()
+#pragma acc parallel wait()
+  while(true);
+
+// CHECK: #pragma acc parallel wait(*iPtr, i)
+#pragma acc parallel wait(*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(queues: *iPtr, i)
+#pragma acc parallel wait(queues:*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(devnum: i : *iPtr, i)
+#pragma acc parallel wait(devnum:i:*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(devnum: i : queues: *iPtr, i)
+#pragma acc parallel wait(devnum:i:queues:*iPtr, i)
+  while(true);
+
+  bool SomeB;
+  struct SomeStruct{} SomeStructImpl;
+
+//CHECK: #pragma acc parallel dtype(SomeB)
+#pragma acc parallel dtype(SomeB)
+  while(true);
+
+//CHECK: #pragma acc parallel device_type(SomeStruct)
+#pragma acc parallel device_type(SomeStruct)
+  while(true);
+
+//CHECK: #pragma acc parallel device_type(int)
+#pragma acc parallel device_type(int)
+  while(true);
+
+//CHECK: #pragma acc parallel dtype(bool)
+#pragma acc parallel dtype(bool)
+  while(true);
+
+//CHECK: #pragma acc parallel device_type(SomeStructImpl)
+#pragma acc parallel device_type (SomeStructImpl)
   while(true);
 }
 

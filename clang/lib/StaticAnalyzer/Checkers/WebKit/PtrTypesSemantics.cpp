@@ -308,22 +308,15 @@ public:
   bool VisitCaseStmt(const CaseStmt *CS) { return VisitChildren(CS); }
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
-  bool VisitUnaryOperator(const UnaryOperator *UO) {
-    // Operator '*' and '!' are allowed as long as the operand is trivial.
-    auto op = UO->getOpcode();
-    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot || op == UO_Not)
-      return Visit(UO->getSubExpr());
+  // break, continue, goto, and label statements are always trivial.
+  bool VisitBreakStmt(const BreakStmt *) { return true; }
+  bool VisitContinueStmt(const ContinueStmt *) { return true; }
+  bool VisitGotoStmt(const GotoStmt *) { return true; }
+  bool VisitLabelStmt(const LabelStmt *) { return true; }
 
-    if (UO->isIncrementOp() || UO->isDecrementOp()) {
-      // Allow increment or decrement of a POD type.
-      if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-        if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
-          return Decl->isLocalVarDeclOrParm() &&
-                 Decl->getType().isPODType(Decl->getASTContext());
-      }
-    }
-    // Other operators are non-trivial.
-    return false;
+  bool VisitUnaryOperator(const UnaryOperator *UO) {
+    // Unary operators are trivial if its operand is trivial except co_await.
+    return UO->getOpcode() != UO_Coawait && Visit(UO->getSubExpr());
   }
 
   bool VisitBinaryOperator(const BinaryOperator *BO) {
@@ -362,9 +355,17 @@ public:
       return false;
     const auto &Name = safeGetName(Callee);
 
+    if (Callee->isInStdNamespace() &&
+        (Name == "addressof" || Name == "forward" || Name == "move"))
+      return true;
+
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
-        Name == "WTFReportAssertionFailure" ||
-        Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
+        Name == "WTFCrashWithSecurityImplication" || Name == "WTFCrash" ||
+        Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
+        Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
+        Name == "isWebThread" || Name == "isUIThread" ||
+        Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
+        Name == "bitwise_cast" || Name.find("__builtin") == 0)
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
@@ -405,6 +406,16 @@ public:
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
   }
 
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (!checkArguments(OCE))
+      return false;
+    auto *Callee = OCE->getCalleeDecl();
+    if (!Callee)
+      return false;
+    // Recursively descend into the callee to confirm that it's trivial as well.
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+  }
+
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
     if (auto *Expr = E->getExpr()) {
       if (!Visit(Expr))
@@ -431,6 +442,8 @@ public:
     return TrivialFunctionAnalysis::isTrivialImpl(CE->getConstructor(), Cache);
   }
 
+  bool VisitCXXNewExpr(const CXXNewExpr *NE) { return VisitChildren(NE); }
+
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     return Visit(ICE->getSubExpr());
   }
@@ -441,6 +454,14 @@ public:
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
     return Visit(VMT->getSubExpr());
+  }
+
+  bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
+    if (auto *Temp = BTE->getTemporary()) {
+      if (!TrivialFunctionAnalysis::isTrivialImpl(Temp->getDestructor(), Cache))
+        return false;
+    }
+    return Visit(BTE->getSubExpr());
   }
 
   bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
