@@ -2,5 +2,5 @@
 
 // CHECK: !llvm.module.flags = !{!0, !1, !2
 // CHECK: !0 = !{i32 2, !"SDK Version", [2 x i32] [i32 11, i32 1]}
-// CHECK: !1 = !{i32 4, !"darwin.target_variant.triple", !"x86_64-apple-ios14-macabi"}
+// CHECK: !1 = !{i32 2, !"darwin.target_variant.triple", !"x86_64-apple-ios14-macabi"}
 // CHECK: !2 = !{i32 2, !"darwin.target_variant.SDK Version", [2 x i32] [i32 14, i32 1]}
