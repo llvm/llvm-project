@@ -295,15 +295,14 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
 namespace {
 
 // Visitor that builds a map from record prvalues to result objects.
-// This traverses the AST sub-tree to be visited; for each result object that
-// it encounters, it propagates the storage location of the result object to all
-// record prvalues that can initialize it.
+// For each result object that it encounters, it propagates the storage location
+// of the result object to all record prvalues that can initialize it.
 class ResultObjectVisitor : public RecursiveASTVisitor<ResultObjectVisitor> {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
-  // object. If the sub-tree to be visited returns a record by value,
-  // `LocForRecordReturnVal` is the location to which this record should be
-  // written; otherwise, it is null.
+  // object. If this visitor will traverse a function that returns a record by
+  // value, `LocForRecordReturnVal` is the location to which this record should
+  // be written; otherwise, it is null.
   explicit ResultObjectVisitor(
       llvm::DenseMap<const Expr *, RecordStorageLocation *> &ResultObjectMap,
       RecordStorageLocation *LocForRecordReturnVal,
@@ -583,6 +582,9 @@ void Environment::initialize() {
           LocForRecordReturnVal));
 }
 
+// FIXME: Add support for resetting globals after function calls to enable the
+// implementation of sound analyses.
+
 void Environment::initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced) {
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
@@ -796,7 +798,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.InitialTargetFunc = EnvA.InitialTargetFunc;
   JoinedEnv.InitialTargetStmt = EnvA.InitialTargetStmt;
 
-  auto *Func = EnvA.getCurrentFunc();
+  const FunctionDecl *Func = EnvA.getCurrentFunc();
   if (!Func) {
     JoinedEnv.ReturnVal = nullptr;
   } else {

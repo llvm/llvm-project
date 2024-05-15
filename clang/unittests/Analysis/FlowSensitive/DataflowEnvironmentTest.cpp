@@ -409,7 +409,7 @@ TEST_F(EnvironmentTest, Stmt) {
   using namespace ast_matchers;
 
   std::string Code = R"cc(
-      struct S {int i;};
+      struct S { int i; };
       void foo() {
         S AnS = S{1};
       }
@@ -420,20 +420,20 @@ TEST_F(EnvironmentTest, Stmt) {
 
   ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
 
-  auto *DeclStatement = const_cast<DeclStmt *>(
-      selectFirst<DeclStmt>("d", match(declStmt().bind("d"), Context)));
+  auto *DeclStatement = const_cast<DeclStmt *>(selectFirst<DeclStmt>(
+      "d", match(declStmt(hasSingleDecl(varDecl(hasName("AnS")))).bind("d"),
+                 Context)));
   ASSERT_THAT(DeclStatement, NotNull());
-  auto *ConstructExpr = selectFirst<CXXConstructExpr>(
-      "c", match(cxxConstructExpr().bind("c"), Context));
-  ASSERT_THAT(ConstructExpr, NotNull());
+  auto *Init = (cast<VarDecl>(*DeclStatement->decl_begin()))->getInit();
+  ASSERT_THAT(Init, NotNull());
 
-  // Verify that we can retrieve the result object location for the construction
+  // Verify that we can retrieve the result object location for the initializer
   // expression when we analyze the DeclStmt for `AnS`.
   Environment Env(DAContext, *DeclStatement);
   // Don't crash when initializing.
   Env.initialize();
   // And don't crash when retrieving the result object location.
-  Env.getResultObjectLocation(*ConstructExpr);
+  Env.getResultObjectLocation(*Init);
 }
 
 } // namespace

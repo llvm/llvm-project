@@ -162,20 +162,14 @@ public:
       : DACtx(&DACtx),
         FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
 
-  // Copy-constructor is private, Environments should not be copied. See fork().
-  Environment &operator=(const Environment &Other) = delete;
-
-  Environment(Environment &&Other) = default;
-  Environment &operator=(Environment &&Other) = default;
-
   /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program, with `S` as the initial analysis target.
+  /// the state of a program, with `S` as the statement to analyze.
   Environment(DataflowAnalysisContext &DACtx, Stmt &S) : Environment(DACtx) {
     InitialTargetStmt = &S;
   }
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program, with `FD` as the initial analysis target.
+  /// the state of a program, with `FD` as the function to analyze.
   ///
   /// Requirements:
   ///
@@ -183,14 +177,21 @@ public:
   ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
   Environment(DataflowAnalysisContext &DACtx, const FunctionDecl &FD)
       : Environment(DACtx, *FD.getBody()) {
+    assert(FD.doesThisDeclarationHaveABody());
     InitialTargetFunc = &FD;
   }
 
+  // Copy-constructor is private, Environments should not be copied. See fork().
+  Environment &operator=(const Environment &Other) = delete;
+
+  Environment(Environment &&Other) = default;
+  Environment &operator=(Environment &&Other) = default;
+
   /// Assigns storage locations and values to all parameters, captures, global
-  /// variables, fields and functions referenced in the initial analysis target.
+  /// variables, fields and functions referenced in the `Stmt` or `FunctionDecl`
+  /// passed to the constructor.
   ///
-  /// If the target is a non-static member function, initializes the environment
-  /// with a symbolic representation of the `this` pointee.
+  /// If no `Stmt` or `FunctionDecl` was supplied, this function does nothing.
   void initialize();
 
   /// Returns a new environment that is a copy of this one.
@@ -662,13 +663,14 @@ public:
     return CallStack.empty() ? InitialTargetFunc : CallStack.back();
   }
 
-  /// Returns the size of the call stack.
+  /// Returns the size of the call stack, not counting the initial analysis
+  /// target.
   size_t callStackSize() const { return CallStack.size(); }
 
   /// Returns whether this `Environment` can be extended to analyze the given
-  /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
-  /// given `MaxDepth`. Note that the `MaxDepth` does not count any initial
-  /// target function, which was not called.
+  /// `Callee` (i.e. if `pushCall` can be used).
+  /// Recursion is not allowed. `MaxDepth` is the maximum size of the call stack
+  /// (i.e. the maximum value that `callStackSize()` may assume after the call).
   bool canDescend(unsigned MaxDepth, const FunctionDecl *Callee) const;
 
   /// Returns the `DataflowAnalysisContext` used by the environment.
@@ -730,9 +732,6 @@ private:
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
 
-  // FIXME: Add support for resetting globals after function calls to enable
-  // the implementation of sound analyses.
-
   /// Assigns storage locations and values to all global variables, fields
   /// and functions in `Referenced`.
   void initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced);
@@ -756,16 +755,16 @@ private:
   // shared between environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
-  // The stack of functions called from the initial analysis target and
-  // recursively being analyzed.
+  // The stack of functions called from the initial analysis target.
   std::vector<const FunctionDecl *> CallStack;
 
-  // If the initial analysis target is a function, this is the function
-  // declaration. Otherwise, this is null.
+  // Initial function to analyze, if a function was passed to the constructor.
+  // Null otherwise.
   const FunctionDecl *InitialTargetFunc = nullptr;
-  // If the initial analysis target is a function, this is its body. If the
-  // initial analysis target was not provided, this is null. Otherwise, this is
-  // the initial analysis target.
+  // Top-level statement of the initial analysis target.
+  // If a function was passed to the constructor, this is its body.
+  // If a statement was passed to the constructor, this is that statement.
+  // Null if no analysis target was passed to the constructor.
   Stmt *InitialTargetStmt = nullptr;
 
   // Maps from prvalues of record type to their result objects. Shared between
@@ -791,8 +790,7 @@ private:
   RecordStorageLocation *LocForRecordReturnVal = nullptr;
 
   // The storage location of the `this` pointee. Should only be null if the
-  // analysis target is not a function or is a function but not a
-  // method.
+  // analysis target is not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from declarations and glvalue expression to storage locations that are
