@@ -758,12 +758,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 }
 
 Error RISCVISAInfo::checkDependency() {
+  bool HasE = Exts.count("e") != 0;
+  bool HasI = Exts.count("i") != 0;
   bool HasC = Exts.count("c") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
+
+  if (HasI && HasE)
+    return createStringError(errc::invalid_argument,
+                             "'I' and 'E' extensions are incompatible");
 
   if (HasF && HasZfinx)
     return createStringError(errc::invalid_argument,
@@ -851,6 +857,9 @@ void RISCVISAInfo::updateImplication() {
     auto Version = findDefaultVersion("i");
     addExtension("i", Version.value());
   }
+
+  if (HasE && HasI)
+    Exts.erase("i");
 
   assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
 
