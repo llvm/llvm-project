@@ -902,19 +902,21 @@ SubtargetEmitter::FindWriteResources(const CodeGenSchedRW &SchedWrite,
   for (Record *WR : ProcModel.WriteResDefs) {
     if (!WR->isSubClassOf("WriteRes"))
       continue;
-    if (AliasDef == WR->getValueAsDef("WriteType") ||
-        SchedWrite.TheDef == WR->getValueAsDef("WriteType")) {
+    // If there is no AliasDef and we find a match, we can early exit since
+    // there is no need to verify whether there are resources defined for both
+    // SchedWrite and its alias.
+    if (!AliasDef && SchedWrite.TheDef == WR->getValueAsDef("WriteType")) {
       ResDef = WR;
       break;
-    }
-  }
-
-  if (ResDef && AliasDef) {
-    PrintFatalError(ResDef->getLoc(), "Resources are defined for both "
+    } else if (AliasDef == WR->getValueAsDef("WriteType")) {
+      if (ResDef) {
+        PrintFatalError(WR->getLoc(), "Resources are defined for both "
                                       "SchedWrite and its alias on processor " +
                                           ProcModel.ModelName);
+      }
+      ResDef = WR;
+    }
   }
-
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindWriteResources recursively with that model here.
   if (!ResDef) {
@@ -959,18 +961,21 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
   for (Record *RA : ProcModel.ReadAdvanceDefs) {
     if (!RA->isSubClassOf("ReadAdvance"))
       continue;
-    if (AliasDef == RA->getValueAsDef("ReadType") ||
-        SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
-      ResDef = RA;
+    // If there is no AliasDef and we find a match, we can early exit since
+    // there is no need to verify whether there are resources defined for both
+    // SchedWrite and its alias.
+    if (!AliasDef && AliasDef == RA->getValueAsDef("ReadType")) {
+      ResDef = WR;
       break;
-    }
-  }
-  if (ResDef && AliasDef) {
-    PrintFatalError(ResDef->getLoc(), "Resources are defined for both "
+    } else if (SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
+      if (ResDef) {
+        PrintFatalError(RA->getLoc(), "Resources are defined for both "
                                       "SchedRead and its alias on processor " +
                                           ProcModel.ModelName);
+      }
+      ResDef = RA;
+    }
   }
-
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindReadAdvance recursively with that model here.
   if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
