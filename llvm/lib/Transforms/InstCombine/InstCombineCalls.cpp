@@ -1435,24 +1435,14 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::simplifyReductionOperand(IntrinsicInst *II,
-                                                        bool CanReorderLanes) {
-  Intrinsic::ID IID = II->getIntrinsicID();
-
+Value *InstCombinerImpl::simplifyReductionOperand(Value *Arg,
+                                                  bool CanReorderLanes) {
   if (!CanReorderLanes)
     return nullptr;
 
-  const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
-                           IID == Intrinsic::vector_reduce_fmul)
-                              ? 1
-                              : 0;
-  Value *Arg = II->getArgOperand(ArgIdx);
   Value *V;
-
-  if (match(Arg, m_VecReverse(m_Value(V)))) {
-    replaceUse(II->getOperandUse(ArgIdx), V);
-    return II;
-  }
+  if (match(Arg, m_VecReverse(m_Value(V))))
+    return V;
 
   ArrayRef<int> Mask;
   if (!isa<FixedVectorType>(Arg->getType()) ||
@@ -1470,12 +1460,7 @@ Instruction *InstCombinerImpl::simplifyReductionOperand(IntrinsicInst *II,
 
   // Can remove shuffle iff just shuffled elements, no repeats, undefs, or
   // other changes.
-  if (UsedIndices.all()) {
-    replaceUse(II->getOperandUse(ArgIdx), V);
-    return II;
-  }
-
-  return nullptr;
+  return UsedIndices.all() ? V : nullptr;
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -3267,8 +3252,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
 
-    if (Instruction *I = simplifyReductionOperand(II, true))
-      return I;
+    if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+      replaceUse(II->getOperandUse(0), NewOp);
+      return II;
+    }
 
     if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
       if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -3302,8 +3289,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOperand(II, true))
-        return I;
+      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
+      }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -3334,8 +3323,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOperand(II, true))
-        return I;
+      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
+      }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -3361,8 +3352,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOperand(II, true))
-        return I;
+      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
+      }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -3389,8 +3382,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOperand(II, true))
-        return I;
+      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
+      }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -3428,8 +3423,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOperand(II, true))
-        return I;
+      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
+      }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -3456,8 +3453,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
                               IID != Intrinsic::vector_reduce_fmul) ||
                              II->hasAllowReassoc();
-    if (simplifyReductionOperand(II, CanBeReassociated))
+    const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
+                             IID == Intrinsic::vector_reduce_fmul)
+                                ? 1
+                                : 0;
+    Value *Arg = II->getArgOperand(ArgIdx);
+    if (Value *NewOp = simplifyReductionOperand(Arg, CanBeReassociated)) {
+      replaceUse(II->getOperandUse(ArgIdx), NewOp);
       return nullptr;
+    }
     break;
   }
   case Intrinsic::is_fpclass: {

@@ -300,8 +300,7 @@ private:
   // prove the answer is identical, where shuffle could be a shufflevector or
   // vector.reverse operation. Return the simplified instruction if it can be
   // simplified or nullptr otherwise.
-  Instruction *simplifyReductionOperand(IntrinsicInst *II,
-                                        bool CanReorderLanes);
+  Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes);
 
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.
