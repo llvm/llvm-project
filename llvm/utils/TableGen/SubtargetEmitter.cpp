@@ -965,7 +965,7 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
     // there is no need to verify whether there are resources defined for both
     // SchedWrite and its alias.
     if (!AliasDef && AliasDef == RA->getValueAsDef("ReadType")) {
-      ResDef = WR;
+      ResDef = RA;
       break;
     } else if (SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
       if (ResDef) {
