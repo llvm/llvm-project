@@ -1161,52 +1161,45 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
+  AsmPrinter::emitFunctionEntryLabel();
+
   if (TM.getTargetTriple().isWindowsArm64EC() &&
       !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
-    // from the normal symbol. We emit the alias from the unmangled symbol to
-    // mangled symbol name here.
-    if (MDNode *Unmangled =
-            MF->getFunction().getMetadata("arm64ec_unmangled_name")) {
-      AsmPrinter::emitFunctionEntryLabel();
+    // from the normal symbol, emit required aliases here.
+    auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
+      OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
+      OutStreamer->emitAssignment(
+          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_WEAKREF,
+                                       MMI->getContext()));
+    };
 
-      if (MDNode *ECMangled =
-              MF->getFunction().getMetadata("arm64ec_ecmangled_name")) {
-        StringRef UnmangledStr =
-            cast<MDString>(Unmangled->getOperand(0))->getString();
-        MCSymbol *UnmangledSym =
-            MMI->getContext().getOrCreateSymbol(UnmangledStr);
-        StringRef ECMangledStr =
-            cast<MDString>(ECMangled->getOperand(0))->getString();
-        MCSymbol *ECMangledSym =
-            MMI->getContext().getOrCreateSymbol(ECMangledStr);
-        OutStreamer->emitSymbolAttribute(UnmangledSym, MCSA_WeakAntiDep);
-        OutStreamer->emitAssignment(
-            UnmangledSym,
-            MCSymbolRefExpr::create(ECMangledSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    MMI->getContext()));
-        OutStreamer->emitSymbolAttribute(ECMangledSym, MCSA_WeakAntiDep);
-        OutStreamer->emitAssignment(
-            ECMangledSym,
-            MCSymbolRefExpr::create(CurrentFnSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    MMI->getContext()));
-        return;
+    auto getSymbolFromMetadata = [&](StringRef Name) {
+      MCSymbol *Sym = nullptr;
+      if (MDNode *Node = MF->getFunction().getMetadata(Name)) {
+        StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+        Sym = MMI->getContext().getOrCreateSymbol(NameStr);
+      }
+      return Sym;
+    };
+
+    if (MCSymbol *UnmangledSym =
+            getSymbolFromMetadata("arm64ec_unmangled_name")) {
+      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
+
+      if (ECMangledSym) {
+        // An external function, emit the alias from the unmangled symbol to
+        // mangled symbol name and the alias from the mangled symbol to guest
+        // exit thunk.
+        emitFunctionAlias(UnmangledSym, ECMangledSym);
+        emitFunctionAlias(ECMangledSym, CurrentFnSym);
       } else {
-        StringRef UnmangledStr =
-            cast<MDString>(Unmangled->getOperand(0))->getString();
-        MCSymbol *UnmangledSym =
-            MMI->getContext().getOrCreateSymbol(UnmangledStr);
-        OutStreamer->emitSymbolAttribute(UnmangledSym, MCSA_WeakAntiDep);
-        OutStreamer->emitAssignment(
-            UnmangledSym,
-            MCSymbolRefExpr::create(CurrentFnSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    MMI->getContext()));
-        return;
+        // A function implementation, emit the alias from the unmangled symbol
+        // to mangled symbol name.
+        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
   }
-
-  return AsmPrinter::emitFunctionEntryLabel();
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
