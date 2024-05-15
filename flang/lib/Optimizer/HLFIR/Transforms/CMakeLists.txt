@@ -11,8 +11,8 @@ add_flang_library(HLFIRTransforms
   OptimizedBufferization.cpp
 
   DEPENDS
+  CUFAttrsIncGen
   FIRDialect
-  CUFAttrs
   HLFIROpsIncGen
   ${dialect_libs}
 

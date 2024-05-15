@@ -5,7 +5,7 @@ add_flang_library(HLFIRDialect
   HLFIROps.cpp
 
   DEPENDS
-  CUFAttrs
+  CUFAttrsIncGen
   FIRDialect
   HLFIROpsIncGen
   ${dialect_libs}
