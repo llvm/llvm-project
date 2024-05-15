@@ -951,6 +951,7 @@ set(files
   fstream
   functional
   future
+  generator
   initializer_list
   inttypes.h
   iomanip
