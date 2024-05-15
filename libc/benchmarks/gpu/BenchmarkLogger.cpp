@@ -13,18 +13,21 @@ namespace libc_gpu_benchmarks {
 
 // cpp::string_view specialization
 template <>
-BenchmarkLogger &BenchmarkLogger::operator<< <cpp::string_view>(cpp::string_view str) {
+BenchmarkLogger &
+    BenchmarkLogger::operator<< <cpp::string_view>(cpp::string_view str) {
   LIBC_NAMESPACE::write_to_stderr(str);
   return *this;
 }
 
 // cpp::string specialization
-template <> BenchmarkLogger &BenchmarkLogger::operator<< <cpp::string>(cpp::string str) {
+template <>
+BenchmarkLogger &BenchmarkLogger::operator<< <cpp::string>(cpp::string str) {
   return *this << static_cast<cpp::string_view>(str);
 }
 
 // const char* specialization
-template <> BenchmarkLogger &BenchmarkLogger::operator<< <const char *>(const char *str) {
+template <>
+BenchmarkLogger &BenchmarkLogger::operator<< <const char *>(const char *str) {
   return *this << cpp::string_view(str);
 }
 
@@ -66,15 +69,20 @@ template BenchmarkLogger &BenchmarkLogger::operator<< <short>(short);
 template BenchmarkLogger &BenchmarkLogger::operator<< <int>(int);
 template BenchmarkLogger &BenchmarkLogger::operator<< <long>(long);
 template BenchmarkLogger &BenchmarkLogger::operator<< <long long>(long long);
-template BenchmarkLogger &BenchmarkLogger::operator<< <unsigned char>(unsigned char);
-template BenchmarkLogger &BenchmarkLogger::operator<< <unsigned short>(unsigned short);
-template BenchmarkLogger &BenchmarkLogger::operator<< <unsigned int>(unsigned int);
-template BenchmarkLogger &BenchmarkLogger::operator<< <unsigned long>(unsigned long);
+template BenchmarkLogger &
+    BenchmarkLogger::operator<< <unsigned char>(unsigned char);
+template BenchmarkLogger &
+    BenchmarkLogger::operator<< <unsigned short>(unsigned short);
+template BenchmarkLogger &
+    BenchmarkLogger::operator<< <unsigned int>(unsigned int);
+template BenchmarkLogger &
+    BenchmarkLogger::operator<< <unsigned long>(unsigned long);
 template BenchmarkLogger &
     BenchmarkLogger::operator<< <unsigned long long>(unsigned long long);
 
 #ifdef LIBC_TYPES_HAS_INT128
-template BenchmarkLogger &BenchmarkLogger::operator<< <__uint128_t>(__uint128_t);
+template BenchmarkLogger &
+    BenchmarkLogger::operator<< <__uint128_t>(__uint128_t);
 #endif // LIBC_TYPES_HAS_INT128
 template BenchmarkLogger &BenchmarkLogger::operator<< <UInt<128>>(UInt<128>);
 template BenchmarkLogger &BenchmarkLogger::operator<< <UInt<192>>(UInt<192>);

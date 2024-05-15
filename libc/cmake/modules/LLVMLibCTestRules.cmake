@@ -550,7 +550,7 @@ function(add_libc_hermetic_test test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "" # No optional arguments
+    "IS_BENCHMARK" # Optional arguments
     "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
@@ -651,6 +651,13 @@ function(add_libc_hermetic_test test_name)
     endif()
   endforeach()
 
+  # Benchmarks requires a separate library with a different `main` function
+  if(HERMETIC_TEST_IS_BENCHMARK)
+    list(APPEND link_libraries LibcGpuBenchmark.hermetic)
+  else()
+    list(APPEND link_libraries LibcTest.hermetic)
+  endif()
+
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
@@ -678,7 +685,6 @@ function(add_libc_hermetic_test test_name)
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1${internal_suffix}
       ${link_libraries}
-      LibcTest.hermetic
       LibcHermeticTestSupport.hermetic
       # The NVIDIA 'nvlink' linker does not currently support static libraries.
       $<$<NOT:$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>)
