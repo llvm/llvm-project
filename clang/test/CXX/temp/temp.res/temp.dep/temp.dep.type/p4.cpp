@@ -471,6 +471,18 @@ namespace N3 {
       this->C::operator=(*this);
     }
   };
+
+  template<typename T>
+  struct D {
+    auto not_instantiated() -> decltype(operator=(0)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template<typename T>
+  struct E {
+    auto instantiated(E& e) -> decltype(operator=(e)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
 } // namespace N3
 
 namespace N4 {
@@ -527,6 +539,17 @@ namespace N4 {
       a->y;
       a->f();
       a->g();
+
+      a->T::x;
+      a->T::y;
+      a->T::f();
+      a->T::g();
+
+      // FIXME: 'U' should be a dependent name, and its lookup context should be 'a.operator->()'!
+      a->U::x; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::y; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::f(); // expected-error {{use of undeclared identifier 'U'}}
+      a->U::g(); // expected-error {{use of undeclared identifier 'U'}}
     }
 
     void instantiated(D a) {
@@ -534,8 +557,25 @@ namespace N4 {
       a->y; // expected-error {{no member named 'y' in 'N4::B'}}
       a->f();
       a->g(); // expected-error {{no member named 'g' in 'N4::B'}}
+
+      a->T::x;
+      a->T::y; // expected-error {{no member named 'y' in 'N4::B'}}
+      a->T::f();
+      a->T::g(); // expected-error {{no member named 'g' in 'N4::B'}}
     }
   };
 
   template void D<B>::instantiated(D); // expected-note {{in instantiation of}}
+
+  template<typename T>
+  struct Typo {
+    T *operator->();
+
+    void not_instantiated(Typo a) {
+      a->Not_instantiated;
+      a->typo;
+      a->T::Not_instantiated;
+      a->T::typo;
+    }
+  };
 } // namespace N4

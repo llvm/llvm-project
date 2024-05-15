@@ -78,6 +78,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -829,36 +830,37 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
                                   OptionValidateNone);
 }
 
-/// Check the header search options deserialized from the control block
-/// against the header search options in an existing preprocessor.
+/// Check that the specified and the existing module cache paths are equivalent.
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
-static bool checkHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                     StringRef SpecificModuleCachePath,
-                                     StringRef ExistingModuleCachePath,
-                                     DiagnosticsEngine *Diags,
-                                     const LangOptions &LangOpts,
-                                     const PreprocessorOptions &PPOpts) {
-  if (LangOpts.Modules) {
-    if (SpecificModuleCachePath != ExistingModuleCachePath &&
-        !PPOpts.AllowPCHWithDifferentModulesCachePath) {
-      if (Diags)
-        Diags->Report(diag::err_pch_modulecache_mismatch)
-          << SpecificModuleCachePath << ExistingModuleCachePath;
-      return true;
-    }
-  }
-
-  return false;
+/// \returns true when the module cache paths differ.
+static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
+                                 StringRef SpecificModuleCachePath,
+                                 StringRef ExistingModuleCachePath,
+                                 DiagnosticsEngine *Diags,
+                                 const LangOptions &LangOpts,
+                                 const PreprocessorOptions &PPOpts) {
+  if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
+      SpecificModuleCachePath == ExistingModuleCachePath)
+    return false;
+  auto EqualOrErr =
+      VFS.equivalent(SpecificModuleCachePath, ExistingModuleCachePath);
+  if (EqualOrErr && *EqualOrErr)
+    return false;
+  if (Diags)
+    Diags->Report(diag::err_pch_modulecache_mismatch)
+        << SpecificModuleCachePath << ExistingModuleCachePath;
+  return true;
 }
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                            StringRef SpecificModuleCachePath,
                                            bool Complain) {
-  return checkHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
-                                  PP.getHeaderSearchInfo().getModuleCachePath(),
-                                  Complain ? &Reader.Diags : nullptr,
-                                  PP.getLangOpts(), PP.getPreprocessorOpts());
+  return checkModuleCachePath(Reader.getFileManager().getVirtualFileSystem(),
+                              SpecificModuleCachePath,
+                              PP.getHeaderSearchInfo().getModuleCachePath(),
+                              Complain ? &Reader.Diags : nullptr,
+                              PP.getLangOpts(), PP.getPreprocessorOpts());
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
@@ -1004,7 +1006,7 @@ static bool readBit(unsigned &Bits) {
   return Value;
 }
 
-IdentID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) {
+IdentifierID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) {
   using namespace llvm::support;
 
   unsigned RawID = endian::readNext<uint32_t, llvm::endianness::little>(d);
@@ -1040,7 +1042,7 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   markIdentifierFromAST(Reader, *II);
   Reader.markIdentifierUpToDate(II);
 
-  IdentID ID = Reader.getGlobalIdentifierID(F, RawID);
+  IdentifierID ID = Reader.getGlobalIdentifierID(F, RawID);
   if (!IsInteresting) {
     // For uninteresting identifiers, there's nothing else to do. Just notify
     // the reader that we've finished loading this identifier.
@@ -4232,9 +4234,9 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 /// Move the given method to the back of the global list of methods.
 static void moveMethodToBackOfGlobalList(Sema &S, ObjCMethodDecl *Method) {
   // Find the entry for this selector in the method pool.
-  Sema::GlobalMethodPool::iterator Known
-    = S.MethodPool.find(Method->getSelector());
-  if (Known == S.MethodPool.end())
+  SemaObjC::GlobalMethodPool::iterator Known =
+      S.ObjC().MethodPool.find(Method->getSelector());
+  if (Known == S.ObjC().MethodPool.end())
     return;
 
   // Retrieve the appropriate method list.
@@ -5376,9 +5378,9 @@ namespace {
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
-      return checkHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
-                                      ExistingModuleCachePath, nullptr,
-                                      ExistingLangOpts, ExistingPPOpts);
+      return checkModuleCachePath(
+          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
+          ExistingModuleCachePath, nullptr, ExistingLangOpts, ExistingPPOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -8550,7 +8552,7 @@ namespace serialization {
 static void addMethodsToPool(Sema &S, ArrayRef<ObjCMethodDecl *> Methods,
                              ObjCMethodList &List) {
   for (ObjCMethodDecl *M : llvm::reverse(Methods))
-    S.addMethodToGlobalList(&List, M);
+    S.ObjC().addMethodToGlobalList(&List, M);
 }
 
 void ASTReader::ReadMethodPool(Selector Sel) {
@@ -8575,8 +8577,10 @@ void ASTReader::ReadMethodPool(Selector Sel) {
     return;
 
   Sema &S = *getSema();
-  Sema::GlobalMethodPool::iterator Pos =
-      S.MethodPool.insert(std::make_pair(Sel, Sema::GlobalMethodPool::Lists()))
+  SemaObjC::GlobalMethodPool::iterator Pos =
+      S.ObjC()
+          .MethodPool
+          .insert(std::make_pair(Sel, SemaObjC::GlobalMethodPool::Lists()))
           .first;
 
   Pos->second.first.setBits(Visitor.getInstanceBits());
@@ -11765,6 +11769,14 @@ SmallVector<Expr *> ASTRecordReader::readOpenACCVarList() {
   return VarList;
 }
 
+SmallVector<Expr *> ASTRecordReader::readOpenACCIntExprList() {
+  unsigned NumExprs = readInt();
+  llvm::SmallVector<Expr *> ExprList;
+  for (unsigned I = 0; I < NumExprs; ++I)
+    ExprList.push_back(readSubExpr());
+  return ExprList;
+}
+
 OpenACCClause *ASTRecordReader::readOpenACCClause() {
   OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
   SourceLocation BeginLoc = readSourceLocation();
@@ -11887,6 +11899,30 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCAsyncClause::Create(getContext(), BeginLoc, LParenLoc,
                                       AsyncExpr, EndLoc);
   }
+  case OpenACCClauseKind::Wait: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *DevNumExpr = readBool() ? readSubExpr() : nullptr;
+    SourceLocation QueuesLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> QueueIdExprs = readOpenACCIntExprList();
+    return OpenACCWaitClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     DevNumExpr, QueuesLoc, QueueIdExprs,
+                                     EndLoc);
+  }
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<DeviceTypeArgument> Archs;
+    unsigned NumArchs = readInt();
+
+    for (unsigned I = 0; I < NumArchs; ++I) {
+      IdentifierInfo *Ident = readBool() ? readIdentifier() : nullptr;
+      SourceLocation Loc = readSourceLocation();
+      Archs.emplace_back(Ident, Loc);
+    }
+
+    return OpenACCDeviceTypeClause::Create(getContext(), ClauseKind, BeginLoc,
+                                           LParenLoc, Archs, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -11908,11 +11944,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::DeviceType:
-  case OpenACCClauseKind::DType:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Wait:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

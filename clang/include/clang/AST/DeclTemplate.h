@@ -2187,7 +2187,7 @@ public:
   /// template<> template<typename T>
   /// struct X<int>::Inner<T*> { /* ... */ };
   /// \endcode
-  bool isMemberSpecialization() {
+  bool isMemberSpecialization() const {
     const auto *First =
         cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getInt();
@@ -2209,6 +2209,8 @@ public:
     return cast<InjectedClassNameType>(getTypeForDecl())
              ->getInjectedSpecializationType();
   }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, getTemplateArgs().asArray(), getTemplateParameters(),
@@ -2947,7 +2949,7 @@ public:
   /// template<> template<typename T>
   /// U* X<int>::Inner<T*> = (T*)(0) + 1;
   /// \endcode
-  bool isMemberSpecialization() {
+  bool isMemberSpecialization() const {
     const auto *First =
         cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getInt();

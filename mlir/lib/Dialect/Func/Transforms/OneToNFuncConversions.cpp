@@ -40,9 +40,9 @@ public:
       return failure();
 
     // Create new CallOp.
-    auto newOp = rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
-                                         adaptor.getFlatOperands());
-    newOp->setAttrs(op->getAttrs());
+    auto newOp =
+        rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
+                                adaptor.getFlatOperands(), op->getAttrs());
 
     rewriter.replaceOp(op, newOp->getResults(), resultMapping);
     return success();

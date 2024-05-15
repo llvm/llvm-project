@@ -12,7 +12,7 @@
 ; CHECK:          DW_AT_name {{.*}} "reserved"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x1c)
-; CHECK:          DW_AT_bit_offset {{.*}} (0xfffffffffffffff8)
+; CHECK:          DW_AT_bit_offset {{.*}} (-8)
 ; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 
 %struct.anon = type { i8, [5 x i8] }

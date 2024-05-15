@@ -985,36 +985,40 @@ ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
 
 SourceRange
 ClassTemplateSpecializationDecl::getSourceRange() const {
-  if (getSpecializationKind() == TSK_ExplicitInstantiationDeclaration) {
-    return SourceRange(getExternKeywordLoc(),
-                       getTemplateArgsAsWritten()->getRAngleLoc());
-  } else if (getSpecializationKind() == TSK_ExplicitInstantiationDefinition) {
-    return SourceRange(getTemplateKeywordLoc(),
-                       getTemplateArgsAsWritten()->getRAngleLoc());
-  } else if (!isExplicitSpecialization()) {
-    // No explicit info available.
+  switch (getSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ImplicitInstantiation: {
     llvm::PointerUnion<ClassTemplateDecl *,
                        ClassTemplatePartialSpecializationDecl *>
-        InstFrom = getInstantiatedFrom();
-    if (InstFrom.isNull())
-      return getSpecializedTemplate()->getSourceRange();
-    if (const auto *CTD = InstFrom.dyn_cast<ClassTemplateDecl *>())
-      return CTD->getSourceRange();
-    return InstFrom.get<ClassTemplatePartialSpecializationDecl *>()
-        ->getSourceRange();
+        Pattern = getSpecializedTemplateOrPartial();
+    assert(!Pattern.isNull() &&
+           "Class template specialization without pattern?");
+    if (const auto *CTPSD =
+            Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+      return CTPSD->getSourceRange();
+    return Pattern.get<ClassTemplateDecl *>()->getSourceRange();
   }
-  SourceLocation Begin = TagDecl::getOuterLocStart();
-  if (const auto *CTPSD =
-          dyn_cast<ClassTemplatePartialSpecializationDecl>(this)) {
-    if (const auto *InstFrom = CTPSD->getInstantiatedFromMember())
-      return InstFrom->getSourceRange();
-    else if (!getNumTemplateParameterLists())
-      Begin = CTPSD->getTemplateParameters()->getTemplateLoc();
+  case TSK_ExplicitSpecialization: {
+    SourceRange Range = CXXRecordDecl::getSourceRange();
+    if (const ASTTemplateArgumentListInfo *Args = getTemplateArgsAsWritten();
+        !isThisDeclarationADefinition() && Args)
+      Range.setEnd(Args->getRAngleLoc());
+    return Range;
   }
-  SourceLocation End = getBraceRange().getEnd();
-  if (End.isInvalid())
-    End = getTemplateArgsAsWritten()->getRAngleLoc();
-  return SourceRange(Begin, End);
+  case TSK_ExplicitInstantiationDeclaration:
+  case TSK_ExplicitInstantiationDefinition: {
+    SourceRange Range = CXXRecordDecl::getSourceRange();
+    if (SourceLocation ExternKW = getExternKeywordLoc(); ExternKW.isValid())
+      Range.setBegin(ExternKW);
+    else if (SourceLocation TemplateKW = getTemplateKeywordLoc();
+             TemplateKW.isValid())
+      Range.setBegin(TemplateKW);
+    if (const ASTTemplateArgumentListInfo *Args = getTemplateArgsAsWritten())
+      Range.setEnd(Args->getRAngleLoc());
+    return Range;
+  }
+  }
+  llvm_unreachable("unhandled template specialization kind");
 }
 
 void ClassTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
@@ -1145,6 +1149,18 @@ ClassTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
   auto *Result = new (C, ID) ClassTemplatePartialSpecializationDecl(C);
   Result->setMayHaveOutOfDateDef(false);
   return Result;
+}
+
+SourceRange ClassTemplatePartialSpecializationDecl::getSourceRange() const {
+  if (const ClassTemplatePartialSpecializationDecl *MT =
+          getInstantiatedFromMember();
+      MT && !isMemberSpecialization())
+    return MT->getSourceRange();
+  SourceRange Range = ClassTemplateSpecializationDecl::getSourceRange();
+  if (const TemplateParameterList *TPL = getTemplateParameters();
+      TPL && !getNumTemplateParameterLists())
+    Range.setBegin(TPL->getTemplateLoc());
+  return Range;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1380,19 +1396,45 @@ VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
 }
 
 SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
-  if (isExplicitSpecialization() && !hasInit()) {
-    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-      return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-  } else if (getTemplateSpecializationKind() ==
-             TSK_ExplicitInstantiationDeclaration) {
-    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-      return SourceRange(getExternKeywordLoc(), Info->getRAngleLoc());
-  } else if (getTemplateSpecializationKind() ==
-             TSK_ExplicitInstantiationDefinition) {
-    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-      return SourceRange(getTemplateKeywordLoc(), Info->getRAngleLoc());
+  switch (getSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ImplicitInstantiation: {
+    llvm::PointerUnion<VarTemplateDecl *,
+                       VarTemplatePartialSpecializationDecl *>
+        Pattern = getSpecializedTemplateOrPartial();
+    assert(!Pattern.isNull() &&
+           "Variable template specialization without pattern?");
+    if (const auto *VTPSD =
+            Pattern.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+      return VTPSD->getSourceRange();
+    VarTemplateDecl *VTD = Pattern.get<VarTemplateDecl *>();
+    if (hasInit()) {
+      if (VarTemplateDecl *Definition = VTD->getDefinition())
+        return Definition->getSourceRange();
+    }
+    return VTD->getCanonicalDecl()->getSourceRange();
   }
-  return VarDecl::getSourceRange();
+  case TSK_ExplicitSpecialization: {
+    SourceRange Range = VarDecl::getSourceRange();
+    if (const ASTTemplateArgumentListInfo *Args = getTemplateArgsAsWritten();
+        !hasInit() && Args)
+      Range.setEnd(Args->getRAngleLoc());
+    return Range;
+  }
+  case TSK_ExplicitInstantiationDeclaration:
+  case TSK_ExplicitInstantiationDefinition: {
+    SourceRange Range = VarDecl::getSourceRange();
+    if (SourceLocation ExternKW = getExternKeywordLoc(); ExternKW.isValid())
+      Range.setBegin(ExternKW);
+    else if (SourceLocation TemplateKW = getTemplateKeywordLoc();
+             TemplateKW.isValid())
+      Range.setBegin(TemplateKW);
+    if (const ASTTemplateArgumentListInfo *Args = getTemplateArgsAsWritten())
+      Range.setEnd(Args->getRAngleLoc());
+    return Range;
+  }
+  }
+  llvm_unreachable("unhandled template specialization kind");
 }
 
 void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
@@ -1460,11 +1502,15 @@ VarTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
 }
 
 SourceRange VarTemplatePartialSpecializationDecl::getSourceRange() const {
-  if (isExplicitSpecialization() && !hasInit()) {
-    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-      return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-  }
-  return VarDecl::getSourceRange();
+  if (const VarTemplatePartialSpecializationDecl *MT =
+          getInstantiatedFromMember();
+      MT && !isMemberSpecialization())
+    return MT->getSourceRange();
+  SourceRange Range = VarTemplateSpecializationDecl::getSourceRange();
+  if (const TemplateParameterList *TPL = getTemplateParameters();
+      TPL && !getNumTemplateParameterLists())
+    Range.setBegin(TPL->getTemplateLoc());
+  return Range;
 }
 
 static TemplateParameterList *

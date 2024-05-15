@@ -138,3 +138,8 @@ constexpr int foo() {
 }
 
 static_assert(foo() == 0);
+
+template <bool ...val>
+void f() {
+    [[assume(val)]]; // expected-error {{expression contains unexpanded parameter pack}}
+}

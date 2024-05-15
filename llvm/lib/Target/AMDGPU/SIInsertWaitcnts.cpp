@@ -1364,6 +1364,11 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
     bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
 
+    // Don't crash if the programmer used legacy waitcnt intrinsics, but don't
+    // attempt to do more than that either.
+    if (Opcode == AMDGPU::S_WAITCNT)
+      continue;
+
     if (Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT) {
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();

@@ -28,6 +28,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -1217,7 +1218,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   // In ARC, infer 'retaining' for variables of retainable type.
   if (SemaRef.getLangOpts().ObjCAutoRefCount &&
-      SemaRef.inferObjCARCLifetime(Var))
+      SemaRef.ObjC().inferObjCARCLifetime(Var))
     Var->setInvalidDecl();
 
   if (SemaRef.getLangOpts().OpenCL)
@@ -2269,16 +2270,18 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
                             TemplateArgumentList::CreateCopy(SemaRef.Context,
                                                              Innermost),
                                                 /*InsertPos=*/nullptr);
-  } else if (isFriend && D->isThisDeclarationADefinition()) {
-    // Do not connect the friend to the template unless it's actually a
-    // definition. We don't want non-template functions to be marked as being
-    // template instantiations.
-    Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
-  } else if (!isFriend) {
-    // If this is not a function template, and this is not a friend (that is,
-    // this is a locally declared function), save the instantiation relationship
-    // for the purposes of constraint instantiation.
-    Function->setInstantiatedFromDecl(D);
+  } else if (FunctionRewriteKind == RewriteKind::None) {
+    if (isFriend && D->isThisDeclarationADefinition()) {
+      // Do not connect the friend to the template unless it's actually a
+      // definition. We don't want non-template functions to be marked as being
+      // template instantiations.
+      Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
+    } else if (!isFriend) {
+      // If this is not a function template, and this is not a friend (that is,
+      // this is a locally declared function), save the instantiation
+      // relationship for the purposes of constraint instantiation.
+      Function->setInstantiatedFromDecl(D);
+    }
   }
 
   if (isFriend) {
@@ -2669,7 +2672,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
                          TemplateArgumentList::CreateCopy(SemaRef.Context,
                                                           Innermost),
                                               /*InsertPos=*/nullptr);
-  } else if (!isFriend) {
+  } else if (!isFriend && FunctionRewriteKind == RewriteKind::None) {
     // Record that this is an instantiation of a member function.
     Method->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
   }

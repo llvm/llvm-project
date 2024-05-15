@@ -541,9 +541,16 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
-  addPass(createRISCVInsertVSETVLIPass());
+
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
+
+  // Run RISCVInsertVSETVLI after PHI elimination. On O1 and above do it after
+  // register coalescing so needVSETVLIPHI doesn't need to look through COPYs.
+  if (TM->getOptLevel() == CodeGenOptLevel::None)
+    insertPass(&PHIEliminationID, createRISCVInsertVSETVLIPass());
+  else
+    insertPass(&RegisterCoalescerID, createRISCVInsertVSETVLIPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {
