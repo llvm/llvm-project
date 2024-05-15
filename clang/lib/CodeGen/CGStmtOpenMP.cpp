@@ -331,6 +331,7 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
     SmallVectorImpl<llvm::Value *> &CapturedVars, QualType RedVarQualType) {
   llvm::Type *RedVarType = ConvertTypeForMem(RedVarQualType);
   assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+          RedVarType->isHalfTy() || RedVarType->isBFloatTy() ||
           RedVarType->isIntegerTy()) &&
          "Unhandled type");
 

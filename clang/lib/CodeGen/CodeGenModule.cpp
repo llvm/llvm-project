@@ -8564,10 +8564,12 @@ CodeGenModule::collectXteamRedVars(const OptKernelNestDirectives &NestDirs) {
         llvm::Type *RefType = getTypes().ConvertTypeForMem(Ref->getType());
         // TODO support more data types
         if (!RefType->isFloatTy() && !RefType->isDoubleTy() &&
+            !RefType->isHalfTy() && !RefType->isBFloatTy() &&
             !RefType->isIntegerTy())
           return std::make_pair(NxUnsupportedRedType,
                                 std::make_pair(VarMap, VarVec));
-        if (RefType->isIntegerTy() && RefType->getPrimitiveSizeInBits() != 32 &&
+        if (RefType->isIntegerTy() && RefType->getPrimitiveSizeInBits() != 16 &&
+            RefType->getPrimitiveSizeInBits() != 32 &&
             RefType->getPrimitiveSizeInBits() != 64)
           return std::make_pair(NxUnsupportedRedIntSize,
                                 std::make_pair(VarMap, VarVec));

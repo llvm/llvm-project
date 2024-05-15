@@ -103,8 +103,12 @@ float _Complex xteamr_shfl_xor_cf(float _Complex var, const int lane_mask,
 // tag dispatching of type specific shfl_xor, get_low, and get_high
 struct _d_tag {};
 struct _f_tag {};
+struct _h_tag {};
+struct _bf_tag {};
 struct _cd_tag {};
 struct _cf_tag {};
+struct _s_tag {};
+struct _us_tag {};
 struct _i_tag {};
 struct _ui_tag {};
 struct _l_tag {};
@@ -116,12 +120,16 @@ template <> struct __dispatch_tag<double> {
 template <> struct __dispatch_tag<float> {
   typedef _f_tag type;
 };
+template <> struct __dispatch_tag<_Float16> { typedef _h_tag type; };
+template <> struct __dispatch_tag<__bf16> { typedef _bf_tag type; };
 template <> struct __dispatch_tag<double _Complex> {
   typedef _cd_tag type;
 };
 template <> struct __dispatch_tag<float _Complex> {
   typedef _cf_tag type;
 };
+template <> struct __dispatch_tag<short> { typedef _s_tag type; };
+template <> struct __dispatch_tag<unsigned short> { typedef _us_tag type; };
 template <> struct __dispatch_tag<int> {
   typedef _i_tag type;
 };
@@ -143,6 +151,14 @@ float xteamr_shfl_xor(_f_tag tag, float var, const int lane_mask) {
   return xteamr_shfl_xor_f(var, lane_mask, _WSZ);
 }
 template <const uint32_t _WSZ>
+float xteamr_shfl_xor(_h_tag tag, _Float16 var, const int lane_mask) {
+  return xteamr_shfl_xor_f(var, lane_mask, _WSZ);
+}
+template <const uint32_t _WSZ>
+float xteamr_shfl_xor(_bf_tag tag, __bf16 var, const int lane_mask) {
+  return xteamr_shfl_xor_f(var, lane_mask, _WSZ);
+}
+template <const uint32_t _WSZ>
 double _Complex xteamr_shfl_xor(_cd_tag tag, double _Complex var,
                                 const int lane_mask) {
   return xteamr_shfl_xor_cd(var, lane_mask, _WSZ);
@@ -151,6 +167,15 @@ template <const uint32_t _WSZ>
 float _Complex xteamr_shfl_xor(_cf_tag tag, float _Complex var,
                                const int lane_mask) {
   return xteamr_shfl_xor_cf(var, lane_mask, _WSZ);
+}
+template <const uint32_t _WSZ>
+int xteamr_shfl_xor(_s_tag tag, short var, const int lane_mask) {
+  return xteamr_shfl_xor_int(var, lane_mask, _WSZ);
+}
+template <const uint32_t _WSZ>
+unsigned int xteamr_shfl_xor(_us_tag tag, unsigned short var,
+                             const int lane_mask) {
+  return xteamr_shfl_xor_int(var, lane_mask, _WSZ);
 }
 template <const uint32_t _WSZ>
 int xteamr_shfl_xor(_i_tag tag, int var, const int lane_mask) {
@@ -369,9 +394,11 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 #define _EXT_ATTR extern "C" __attribute__((flatten, always_inline)) void
 #define _CD double _Complex
 #define _CF float _Complex
+#define _US unsigned short
 #define _UI unsigned int
 #define _UL unsigned long
 #define _LDS volatile __attribute__((address_space(3)))
+
 _EXT_ATTR
 __kmpc_xteamr_d_16x64(double v, double *r_p, double *tvs, uint32_t *td,
                       void (*rf)(double *, double),
@@ -416,6 +443,51 @@ __kmpc_iteamr_f_16x64(float v, float *r_p, void (*rf)(float *, float),
   _iteam_reduction<float, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
+__kmpc_xteamr_h_16x64(_Float16 v, _Float16 *r_p, _Float16 *tvs, uint32_t *td,
+                      void (*rf)(_Float16 *, _Float16),
+                      void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
+                      const _Float16 rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_Float16, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_h_16x64_fast_sum(_Float16 v, _Float16 *r_p, _Float16 *tvs,
+                               uint32_t *td, void (*rf)(_Float16 *, _Float16),
+                               void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
+                               const _Float16 rnv, const uint64_t k,
+                               const uint32_t nt) {
+  _xteam_reduction<_Float16, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
+                                           nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_h_16x64(_Float16 v, _Float16 *r_p,
+                      void (*rf)(_Float16 *, _Float16),
+                      void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
+                      const _Float16 rnv, const uint64_t k) {
+  _iteam_reduction<_Float16, 16, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_bf_16x64(__bf16 v, __bf16 *r_p, __bf16 *tvs, uint32_t *td,
+                       void (*rf)(__bf16 *, __bf16),
+                       void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
+                       const __bf16 rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<__bf16, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_bf_16x64_fast_sum(__bf16 v, __bf16 *r_p, __bf16 *tvs,
+                                uint32_t *td, void (*rf)(__bf16 *, __bf16),
+                                void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
+                                const __bf16 rnv, const uint64_t k,
+                                const uint32_t nt) {
+  _xteam_reduction<__bf16, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
+                                         nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_bf_16x64(__bf16 v, __bf16 *r_p, void (*rf)(__bf16 *, __bf16),
+                       void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
+                       const __bf16 rnv, const uint64_t k) {
+  _iteam_reduction<__bf16, 16, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
 __kmpc_xteamr_cd_16x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
                        void (*rf)(_CD *, _CD),
                        void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
@@ -456,6 +528,48 @@ __kmpc_iteamr_cf_16x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
                        void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
                        const uint64_t k) {
   _iteam_reduction<_CF, 16, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_s_16x64(short v, short *r_p, short *tvs, uint32_t *td,
+                      void (*rf)(short *, short),
+                      void (*rflds)(_LDS short *, _LDS short *),
+                      const short rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<short, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_s_16x64_fast_sum(short v, short *r_p, short *tvs, uint32_t *td,
+                               void (*rf)(short *, short),
+                               void (*rflds)(_LDS short *, _LDS short *),
+                               const short rnv, const uint64_t k,
+                               const uint32_t nt) {
+  _xteam_reduction<short, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_s_16x64(short v, short *r_p, void (*rf)(short *, short),
+                      void (*rflds)(_LDS short *, _LDS short *),
+                      const short rnv, const uint64_t k) {
+  _iteam_reduction<short, 16, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_us_16x64(_US v, _US *r_p, _US *tvs, uint32_t *td,
+                       void (*rf)(_US *, _US),
+                       void (*rflds)(_LDS _US *, _LDS _US *), const _US rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_US, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_us_16x64_fast_sum(_US v, _US *r_p, _US *tvs, uint32_t *td,
+                                void (*rf)(_US *, _US),
+                                void (*rflds)(_LDS _US *, _LDS _US *),
+                                const _US rnv, const uint64_t k,
+                                const uint32_t nt) {
+  _xteam_reduction<_US, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_us_16x64(_US v, _US *r_p, void (*rf)(_US *, _US),
+                       void (*rflds)(_LDS _US *, _LDS _US *), const _US rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_US, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
 __kmpc_xteamr_i_16x64(int v, int *r_p, int *tvs, uint32_t *td,
@@ -585,6 +699,51 @@ __kmpc_iteamr_f_32x32(float v, float *r_p, void (*rf)(float *, float),
   _iteam_reduction<float, 32, 32>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
+__kmpc_xteamr_h_32x32(_Float16 v, _Float16 *r_p, _Float16 *tvs, uint32_t *td,
+                      void (*rf)(_Float16 *, _Float16),
+                      void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
+                      const _Float16 rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_Float16, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_h_32x32_fast_sum(_Float16 v, _Float16 *r_p, _Float16 *tvs,
+                               uint32_t *td, void (*rf)(_Float16 *, _Float16),
+                               void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
+                               const _Float16 rnv, const uint64_t k,
+                               const uint32_t nt) {
+  _xteam_reduction<_Float16, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
+                                           nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_h_32x32(_Float16 v, _Float16 *r_p,
+                      void (*rf)(_Float16 *, _Float16),
+                      void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
+                      const _Float16 rnv, const uint64_t k) {
+  _iteam_reduction<_Float16, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_bf_32x32(__bf16 v, __bf16 *r_p, __bf16 *tvs, uint32_t *td,
+                       void (*rf)(__bf16 *, __bf16),
+                       void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
+                       const __bf16 rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<__bf16, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_bf_32x32_fast_sum(__bf16 v, __bf16 *r_p, __bf16 *tvs,
+                                uint32_t *td, void (*rf)(__bf16 *, __bf16),
+                                void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
+                                const __bf16 rnv, const uint64_t k,
+                                const uint32_t nt) {
+  _xteam_reduction<__bf16, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
+                                         nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_bf_32x32(__bf16 v, __bf16 *r_p, void (*rf)(__bf16 *, __bf16),
+                       void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
+                       const __bf16 rnv, const uint64_t k) {
+  _iteam_reduction<__bf16, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
 __kmpc_xteamr_cd_32x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
                        void (*rf)(_CD *, _CD),
                        void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
@@ -625,6 +784,48 @@ __kmpc_iteamr_cf_32x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
                        void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
                        const uint64_t k) {
   _iteam_reduction<_CF, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_s_32x32(short v, short *r_p, short *tvs, uint32_t *td,
+                      void (*rf)(short *, short),
+                      void (*rflds)(_LDS short *, _LDS short *),
+                      const short rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<short, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_s_32x32_fast_sum(short v, short *r_p, short *tvs, uint32_t *td,
+                               void (*rf)(short *, short),
+                               void (*rflds)(_LDS short *, _LDS short *),
+                               const short rnv, const uint64_t k,
+                               const uint32_t nt) {
+  _xteam_reduction<short, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_s_32x32(short v, short *r_p, void (*rf)(short *, short),
+                      void (*rflds)(_LDS short *, _LDS short *),
+                      const short rnv, const uint64_t k) {
+  _iteam_reduction<short, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_us_32x32(_US v, _US *r_p, _US *tvs, uint32_t *td,
+                       void (*rf)(_US *, _US),
+                       void (*rflds)(_LDS _US *, _LDS _US *), const _US rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_US, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteamr_us_32x32_fast_sum(_US v, _US *r_p, _US *tvs, uint32_t *td,
+                                void (*rf)(_US *, _US),
+                                void (*rflds)(_LDS _US *, _LDS _US *),
+                                const _US rnv, const uint64_t k,
+                                const uint32_t nt) {
+  _xteam_reduction<_US, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_us_32x32(_US v, _US *r_p, void (*rf)(_US *, _US),
+                       void (*rflds)(_LDS _US *, _LDS _US *), const _US rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_US, 32, 32>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
 __kmpc_xteamr_i_32x32(int v, int *r_p, int *tvs, uint32_t *td,
@@ -710,11 +911,6 @@ __kmpc_iteamr_ul_32x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
                        const uint64_t k) {
   _iteam_reduction<_UL, 32, 32>(v, r_p, rf, rflds, rnv, k);
 }
-#undef _CD
-#undef _CF
-#undef _UI
-#undef _UL
-#undef _LDS
 
 // Built-in pair reduction functions used as function pointers for
 // cross team reduction functions.
@@ -729,82 +925,50 @@ _EXT_ATTR __kmpc_rfun_sum_f(float *val, float otherval) { *val += otherval; }
 _EXT_ATTR __kmpc_rfun_sum_lds_f(_RF_LDS float *val, _RF_LDS float *otherval) {
   *val += *otherval;
 }
-_EXT_ATTR __kmpc_rfun_sum_cd(double _Complex *val, double _Complex otherval) {
+_EXT_ATTR __kmpc_rfun_sum_h(_Float16 *val, _Float16 otherval) {
   *val += otherval;
 }
-_EXT_ATTR __kmpc_rfun_sum_lds_cd(_RF_LDS double _Complex *val,
-                                 _RF_LDS double _Complex *otherval) {
+_EXT_ATTR __kmpc_rfun_sum_lds_h(_RF_LDS _Float16 *val,
+                                _RF_LDS _Float16 *otherval) {
   *val += *otherval;
 }
-_EXT_ATTR __kmpc_rfun_sum_cf(float _Complex *val, float _Complex otherval) {
-  *val += otherval;
+_EXT_ATTR __kmpc_rfun_sum_bf(__bf16 *val, __bf16 otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_bf(_RF_LDS __bf16 *val,
+                                 _RF_LDS __bf16 *otherval) {
+  *val += *otherval;
 }
-_EXT_ATTR __kmpc_rfun_sum_lds_cf(_RF_LDS float _Complex *val,
-                                 _RF_LDS float _Complex *otherval) {
+_EXT_ATTR __kmpc_rfun_sum_cd(_CD *val, _CD otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_cd(_RF_LDS _CD *val, _RF_LDS _CD *otherval) {
+  *val += *otherval;
+}
+_EXT_ATTR __kmpc_rfun_sum_cf(_CF *val, _CF otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_cf(_RF_LDS _CF *val, _RF_LDS _CF *otherval) {
+  *val += *otherval;
+}
+_EXT_ATTR __kmpc_rfun_sum_s(short *val, short otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_s(_RF_LDS short *val, _RF_LDS short *otherval) {
+  *val += *otherval;
+}
+_EXT_ATTR __kmpc_rfun_sum_us(_US *val, _US otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_us(_RF_LDS _US *val, _RF_LDS _US *otherval) {
   *val += *otherval;
 }
 _EXT_ATTR __kmpc_rfun_sum_i(int *val, int otherval) { *val += otherval; }
 _EXT_ATTR __kmpc_rfun_sum_lds_i(_RF_LDS int *val, _RF_LDS int *otherval) {
   *val += *otherval;
 }
-_EXT_ATTR __kmpc_rfun_sum_ui(unsigned int *val, unsigned int otherval) {
-  *val += otherval;
-}
-_EXT_ATTR __kmpc_rfun_sum_lds_ui(_RF_LDS unsigned int *val,
-                                 _RF_LDS unsigned int *otherval) {
+_EXT_ATTR __kmpc_rfun_sum_ui(_UI *val, _UI otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_ui(_RF_LDS _UI *val, _RF_LDS _UI *otherval) {
   *val += *otherval;
 }
 _EXT_ATTR __kmpc_rfun_sum_l(long *val, long otherval) { *val += otherval; }
 _EXT_ATTR __kmpc_rfun_sum_lds_l(_RF_LDS long *val, _RF_LDS long *otherval) {
   *val += *otherval;
 }
-_EXT_ATTR __kmpc_rfun_sum_ul(unsigned long *val, unsigned long otherval) {
-  *val += otherval;
-}
-_EXT_ATTR __kmpc_rfun_sum_lds_ul(_RF_LDS unsigned long *val,
-                                 _RF_LDS unsigned long *otherval) {
+_EXT_ATTR __kmpc_rfun_sum_ul(_UL *val, _UL otherval) { *val += otherval; }
+_EXT_ATTR __kmpc_rfun_sum_lds_ul(_RF_LDS _UL *val, _RF_LDS _UL *otherval) {
   *val += *otherval;
 }
-
-_EXT_ATTR __kmpc_rfun_min_d(double *val, double otherval) {
-  *val = (otherval < *val) ? otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_lds_d(_RF_LDS double *val, _RF_LDS double *otherval) {
-  *val = (*otherval < *val) ? *otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_f(float *val, float otherval) {
-  *val = (otherval < *val) ? otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_lds_f(_RF_LDS float *val, _RF_LDS float *otherval) {
-  *val = (*otherval < *val) ? *otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_i(int *val, int otherval) {
-  *val = (otherval < *val) ? otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_lds_i(_RF_LDS int *val, _RF_LDS int *otherval) {
-  *val = (*otherval < *val) ? *otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_ui(unsigned int *val, unsigned int otherval) {
-  *val = (otherval < *val) ? otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_lds_ui(_RF_LDS unsigned int *val,
-                                 _RF_LDS unsigned int *otherval) {
-  *val = (*otherval < *val) ? *otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_l(long *val, long otherval) {
-  *val = (otherval < *val) ? otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_lds_l(_RF_LDS long *val, _RF_LDS long *otherval) {
-  *val = (*otherval < *val) ? *otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_ul(unsigned long *val, unsigned long otherval) {
-  *val = (otherval < *val) ? otherval : *val;
-}
-_EXT_ATTR __kmpc_rfun_min_lds_ul(_RF_LDS unsigned long *val,
-                                 _RF_LDS unsigned long *otherval) {
-  *val = (*otherval < *val) ? *otherval : *val;
-}
-
 _EXT_ATTR __kmpc_rfun_max_d(double *val, double otherval) {
   *val = (otherval > *val) ? otherval : *val;
 }
@@ -817,17 +981,42 @@ _EXT_ATTR __kmpc_rfun_max_f(float *val, float otherval) {
 _EXT_ATTR __kmpc_rfun_max_lds_f(_RF_LDS float *val, _RF_LDS float *otherval) {
   *val = (*otherval > *val) ? *otherval : *val;
 }
+_EXT_ATTR __kmpc_rfun_max_h(_Float16 *val, _Float16 otherval) {
+  *val = (otherval > *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_lds_h(_RF_LDS _Float16 *val,
+                                _RF_LDS _Float16 *otherval) {
+  *val = (*otherval > *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_bf(__bf16 *val, __bf16 otherval) {
+  *val = (otherval > *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_lds_bf(_RF_LDS __bf16 *val,
+                                 _RF_LDS __bf16 *otherval) {
+  *val = (*otherval > *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_s(short *val, short otherval) {
+  *val = (otherval > *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_lds_s(_RF_LDS short *val, _RF_LDS short *otherval) {
+  *val = (*otherval > *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_us(_US *val, _US otherval) {
+  *val = (otherval > *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_max_lds_us(_RF_LDS _US *val, _RF_LDS _US *otherval) {
+  *val = (*otherval > *val) ? *otherval : *val;
+}
 _EXT_ATTR __kmpc_rfun_max_i(int *val, int otherval) {
   *val = (otherval > *val) ? otherval : *val;
 }
 _EXT_ATTR __kmpc_rfun_max_lds_i(_RF_LDS int *val, _RF_LDS int *otherval) {
   *val = (*otherval > *val) ? *otherval : *val;
 }
-_EXT_ATTR __kmpc_rfun_max_ui(unsigned int *val, unsigned int otherval) {
+_EXT_ATTR __kmpc_rfun_max_ui(_UI *val, _UI otherval) {
   *val = (otherval > *val) ? otherval : *val;
 }
-_EXT_ATTR __kmpc_rfun_max_lds_ui(_RF_LDS unsigned int *val,
-                                 _RF_LDS unsigned int *otherval) {
+_EXT_ATTR __kmpc_rfun_max_lds_ui(_RF_LDS _UI *val, _RF_LDS _UI *otherval) {
   *val = (*otherval > *val) ? *otherval : *val;
 }
 _EXT_ATTR __kmpc_rfun_max_l(long *val, long otherval) {
@@ -836,15 +1025,81 @@ _EXT_ATTR __kmpc_rfun_max_l(long *val, long otherval) {
 _EXT_ATTR __kmpc_rfun_max_lds_l(_RF_LDS long *val, _RF_LDS long *otherval) {
   *val = (*otherval > *val) ? *otherval : *val;
 }
-_EXT_ATTR __kmpc_rfun_max_ul(unsigned long *val, unsigned long otherval) {
+_EXT_ATTR __kmpc_rfun_max_ul(_UL *val, _UL otherval) {
   *val = (otherval > *val) ? otherval : *val;
 }
-_EXT_ATTR __kmpc_rfun_max_lds_ul(_RF_LDS unsigned long *val,
-                                 _RF_LDS unsigned long *otherval) {
+_EXT_ATTR __kmpc_rfun_max_lds_ul(_RF_LDS _UL *val, _RF_LDS _UL *otherval) {
   *val = (*otherval > *val) ? *otherval : *val;
 }
-
+_EXT_ATTR __kmpc_rfun_min_d(double *val, double otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_d(_RF_LDS double *val, _RF_LDS double *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_f(float *val, float otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_f(_RF_LDS float *val, _RF_LDS float *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_h(_Float16 *val, _Float16 otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_h(_RF_LDS _Float16 *val,
+                                _RF_LDS _Float16 *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_bf(__bf16 *val, __bf16 otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_bf(_RF_LDS __bf16 *val,
+                                 _RF_LDS __bf16 *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_s(short *val, short otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_s(_RF_LDS short *val, _RF_LDS short *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_us(_US *val, _US otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_us(_RF_LDS _US *val, _RF_LDS _US *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_i(int *val, int otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_i(_RF_LDS int *val, _RF_LDS int *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_ui(_UI *val, _UI otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_ui(_RF_LDS _UI *val, _RF_LDS _UI *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_l(long *val, long otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_l(_RF_LDS long *val, _RF_LDS long *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_ul(_UL *val, _UL otherval) {
+  *val = (otherval < *val) ? otherval : *val;
+}
+_EXT_ATTR __kmpc_rfun_min_lds_ul(_RF_LDS _UL *val, _RF_LDS _UL *otherval) {
+  *val = (*otherval < *val) ? *otherval : *val;
+}
 #undef _EXT_ATTR
+#undef _CD
+#undef _CF
+#undef _US
+#undef _UI
+#undef _UL
+#undef _LDS
 #undef _RF_LDS
 
 #pragma omp end declare target

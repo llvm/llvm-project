@@ -423,11 +423,13 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
     const Expr *RedVarExpr = Itr->second.RedVarExpr;
     llvm::Type *RedVarType = ConvertTypeForMem(RedVarExpr->getType());
     assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+            RedVarType->isHalfTy() || RedVarType->isBFloatTy() ||
             RedVarType->isIntegerTy()) &&
            "Unhandled type");
     llvm::AllocaInst *XteamRedInst = Builder.CreateAlloca(RedVarType);
     llvm::Value *InitVal = nullptr;
-    if (RedVarType->isFloatTy() || RedVarType->isDoubleTy())
+    if (RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+        RedVarType->isHalfTy() || RedVarType->isBFloatTy())
       InitVal = llvm::ConstantFP::getZero(RedVarType);
     else if (RedVarType->isIntegerTy())
       InitVal = llvm::ConstantInt::get(RedVarType, 0);
@@ -560,15 +562,16 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   // Compute *xteam_red_local_addr + rhs_value
   llvm::Value *RedRHS = nullptr;
   llvm::Type *RedVarType = ConvertTypeForMem(RedVarDecl->getType());
-  if (RedVarType->isFloatTy() || RedVarType->isDoubleTy()) {
+  if (RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+      RedVarType->isHalfTy() || RedVarType->isBFloatTy()) {
     auto RHSOp = RHSValue->getType()->isIntegerTy()
-                     ? Builder.CreateUIToFP(RHSValue, RedVarType)
+                     ? Builder.CreateSIToFP(RHSValue, RedVarType)
                      : Builder.CreateFPCast(RHSValue, RedVarType);
     RedRHS = Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSOp);
   } else if (RedVarType->isIntegerTy()) {
     auto RHSOp = RHSValue->getType()->isIntegerTy()
                      ? Builder.CreateIntCast(RHSValue, RedVarType, false)
-                     : Builder.CreateFPToUI(RHSValue, RedVarType);
+                     : Builder.CreateFPToSI(RHSValue, RedVarType);
     RedRHS = Builder.CreateAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSOp);
   } else
     llvm_unreachable("Unhandled type");

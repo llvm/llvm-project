@@ -20,6 +20,7 @@
 
 #define _CD double _Complex
 #define _CF float _Complex
+#define _US unsigned short
 #define _UI unsigned int
 #define _UL unsigned long
 #define _INLINE_ATTR_ __attribute__((flatten, always_inline))
@@ -109,6 +110,44 @@ void _INLINE_ATTR_ __kmpc_iteamr_f_16x64(float v, float *r_ptr,
                                                          _RF_LDS float *),
                                          const float rnv, const uint64_t k);
 /// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_h_16x64(
+    _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
+    void (*_rf)(_Float16 *, _Float16),
+    void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_h_16x64_fast_sum(
+    _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
+    void (*_rf)(_Float16 *, _Float16),
+    void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_h_16x64(_Float16 v, _Float16 *r_ptr,
+                                         void (*_rf)(_Float16 *, _Float16),
+                                         void (*_rf_lds)(_RF_LDS _Float16 *,
+                                                         _RF_LDS _Float16 *),
+                                         const _Float16 rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_bf_16x64(
+    __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
+    void (*_rf)(__bf16 *, __bf16),
+    void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_bf_16x64_fast_sum(
+    __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
+    void (*_rf)(__bf16 *, __bf16),
+    void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_bf_16x64(__bf16 v, __bf16 *r_ptr,
+                                          void (*_rf)(__bf16 *, __bf16),
+                                          void (*_rf_lds)(_RF_LDS __bf16 *,
+                                                          _RF_LDS __bf16 *),
+                                          const __bf16 rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_xteamr_cd_16x64(
     _CD v, _CD *r_ptr, _CD *tvs, uint32_t *td, void (*_rf)(_CD *, _CD),
     void (*_rf_lds)(_RF_LDS _CD *, _RF_LDS _CD *), const _CD rnv,
@@ -142,6 +181,42 @@ void _INLINE_ATTR_ __kmpc_iteamr_cf_16x64(_CF v, _CF *r_ptr,
                                           void (*_rf_lds)(_RF_LDS _CF *,
                                                           _RF_LDS _CF *),
                                           const _CF rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_s_16x64(
+    short v, short *r_ptr, short *tvs, uint32_t *td,
+    void (*_rf)(short *, short),
+    void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_s_16x64_fast_sum(
+    short v, short *r_ptr, short *tvs, uint32_t *td,
+    void (*_rf)(short *, short),
+    void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_s_16x64(short v, short *r_ptr,
+                                         void (*_rf)(short *, short),
+                                         void (*_rf_lds)(_RF_LDS short *,
+                                                         _RF_LDS short *),
+                                         const short rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_us_16x64(
+    _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
+    void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_us_16x64_fast_sum(
+    _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
+    void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_us_16x64(_US v, _US *r_ptr,
+                                          void (*_rf)(_US *, _US),
+                                          void (*_rf_lds)(_RF_LDS _US *,
+                                                          _RF_LDS _US *),
+                                          const _US rnv, const uint64_t k);
 /// Cross team reduction (xteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_xteamr_i_16x64(
     int v, int *r_ptr, int *tvs, uint32_t *td, void (*_rf)(int *, int),
@@ -249,6 +324,44 @@ void _INLINE_ATTR_ __kmpc_iteamr_f_32x32(float v, float *r_ptr,
                                                          _RF_LDS float *),
                                          const float rnv, const uint64_t k);
 /// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_h_32x32(
+    _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
+    void (*_rf)(_Float16 *, _Float16),
+    void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_h_32x32_fast_sum(
+    _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
+    void (*_rf)(_Float16 *, _Float16),
+    void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_h_32x32(_Float16 v, _Float16 *r_ptr,
+                                         void (*_rf)(_Float16 *, _Float16),
+                                         void (*_rf_lds)(_RF_LDS _Float16 *,
+                                                         _RF_LDS _Float16 *),
+                                         const _Float16 rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_bf_32x32(
+    __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
+    void (*_rf)(__bf16 *, __bf16),
+    void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_bf_32x32_fast_sum(
+    __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
+    void (*_rf)(__bf16 *, __bf16),
+    void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_bf_32x32(__bf16 v, __bf16 *r_ptr,
+                                          void (*_rf)(__bf16 *, __bf16),
+                                          void (*_rf_lds)(_RF_LDS __bf16 *,
+                                                          _RF_LDS __bf16 *),
+                                          const __bf16 rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_xteamr_cd_32x32(
     _CD v, _CD *r_ptr, _CD *tvs, uint32_t *td, void (*_rf)(_CD *, _CD),
     void (*_rf_lds)(_RF_LDS _CD *, _RF_LDS _CD *), const _CD rnv,
@@ -282,6 +395,42 @@ void _INLINE_ATTR_ __kmpc_iteamr_cf_32x32(_CF v, _CF *r_ptr,
                                           void (*_rf_lds)(_RF_LDS _CF *,
                                                           _RF_LDS _CF *),
                                           const _CF rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_s_32x32(
+    short v, short *r_ptr, short *tvs, uint32_t *td,
+    void (*_rf)(short *, short),
+    void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_s_32x32_fast_sum(
+    short v, short *r_ptr, short *tvs, uint32_t *td,
+    void (*_rf)(short *, short),
+    void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_s_32x32(short v, short *r_ptr,
+                                         void (*_rf)(short *, short),
+                                         void (*_rf_lds)(_RF_LDS short *,
+                                                         _RF_LDS short *),
+                                         const short rnv, const uint64_t k);
+/// Cross team reduction (xteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_xteamr_us_32x32(
+    _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
+    void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Fast Cross team sum reduction (xteamr) helper function, see documentation
+/// above.
+void _INLINE_ATTR_ __kmpc_xteamr_us_32x32_fast_sum(
+    _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
+    void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
+    const uint64_t k, const uint32_t numteams);
+/// Intra-team reduction (iteamr) helper function, see documentation above.
+void _INLINE_ATTR_ __kmpc_iteamr_us_32x32(_US v, _US *r_ptr,
+                                          void (*_rf)(_US *, _US),
+                                          void (*_rf_lds)(_RF_LDS _US *,
+                                                          _RF_LDS _US *),
+                                          const _US rnv, const uint64_t k);
 /// Cross team reduction (xteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_xteamr_i_32x32(
     int v, int *r_ptr, int *tvs, uint32_t *td, void (*_rf)(int *, int),
@@ -350,6 +499,7 @@ void _INLINE_ATTR_ __kmpc_iteamr_ul_32x32(_UL v, _UL *r_ptr,
                                           void (*_rf_lds)(_RF_LDS _UL *,
                                                           _RF_LDS _UL *),
                                           const _UL rnv, const uint64_t k);
+
 /// Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_sum_d(double *val, double otherval);
 /// LDS Built-in pair reduction function, see documentation above.
@@ -359,6 +509,14 @@ void __kmpc_rfun_sum_f(float *val, float otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_sum_lds_f(_RF_LDS float *val, _RF_LDS float *otherval);
 /// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_h(_Float16 *val, _Float16 otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_lds_h(_RF_LDS _Float16 *val, _RF_LDS _Float16 *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_bf(__bf16 *val, __bf16 otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_lds_bf(_RF_LDS __bf16 *val, _RF_LDS __bf16 *otherval);
+/// Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_sum_cd(_CD *val, _CD otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_sum_lds_cd(_RF_LDS _CD *val, _RF_LDS _CD *otherval);
@@ -366,6 +524,14 @@ void __kmpc_rfun_sum_lds_cd(_RF_LDS _CD *val, _RF_LDS _CD *otherval);
 void __kmpc_rfun_sum_cf(_CF *val, _CF otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_sum_lds_cf(_RF_LDS _CF *val, _RF_LDS _CF *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_s(short *val, short otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_lds_s(_RF_LDS short *val, _RF_LDS short *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_us(_US *val, _US otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_sum_lds_us(_RF_LDS _US *val, _RF_LDS _US *otherval);
 /// Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_sum_i(int *val, int otherval);
 /// LDS Built-in pair reduction function, see documentation above.
@@ -391,6 +557,22 @@ void __kmpc_rfun_max_f(float *val, float otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_max_lds_f(_RF_LDS float *val, _RF_LDS float *otherval);
 /// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_h(_Float16 *val, _Float16 otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_lds_h(_RF_LDS _Float16 *val, _RF_LDS _Float16 *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_bf(__bf16 *val, __bf16 otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_lds_bf(_RF_LDS __bf16 *val, _RF_LDS __bf16 *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_s(short *val, short otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_lds_s(_RF_LDS short *val, _RF_LDS short *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_us(_US *val, _US otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_max_lds_us(_RF_LDS _US *val, _RF_LDS _US *otherval);
+/// Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_max_i(int *val, int otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_max_lds_i(_RF_LDS int *val, _RF_LDS int *otherval);
@@ -415,6 +597,22 @@ void __kmpc_rfun_min_f(float *val, float otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_min_lds_f(_RF_LDS float *val, _RF_LDS float *otherval);
 /// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_h(_Float16 *val, _Float16 otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_lds_h(_RF_LDS _Float16 *val, _RF_LDS _Float16 *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_bf(__bf16 *val, __bf16 otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_lds_bf(_RF_LDS __bf16 *val, _RF_LDS __bf16 *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_s(short *val, short otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_lds_s(_RF_LDS short *val, _RF_LDS short *otherval);
+/// Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_us(_US *val, _US otherval);
+/// LDS Built-in pair reduction function, see documentation above.
+void __kmpc_rfun_min_lds_us(_RF_LDS _US *val, _RF_LDS _US *otherval);
+/// Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_min_i(int *val, int otherval);
 /// LDS Built-in pair reduction function, see documentation above.
 void __kmpc_rfun_min_lds_i(_RF_LDS int *val, _RF_LDS int *otherval);
@@ -434,6 +632,7 @@ void __kmpc_rfun_min_lds_ul(_RF_LDS _UL *val, _RF_LDS _UL *otherval);
 
 #undef _CD
 #undef _CF
+#undef _US
 #undef _UI
 #undef _UL
 #undef _INLINE_ATTR_
