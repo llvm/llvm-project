@@ -1,17 +1,14 @@
-! REQUIRES: openmp_runtime
-
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+
+! The "allocate" clause has been removed, because it needs to be used
+! together with a privatizing clause. The only such clause for "taskgroup"
+! is "task_reduction", but it's not yet supported.
 
 !CHECK-LABEL: @_QPomp_taskgroup
 subroutine omp_taskgroup
-use omp_lib
-integer :: allocated_x
-!CHECK: %[[ALLOC_X_REF:.*]] = fir.alloca i32 {bindc_name = "allocated_x", uniq_name = "_QFomp_taskgroupEallocated_x"}
-!CHECK-NEXT: %[[ALLOC_X_DECL:.*]]:2 = hlfir.declare %[[ALLOC_X_REF]] {uniq_name = "_QFomp_taskgroupEallocated_x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[C4:.*]] = arith.constant 4 : i64
-
-!CHECK: omp.taskgroup  allocate(%[[C4]] : i64 -> %[[ALLOC_X_DECL]]#1 : !fir.ref<i32>)
-!$omp taskgroup allocate(omp_high_bw_mem_alloc: allocated_x)
+!CHECK: omp.taskgroup
+!$omp taskgroup
+!CHECK: omp.task
 !$omp task
 !CHECK: fir.call @_QPwork() {{.*}}: () -> ()
    call work()
