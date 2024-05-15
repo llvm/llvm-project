@@ -5610,7 +5610,7 @@ avoided.
 
 ``clang::offset``
 -----------------
-The ``clang::offset`` embed parameter may appear zero times or one time in the
+The ``clang::offset`` embed parameter may appear zero or one time in the
 embed parameter sequence. Its preprocessor argument clause shall be present and
 have the form:
 

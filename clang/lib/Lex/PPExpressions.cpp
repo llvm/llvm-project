@@ -961,9 +961,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds, ValRange};
 }
 
-/// EvaluateDirectiveExpression - Evaluate an integer constant expression that
-/// may occur after a #if or #elif directive.  If the expression is equivalent
-/// to "!defined(X)" return X in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
 Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
                                           bool CheckForEoD) {

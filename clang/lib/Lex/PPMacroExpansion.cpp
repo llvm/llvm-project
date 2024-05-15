@@ -1296,7 +1296,7 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     // Return a valid identifier token.
     assert(Tok.is(tok::identifier));
     Tok.setIdentifierInfo(II);
-    return EmbedResult::NotFound;
+    return EmbedResult::Invalid;
   }
 
   // Ensure we have a '('.

@@ -4840,8 +4840,8 @@ class EmbedExpr final : public Expr {
   unsigned NumOfElements;
 
 public:
-  EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
-            EmbedDataStorage *Data, unsigned Begin, unsigned NumOfElements);
+  EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, EmbedDataStorage *Data,
+            unsigned Begin, unsigned NumOfElements);
   explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
 
   SourceLocation getLocation() const { return EmbedKeywordLoc; }
@@ -4855,6 +4855,12 @@ public:
   unsigned getStartingElementPos() const { return Begin; }
   size_t getDataElementCount() const { return NumOfElements; }
 
+  // Allows accessing every byte of EmbedExpr data and iterating over it.
+  // An Iterator knows the EmbedExpr that it refers to, and an offset value
+  // within the data.
+  // Dereferencing an Iterator results in construction of IntegerLiteral AST
+  // node filled with byte of data of the corresponding EmbedExpr within offset
+  // that the Iterator currently has.
   template <bool Const>
   class ChildElementIter
       : public llvm::iterator_facade_base<
