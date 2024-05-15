@@ -10,7 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestDAP_repl_mode_detection(lldbdap_testcase.DAPTestCaseBase):
-
     def assertEvaluate(self, expression, regex):
         self.assertRegex(
             self.dap_server.request_evaluate(expression, context="repl")["body"][
