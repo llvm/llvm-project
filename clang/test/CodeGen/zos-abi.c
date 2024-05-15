@@ -64,26 +64,26 @@ struct SingleVec pass_SingleVec_agg(struct SingleVec arg) { return arg; };
 // Complex types
 
 _Complex float pass_complex_float(_Complex float arg) { return arg; }
-// CHECK-LABEL: define { float, float } @pass_complex_float({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define { float, float } @pass_complex_float({ float, float } %{{.*}})
 
 _Complex double pass_complex_double(_Complex double arg) { return arg; }
-// CHECK-LABEL: define { double, double } @pass_complex_double({ double, double } inreg %{{.*}})
+// CHECK-LABEL: define { double, double } @pass_complex_double({ double, double } %{{.*}})
 
 _Complex long double pass_complex_longdouble(_Complex long double arg) { return arg; }
-// CHECK-LABEL: define { fp128, fp128 } @pass_complex_longdouble({ fp128, fp128 } inreg %{{.*}})
+// CHECK-LABEL: define { fp128, fp128 } @pass_complex_longdouble({ fp128, fp128 } %{{.*}})
 
 // Verify that the following are complex-like types
 struct complexlike_float { float re, im; };
 struct complexlike_float pass_complexlike_float(struct complexlike_float arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float({ float, float } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_float @pass_complexlike_float({ float, float } %{{.*}})
 
 struct complexlike_double { double re, im; };
 struct complexlike_double pass_complexlike_double(struct complexlike_double arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_double @pass_complexlike_double({ double, double } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_double @pass_complexlike_double({ double, double } %{{.*}})
 
 struct complexlike_longdouble { long double re, im; };
 struct complexlike_longdouble pass_complexlike_longdouble(struct complexlike_longdouble arg) { return arg; }
-// CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } inreg %{{.*}})
+// CHECK-LABEL: define %struct.complexlike_longdouble @pass_complexlike_longdouble({ fp128, fp128 } %{{.*}})
 
 // Unnamed types
 

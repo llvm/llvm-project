@@ -854,7 +854,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
   auto CompTy = getFPTypeOfComplexLikeType(Ty);
   if (IsNamedArg) {
     if (Ty->isComplexType()) {
-      auto AI = ABIArgInfo::getDirectInReg(CGT.ConvertType(Ty));
+      auto AI = ABIArgInfo::getDirect(CGT.ConvertType(Ty));
       AI.setCanBeFlattened(false);
       return AI;
     }
@@ -862,7 +862,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
     if (CompTy.has_value()) {
       llvm::Type *FPTy = CGT.ConvertType(*CompTy);
       llvm::Type *CoerceTy = llvm::StructType::get(FPTy, FPTy);
-      auto AI = ABIArgInfo::getDirectInReg(CoerceTy);
+      auto AI = ABIArgInfo::getDirect(CoerceTy);
       AI.setCanBeFlattened(false);
       return AI;
     }
