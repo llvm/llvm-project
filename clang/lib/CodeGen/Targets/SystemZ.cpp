@@ -554,23 +554,19 @@ public:
   unsigned getMaxAlignFromTypeDefs(QualType Ty) const;
   std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
 
-  ABIArgInfo classifyReturnType(QualType RetTy,
-                                unsigned functionCallConv) const;
-  ABIArgInfo classifyArgumentType(QualType ArgTy, bool IsNamedArg,
-                                  unsigned functionCallConv) const;
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType ArgTy, bool IsNamedArg) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
-      FI.getReturnInfo() =
-          classifyReturnType(FI.getReturnType(), FI.getCallingConvention());
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
     unsigned NumRequiredArgs = FI.getNumRequiredArgs();
     unsigned ArgNo = 0;
 
     for (auto &I : FI.arguments()) {
       bool IsNamedArg = ArgNo < NumRequiredArgs;
-      I.info =
-          classifyArgumentType(I.type, IsNamedArg, FI.getCallingConvention());
+      I.info = classifyArgumentType(I.type, IsNamedArg);
       ++ArgNo;
     }
   }
@@ -781,18 +777,11 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
   return std::nullopt;
 }
 
-ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
-                                                unsigned CallConv) const {
+ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy) const {
 
   // Ignore void types.
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
-
-  // For non-C calling convention, indirect by value for structs and complex.
-  if ((CallConv != llvm::CallingConv::C) &&
-      (isAggregateTypeForABI(RetTy) || RetTy->isAnyComplexType())) {
-    return getNaturalAlignIndirect(RetTy);
-  }
 
   // Vectors are returned directly.
   if (isVectorArgumentType(RetTy))
@@ -835,8 +824,8 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
                                          : ABIArgInfo::getDirect());
 }
 
-ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
-                                                  unsigned CallConv) const {
+ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty,
+                                                  bool IsNamedArg) const {
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
     return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
@@ -844,10 +833,6 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerType(Ty))
     return ABIArgInfo::getExtend(Ty);
-
-  // For non-C calling conventions, compound types passed by address copy.
-  if ((CallConv != llvm::CallingConv::C) && isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
 
   // Complex types are passed by value as per the XPLINK docs.
   // If place available, their members will be placed in FPRs.
