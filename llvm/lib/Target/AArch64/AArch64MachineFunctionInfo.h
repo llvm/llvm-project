@@ -243,7 +243,7 @@ public:
   void setVGIdx(unsigned Idx) { VGIdx = Idx; };
 
   int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
-  void setStreamingVGIdx(unsigned Idx) { StreamingVGIdx = Idx; };
+  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
@@ -503,11 +503,6 @@ public:
   bool hasStreamingModeChanges() const { return HasStreamingModeChanges; }
   void setHasStreamingModeChanges(bool HasChanges) {
     HasStreamingModeChanges = HasChanges;
-  }
-
-  bool requiresVGSpill(const MachineFunction &MF) const {
-    const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-    return STI.hasSVE() && HasStreamingModeChanges;
   }
 
   bool hasStackProbing() const { return StackProbeSize != 0; }

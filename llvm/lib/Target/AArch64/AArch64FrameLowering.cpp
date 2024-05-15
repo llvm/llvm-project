@@ -321,7 +321,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
     return false;
 
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasSwiftAsyncContext() || AFI->requiresVGSpill(MF))
+  if (AFI->hasSwiftAsyncContext() || AFI->hasStreamingModeChanges())
     return false;
 
   // If there are an odd number of GPRs before LR and FP in the CSRs list,
@@ -1357,6 +1357,32 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
     ImmOpnd->setImm(ImmOpnd->getImm() + LocalStackSize);
 }
 
+bool requiresGetVGCall(MachineFunction &MF) {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return AFI->hasStreamingModeChanges() &&
+         !MF.getSubtarget<AArch64Subtarget>().hasSVE();
+}
+
+bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
+  unsigned Opc = MBBI->getOpcode();
+  if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
+      Opc == AArch64::UBFMXri)
+    return true;
+
+  if (requiresGetVGCall(*MBBI->getMF())) {
+    if (Opc == AArch64::ORRXrr)
+      return true;
+
+    if (Opc == AArch64::BL) {
+      auto Op1 = MBBI->getOperand(0);
+      return Op1.isSymbol() &&
+             (StringRef(Op1.getSymbolName()) == "__arm_get_current_vg");
+    }
+  }
+
+  return false;
+}
+
 // Convert callee-save register save/restore instruction to do stack pointer
 // decrement/increment to allocate/deallocate the callee-save stack area by
 // converting store/load to use pre/post increment version.
@@ -1372,16 +1398,11 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // to calculate the value of VG before spilling. For locally-streaming
   // functions, we need to do this for both the streaming and non-streaming
   // vector length. Move past these instructions if necessary.
-  unsigned Opc = MBBI->getOpcode();
-  if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI) {
-    MachineFunction &MF = *MBB.getParent();
-    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    assert(AFI->requiresVGSpill(MF) &&
-           "Unexpected callee-save save/restore opcode!");
-    ++MBBI;
-    if (MBBI->getOpcode() == AArch64::UBFMXri)
+  MachineFunction &MF = *MBB.getParent();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->hasStreamingModeChanges())
+    while (isVGInstruction(MBBI))
       ++MBBI;
-  }
 
   switch (MBBI->getOpcode()) {
   default:
@@ -1439,7 +1460,6 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
 
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
-  MachineFunction &MF = *MBB.getParent();
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
@@ -1691,6 +1711,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     LiveRegs.removeReg(AArch64::X19);
     LiveRegs.removeReg(AArch64::FP);
     LiveRegs.removeReg(AArch64::LR);
+
+    // X0 will be clobbered by a call to __arm_get_current_vg in the prologue.
+    // This is necessary to spill VG if required where SVE is unavailable, but
+    // X0 is preserved around this call.
+    if (requiresGetVGCall(MF))
+      LiveRegs.removeReg(AArch64::X0);
   }
 
   auto VerifyClobberOnExit = make_scope_exit([&]() {
@@ -1877,14 +1903,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer bump above.
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
-    unsigned Opc = MBBI->getOpcode();
     // Move past instructions generated to calculate VG
-    if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI) {
-      assert(AFI->requiresVGSpill(MF) && "Unexpected opcode!");
-      ++MBBI;
-      if (MBBI->getOpcode() == AArch64::UBFMXri)
+    if (AFI->hasStreamingModeChanges())
+      while (isVGInstruction(MBBI))
         ++MBBI;
-    }
+
     if (CombineSPBump)
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
@@ -3049,6 +3072,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool NeedsWinCFI = needsWinCFI(MF);
+  bool HasSVE = MF.getSubtarget<AArch64Subtarget>().hasSVE();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
 
@@ -3122,6 +3146,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       break;
     }
 
+    unsigned X0Scratch = AArch64::NoRegister;
     if (Reg1 == AArch64::VG) {
       // Find an available register to store value of VG to.
       Reg1 = findScratchNonCalleeSaveRegister(&MBB);
@@ -3143,10 +3168,32 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
         AFI->setStreamingVGIdx(RPI.FrameIdx);
       } else {
-        BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
-            .addImm(31)
-            .addImm(1)
-            .setMIFlag(MachineInstr::FrameSetup);
+        if (HasSVE)
+          BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
+              .addImm(31)
+              .addImm(1)
+              .setMIFlag(MachineInstr::FrameSetup);
+        else {
+          const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+          for (const auto &LiveIn : MBB.liveins())
+            if (STI.getRegisterInfo()->isSuperOrSubRegisterEq(AArch64::X0,
+                                                              LiveIn.PhysReg))
+              X0Scratch = Reg1;
+
+          if (X0Scratch != AArch64::NoRegister)
+            BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), Reg1)
+                .addReg(AArch64::XZR)
+                .addReg(AArch64::X0, RegState::Undef)
+                .addReg(AArch64::X0, RegState::Implicit)
+                .setMIFlag(MachineInstr::FrameSetup);
+
+          // FIXME: Add PreserveMost_From_X1 regmask from PR #93963
+          BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
+              .addExternalSymbol("__arm_get_current_vg")
+              .addReg(AArch64::X0, RegState::ImplicitDefine)
+              .setMIFlag(MachineInstr::FrameSetup);
+          Reg1 = AArch64::X0;
+        }
         AFI->setVGIdx(RPI.FrameIdx);
       }
     }
@@ -3242,6 +3289,13 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       if (RPI.isPaired())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
     }
+
+    if (X0Scratch != AArch64::NoRegister)
+      BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), AArch64::X0)
+          .addReg(AArch64::XZR)
+          .addReg(X0Scratch, RegState::Undef)
+          .addReg(X0Scratch, RegState::Implicit)
+          .setMIFlag(MachineInstr::FrameSetup);
   }
   return true;
 }
@@ -3528,7 +3582,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // non-streaming VG value.
   const Function &F = MF.getFunction();
   SMEAttrs Attrs(F);
-  if (AFI->requiresVGSpill(MF)) {
+  if (AFI->hasStreamingModeChanges()) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
     else
@@ -3672,7 +3726,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  if (AFI->requiresVGSpill(MF)) {
+  if (AFI->hasStreamingModeChanges()) {
     std::vector<CalleeSavedInfo> VGSaves;
     SMEAttrs Attrs(MF.getFunction());
 
@@ -4313,12 +4367,58 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
 }
 } // namespace
 
+MachineBasicBlock::iterator emitVGSaveRestore(MachineBasicBlock::iterator II,
+                                              const AArch64FrameLowering *TFI) {
+  MachineInstr &MI = *II;
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
+
+  if (MI.getOpcode() != AArch64::VGSavePseudo &&
+      MI.getOpcode() != AArch64::VGRestorePseudo)
+    return II;
+
+  SMEAttrs FuncAttrs(MF->getFunction());
+  bool LocallyStreaming =
+      FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
+  const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  const AArch64InstrInfo *TII =
+      MF->getSubtarget<AArch64Subtarget>().getInstrInfo();
+
+  int64_t VGFrameIdx =
+      LocallyStreaming ? AFI->getStreamingVGIdx() : AFI->getVGIdx();
+  assert(VGFrameIdx != std::numeric_limits<int>::max() &&
+         "Expected FrameIdx for VG");
+
+  unsigned CFIIndex;
+  if (MI.getOpcode() == AArch64::VGSavePseudo) {
+    const MachineFrameInfo &MFI = MF->getFrameInfo();
+    int64_t Offset =
+        MFI.getObjectOffset(VGFrameIdx) - TFI->getOffsetOfLocalArea();
+    CFIIndex = MF->addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, TRI->getDwarfRegNum(AArch64::VG, true), Offset));
+  } else
+    CFIIndex = MF->addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, TRI->getDwarfRegNum(AArch64::VG, true)));
+
+  MachineInstr *UnwindInst = BuildMI(*MBB, II, II->getDebugLoc(),
+                                     TII->get(TargetOpcode::CFI_INSTRUCTION))
+                                 .addCFIIndex(CFIIndex);
+
+  MI.eraseFromParent();
+  return UnwindInst->getIterator();
+}
+
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
-  if (StackTaggingMergeSetTag)
-    for (auto &BB : MF)
-      for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();)
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  for (auto &BB : MF)
+    for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
+      if (AFI->hasStreamingModeChanges())
+        II = emitVGSaveRestore(II, this);
+      if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
+    }
 }
 
 /// For Win64 AArch64 EH, the offset to the Unwind object is from the SP

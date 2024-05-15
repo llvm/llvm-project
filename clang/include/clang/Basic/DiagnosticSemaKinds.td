@@ -3776,12 +3776,6 @@ def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_sme_streaming_cannot_be_multiversioned : Error<
   "streaming function cannot be multi-versioned">;
-def err_sme_streaming_mode_change_no_sve : Error<
-  "function requires a streaming-mode change, unwinding is not possible without 'sve'. "
-  "Consider marking this function as 'noexcept' or '__attribute__((nothrow))'">;
-def err_sme_locally_streaming_no_sve : Error<
-  "unwinding is not possible for locally-streaming functions without 'sve'. "
-  "Consider marking this function as 'noexcept' or '__attribute__((nothrow))'">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
 def err_missing_arm_state : Error<

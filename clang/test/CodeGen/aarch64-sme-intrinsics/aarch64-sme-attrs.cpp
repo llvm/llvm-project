@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme \
-// RUN:   -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - %s \
+// RUN:   -disable-O0-optnone -Werror -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | opt -S -passes=inline \
 // RUN: | FileCheck %s
@@ -278,18 +278,18 @@ int test_variadic_template() __arm_inout("za") {
               preserves_za_decl);
 }
 
-// CHECK: attributes #[[SM_ENABLED]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[NORMAL_DECL]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[SM_ENABLED_DECL]] = { "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[SM_COMPATIBLE]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_new_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
-// CHECK: attributes #[[NORMAL_DEF]] = { mustprogress noinline nounwind vscale_range(1,16) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme,+sve" }
+// CHECK: attributes #[[SM_ENABLED]] = { mustprogress noinline nounwind "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[NORMAL_DECL]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[SM_ENABLED_DECL]] = { "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[SM_COMPATIBLE]] = { mustprogress noinline nounwind "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_new_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[NORMAL_DEF]] = { mustprogress noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_ENABLED_CALL]] = { "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[SM_COMPATIBLE_CALL]] = { "aarch64_pstate_sm_compatible" }
 // CHECK: attributes #[[SM_BODY_CALL]] = { "aarch64_pstate_sm_body" }

@@ -7,6 +7,7 @@ declare void @fixed_callee(<4 x i32>);
 declare void @scalable_callee(<vscale x 2 x i64>);
 
 declare void @streaming_callee() #0;
+declare void @streaming_callee_with_arg(i32) #0;
 
 ; Simple example of a function with one call requiring a streaming mode change
 ;
@@ -1002,22 +1003,27 @@ define void @streaming_compatible_to_non_streaming() #4 {
   ret void
 }
 
-; If the target does not have SVE, do not spill VG even if the function
-; has streaming-mode changes.
+; If the target does not have SVE, do not emit cntd in the prologue and
+; instead spill the result returned by __arm_get_current_vg.
+; This requires preserving the argument %x as the vg value is returned
+; in X0.
 ;
-define void @streaming_compatible_no_sve() #4 {
+define void @streaming_compatible_no_sve(i32 noundef %x) #4 {
 ; NO-SVE-CHECK-LABEL: streaming_compatible_no_sve:
 ; NO-SVE-CHECK:       // %bb.0:
 ; NO-SVE-CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
 ; NO-SVE-CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; NO-SVE-CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    mov x9, x0
 ; NO-SVE-CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; NO-SVE-CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; NO-SVE-CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; NO-SVE-CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    bl __arm_get_current_vg
+; NO-SVE-CHECK-NEXT:    stp x0, x19, [sp, #80] // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT:    mov x0, x9
 ; NO-SVE-CHECK-NEXT:    add x29, sp, #64
 ; NO-SVE-CHECK-NEXT:    .cfi_def_cfa w29, 32
-; NO-SVE-CHECK-NEXT:    .cfi_offset w19, -16
+; NO-SVE-CHECK-NEXT:    .cfi_offset w19, -8
 ; NO-SVE-CHECK-NEXT:    .cfi_offset w30, -24
 ; NO-SVE-CHECK-NEXT:    .cfi_offset w29, -32
 ; NO-SVE-CHECK-NEXT:    .cfi_offset b8, -40
@@ -1028,20 +1034,24 @@ define void @streaming_compatible_no_sve() #4 {
 ; NO-SVE-CHECK-NEXT:    .cfi_offset b13, -80
 ; NO-SVE-CHECK-NEXT:    .cfi_offset b14, -88
 ; NO-SVE-CHECK-NEXT:    .cfi_offset b15, -96
+; NO-SVE-CHECK-NEXT:    mov w8, w0
 ; NO-SVE-CHECK-NEXT:    bl __arm_sme_state
 ; NO-SVE-CHECK-NEXT:    and x19, x0, #0x1
+; NO-SVE-CHECK-NEXT:    .cfi_offset vg, -16
 ; NO-SVE-CHECK-NEXT:    tbnz w19, #0, .LBB8_2
 ; NO-SVE-CHECK-NEXT:  // %bb.1:
 ; NO-SVE-CHECK-NEXT:    smstart sm
 ; NO-SVE-CHECK-NEXT:  .LBB8_2:
-; NO-SVE-CHECK-NEXT:    bl streaming_callee
+; NO-SVE-CHECK-NEXT:    mov w0, w8
+; NO-SVE-CHECK-NEXT:    bl streaming_callee_with_arg
 ; NO-SVE-CHECK-NEXT:    tbnz w19, #0, .LBB8_4
 ; NO-SVE-CHECK-NEXT:  // %bb.3:
 ; NO-SVE-CHECK-NEXT:    smstop sm
 ; NO-SVE-CHECK-NEXT:  .LBB8_4:
+; NO-SVE-CHECK-NEXT:    .cfi_restore vg
 ; NO-SVE-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; NO-SVE-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; NO-SVE-CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
+; NO-SVE-CHECK-NEXT:    ldr x19, [sp, #88] // 8-byte Folded Reload
 ; NO-SVE-CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; NO-SVE-CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; NO-SVE-CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -1060,7 +1070,7 @@ define void @streaming_compatible_no_sve() #4 {
 ; NO-SVE-CHECK-NEXT:    .cfi_restore b15
 ; NO-SVE-CHECK-NEXT:    ret
 ;
-  call void @streaming_callee()
+  call void @streaming_callee_with_arg(i32 %x)
   ret void
 }
 

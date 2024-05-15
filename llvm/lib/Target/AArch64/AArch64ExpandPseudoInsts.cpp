@@ -1599,57 +1599,6 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::COALESCER_BARRIER_FPR128:
      MI.eraseFromParent();
      return true;
-   case AArch64::VGSavePseudo:
-   case AArch64::VGRestorePseudo: {
-     MachineFunction &MF = *MBB.getParent();
-     SMEAttrs FuncAttrs(MF.getFunction());
-     bool LocallyStreaming =
-         FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
-     const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-
-     if (!AFI->requiresVGSpill(MF))
-       return false;
-
-     int64_t VGFrameIdx =
-         LocallyStreaming ? AFI->getStreamingVGIdx() : AFI->getVGIdx();
-     assert(VGFrameIdx != std::numeric_limits<int>::max() &&
-            "Expected FrameIdx for VG");
-
-     const TargetSubtargetInfo &STI = MF.getSubtarget();
-     const TargetInstrInfo &TII = *STI.getInstrInfo();
-     const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-
-     if (Opcode == AArch64::VGSavePseudo) {
-       // This pseudo has been inserted after a streaming-mode change
-       // to save the streaming value of VG before a call.
-       // Calculate and emit the CFI offset using VGFrameIdx.
-       MachineFrameInfo &MFI = MF.getFrameInfo();
-       const AArch64FrameLowering *TFI =
-           MF.getSubtarget<AArch64Subtarget>().getFrameLowering();
-
-       int64_t Offset =
-           MFI.getObjectOffset(VGFrameIdx) - TFI->getOffsetOfLocalArea();
-       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-           nullptr, TRI.getDwarfRegNum(AArch64::VG, true), Offset));
-       BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
-               TII.get(TargetOpcode::CFI_INSTRUCTION))
-           .addCFIIndex(CFIIndex)
-           .setMIFlags(MachineInstr::FrameSetup);
-     } else {
-       // This is a restore of VG after returning from the call. Emit the
-       // .cfi_restore instruction, which sets the rule for VG to the same
-       // as it was on entry to the function.
-       ++MBBI;
-       DebugLoc DL = MI.getDebugLoc();
-       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
-           nullptr, TRI.getDwarfRegNum(AArch64::VG, true)));
-       BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-           .addCFIIndex(CFIIndex);
-     }
-
-     MI.eraseFromParent();
-     return true;
-   }
    case AArch64::LD1B_2Z_IMM_PSEUDO:
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
