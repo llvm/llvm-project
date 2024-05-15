@@ -1,8 +1,13 @@
 # REQUIRES: (target-aarch64 || target-arm) && native
 # UNSUPPORTED: system-windows
+# llvm.org/pr91610, rdar://128031075
+# XFAIL: system-darwin
 
 # RUN: %clang_host %S/Inputs/unaligned-pc-sigbus.c -o %t
 # RUN: %lldb -s %s -o exit %t | FileCheck %s
+
+# Convert EXC_BAD_ACCESS into SIGBUS on darwin.
+settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_ACCESS
 
 breakpoint set -n sigbus_handler
 # CHECK: Breakpoint 1: where = {{.*}}`sigbus_handler
