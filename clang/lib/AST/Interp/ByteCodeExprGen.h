@@ -123,6 +123,7 @@ public:
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
   bool VisitRecoveryExpr(const RecoveryExpr *E);
   bool VisitAddrLabelExpr(const AddrLabelExpr *E);
+  bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
