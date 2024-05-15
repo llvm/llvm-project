@@ -22,18 +22,18 @@ import sys
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     def runTargetProgramOnPort(self, port=None, program=None):
         server_tool = None
-        if (lldbplatformutil.getPlatform() == "linux"):
+        if lldbplatformutil.getPlatform() == "linux":
             server_tool = lldbgdbserverutils.get_lldb_server_exe()
             if server_tool is None:
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "lldb-server not found.")
-            server_tool += " g localhost:" +  port + " "
-        elif (lldbplatformutil.getPlatform() == "macosx"):
+            server_tool += " g localhost:" + port + " "
+        elif lldbplatformutil.getPlatform() == "macosx":
             server_tool = lldbgdbserverutils.get_debugserver_exe()
             if server_tool is None:
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "debugserver not found.")
-            server_tool += " --listen localhost:" +  port + " "
+            server_tool += " --listen localhost:" + port + " "
 
         self.process = subprocess.Popen(
             [server_tool + program],
@@ -72,9 +72,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         port = "2345"
         self.process = self.runTargetProgramOnPort(port=port, program=program)
         pid = self.process.pid
-        response = self.attach(
-            program=program, port=int(port), sourceInitFile=True
-        )
+        response = self.attach(program=program, port=int(port), sourceInitFile=True)
         self.set_and_hit_breakpoint(continueToExit=True)
         self.process.kill()
 
@@ -91,7 +89,11 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         port = "2345"
         self.process = self.runTargetProgramOnPort(port=port, program=program)
         response = self.attach(
-            program=program, pid=1234, port=int(port), sourceInitFile=True, expectFailure=True
+            program=program,
+            pid=1234,
+            port=int(port),
+            sourceInitFile=True,
+            expectFailure=True,
         )
         if not (response and response["success"]):
             self.assertFalse(

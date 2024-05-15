@@ -299,7 +299,6 @@ class DAPTestCaseBase(TestBase):
         expectFailure=False,
         port=None,
         hostname=None,
-        
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
