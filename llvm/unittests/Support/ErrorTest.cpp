@@ -1158,4 +1158,20 @@ TEST(Error, BadAllocFatalErrorHandlersInteraction) {
   remove_bad_alloc_error_handler();
 }
 
+TEST(Error, ForwardToExpected) {
+  auto ErrorReturningFct = [](bool Fail) {
+    return Fail ? make_error<StringError>(llvm::errc::invalid_argument,
+                                          "Some Error")
+                : Error::success();
+  };
+  auto ExpectedReturningFct = [&](bool Fail) -> Expected<int> {
+    auto Err = ErrorReturningFct(Fail);
+    if (Err)
+      return Err;
+    return 42;
+  };
+  std::optional<int> MaybeV;
+  EXPECT_THAT_ERROR(ExpectedReturningFct(true).moveInto(MaybeV), Failed());
+  EXPECT_EQ(*ExpectedReturningFct(false), 42);
+}
 } // namespace
