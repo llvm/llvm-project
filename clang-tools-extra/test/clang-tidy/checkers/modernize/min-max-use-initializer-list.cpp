@@ -300,6 +300,27 @@ B maxTT2 = std::max(B(), std::max(B(), B()));
 B maxTT3 = std::max(B(), std::max(B(), B()), [](const B &lhs, const B &rhs) { return lhs.a[0] < rhs.a[0]; });
 // CHECK-FIXES: B maxTT3 = std::max(B(), std::max(B(), B()), [](const B &lhs, const B &rhs) { return lhs.a[0] < rhs.a[0]; });
 
+struct GH91982 {
+  int fun0Args();
+  int fun1Arg(int a);
+  int fun2Args(int a, int b);
+  int fun3Args(int a, int b, int c);
+  int fun4Args(int a, int b, int c, int d);
+
+  int foo() {
+    return std::max(
+        fun0Args(),
+        std::max(fun1Arg(0),
+                 std::max(fun2Args(0, 1),
+                          std::max(fun3Args(0, 1, 2), fun4Args(0, 1, 2, 3)))));
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: do not use nested 'std::max' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
+// CHECK-FIXES: return std::max(
+// CHECK-FIXES-NEXT: {fun0Args(),
+// CHECK-FIXES-NEXT: fun1Arg(0),
+// CHECK-FIXES-NEXT: fun2Args(0, 1),
+// CHECK-FIXES-NEXT: fun3Args(0, 1, 2), fun4Args(0, 1, 2, 3)});
+  }
+};
 
 } // namespace
 
