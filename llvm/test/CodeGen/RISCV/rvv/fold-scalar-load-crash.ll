@@ -15,8 +15,8 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV32-NEXT:  .LBB0_1: # %for.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vmv.s.x v9, zero
-; RV32-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; RV32-NEXT:    vslideup.vx v10, v9, a2
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
 ; RV32-NEXT:    vmv.s.x v10, a0
@@ -40,8 +40,8 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV64-NEXT:  .LBB0_1: # %for.body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vmv.s.x v9, zero
-; RV64-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; RV64-NEXT:    vmv1r.v v10, v8
+; RV64-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; RV64-NEXT:    vslideup.vx v10, v9, a2
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
 ; RV64-NEXT:    vmv.s.x v10, a0
