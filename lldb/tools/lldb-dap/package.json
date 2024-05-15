@@ -2,7 +2,7 @@
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
   "version": "0.2.0",
-  "publisher": "llvm",
+  "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
   "license": "Apache 2.0 License with LLVM exceptions",
@@ -42,6 +42,7 @@
     "watch": "tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
     "package": "vsce package --out ./out/lldb-dap.vsix",
+    "publish": "vsce publish",
     "vscode-uninstall": "code --uninstall-extension llvm.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
   },
