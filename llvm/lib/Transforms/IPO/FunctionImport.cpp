@@ -1125,10 +1125,10 @@ void llvm::ComputeCrossModuleImport(
         }
       }
     }
-    //  Prune list computed above to only include values defined in the
-    //  exporting module. We do this after the above insertion since we may hit
-    //  the same ref/call target multiple times in above loop, and it is more
-    //  efficient to avoid a set lookup each time.
+    // Prune list computed above to only include values defined in the
+    // exporting module. We do this after the above insertion since we may hit
+    // the same ref/call target multiple times in above loop, and it is more
+    // efficient to avoid a set lookup each time.
     for (auto EI = NewExports.begin(); EI != NewExports.end();) {
       if (!DefinedGVSummaries.count(EI->first.getGUID()))
         NewExports.erase(EI++);

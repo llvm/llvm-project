@@ -121,7 +121,7 @@ void llvm::computeLTOCacheKey(
     support::endian::write64le(Data, I);
     Hasher.update(Data);
   };
-  auto AddUint8 = [&](const uint8_t &I) {
+  auto AddUint8 = [&](const uint8_t I) {
     Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
   };
   AddString(Conf.CPU);
