@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s --match-full-lines
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan-compute"
@@ -26,12 +27,31 @@ entry:
 ; CHECK:   %[[#while_cond]] = OpLabel
 ; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]] Aligned 4
 ; CHECK:         %[[#cmp:]] = OpINotEqual %[[#bool_ty]] %[[#tmp]] %[[#int_10]]
-; CHECK:                      OpBranchConditional %[[#cmp]] %[[#while_body:]] %[[#new_end:]]
+; CHECK:                      OpLoopMerge %[[#new_end:]] %[[#if_end:]] None
+; CHECK:                      OpBranchConditional %[[#cmp]] %[[#while_body:]] %[[#new_end]]
+
+; CHECK:   %[[#new_end]] = OpLabel
+; CHECK:    %[[#route:]] = OpPhi %[[#int_ty]] %[[#int_0]] %[[#while_cond]] %[[#int_1]] %[[#while_body]]
+; CHECK:                   OpSelectionMerge %[[#while_end:]] None
+; CHECK:                   OpSwitch %[[#route]] %[[#if_then:]] 1 %[[#while_end_loopexit:]]
 while.cond:
   %1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
   %2 = load i32, ptr %idx, align 4
   %cmp = icmp ne i32 %2, 10
   br i1 %cmp, label %while.body, label %while.end
+
+; CHECK:   %[[#while_end_loopexit]] = OpLabel
+; CHECK:                               OpBranch %[[#while_end]]
+
+; CHECK:   %[[#while_end]] = OpLabel
+; CHECK:                     OpReturn
+while.end:
+  ret void
+
+; CHECK:   %[[#if_then]] = OpLabel
+; CHECK:                    OpBranch %[[#while_end]]
+if.then:
+  br label %while.end
 
 ; CHECK:   %[[#while_body]] = OpLabel
 ; CHECK-NEXT:    %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]] Aligned 1
@@ -46,27 +66,10 @@ while.body:
   %cmp1 = icmp eq i32 %4, 0
   br i1 %cmp1, label %if.then, label %if.end
 
-; CHECK:   %[[#if_then:]] = OpLabel
-; CHECK:                    OpBranch %[[#while_end:]]
-if.then:
-  br label %while.end
-
 ; CHECK:   %[[#if_end]] = OpLabel
 ; CHECK:                  OpBranch %[[#while_cond]]
 if.end:
   br label %while.cond
-
-; CHECK:   %[[#while_end_loopexit:]] = OpLabel
-; CHECK:                               OpBranch %[[#while_end]]
-
-; CHECK:   %[[#while_end]] = OpLabel
-; CHECK:                     OpReturn
-while.end:
-  ret void
-
-; CHECK:   %[[#new_end]] = OpLabel
-; CHECK:    %[[#route:]] = OpPhi %[[#int_ty]] %[[#int_1]] %[[#while_cond]] %[[#int_0]] %[[#while_body]]
-; CHECK:                   OpSwitch %[[#route]] %[[#if_then]] 1 %[[#while_end_loopexit]]
 }
 
 declare token @llvm.experimental.convergence.entry() #2

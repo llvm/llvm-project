@@ -230,7 +230,8 @@ private:
     auto *Terminator = From->getTerminator();
     for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
       auto *To = Terminator->getSuccessor(i);
-      if (isBackEdge(From, To))
+      // Ignore back edges and self edges.
+      if (From == To || isBackEdge(From, To))
         continue;
 
       auto ChildSet = findPathsToMatch(LI, To, isMatch);
@@ -276,7 +277,6 @@ public:
     while (ToProcess.size() != 0) {
       auto *L = ToProcess.front();
       ToProcess.pop();
-      assert(L->isLoopSimplifyForm());
 
       auto CT = getConvergenceToken(L->getHeader());
       SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),
