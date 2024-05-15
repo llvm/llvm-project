@@ -40,7 +40,7 @@ void b(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0
 // B-NEXT:   }
 // B-NEXT: ]
 
-// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix E
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix C
 void c(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0))) __attribute__((availability(ios, introduced=13.0)));
 // C-LABEL: "!testLabel": "c:@F@c"
 // C:       "availability": [
