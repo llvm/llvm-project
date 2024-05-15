@@ -48,28 +48,32 @@ void fallthrough(int n) {
 namespace cwg2428 { // cwg2428: 19
 #if __cplusplus >= 202002L
 template <typename>
-concept C [[deprecated]] = true; // #C
+concept C [[deprecated]] = true; // #cwg2428-C
+
+template <typename>
+[[deprecated]] concept C2 = true;
+// expected-error@-1 {{expected unqualified-id}}
 
 template <typename T>
 concept C3 = C<T>;
 // expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 
 template <typename T, C U>
 // expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 requires C<T>
 // expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 void f() {
   bool b = C<int>;
   // expected-warning@-1 {{'C' is deprecated}}
-  //   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 };
 
 void g(C auto a) {};
 // expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#C {{'C' has been explicitly marked deprecated here}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 #endif
 } // namespace cwg2428
 
