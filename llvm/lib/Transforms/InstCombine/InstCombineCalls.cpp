@@ -1435,13 +1435,11 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::simplifyReductionOfShuffle(IntrinsicInst *II) {
+Instruction *InstCombinerImpl::simplifyReductionOperand(IntrinsicInst *II,
+                                                        bool CanReorderLanes) {
   Intrinsic::ID IID = II->getIntrinsicID();
-  bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
-                            IID != Intrinsic::vector_reduce_fmul) ||
-                           II->hasAllowReassoc();
 
-  if (!CanBeReassociated)
+  if (!CanReorderLanes)
     return nullptr;
 
   const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
@@ -3269,7 +3267,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
 
-    if (Instruction *I = simplifyReductionOfShuffle(II))
+    if (Instruction *I = simplifyReductionOperand(II, true))
       return I;
 
     if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -3304,7 +3302,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOfShuffle(II))
+      if (Instruction *I = simplifyReductionOperand(II, true))
         return I;
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -3336,7 +3334,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOfShuffle(II))
+      if (Instruction *I = simplifyReductionOperand(II, true))
         return I;
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -3363,7 +3361,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOfShuffle(II))
+      if (Instruction *I = simplifyReductionOperand(II, true))
         return I;
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -3391,7 +3389,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOfShuffle(II))
+      if (Instruction *I = simplifyReductionOperand(II, true))
         return I;
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -3430,7 +3428,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Instruction *I = simplifyReductionOfShuffle(II))
+      if (Instruction *I = simplifyReductionOperand(II, true))
         return I;
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -3455,7 +3453,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::vector_reduce_fmul: {
-    if (simplifyReductionOfShuffle(II))
+    bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
+                              IID != Intrinsic::vector_reduce_fmul) ||
+                             II->hasAllowReassoc();
+    if (simplifyReductionOperand(II, CanBeReassociated))
       return nullptr;
     break;
   }
