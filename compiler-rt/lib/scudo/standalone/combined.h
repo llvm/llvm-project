@@ -1268,7 +1268,7 @@ private:
     }
   }
 
-  NOINLINE void *retagBlock(const Options &Options, void *TaggedPtr, void *Ptr,
+  NOINLINE void *retagBlock(const Options &Options, void *TaggedPtr, void *&Ptr,
                             Chunk::UnpackedHeader *Header, const uptr Size,
                             bool BypassQuarantine) {
     DCHECK(useMemoryTagging<AllocatorConfig>(Options));
