@@ -23881,7 +23881,7 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
 
   // For "scalar + vector of indices", just scale the indices. This only
   // applies to non-temporal scatters because there's no instruction that takes
-  // indicies.
+  // indices.
   if (Opcode == AArch64ISD::SSTNT1_INDEX_PRED) {
     Offset =
         getScaledOffsetForBitWidth(DAG, Offset, DL, SrcElVT.getSizeInBits());

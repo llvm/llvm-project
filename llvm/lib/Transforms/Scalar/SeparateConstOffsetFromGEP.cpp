@@ -1008,7 +1008,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   }
 
   IRBuilder<> Builder(GEP);
-  // For trivial GEP chains, we can swap the indicies.
+  // For trivial GEP chains, we can swap the indices.
   Value *NewSrc = Builder.CreateGEP(
       GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
       SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);
