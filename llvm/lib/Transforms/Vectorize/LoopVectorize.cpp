@@ -8553,20 +8553,11 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
 // Return false if the vector region has recipes relying on
 // RuntimeVF.
 static bool isCompatibleToEVLTransform(VPlan &Plan) {
-  auto HasAnyRuntimeVFUserInLoop = [](VPlan &Plan) -> bool {
-    for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())
-      if (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
-          isa<VPWidenPointerInductionRecipe>(&Phi))
-        return true;
-    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_depth_first_deep(Plan.getVectorLoopRegion())))
-      for (VPRecipeBase &Recipe : *VPBB)
-        if (auto *VecPtrR = dyn_cast<VPVectorPointerRecipe>(&Recipe))
-          if (VecPtrR->isReverse())
-            return true;
-    return false;
-  };
-  if (HasAnyRuntimeVFUserInLoop(Plan))
+  if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+             [](VPRecipeBase &Phi) {
+               return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
+                       isa<VPWidenPointerInductionRecipe>(&Phi));
+             }))
     return false;
   return true;
 }
@@ -8586,7 +8577,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
       // TODO: try to put it close to addActiveLaneMask().
       if (CM.foldTailWithEVL()) {
-        // Don't generate plan if the plan is not EVL-compatible
+        // Discard the plan if it is not EVL-compatible
         if (!isCompatibleToEVLTransform(*Plan))
           break;
         VPlanTransforms::addExplicitVectorLength(*Plan);
