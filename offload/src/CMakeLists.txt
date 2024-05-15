@@ -122,6 +122,7 @@ if(NOT DEFINED CMAKE_INSTALL_RPATH)
   set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
+
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES

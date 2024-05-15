@@ -21,6 +21,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
 using namespace clang;
@@ -1345,6 +1346,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     else if (const ObjCObjectPointerType *Ptr
                = BaseType->getAs<ObjCObjectPointerType>())
       BaseType = Ptr->getPointeeType();
+    else if (BaseType->isDependentType())
+      BaseType = S.Context.DependentTy;
     else if (BaseType->isRecordType()) {
       // Recover from arrow accesses to records, e.g.:
       //   struct MyRecord foo;
@@ -1363,7 +1366,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       goto fail;
     } else {
       S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
-        << BaseType << BaseExpr.get()->getSourceRange();
+          << BaseType << BaseExpr.get()->getSourceRange();
       return ExprError();
     }
   }
@@ -1395,6 +1398,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     // failed, the lookup result will have been cleared--that combined with the
     // valid-but-null ExprResult will trigger the appropriate diagnostics.
     return ExprResult(TE);
+  } else if (BaseType->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return ExprEmpty();
   }
 
   // Handle ivar access to Objective-C objects.
@@ -1538,9 +1544,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     if (warn) {
       if (ObjCMethodDecl *MD = S.getCurMethodDecl()) {
         ObjCMethodFamily MF = MD->getMethodFamily();
-        warn = (MF != OMF_init && MF != OMF_dealloc &&
-                MF != OMF_finalize &&
-                !S.IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
+        warn = (MF != OMF_init && MF != OMF_dealloc && MF != OMF_finalize &&
+                !S.ObjC().IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
       }
       if (warn)
         S.Diag(MemberLoc, diag::warn_direct_ivar_access) << IV->getDeclName();
@@ -1678,9 +1683,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     }
 
     // Normal property access.
-    return S.HandleExprPropertyRefExpr(OPT, BaseExpr.get(), OpLoc, MemberName,
-                                       MemberLoc, SourceLocation(), QualType(),
-                                       false);
+    return S.ObjC().HandleExprPropertyRefExpr(
+        OPT, BaseExpr.get(), OpLoc, MemberName, MemberLoc, SourceLocation(),
+        QualType(), false);
   }
 
   if (BaseType->isExtVectorBoolType()) {

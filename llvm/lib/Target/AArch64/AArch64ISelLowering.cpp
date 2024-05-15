@@ -1040,7 +1040,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::UINT_TO_FP});
 
   setTargetDAGCombine({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                       ISD::FP_TO_UINT_SAT, ISD::FADD, ISD::FDIV});
+                       ISD::FP_TO_UINT_SAT, ISD::FADD});
 
   // Try and combine setcc with csel
   setTargetDAGCombine(ISD::SETCC);
@@ -1618,6 +1618,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
     }
 
+    // Histcnt is SVE2 only
+    if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable())
+      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::Other,
+                         Custom);
+
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
     if (Subtarget->useSVEForFixedLengthVectors()) {
@@ -1863,7 +1868,12 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  return !Subtarget->hasSVEorSME() || VT != MVT::nxv16i1;
+  if (!Subtarget->hasSVEorSME())
+    return true;
+
+  // We can only use the BRKB + CNTP sequence with legal predicate types.
+  return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
+         VT != MVT::nxv2i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -4286,6 +4296,15 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     return SDValue();
 
   SDLoc DL(Op);
+  // Expand to f64 if we are saturating to i64, to help produce keep the lanes
+  // the same width and produce a fcvtzu.
+  if (SatWidth == 64 && SrcElementWidth < 64) {
+    MVT F64VT = MVT::getVectorVT(MVT::f64, SrcVT.getVectorNumElements());
+    SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F64VT, SrcVal);
+    SrcVT = F64VT;
+    SrcElementVT = MVT::f64;
+    SrcElementWidth = 64;
+  }
   // Cases that we can emit directly.
   if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth)
     return DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
@@ -6766,6 +6785,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFunnelShift(Op, DAG);
   case ISD::FLDEXP:
     return LowerFLDEXP(Op, DAG);
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    return LowerVECTOR_HISTOGRAM(Op, DAG);
   }
 }
 
@@ -17942,75 +17963,6 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   return FixConv;
 }
 
-/// Fold a floating-point divide by power of two into fixed-point to
-/// floating-point conversion.
-static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  const AArch64Subtarget *Subtarget) {
-  if (!Subtarget->hasNEON())
-    return SDValue();
-
-  SDValue Op = N->getOperand(0);
-  unsigned Opc = Op->getOpcode();
-  if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
-      !Op.getOperand(0).getValueType().isSimple() ||
-      (Opc != ISD::SINT_TO_FP && Opc != ISD::UINT_TO_FP))
-    return SDValue();
-
-  SDValue ConstVec = N->getOperand(1);
-  if (!isa<BuildVectorSDNode>(ConstVec))
-    return SDValue();
-
-  MVT IntTy = Op.getOperand(0).getSimpleValueType().getVectorElementType();
-  int32_t IntBits = IntTy.getSizeInBits();
-  if (IntBits != 16 && IntBits != 32 && IntBits != 64)
-    return SDValue();
-
-  MVT FloatTy = N->getSimpleValueType(0).getVectorElementType();
-  int32_t FloatBits = FloatTy.getSizeInBits();
-  if (FloatBits != 32 && FloatBits != 64)
-    return SDValue();
-
-  // Avoid conversions where iN is larger than the float (e.g., i64 -> float).
-  if (IntBits > FloatBits)
-    return SDValue();
-
-  BitVector UndefElements;
-  BuildVectorSDNode *BV = cast<BuildVectorSDNode>(ConstVec);
-  int32_t C = BV->getConstantFPSplatPow2ToLog2Int(&UndefElements, FloatBits + 1);
-  if (C == -1 || C == 0 || C > FloatBits)
-    return SDValue();
-
-  MVT ResTy;
-  unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  switch (NumLanes) {
-  default:
-    return SDValue();
-  case 2:
-    ResTy = FloatBits == 32 ? MVT::v2i32 : MVT::v2i64;
-    break;
-  case 4:
-    ResTy = FloatBits == 32 ? MVT::v4i32 : MVT::v4i64;
-    break;
-  }
-
-  if (ResTy == MVT::v4i64 && DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  SDLoc DL(N);
-  SDValue ConvInput = Op.getOperand(0);
-  bool IsSigned = Opc == ISD::SINT_TO_FP;
-  if (IntBits < FloatBits)
-    ConvInput = DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
-                            ResTy, ConvInput);
-
-  unsigned IntrinsicOpcode = IsSigned ? Intrinsic::aarch64_neon_vcvtfxs2fp
-                                      : Intrinsic::aarch64_neon_vcvtfxu2fp;
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
-                     DAG.getConstant(IntrinsicOpcode, DL, MVT::i32), ConvInput,
-                     DAG.getConstant(C, DL, MVT::i32));
-}
-
 static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64TargetLowering &TLI) {
   EVT VT = N->getValueType(0);
@@ -24699,8 +24651,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
-  case ISD::FDIV:
-    return performFDivCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget, *this);
   case ISD::AND:
@@ -27344,6 +27294,64 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   SDValue Hi = DAG.getNode(AArch64ISD::ZIP2, DL, OpVT, Op.getOperand(0),
                            Op.getOperand(1));
   return DAG.getMergeValues({Lo, Hi}, DL);
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  // FIXME: Maybe share some code with LowerMGather/Scatter?
+  MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(Op);
+  SDLoc DL(HG);
+  SDValue Chain = HG->getChain();
+  SDValue Inc = HG->getInc();
+  SDValue Mask = HG->getMask();
+  SDValue Ptr = HG->getBasePtr();
+  SDValue Index = HG->getIndex();
+  SDValue Scale = HG->getScale();
+  SDValue IntID = HG->getIntID();
+
+  // The Intrinsic ID determines the type of update operation.
+  [[maybe_unused]] ConstantSDNode *CID = cast<ConstantSDNode>(IntID.getNode());
+  // Right now, we only support 'add' as an update.
+  assert(CID->getZExtValue() == Intrinsic::experimental_vector_histogram_add &&
+         "Unexpected histogram update operation");
+
+  EVT IncVT = Inc.getValueType();
+  EVT IndexVT = Index.getValueType();
+  EVT MemVT = EVT::getVectorVT(*DAG.getContext(), IncVT,
+                               IndexVT.getVectorElementCount());
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue PassThru = DAG.getSplatVector(MemVT, DL, Zero);
+  SDValue IncSplat = DAG.getSplatVector(MemVT, DL, Inc);
+  SDValue Ops[] = {Chain, PassThru, Mask, Ptr, Index, Scale};
+
+  MachineMemOperand *MMO = HG->getMemOperand();
+  // Create an MMO for the gather, without load|store flags.
+  MachineMemOperand *GMMO = DAG.getMachineFunction().getMachineMemOperand(
+      MMO->getPointerInfo(), MachineMemOperand::MOLoad, MMO->getSize(),
+      MMO->getAlign(), MMO->getAAInfo());
+  ISD::MemIndexType IndexType = HG->getIndexType();
+  SDValue Gather =
+      DAG.getMaskedGather(DAG.getVTList(MemVT, MVT::Other), MemVT, DL, Ops,
+                          GMMO, IndexType, ISD::NON_EXTLOAD);
+
+  SDValue GChain = Gather.getValue(1);
+
+  // Perform the histcnt, multiply by inc, add to bucket data.
+  SDValue ID = DAG.getTargetConstant(Intrinsic::aarch64_sve_histcnt, DL, IncVT);
+  SDValue HistCnt =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT, ID, Mask, Index, Index);
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, MemVT, HistCnt, IncSplat);
+  SDValue Add = DAG.getNode(ISD::ADD, DL, MemVT, Gather, Mul);
+
+  // Create an MMO for the scatter, without load|store flags.
+  MachineMemOperand *SMMO = DAG.getMachineFunction().getMachineMemOperand(
+      MMO->getPointerInfo(), MachineMemOperand::MOStore, MMO->getSize(),
+      MMO->getAlign(), MMO->getAAInfo());
+
+  SDValue ScatterOps[] = {GChain, Add, Mask, Ptr, Index, Scale};
+  SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MemVT, DL,
+                                         ScatterOps, SMMO, IndexType, false);
+  return Scatter;
 }
 
 SDValue

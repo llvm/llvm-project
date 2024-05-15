@@ -538,7 +538,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
-  MODULE_NAME _mlirDialectsNvgpu
+  MODULE_NAME _mlirDialectsNVGPU
   ADD_TO_PARENT MLIRPythonSources.Dialects.nvgpu
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES

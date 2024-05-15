@@ -1860,13 +1860,13 @@ defm apinotes : BoolOption<"f", "apinotes",
     LangOpts<"APINotes">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Enable">,
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
-    BothFlags<[], [ClangOption, CC1Option], "external API notes support">>,
+    BothFlags<[], [ClangOption, CC1Option], " external API notes support">>,
     Group<f_clang_Group>;
 defm apinotes_modules : BoolOption<"f", "apinotes-modules",
     LangOpts<"APINotesModules">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Enable">,
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
-    BothFlags<[], [ClangOption, CC1Option], "module-based external API notes support">>,
+    BothFlags<[], [ClangOption, CC1Option], " module-based external API notes support">>,
     Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -5581,7 +5581,10 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  Visibility<[ClangOption, CLOption]>;
+  HelpTextForVariants<[FlangOption],
+                      "Print the resource directory pathname that contains lib and "
+                      "include directories with the runtime libraries and MODULE files.">,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;

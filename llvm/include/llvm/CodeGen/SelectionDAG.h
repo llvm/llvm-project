@@ -1537,6 +1537,9 @@ public:
                            ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
                            ISD::MemIndexType IndexType,
                            bool IsTruncating = false);
+  SDValue getMaskedHistogram(SDVTList VTs, EVT MemVT, const SDLoc &dl,
+                             ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
+                             ISD::MemIndexType IndexType);
 
   SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
                       MachineMemOperand *MMO);
