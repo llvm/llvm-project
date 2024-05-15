@@ -1750,7 +1750,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                                   TARGET_ALLOC_DEFAULT);
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
-  KernelArgsTy KernelArgs = {0};
+  KernelArgsTy KernelArgs{};
   KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;

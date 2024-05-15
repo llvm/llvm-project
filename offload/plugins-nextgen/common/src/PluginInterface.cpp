@@ -593,7 +593,7 @@ void *GenericKernelTy::prepareArgs(
     Args[0] = &Ptrs[0];
   }
 
-  for (int I = KLEOffset; I < NumArgs; ++I) {
+  for (uint32_t I = KLEOffset; I < NumArgs; ++I) {
     Ptrs[I] =
         (void *)((intptr_t)ArgPtrs[I - KLEOffset] + ArgOffsets[I - KLEOffset]);
     Args[I] = &Ptrs[I];
