@@ -342,9 +342,21 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
-def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", SDTIntBinOp>;
-def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", SDTIntUnaryOp>;
-def AMDGPUwritelane_impl : SDNode<"AMDGPUISD::WRITELANE", AMDGPUDTIntTernaryOp>;
+def AMDGPUReadfirstlaneOp : SDTypeProfile<1, 1, [
+  SDTCisSameAs<0, 1>
+]>;
+
+def AMDGPUReadlaneOp : SDTypeProfile<1, 2, [
+  SDTCisSameAs<0, 1>, SDTCisInt<2>
+]>;
+
+def AMDGPUDWritelaneOp : SDTypeProfile<1, 3, [
+  SDTCisSameAs<1, 1>, SDTCisInt<2>, SDTCisSameAs<0, 3>,
+]>;
+
+def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", AMDGPUReadlaneOp>;
+def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", AMDGPUReadfirstlaneOp>;
+def AMDGPUwritelane_impl : SDNode<"AMDGPUISD::WRITELANE", AMDGPUDWritelaneOp>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [

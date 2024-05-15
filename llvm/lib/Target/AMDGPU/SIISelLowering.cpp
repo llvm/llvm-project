@@ -6111,14 +6111,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   }
 
   if (ValSize == 32) {
-    if (VT == MVT::i32)
-      // Already legal
-      return SDValue();
-    Src0 = DAG.getBitcast(IntVT, Src0);
-    if (Src2.getNode())
-      Src2 = DAG.getBitcast(IntVT, Src2);
-    SDValue LaneOp = createLaneOp(Src0, Src1, Src2, MVT::i32);
-    return DAG.getBitcast(VT, LaneOp);
+    // Already legal
+    return SDValue();
   }
 
   if (ValSize < 32) {

@@ -243,9 +243,14 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
 // TODO: There is VOP3 encoding also
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
-                                       getVOP1Pat<AMDGPUreadfirstlane,
-                                                  VOP_READFIRSTLANE>.ret, 1> {
+                                       [], 1> {
   let isConvergent = 1;
+}
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(vt (AMDGPUreadfirstlane (vt VRegOrLdsSrc_32:$src0))),
+        (V_READFIRSTLANE_B32 (vt VRegOrLdsSrc_32:$src0))
+  >;
 }
 
 let isReMaterializable = 1 in {
