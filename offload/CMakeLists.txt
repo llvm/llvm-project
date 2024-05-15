@@ -25,7 +25,7 @@ elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
   message(WARNING "Host compiler must support C++17 to build libomptarget!")
   return()
 elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(WARNING "libomptarget on 32-bit systems are not yet supported!")
+  message(WARNING "libomptarget on 32-bit systems is not supported!")
   return()
 endif()
 
