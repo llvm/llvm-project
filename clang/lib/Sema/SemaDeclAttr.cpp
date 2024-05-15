@@ -2714,6 +2714,11 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
+  if (IsStrict && AL.getEnvironment()) {
+    S.Diag(AL.getStrictLoc(), diag::warn_availability_strict_not_supported_with_environment);
+    return;
+  }
+
   int PriorityModifier = AL.isPragmaClangAttribute()
                              ? Sema::AP_PragmaClangAttribute
                              : Sema::AP_Explicit;
