@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -passes=polly-codegen -S \
+; RUN: opt %loadPolly -polly-codegen -S \
 ; RUN:     < %s | FileCheck %s
 ;
 ;    void pos(float *A, long n) {

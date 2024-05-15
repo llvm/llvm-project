@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -O3 -polly -polly-position=early             -polly-dump-before-file=%t-npm-before-early.ll    --disable-output < %s && FileCheck --input-file=%t-npm-before-early.ll    --check-prefix=EARLY %s
-; RUN: opt %loadPolly -O3 -polly -polly-position=early             -polly-dump-after-file=%t-npm-after-early.ll      --disable-output < %s && FileCheck --input-file=%t-npm-after-early.ll     --check-prefix=EARLY --check-prefix=AFTEREARLY %s
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early             -polly-dump-before-file=%t-npm-before-early.ll    --disable-output < %s && FileCheck --input-file=%t-npm-before-early.ll    --check-prefix=EARLY %s
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early             -polly-dump-after-file=%t-npm-after-early.ll      --disable-output < %s && FileCheck --input-file=%t-npm-after-early.ll     --check-prefix=EARLY --check-prefix=AFTEREARLY %s
 ;
 ; Check the module dumping before Polly at specific positions in the
 ; pass pipeline.

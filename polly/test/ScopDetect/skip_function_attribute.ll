@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; Verify polly skips this function
 ;

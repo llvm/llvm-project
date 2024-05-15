@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -aa-pipeline=basic-aa '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 \
+; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output < %s \
 ; RUN:  -polly-precise-inbounds | FileCheck %s
 ;
 ;    void foo(float A[restrict][20], float B[restrict][20], long n, long m,

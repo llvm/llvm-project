@@ -1,14 +1,14 @@
 ; RUN: opt %loadPolly -disable-output -polly-invariant-load-hoisting \
 ; RUN: -polly-allow-dereference-of-all-function-parameters \
-; RUN: '-passes=print<polly-function-scops>' < %s 2>&1 | FileCheck %s --check-prefix=SCOP
+; RUN: -polly-print-scops < %s | FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S -polly-invariant-load-hoisting \
-; RUN: -passes=polly-codegen < %s 2>&1 | FileCheck %s --check-prefix=CODE-RTC
+; RUN: -polly-codegen < %s | FileCheck %s --check-prefix=CODE-RTC
 
 
 ; RUN: opt %loadPolly -S -polly-invariant-load-hoisting \
 ; RUN: -polly-allow-dereference-of-all-function-parameters \
-; RUN: -passes=polly-codegen < %s 2>&1 | FileCheck %s --check-prefix=CODE
+; RUN: -polly-codegen < %s | FileCheck %s --check-prefix=CODE
 
 ; SCOP:      Function: hoge
 ; SCOP-NEXT: Region: %bb15---%bb37
