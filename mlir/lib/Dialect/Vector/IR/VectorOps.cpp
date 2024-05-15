@@ -170,27 +170,22 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
       shapedType.getContext());
 }
 
-/// Returns true if both `write` and `read` have no masks, or the write is of a
-/// constant splat and the masks + padding means the read will always be the
-/// same constant splat. Note: This assumes other properties of both `read` and
-/// `write` have already been checked (e.g. indices, source, etc). For a more
-/// general check use `checkSameValueRAW`.
-static bool hasNoMasksOrConsistentSplatAndPadding(vector::TransferWriteOp write,
-                                                  vector::TransferReadOp read) {
+/// Check if `write` is of a constant splat and the masked `read` is padded with
+/// the same splat value -- meaning it could be the same value as the initial
+/// constant splat.
+static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
+                                                 vector::TransferReadOp read) {
   auto readMask = read.getMask();
   auto writeMask = write.getMask();
-  if (!writeMask && !readMask) {
-    // Success: No masks (values could be the same).
-    return true;
-  }
-  // Check for constant splats. These will be the same value if the read is
-  // masked (and padded with the splat value), and the write is unmasked or has
-  // the same mask. Note this does not allow the case where the write is masked
-  // and the read is unmasked, as then the read could be of more elements than
-  // the write (which may not be the same value).
+  // Check if the masks are consistent. The splat value could be the same if the
+  // read is masked (and padded with the splat value), and the write is unmasked
+  // or has the same mask. Note this does not allow the case where the write is
+  // masked and the read is unmasked, as then the read could be of more elements
+  // than the write (which may not be the same value).
   bool couldBeSameSplat = readMask && (!writeMask || writeMask == readMask);
   if (!couldBeSameSplat)
     return false;
+  // Check for constant splat (as the source of the write).
   DenseElementsAttr splatAttr;
   if (!matchPattern(write.getVector(),
                     m_Constant<DenseElementsAttr>(&splatAttr)) ||
@@ -210,7 +205,8 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
          defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
          defWrite.getPermutationMap() == read.getPermutationMap() &&
-         hasNoMasksOrConsistentSplatAndPadding(defWrite, read);
+         ((!defWrite.getMask() && !read.getMask()) ||
+          isSplatWriteConsistentWithMaskedRead(defWrite, read));
 }
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
