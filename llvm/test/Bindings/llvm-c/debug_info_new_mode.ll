@@ -1,26 +1,19 @@
-; RUN: llvm-c-test --test-dibuilder-old-debuginfo-format | FileCheck %s
+; RUN: llvm-c-test --test-dibuilder-new-debuginfo-format | FileCheck %s
+;; Duplicate of debug_info.ll using debug records instead of intrinsics.
 
 ; CHECK: ; ModuleID = 'debuginfo.c'
 ; CHECK-NEXT: source_filename = "debuginfo.c"
 
 ; CHECK:      define i64 @foo(i64 %0, i64 %1, <10 x i64> %2) !dbg !31 {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i64 0, metadata !38, metadata !DIExpression()), !dbg !43
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i64 0, metadata !39, metadata !DIExpression()), !dbg !43
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i64 0, metadata !40, metadata !DIExpression()), !dbg !43
+; CHECK-NEXT:     #dbg_declare(i64 0, !38, !DIExpression(), !43)
+; CHECK-NEXT:     #dbg_declare(i64 0, !39, !DIExpression(), !43)
+; CHECK-NEXT:     #dbg_declare(i64 0, !40, !DIExpression(), !43)
 ; CHECK-NEXT:   br label %vars
 ; CHECK:      vars:
-; CHECK-NEXT:   call void @llvm.dbg.value(metadata i64 0, metadata !41, metadata !DIExpression(DW_OP_constu, 0, DW_OP_stack_value)), !dbg !44
+; CHECK-NEXT:     #dbg_value(i64 0, !41, !DIExpression(DW_OP_constu, 0, DW_OP_stack_value), !44)
 ; CHECK-NEXT:   ret i64 0
 ; CHECK-NEXT: }
-
-; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK-NEXT: declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
-
-; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK-NEXT: declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-
-; CHECK:      attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 ; CHECK:      !llvm.dbg.cu = !{!0}
 ; CHECK-NEXT: !FooType = !{!28}
