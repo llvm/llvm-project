@@ -247,6 +247,68 @@ public:
   void dump() const;
 };
 
+// An offset from an address that is either scalable or fixed. Used for
+// per-target optimizations of addressing modes.
+class Immediate : public details::FixedOrScalableQuantity<Immediate, int64_t> {
+  constexpr Immediate(ScalarTy MinVal, bool Scalable)
+      : FixedOrScalableQuantity(MinVal, Scalable) {}
+
+  constexpr Immediate(const FixedOrScalableQuantity<Immediate, int64_t> &V)
+      : FixedOrScalableQuantity(V) {}
+
+public:
+  constexpr Immediate() : FixedOrScalableQuantity() {}
+
+  static constexpr Immediate getFixed(ScalarTy MinVal) {
+    return Immediate(MinVal, false);
+  }
+  static constexpr Immediate getScalable(ScalarTy MinVal) {
+    return Immediate(MinVal, true);
+  }
+  static constexpr Immediate get(ScalarTy MinVal, bool Scalable) {
+    return Immediate(MinVal, Scalable);
+  }
+
+  constexpr bool isLessThanZero() const { return Quantity < 0; }
+
+  constexpr bool isGreaterThanZero() const { return Quantity > 0; }
+
+  constexpr bool isMin() const {
+    return Quantity == std::numeric_limits<ScalarTy>::min();
+  }
+
+  constexpr bool isMax() const {
+    return Quantity == std::numeric_limits<ScalarTy>::max();
+  }
+};
+
+// This is needed for the Compare type of std::map when Immediate is used
+// as a key. We don't need it to be fully correct against any value of vscale,
+// just to make sure that vscale-related terms in the map are considered against
+// each other rather than being mixed up and potentially missing opportunities.
+struct KeyOrderTargetImmediate {
+  bool operator()(const Immediate &LHS, const Immediate &RHS) const {
+    if (LHS.isScalable() && !RHS.isScalable())
+      return false;
+    if (!LHS.isScalable() && RHS.isScalable())
+      return true;
+    return LHS.getKnownMinValue() < RHS.getKnownMinValue();
+  }
+};
+
+// This would be nicer if we could be generic instead of directly using size_t,
+// but there doesn't seem to be a type trait for is_orderable or
+// is_lessthan_comparable or similar.
+struct KeyOrderSizeTAndImmediate {
+  bool operator()(const std::pair<size_t, Immediate> &LHS,
+                  const std::pair<size_t, Immediate> &RHS) const {
+    size_t LSize = LHS.first;
+    size_t RSize = RHS.first;
+    if (LSize != RSize)
+      return LSize < RSize;
+    return KeyOrderTargetImmediate()(LHS.second, RHS.second);
+  }
+};
 } // end anonymous namespace
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -357,7 +419,7 @@ struct Formula {
   GlobalValue *BaseGV = nullptr;
 
   /// Base offset for complex addressing.
-  int64_t BaseOffset = 0;
+  Immediate BaseOffset;
 
   /// Whether any complex addressing has a base register.
   bool HasBaseReg = false;
@@ -388,7 +450,7 @@ struct Formula {
   /// An additional constant offset which added near the use. This requires a
   /// temporary register, but the offset itself can live in an add immediate
   /// field rather than a register.
-  int64_t UnfoldedOffset = 0;
+  Immediate UnfoldedOffset;
 
   Formula() = default;
 
@@ -628,7 +690,7 @@ void Formula::print(raw_ostream &OS) const {
     if (!First) OS << " + "; else First = false;
     BaseGV->printAsOperand(OS, /*PrintType=*/false);
   }
-  if (BaseOffset != 0) {
+  if (BaseOffset.isNonZero()) {
     if (!First) OS << " + "; else First = false;
     OS << BaseOffset;
   }
@@ -652,7 +714,7 @@ void Formula::print(raw_ostream &OS) const {
       OS << "<unknown>";
     OS << ')';
   }
-  if (UnfoldedOffset != 0) {
+  if (UnfoldedOffset.isNonZero()) {
     if (!First) OS << " + ";
     OS << "imm(" << UnfoldedOffset << ')';
   }
@@ -798,28 +860,28 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
 
 /// If S involves the addition of a constant integer value, return that integer
 /// value, and mutate S to point to a new SCEV with that value excluded.
-static int64_t ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
+static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S)) {
     if (C->getAPInt().getSignificantBits() <= 64) {
       S = SE.getConstant(C->getType(), 0);
-      return C->getValue()->getSExtValue();
+      return Immediate::getFixed(C->getValue()->getSExtValue());
     }
   } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     SmallVector<const SCEV *, 8> NewOps(Add->operands());
-    int64_t Result = ExtractImmediate(NewOps.front(), SE);
-    if (Result != 0)
+    Immediate Result = ExtractImmediate(NewOps.front(), SE);
+    if (Result.isNonZero())
       S = SE.getAddExpr(NewOps);
     return Result;
   } else if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     SmallVector<const SCEV *, 8> NewOps(AR->operands());
-    int64_t Result = ExtractImmediate(NewOps.front(), SE);
-    if (Result != 0)
+    Immediate Result = ExtractImmediate(NewOps.front(), SE);
+    if (Result.isNonZero())
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                            SCEV::FlagAnyWrap);
     return Result;
   }
-  return 0;
+  return Immediate();
 }
 
 /// If S involves the addition of a GlobalValue address, return that symbol, and
@@ -1134,7 +1196,7 @@ struct LSRFixup {
   /// A constant offset to be added to the LSRUse expression.  This allows
   /// multiple fixups to share the same LSRUse with different offsets, for
   /// example in an unrolled loop.
-  int64_t Offset = 0;
+  Immediate Offset;
 
   LSRFixup() = default;
 
@@ -1197,8 +1259,10 @@ public:
   SmallVector<LSRFixup, 8> Fixups;
 
   /// Keep track of the min and max offsets of the fixups.
-  int64_t MinOffset = std::numeric_limits<int64_t>::max();
-  int64_t MaxOffset = std::numeric_limits<int64_t>::min();
+  Immediate MinOffset =
+      Immediate::getFixed(std::numeric_limits<int64_t>::max());
+  Immediate MaxOffset =
+      Immediate::getFixed(std::numeric_limits<int64_t>::min());
 
   /// This records whether all of the fixups using this LSRUse are outside of
   /// the loop, in which case some special-case heuristics may be used.
@@ -1234,9 +1298,9 @@ public:
 
   void pushFixup(LSRFixup &f) {
     Fixups.push_back(f);
-    if (f.Offset > MaxOffset)
+    if (Immediate::isKnownGT(f.Offset, MaxOffset))
       MaxOffset = f.Offset;
-    if (f.Offset < MinOffset)
+    if (Immediate::isKnownLT(f.Offset, MinOffset))
       MinOffset = f.Offset;
   }
 
@@ -1254,7 +1318,7 @@ public:
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
-                                 GlobalValue *BaseGV, int64_t BaseOffset,
+                                 GlobalValue *BaseGV, Immediate BaseOffset,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup = nullptr,
                                  int64_t ScalableOffset = 0);
@@ -1311,7 +1375,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       // addressing.
       if (AMK == TTI::AMK_PreIndexed) {
         if (auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE)))
-          if (Step->getAPInt() == F.BaseOffset)
+          if (Step->getAPInt() == F.BaseOffset.getFixedValue())
             LoopCost = 0;
       } else if (AMK == TTI::AMK_PostIndexed) {
         const SCEV *LoopStep = AR->getStepRecurrence(*SE);
@@ -1402,24 +1466,25 @@ void Cost::RateFormula(const Formula &F,
     // allows to fold 2 registers.
     C.NumBaseAdds +=
         NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(*TTI, LU, F)));
-  C.NumBaseAdds += (F.UnfoldedOffset != 0);
+  C.NumBaseAdds += (F.UnfoldedOffset.isNonZero());
 
   // Accumulate non-free scaling amounts.
   C.ScaleCost += *getScalingFactorCost(*TTI, LU, F, *L).getValue();
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {
-    int64_t O = Fixup.Offset;
-    int64_t Offset = (uint64_t)O + F.BaseOffset;
+    Immediate O = Fixup.Offset;
+    Immediate Offset = Immediate::getFixed((uint64_t)O.getFixedValue() +
+                                           F.BaseOffset.getFixedValue());
     if (F.BaseGV)
       C.ImmCost += 64; // Handle symbolic values conservatively.
                      // TODO: This should probably be the pointer size.
-    else if (Offset != 0)
-      C.ImmCost += APInt(64, Offset, true).getSignificantBits();
+    else if (Offset.isNonZero())
+      C.ImmCost += APInt(64, Offset.getFixedValue(), true).getSignificantBits();
 
     // Check with target if this offset with this instruction is
     // specifically not supported.
-    if (LU.Kind == LSRUse::Address && Offset != 0 &&
+    if (LU.Kind == LSRUse::Address && Offset.isNonZero() &&
         !isAMCompletelyFolded(*TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
                               Offset, F.HasBaseReg, F.Scale, Fixup.UserInst))
       C.NumBaseAdds++;
@@ -1547,7 +1612,7 @@ void LSRFixup::print(raw_ostream &OS) const {
     PIL->getHeader()->printAsOperand(OS, /*PrintType=*/false);
   }
 
-  if (Offset != 0)
+  if (Offset.isNonZero())
     OS << ", Offset=" << Offset;
 }
 
@@ -1674,15 +1739,16 @@ LLVM_DUMP_METHOD void LSRUse::dump() const {
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
-                                 GlobalValue *BaseGV, int64_t BaseOffset,
+                                 GlobalValue *BaseGV, Immediate BaseOffset,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup /* = nullptr */,
                                  int64_t ScalableOffset) {
   switch (Kind) {
   case LSRUse::Address:
-    return TTI.isLegalAddressingMode(AccessTy.MemTy, BaseGV, BaseOffset,
-                                     HasBaseReg, Scale, AccessTy.AddrSpace,
-                                     Fixup, ScalableOffset);
+    return TTI.isLegalAddressingMode(AccessTy.MemTy, BaseGV,
+                                     BaseOffset.getFixedValue(), HasBaseReg,
+                                     Scale, AccessTy.AddrSpace, Fixup,
+                                     ScalableOffset);
 
   case LSRUse::ICmpZero:
     // There's not even a target hook for querying whether it would be legal to
@@ -1691,7 +1757,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
       return false;
 
     // ICmp only has two operands; don't allow more than two non-trivial parts.
-    if (Scale != 0 && HasBaseReg && BaseOffset != 0)
+    if (Scale != 0 && HasBaseReg && BaseOffset.isNonZero())
       return false;
 
     // ICmp only supports no scale or a -1 scale, as we can "fold" a -1 scale by
@@ -1701,7 +1767,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
 
     // If we have low-level target information, ask the target if it can fold an
     // integer immediate on an icmp.
-    if (BaseOffset != 0) {
+    if (BaseOffset.isNonZero()) {
       // We have one of:
       // ICmpZero     BaseReg + BaseOffset => ICmp BaseReg, -BaseOffset
       // ICmpZero -1*ScaleReg + BaseOffset => ICmp ScaleReg, BaseOffset
@@ -1709,8 +1775,8 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
       if (Scale == 0)
         // The cast does the right thing with
         // std::numeric_limits<int64_t>::min().
-        BaseOffset = -(uint64_t)BaseOffset;
-      return TTI.isLegalICmpImmediate(BaseOffset);
+        BaseOffset = BaseOffset.getFixed(-(uint64_t)BaseOffset.getFixedValue());
+      return TTI.isLegalICmpImmediate(BaseOffset.getFixedValue());
     }
 
     // ICmpZero BaseReg + -1*ScaleReg => ICmp BaseReg, ScaleReg
@@ -1718,31 +1784,34 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
 
   case LSRUse::Basic:
     // Only handle single-register values.
-    return !BaseGV && Scale == 0 && BaseOffset == 0 && ScalableOffset == 0;
+    return !BaseGV && Scale == 0 && BaseOffset.isZero();
 
   case LSRUse::Special:
     // Special case Basic to handle -1 scales.
-    return !BaseGV && (Scale == 0 || Scale == -1) && BaseOffset == 0 &&
-           ScalableOffset == 0;
+    return !BaseGV && (Scale == 0 || Scale == -1) && BaseOffset.isZero();
   }
 
   llvm_unreachable("Invalid LSRUse Kind!");
 }
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
-                                 int64_t MinOffset, int64_t MaxOffset,
+                                 Immediate MinOffset, Immediate MaxOffset,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
-                                 GlobalValue *BaseGV, int64_t BaseOffset,
+                                 GlobalValue *BaseGV, Immediate BaseOffset,
                                  bool HasBaseReg, int64_t Scale) {
+  int64_t Base = BaseOffset.getFixedValue();
+  int64_t Min = MinOffset.getFixedValue();
+  int64_t Max = MaxOffset.getFixedValue();
   // Check for overflow.
-  if (((int64_t)((uint64_t)BaseOffset + MinOffset) > BaseOffset) !=
-      (MinOffset > 0))
+  if (((int64_t)((uint64_t)Base + Min) > Base) != (Min > 0))
     return false;
-  MinOffset = (uint64_t)BaseOffset + MinOffset;
-  if (((int64_t)((uint64_t)BaseOffset + MaxOffset) > BaseOffset) !=
-      (MaxOffset > 0))
+  Min = (uint64_t)Base + Min;
+  if (((int64_t)((uint64_t)Base + Max) > Base) != (Max > 0))
     return false;
-  MaxOffset = (uint64_t)BaseOffset + MaxOffset;
+  Max = (uint64_t)Base + Max;
+
+  MinOffset = Immediate::getFixed(Min);
+  MaxOffset = Immediate::getFixed(Max);
 
   return isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, MinOffset,
                               HasBaseReg, Scale) &&
@@ -1751,7 +1820,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
 }
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
-                                 int64_t MinOffset, int64_t MaxOffset,
+                                 Immediate MinOffset, Immediate MaxOffset,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  const Formula &F, const Loop &L) {
   // For the purpose of isAMCompletelyFolded either having a canonical formula
@@ -1767,10 +1836,10 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
 }
 
 /// Test whether we know how to expand the current formula.
-static bool isLegalUse(const TargetTransformInfo &TTI, int64_t MinOffset,
-                       int64_t MaxOffset, LSRUse::KindType Kind,
+static bool isLegalUse(const TargetTransformInfo &TTI, Immediate MinOffset,
+                       Immediate MaxOffset, LSRUse::KindType Kind,
                        MemAccessTy AccessTy, GlobalValue *BaseGV,
-                       int64_t BaseOffset, bool HasBaseReg, int64_t Scale) {
+                       Immediate BaseOffset, bool HasBaseReg, int64_t Scale) {
   // We know how to expand completely foldable formulae.
   return isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy, BaseGV,
                               BaseOffset, HasBaseReg, Scale) ||
@@ -1781,8 +1850,8 @@ static bool isLegalUse(const TargetTransformInfo &TTI, int64_t MinOffset,
                                BaseGV, BaseOffset, true, 0));
 }
 
-static bool isLegalUse(const TargetTransformInfo &TTI, int64_t MinOffset,
-                       int64_t MaxOffset, LSRUse::KindType Kind,
+static bool isLegalUse(const TargetTransformInfo &TTI, Immediate MinOffset,
+                       Immediate MaxOffset, LSRUse::KindType Kind,
                        MemAccessTy AccessTy, const Formula &F) {
   return isLegalUse(TTI, MinOffset, MaxOffset, Kind, AccessTy, F.BaseGV,
                     F.BaseOffset, F.HasBaseReg, F.Scale);
@@ -1819,15 +1888,15 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
 
   switch (LU.Kind) {
   case LSRUse::Address: {
+    int64_t FixedMin = (F.BaseOffset + LU.MinOffset).getFixedValue();
+    int64_t FixedMax = (F.BaseOffset + LU.MaxOffset).getFixedValue();
     // Check the scaling factor cost with both the min and max offsets.
     InstructionCost ScaleCostMinOffset = TTI.getScalingFactorCost(
-        LU.AccessTy.MemTy, F.BaseGV,
-        StackOffset::getFixed(F.BaseOffset + LU.MinOffset), F.HasBaseReg,
-        F.Scale, LU.AccessTy.AddrSpace);
+        LU.AccessTy.MemTy, F.BaseGV, StackOffset::getFixed(FixedMin),
+        F.HasBaseReg, F.Scale, LU.AccessTy.AddrSpace);
     InstructionCost ScaleCostMaxOffset = TTI.getScalingFactorCost(
-        LU.AccessTy.MemTy, F.BaseGV,
-        StackOffset::getFixed(F.BaseOffset + LU.MaxOffset), F.HasBaseReg,
-        F.Scale, LU.AccessTy.AddrSpace);
+        LU.AccessTy.MemTy, F.BaseGV, StackOffset::getFixed(FixedMax),
+        F.HasBaseReg, F.Scale, LU.AccessTy.AddrSpace);
 
     assert(ScaleCostMinOffset.isValid() && ScaleCostMaxOffset.isValid() &&
            "Legal addressing mode has an illegal cost!");
@@ -1846,10 +1915,11 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
 
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
                              LSRUse::KindType Kind, MemAccessTy AccessTy,
-                             GlobalValue *BaseGV, int64_t BaseOffset,
+                             GlobalValue *BaseGV, Immediate BaseOffset,
                              bool HasBaseReg, int64_t ScalableOffset = 0) {
   // Fast-path: zero is always foldable.
-  if (BaseOffset == 0 && !BaseGV) return true;
+  if (BaseOffset.isZero() && !BaseGV)
+    return true;
 
   // Conservatively, create an address with an immediate and a
   // base and a scale.
@@ -1867,8 +1937,8 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
 }
 
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
-                             ScalarEvolution &SE, int64_t MinOffset,
-                             int64_t MaxOffset, LSRUse::KindType Kind,
+                             ScalarEvolution &SE, Immediate MinOffset,
+                             Immediate MaxOffset, LSRUse::KindType Kind,
                              MemAccessTy AccessTy, const SCEV *S,
                              bool HasBaseReg) {
   // Fast-path: zero is always foldable.
@@ -1876,14 +1946,15 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
 
   // Conservatively, create an address with an immediate and a
   // base and a scale.
-  int64_t BaseOffset = ExtractImmediate(S, SE);
+  Immediate BaseOffset = ExtractImmediate(S, SE);
   GlobalValue *BaseGV = ExtractSymbol(S, SE);
 
   // If there's anything else involved, it's not foldable.
   if (!S->isZero()) return false;
 
   // Fast-path: zero is always foldable.
-  if (BaseOffset == 0 && !BaseGV) return true;
+  if (BaseOffset.isZero() && !BaseGV)
+    return true;
 
   // Conservatively, create an address with an immediate and a
   // base and a scale.
@@ -2032,11 +2103,11 @@ class LSRInstance {
   using UseMapTy = DenseMap<LSRUse::SCEVUseKindPair, size_t>;
   UseMapTy UseMap;
 
-  bool reconcileNewOffset(LSRUse &LU, int64_t NewOffset, bool HasBaseReg,
+  bool reconcileNewOffset(LSRUse &LU, Immediate NewOffset, bool HasBaseReg,
                           LSRUse::KindType Kind, MemAccessTy AccessTy);
 
-  std::pair<size_t, int64_t> getUse(const SCEV *&Expr, LSRUse::KindType Kind,
-                                    MemAccessTy AccessTy);
+  std::pair<size_t, Immediate> getUse(const SCEV *&Expr, LSRUse::KindType Kind,
+                                      MemAccessTy AccessTy);
 
   void DeleteUse(LSRUse &LU, size_t LUIdx);
 
@@ -2062,7 +2133,7 @@ class LSRInstance {
   void GenerateSymbolicOffsets(LSRUse &LU, unsigned LUIdx, Formula Base);
   void GenerateConstantOffsetsImpl(LSRUse &LU, unsigned LUIdx,
                                    const Formula &Base,
-                                   const SmallVectorImpl<int64_t> &Worklist,
+                                   const SmallVectorImpl<Immediate> &Worklist,
                                    size_t Idx, bool IsScaledReg = false);
   void GenerateConstantOffsets(LSRUse &LU, unsigned LUIdx, Formula Base);
   void GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx, Formula Base);
@@ -2570,11 +2641,11 @@ LSRInstance::OptimizeLoopTermCond() {
 
 /// Determine if the given use can accommodate a fixup at the given offset and
 /// other details. If so, update the use and return true.
-bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
+bool LSRInstance::reconcileNewOffset(LSRUse &LU, Immediate NewOffset,
                                      bool HasBaseReg, LSRUse::KindType Kind,
                                      MemAccessTy AccessTy) {
-  int64_t NewMinOffset = LU.MinOffset;
-  int64_t NewMaxOffset = LU.MaxOffset;
+  Immediate NewMinOffset = LU.MinOffset;
+  Immediate NewMaxOffset = LU.MaxOffset;
   MemAccessTy NewAccessTy = AccessTy;
 
   // Check for a mismatched kind. It's tempting to collapse mismatched kinds to
@@ -2594,12 +2665,12 @@ bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
   }
 
   // Conservatively assume HasBaseReg is true for now.
-  if (NewOffset < LU.MinOffset) {
+  if (Immediate::isKnownLT(NewOffset, LU.MinOffset)) {
     if (!isAlwaysFoldable(TTI, Kind, NewAccessTy, /*BaseGV=*/nullptr,
                           LU.MaxOffset - NewOffset, HasBaseReg))
       return false;
     NewMinOffset = NewOffset;
-  } else if (NewOffset > LU.MaxOffset) {
+  } else if (Immediate::isKnownGT(NewOffset, LU.MaxOffset)) {
     if (!isAlwaysFoldable(TTI, Kind, NewAccessTy, /*BaseGV=*/nullptr,
                           NewOffset - LU.MinOffset, HasBaseReg))
       return false;
@@ -2616,17 +2687,17 @@ bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
 /// Return an LSRUse index and an offset value for a fixup which needs the given
 /// expression, with the given kind and optional access type.  Either reuse an
 /// existing use or create a new one, as needed.
-std::pair<size_t, int64_t> LSRInstance::getUse(const SCEV *&Expr,
-                                               LSRUse::KindType Kind,
-                                               MemAccessTy AccessTy) {
+std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
+                                                 LSRUse::KindType Kind,
+                                                 MemAccessTy AccessTy) {
   const SCEV *Copy = Expr;
-  int64_t Offset = ExtractImmediate(Expr, SE);
+  Immediate Offset = ExtractImmediate(Expr, SE);
 
   // Basic uses can't accept any offset, for example.
   if (!isAlwaysFoldable(TTI, Kind, AccessTy, /*BaseGV=*/ nullptr,
                         Offset, /*HasBaseReg=*/ true)) {
     Expr = Copy;
-    Offset = 0;
+    Offset = Immediate::getFixed(0);
   }
 
   std::pair<UseMapTy::iterator, bool> P =
@@ -2687,7 +2758,7 @@ LSRInstance::FindUseWithSimilarFormula(const Formula &OrigF,
             F.BaseGV == OrigF.BaseGV &&
             F.Scale == OrigF.Scale &&
             F.UnfoldedOffset == OrigF.UnfoldedOffset) {
-          if (F.BaseOffset == 0)
+          if (F.BaseOffset.isZero())
             return &LU;
           // This is the formula where all the registers and symbols matched;
           // there aren't going to be any others. Since we declined it, we
@@ -3192,7 +3263,8 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
 
   MemAccessTy AccessTy = getAccessType(TTI, UserInst, Operand);
   if (!isAlwaysFoldable(TTI, LSRUse::Address, AccessTy, /*BaseGV=*/nullptr,
-                        IncOffset, /*HasBaseReg=*/false, ScalableOffset))
+                        Immediate::getFixed(IncOffset), /*HasBaseReg=*/false,
+                        ScalableOffset))
     return false;
 
   return true;
@@ -3424,9 +3496,9 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     }
 
     // Get or create an LSRUse.
-    std::pair<size_t, int64_t> P = getUse(S, Kind, AccessTy);
+    std::pair<size_t, Immediate> P = getUse(S, Kind, AccessTy);
     size_t LUIdx = P.first;
-    int64_t Offset = P.second;
+    Immediate Offset = P.second;
     LSRUse &LU = Uses[LUIdx];
 
     // Record the fixup.
@@ -3616,10 +3688,10 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
             continue;
         }
 
-        std::pair<size_t, int64_t> P = getUse(
-            S, LSRUse::Basic, MemAccessTy());
+        std::pair<size_t, Immediate> P =
+            getUse(S, LSRUse::Basic, MemAccessTy());
         size_t LUIdx = P.first;
-        int64_t Offset = P.second;
+        Immediate Offset = P.second;
         LSRUse &LU = Uses[LUIdx];
         LSRFixup &LF = LU.getNewFixup();
         LF.UserInst = const_cast<Instruction *>(UserInst);
@@ -3778,10 +3850,11 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
     // Add the remaining pieces of the add back into the new formula.
     const SCEVConstant *InnerSumSC = dyn_cast<SCEVConstant>(InnerSum);
     if (InnerSumSC && SE.getTypeSizeInBits(InnerSumSC->getType()) <= 64 &&
-        TTI.isLegalAddImmediate((uint64_t)F.UnfoldedOffset +
+        TTI.isLegalAddImmediate((uint64_t)F.UnfoldedOffset.getFixedValue() +
                                 InnerSumSC->getValue()->getZExtValue())) {
       F.UnfoldedOffset =
-          (uint64_t)F.UnfoldedOffset + InnerSumSC->getValue()->getZExtValue();
+          Immediate::getFixed((uint64_t)F.UnfoldedOffset.getFixedValue() +
+                              InnerSumSC->getValue()->getZExtValue());
       if (IsScaledReg)
         F.ScaledReg = nullptr;
       else
@@ -3794,10 +3867,11 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
     // Add J as its own register, or an unfolded immediate.
     const SCEVConstant *SC = dyn_cast<SCEVConstant>(*J);
     if (SC && SE.getTypeSizeInBits(SC->getType()) <= 64 &&
-        TTI.isLegalAddImmediate((uint64_t)F.UnfoldedOffset +
+        TTI.isLegalAddImmediate((uint64_t)F.UnfoldedOffset.getFixedValue() +
                                 SC->getValue()->getZExtValue()))
       F.UnfoldedOffset =
-          (uint64_t)F.UnfoldedOffset + SC->getValue()->getZExtValue();
+          Immediate::getFixed((uint64_t)F.UnfoldedOffset.getFixedValue() +
+                              SC->getValue()->getZExtValue());
     else
       F.BaseRegs.push_back(*J);
     // We may have changed the number of register in base regs, adjust the
@@ -3838,7 +3912,8 @@ void LSRInstance::GenerateCombinations(LSRUse &LU, unsigned LUIdx,
                                        Formula Base) {
   // This method is only interesting on a plurality of registers.
   if (Base.BaseRegs.size() + (Base.Scale == 1) +
-      (Base.UnfoldedOffset != 0) <= 1)
+          (Base.UnfoldedOffset.isNonZero()) <=
+      1)
     return;
 
   // Flatten the representation, i.e., reg1 + 1*reg2 => reg1 + reg2, before
@@ -3889,9 +3964,9 @@ void LSRInstance::GenerateCombinations(LSRUse &LU, unsigned LUIdx,
   // registers collected.
   if (NewBase.UnfoldedOffset) {
     assert(CombinedIntegerType && "Missing a type for the unfolded offset");
-    Ops.push_back(SE.getConstant(CombinedIntegerType, NewBase.UnfoldedOffset,
-                                 true));
-    NewBase.UnfoldedOffset = 0;
+    Ops.push_back(SE.getConstant(CombinedIntegerType,
+                                 NewBase.UnfoldedOffset.getFixedValue(), true));
+    NewBase.UnfoldedOffset = Immediate::getFixed(0);
     GenerateFormula(SE.getAddExpr(Ops));
   }
 }
@@ -3931,15 +4006,17 @@ void LSRInstance::GenerateSymbolicOffsets(LSRUse &LU, unsigned LUIdx,
 /// Helper function for LSRInstance::GenerateConstantOffsets.
 void LSRInstance::GenerateConstantOffsetsImpl(
     LSRUse &LU, unsigned LUIdx, const Formula &Base,
-    const SmallVectorImpl<int64_t> &Worklist, size_t Idx, bool IsScaledReg) {
+    const SmallVectorImpl<Immediate> &Worklist, size_t Idx, bool IsScaledReg) {
 
-  auto GenerateOffset = [&](const SCEV *G, int64_t Offset) {
+  auto GenerateOffset = [&](const SCEV *G, Immediate Offset) {
     Formula F = Base;
-    F.BaseOffset = (uint64_t)Base.BaseOffset - Offset;
+    F.BaseOffset = Immediate::getFixed(
+        (uint64_t)Base.BaseOffset.getFixedValue() - Offset.getFixedValue());
 
     if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F)) {
       // Add the offset to the base register.
-      const SCEV *NewG = SE.getAddExpr(SE.getConstant(G->getType(), Offset), G);
+      const SCEV *NewG = SE.getAddExpr(
+          SE.getConstant(G->getType(), Offset.getFixedValue()), G);
       // If it cancelled out, drop the base register, otherwise update it.
       if (NewG->isZero()) {
         if (IsScaledReg) {
@@ -3975,21 +4052,22 @@ void LSRInstance::GenerateConstantOffsetsImpl(
         int64_t Step = StepInt.isNegative() ?
           StepInt.getSExtValue() : StepInt.getZExtValue();
 
-        for (int64_t Offset : Worklist) {
-          Offset -= Step;
+        for (Immediate Offset : Worklist) {
+          Offset = Immediate::getFixed(Offset.getFixedValue() - Step);
           GenerateOffset(G, Offset);
         }
       }
     }
   }
-  for (int64_t Offset : Worklist)
+  for (Immediate Offset : Worklist)
     GenerateOffset(G, Offset);
 
-  int64_t Imm = ExtractImmediate(G, SE);
-  if (G->isZero() || Imm == 0)
+  Immediate Imm = ExtractImmediate(G, SE);
+  if (G->isZero() || Imm.isZero())
     return;
   Formula F = Base;
-  F.BaseOffset = (uint64_t)F.BaseOffset + Imm;
+  F.BaseOffset = Immediate::getFixed((uint64_t)F.BaseOffset.getFixedValue() +
+                                     Imm.getFixedValue());
   if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
     return;
   if (IsScaledReg) {
@@ -4008,7 +4086,7 @@ void LSRInstance::GenerateConstantOffsets(LSRUse &LU, unsigned LUIdx,
                                           Formula Base) {
   // TODO: For now, just add the min and max offset, because it usually isn't
   // worthwhile looking at everything inbetween.
-  SmallVector<int64_t, 2> Worklist;
+  SmallVector<Immediate, 2> Worklist;
   Worklist.push_back(LU.MinOffset);
   if (LU.MaxOffset != LU.MinOffset)
     Worklist.push_back(LU.MaxOffset);
@@ -4048,27 +4126,29 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     if (!ConstantInt::isValueValidForType(IntTy, Factor))
       continue;
     // Check that the multiplication doesn't overflow.
-    if (Base.BaseOffset == std::numeric_limits<int64_t>::min() && Factor == -1)
+    if (Base.BaseOffset.isMin() && Factor == -1)
       continue;
-    int64_t NewBaseOffset = (uint64_t)Base.BaseOffset * Factor;
+    Immediate NewBaseOffset =
+        Immediate::getFixed((uint64_t)Base.BaseOffset.getFixedValue() * Factor);
     assert(Factor != 0 && "Zero factor not expected!");
-    if (NewBaseOffset / Factor != Base.BaseOffset)
+    if (NewBaseOffset.getFixedValue() / Factor !=
+        Base.BaseOffset.getFixedValue())
       continue;
     // If the offset will be truncated at this use, check that it is in bounds.
     if (!IntTy->isPointerTy() &&
-        !ConstantInt::isValueValidForType(IntTy, NewBaseOffset))
+        !ConstantInt::isValueValidForType(IntTy, NewBaseOffset.getFixedValue()))
       continue;
 
     // Check that multiplying with the use offset doesn't overflow.
-    int64_t Offset = LU.MinOffset;
-    if (Offset == std::numeric_limits<int64_t>::min() && Factor == -1)
+    Immediate Offset = LU.MinOffset;
+    if (Offset.isMin() && Factor == -1)
       continue;
-    Offset = (uint64_t)Offset * Factor;
-    if (Offset / Factor != LU.MinOffset)
+    Offset = Immediate::getFixed((uint64_t)Offset.getFixedValue() * Factor);
+    if (Offset.getFixedValue() / Factor != LU.MinOffset.getFixedValue())
       continue;
     // If the offset will be truncated at this use, check that it is in bounds.
     if (!IntTy->isPointerTy() &&
-        !ConstantInt::isValueValidForType(IntTy, Offset))
+        !ConstantInt::isValueValidForType(IntTy, Offset.getFixedValue()))
       continue;
 
     Formula F = Base;
@@ -4079,7 +4159,9 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
       continue;
 
     // Compensate for the use having MinOffset built into it.
-    F.BaseOffset = (uint64_t)F.BaseOffset + Offset - LU.MinOffset;
+    F.BaseOffset = Immediate::getFixed((uint64_t)F.BaseOffset.getFixedValue() +
+                                       Offset.getFixedValue() -
+                                       LU.MinOffset.getFixedValue());
 
     const SCEV *FactorS = SE.getConstant(IntTy, Factor);
 
@@ -4098,16 +4180,17 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     }
 
     // Check that multiplying with the unfolded offset doesn't overflow.
-    if (F.UnfoldedOffset != 0) {
-      if (F.UnfoldedOffset == std::numeric_limits<int64_t>::min() &&
-          Factor == -1)
+    if (F.UnfoldedOffset.isNonZero()) {
+      if (F.UnfoldedOffset.isMin() && Factor == -1)
         continue;
-      F.UnfoldedOffset = (uint64_t)F.UnfoldedOffset * Factor;
-      if (F.UnfoldedOffset / Factor != Base.UnfoldedOffset)
+      F.UnfoldedOffset = Immediate::getFixed(
+          (uint64_t)F.UnfoldedOffset.getFixedValue() * Factor);
+      if (F.UnfoldedOffset.getFixedValue() / Factor !=
+          Base.UnfoldedOffset.getFixedValue())
         continue;
       // If the offset will be truncated, check that it is in bounds.
-      if (!IntTy->isPointerTy() &&
-          !ConstantInt::isValueValidForType(IntTy, F.UnfoldedOffset))
+      if (!IntTy->isPointerTy() && !ConstantInt::isValueValidForType(
+                                       IntTy, F.UnfoldedOffset.getFixedValue()))
         continue;
     }
 
@@ -4150,8 +4233,8 @@ void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
     }
     // For an ICmpZero, negating a solitary base register won't lead to
     // new solutions.
-    if (LU.Kind == LSRUse::ICmpZero &&
-        !Base.HasBaseReg && Base.BaseOffset == 0 && !Base.BaseGV)
+    if (LU.Kind == LSRUse::ICmpZero && !Base.HasBaseReg &&
+        Base.BaseOffset.isZero() && !Base.BaseGV)
       continue;
     // For each addrec base reg, if its loop is current loop, apply the scale.
     for (size_t i = 0, e = Base.BaseRegs.size(); i != e; ++i) {
@@ -4277,10 +4360,10 @@ namespace {
 /// structures moving underneath it.
 struct WorkItem {
   size_t LUIdx;
-  int64_t Imm;
+  Immediate Imm;
   const SCEV *OrigReg;
 
-  WorkItem(size_t LI, int64_t I, const SCEV *R)
+  WorkItem(size_t LI, Immediate I, const SCEV *R)
       : LUIdx(LI), Imm(I), OrigReg(R) {}
 
   void print(raw_ostream &OS) const;
@@ -4304,14 +4387,14 @@ LLVM_DUMP_METHOD void WorkItem::dump() const {
 /// opportunities between them.
 void LSRInstance::GenerateCrossUseConstantOffsets() {
   // Group the registers by their value without any added constant offset.
-  using ImmMapTy = std::map<int64_t, const SCEV *>;
+  using ImmMapTy = std::map<Immediate, const SCEV *, KeyOrderTargetImmediate>;
 
   DenseMap<const SCEV *, ImmMapTy> Map;
   DenseMap<const SCEV *, SmallBitVector> UsedByIndicesMap;
   SmallVector<const SCEV *, 8> Sequence;
   for (const SCEV *Use : RegUses) {
     const SCEV *Reg = Use; // Make a copy for ExtractImmediate to modify.
-    int64_t Imm = ExtractImmediate(Reg, SE);
+    Immediate Imm = ExtractImmediate(Reg, SE);
     auto Pair = Map.insert(std::make_pair(Reg, ImmMapTy()));
     if (Pair.second)
       Sequence.push_back(Reg);
@@ -4323,7 +4406,8 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
   // a list of work to do and do the work in a separate step so that we're
   // not adding formulae and register counts while we're searching.
   SmallVector<WorkItem, 32> WorkItems;
-  SmallSet<std::pair<size_t, int64_t>, 32> UniqueItems;
+  SmallSet<std::pair<size_t, Immediate>, 32, KeyOrderSizeTAndImmediate>
+      UniqueItems;
   for (const SCEV *Reg : Sequence) {
     const ImmMapTy &Imms = Map.find(Reg)->second;
 
@@ -4342,7 +4426,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
          J != JE; ++J) {
       const SCEV *OrigReg = J->second;
 
-      int64_t JImm = J->first;
+      Immediate JImm = J->first;
       const SmallBitVector &UsedByIndices = RegUses.getUsedByIndices(OrigReg);
 
       if (!isa<SCEVConstant>(OrigReg) &&
@@ -4354,8 +4438,8 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
 
       // Conservatively examine offsets between this orig reg a few selected
       // other orig regs.
-      int64_t First = Imms.begin()->first;
-      int64_t Last = std::prev(Imms.end())->first;
+      int64_t First = Imms.begin()->first.getFixedValue();
+      int64_t Last = std::prev(Imms.end())->first.getFixedValue();
       // Compute (First + Last)  / 2 without overflow using the fact that
       // First + Last = 2 * (First + Last) + (First ^ Last).
       int64_t Avg = (First & Last) + ((First ^ Last) >> 1);
@@ -4364,12 +4448,13 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
       Avg = Avg + ((First ^ Last) & ((uint64_t)Avg >> 63));
       ImmMapTy::const_iterator OtherImms[] = {
           Imms.begin(), std::prev(Imms.end()),
-         Imms.lower_bound(Avg)};
+          Imms.lower_bound(Immediate::getFixed(Avg))};
       for (const auto &M : OtherImms) {
         if (M == J || M == JE) continue;
 
         // Compute the difference between the two.
-        int64_t Imm = (uint64_t)JImm - M->first;
+        Immediate Imm = Immediate::getFixed((uint64_t)JImm.getFixedValue() -
+                                            M->first.getFixedValue());
         for (unsigned LUIdx : UsedByIndices.set_bits())
           // Make a memo of this use, offset, and register tuple.
           if (UniqueItems.insert(std::make_pair(LUIdx, Imm)).second)
@@ -4387,11 +4472,12 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
   for (const WorkItem &WI : WorkItems) {
     size_t LUIdx = WI.LUIdx;
     LSRUse &LU = Uses[LUIdx];
-    int64_t Imm = WI.Imm;
+    Immediate Imm = WI.Imm;
     const SCEV *OrigReg = WI.OrigReg;
 
     Type *IntTy = SE.getEffectiveSCEVType(OrigReg->getType());
-    const SCEV *NegImmS = SE.getSCEV(ConstantInt::get(IntTy, -(uint64_t)Imm));
+    const SCEV *NegImmS =
+        SE.getSCEV(ConstantInt::get(IntTy, -(uint64_t)Imm.getFixedValue()));
     unsigned BitWidth = SE.getTypeSizeInBits(IntTy);
 
     // TODO: Use a more targeted data structure.
@@ -4404,10 +4490,12 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
       F.unscale();
       // Use the immediate in the scaled register.
       if (F.ScaledReg == OrigReg) {
-        int64_t Offset = (uint64_t)F.BaseOffset + Imm * (uint64_t)F.Scale;
+        Immediate Offset =
+            Immediate::getFixed((uint64_t)F.BaseOffset.getFixedValue() +
+                                Imm.getFixedValue() * (uint64_t)F.Scale);
         // Don't create 50 + reg(-50).
         if (F.referencesReg(SE.getSCEV(
-                   ConstantInt::get(IntTy, -(uint64_t)Offset))))
+                ConstantInt::get(IntTy, -(uint64_t)Offset.getFixedValue()))))
           continue;
         Formula NewF = F;
         NewF.BaseOffset = Offset;
@@ -4420,9 +4508,10 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
         // value to the immediate would produce a value closer to zero than the
         // immediate itself, then the formula isn't worthwhile.
         if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewF.ScaledReg))
-          if (C->getValue()->isNegative() != (NewF.BaseOffset < 0) &&
+          if (C->getValue()->isNegative() !=
+                  (NewF.BaseOffset.isLessThanZero()) &&
               (C->getAPInt().abs() * APInt(BitWidth, F.Scale))
-                  .ule(std::abs(NewF.BaseOffset)))
+                  .ule(std::abs(NewF.BaseOffset.getFixedValue())))
             continue;
 
         // OK, looks good.
@@ -4435,16 +4524,21 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           if (BaseReg != OrigReg)
             continue;
           Formula NewF = F;
-          NewF.BaseOffset = (uint64_t)NewF.BaseOffset + Imm;
+          NewF.BaseOffset = Immediate::getFixed(
+              (uint64_t)NewF.BaseOffset.getFixedValue() + Imm.getFixedValue());
           if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset,
                           LU.Kind, LU.AccessTy, NewF)) {
             if (AMK == TTI::AMK_PostIndexed &&
                 mayUsePostIncMode(TTI, LU, OrigReg, this->L, SE))
               continue;
-            if (!TTI.isLegalAddImmediate((uint64_t)NewF.UnfoldedOffset + Imm))
+            if (!TTI.isLegalAddImmediate(
+                    (uint64_t)NewF.UnfoldedOffset.getFixedValue() +
+                    Imm.getFixedValue()))
               continue;
             NewF = F;
-            NewF.UnfoldedOffset = (uint64_t)NewF.UnfoldedOffset + Imm;
+            NewF.UnfoldedOffset = Immediate::getFixed(
+                (uint64_t)NewF.UnfoldedOffset.getFixedValue() +
+                Imm.getFixedValue());
           }
           NewF.BaseRegs[N] = SE.getAddExpr(NegImmS, BaseReg);
 
@@ -4453,11 +4547,13 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           // zero than the immediate itself, then the formula isn't worthwhile.
           for (const SCEV *NewReg : NewF.BaseRegs)
             if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewReg))
-              if ((C->getAPInt() + NewF.BaseOffset)
+              if ((C->getAPInt() + NewF.BaseOffset.getFixedValue())
                       .abs()
-                      .slt(std::abs(NewF.BaseOffset)) &&
-                  (C->getAPInt() + NewF.BaseOffset).countr_zero() >=
-                      (unsigned)llvm::countr_zero<uint64_t>(NewF.BaseOffset))
+                      .slt(std::abs(NewF.BaseOffset.getFixedValue())) &&
+                  (C->getAPInt() + NewF.BaseOffset.getFixedValue())
+                          .countr_zero() >=
+                      (unsigned)llvm::countr_zero<uint64_t>(
+                          NewF.BaseOffset.getFixedValue()))
                 goto skip_formula;
 
           // Ok, looks good.
@@ -4651,7 +4747,9 @@ void LSRInstance::NarrowSearchSpaceByDetectingSupersets() {
             Formula NewF = F;
             //FIXME: Formulas should store bitwidth to do wrapping properly.
             //       See PR41034.
-            NewF.BaseOffset += (uint64_t)C->getValue()->getSExtValue();
+            NewF.BaseOffset =
+                Immediate::getFixed(NewF.BaseOffset.getFixedValue() +
+                                    (uint64_t)C->getValue()->getSExtValue());
             NewF.BaseRegs.erase(NewF.BaseRegs.begin() +
                                 (I - F.BaseRegs.begin()));
             if (LU.HasFormulaWithSameRegs(NewF)) {
@@ -4707,7 +4805,7 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
     for (const Formula &F : LU.Formulae) {
-      if (F.BaseOffset == 0 || (F.Scale != 0 && F.Scale != 1))
+      if (F.BaseOffset.isZero() || (F.Scale != 0 && F.Scale != 1))
         continue;
 
       LSRUse *LUThatHas = FindUseWithSimilarFormula(F, LU);
@@ -5543,30 +5641,33 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   }
 
   // Expand the immediate portion.
-  int64_t Offset = (uint64_t)F.BaseOffset + LF.Offset;
-  if (Offset != 0) {
+  Immediate Offset = Immediate::getFixed(
+      (uint64_t)F.BaseOffset.getFixedValue() + LF.Offset.getFixedValue());
+  if (Offset.isNonZero()) {
     if (LU.Kind == LSRUse::ICmpZero) {
       // The other interesting way of "folding" with an ICmpZero is to use a
       // negated immediate.
       if (!ICmpScaledV)
-        ICmpScaledV = ConstantInt::get(IntTy, -(uint64_t)Offset);
+        ICmpScaledV =
+            ConstantInt::get(IntTy, -(uint64_t)Offset.getFixedValue());
       else {
         Ops.push_back(SE.getUnknown(ICmpScaledV));
-        ICmpScaledV = ConstantInt::get(IntTy, Offset);
+        ICmpScaledV = ConstantInt::get(IntTy, Offset.getFixedValue());
       }
     } else {
       // Just add the immediate values. These again are expected to be matched
       // as part of the address.
-      Ops.push_back(SE.getUnknown(ConstantInt::getSigned(IntTy, Offset)));
+      Ops.push_back(
+          SE.getUnknown(ConstantInt::getSigned(IntTy, Offset.getFixedValue())));
     }
   }
 
   // Expand the unfolded offset portion.
-  int64_t UnfoldedOffset = F.UnfoldedOffset;
-  if (UnfoldedOffset != 0) {
+  Immediate UnfoldedOffset = F.UnfoldedOffset;
+  if (UnfoldedOffset.isNonZero()) {
     // Just add the immediate values.
-    Ops.push_back(SE.getUnknown(ConstantInt::getSigned(IntTy,
-                                                       UnfoldedOffset)));
+    Ops.push_back(SE.getUnknown(
+        ConstantInt::getSigned(IntTy, UnfoldedOffset.getFixedValue())));
   }
 
   // Emit instructions summing all the operands.
@@ -5602,7 +5703,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
              "ICmp does not support folding a global value and "
              "a scale at the same time!");
       Constant *C = ConstantInt::getSigned(SE.getEffectiveSCEVType(OpTy),
-                                           -(uint64_t)Offset);
+                                           -(uint64_t)Offset.getFixedValue());
       if (C->getType() != OpTy) {
         C = ConstantFoldCastOperand(
             CastInst::getCastOpcode(C, false, OpTy, false), C, OpTy,
