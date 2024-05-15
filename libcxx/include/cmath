@@ -160,6 +160,14 @@ floating_point asinh (arithmetic x);
 float          asinhf(float x);
 long double    asinhl(long double x);
 
+double         assoc_laguerre(unsigned n, unsigned m, double x);        // C++17
+float          assoc_laguerre(unsigned n, unsigned m, float x);         // C++17
+long double    assoc_laguerre(unsigned n, unsigned m, long double x);   // C++17
+float          assoc_laguerref(unsigned n, unsigned m, float x);        // C++17
+long double    assoc_laguerrel(unsigned n, unsigned m, long double x);  // C++17
+template <class Integer>
+double         assoc_laguerre(unsigned n, unsigned m, Integer x);       // C++17
+
 floating_point atanh (arithmetic x);
 float          atanhf(float x);
 long double    atanhl(long double x);
@@ -215,6 +223,14 @@ long double  hypot(long double x, long double y, long double z); // C++17
 int ilogb (arithmetic x);
 int ilogbf(float x);
 int ilogbl(long double x);
+
+double         laguerre(unsigned n, double x);                    // C++17
+float          laguerre(unsigned n, float x);                     // C++17
+long double    laguerre(unsigned n, long double x);               // C++17
+float          laguerref(unsigned n, float x);                    // C++17
+long double    laguerrel(unsigned n, long double x);              // C++17
+template <class Integer>
+double         laguerre(unsigned n, Integer x);                   // C++17
 
 floating_point lgamma (arithmetic x);
 float          lgammaf(float x);
@@ -315,6 +331,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <limits>
 #include <version>
 
+#include <__math/special_functions.h>
 #include <math.h>
 
 #ifndef _LIBCPP_MATH_H
