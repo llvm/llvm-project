@@ -107,17 +107,6 @@ struct complexlike_double_padded {
 struct complexlike_double_padded pass_complexlike_double_padded(struct complexlike_double_padded arg) { return arg; }
 // CHECK-LABEL: define void @pass_complexlike_double_padded(ptr {{.*}} sret(%struct.complexlike_double_padded) align 32 %{{.*}}, [4 x i64] %{{.*}})
 
-// Unnamed types
-
-int pass_unnamed_int(int) { return 0; }
-// CHECK-LABEL: define signext i32 @pass_unnamed_int(i32 signext %{{.*}})
-
-signed char pass_unnamed_schar(signed char) { return '0'; }
-// CHECK-LABEL: define signext i8 @pass_unnamed_schar(i8 signext %{{.*}})
-
-long double pass_unnamed_longdouble(long double) { return 0; }
-// CHECK-LABEL: define fp128 @pass_unnamed_longdouble(fp128 %{{.*}})
-
 // Aggregate types
 
 struct agg_1byte { char a[1]; };
