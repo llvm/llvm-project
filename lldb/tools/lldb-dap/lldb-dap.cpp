@@ -977,7 +977,7 @@ void request_disconnect(const llvm::json::Object &request) {
     g_dap.debugger.SetAsync(false);
     lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
     if (!error.Success())
-      response.try_emplace("error", error.GetCString());
+      EmplaceSafeString(response, "error", error.GetCString());
     g_dap.debugger.SetAsync(true);
     break;
   }
