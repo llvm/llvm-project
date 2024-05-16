@@ -573,7 +573,7 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
           builder.getInt32(op.getRowMask()),
           builder.getInt32(op.getBankMask()),
           builder.getInt1(op.getBoundCtrl())
-      }; 
+      };
       $res = createIntrinsicCall(builder,
         llvm::Intrinsic::amdgcn_update_dpp, args, {vdataType});
   }];

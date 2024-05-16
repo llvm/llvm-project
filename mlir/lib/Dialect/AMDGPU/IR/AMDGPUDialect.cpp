@@ -331,8 +331,8 @@ LogicalResult MFMAOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
   Type srcType = getSrc().getType();
-  if (srcType.getIntOrFloatBitWidth() > 32) {
-    return emitOpError("integer and floating point types larger than 32 bits "
+  if (srcType.getIntOrFloatBitWidth() > 64) {
+    return emitOpError("integer and floating point types larger than 64 bits "
                        "are not supported");
   }
 
