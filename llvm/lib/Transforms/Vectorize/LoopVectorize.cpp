@@ -8483,6 +8483,9 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
       return Recipe;
 
+    if (!Phi->getNumUses())
+      return nullptr;
+
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
     assert((Legal->isReductionVariable(Phi) ||
             Legal->isFixedOrderRecurrence(Phi)) &&

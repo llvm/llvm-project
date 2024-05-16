@@ -881,6 +881,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
+        if (!Phi->getNumUses())
+          continue;
+
         reportVectorizationFailure("Found an unidentified PHI",
             "value that could not be identified as "
             "reduction is used outside the loop",

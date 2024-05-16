@@ -642,7 +642,6 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 
   SelectInst *SI = cast<SelectInst>(I);
   Value *NonPhi = nullptr;
-
   if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))
     NonPhi = SI->getFalseValue();
   else if (OrigPhi == dyn_cast<PHINode>(SI->getFalseValue()))
@@ -963,6 +962,9 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // Ensure the phi node's incoming blocks are the loop preheader and latch.
   if (Phi->getBasicBlockIndex(Preheader) < 0 ||
       Phi->getBasicBlockIndex(Latch) < 0)
+    return false;
+
+  if (!Phi->getNumUses())
     return false;
 
   // Get the previous value. The previous value comes from the latch edge while
