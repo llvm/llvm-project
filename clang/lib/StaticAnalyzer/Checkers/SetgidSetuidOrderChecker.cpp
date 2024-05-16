@@ -46,7 +46,6 @@ public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
                              bool Assumption) const;
-  const BugType *getBT() const { return &BT; }
 
 private:
   void processSetuid(ProgramStateRef State, const CallEvent &Call,
@@ -128,7 +127,7 @@ void SetgidSetuidOrderChecker::processSetuid(ProgramStateRef State,
     State = State->set<LastSetuidCallSVal>(RetSym);
     const NoteTag *Note = C.getNoteTag([this,
                                         RetSym](PathSensitiveBugReport &BR) {
-      if (!BR.isInteresting(RetSym) || &BR.getBugType() != this->getBT())
+      if (!BR.isInteresting(RetSym) || &BR.getBugType() != &this->BT)
         return "";
       return "Call to 'setuid' found here that removes superuser privileges";
     });
