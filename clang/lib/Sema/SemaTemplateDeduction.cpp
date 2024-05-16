@@ -3237,6 +3237,40 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
 
   return TemplateDeductionResult::Success;
 }
+/// Complete template argument deduction for DeduceTemplateArgumentsFromType.
+/// FIXME: this is mostly duplicated with the above two versions. Deduplicate
+/// the three implementations.
+static TemplateDeductionResult FinishTemplateArgumentDeduction(
+    Sema &S, TemplateDecl *TD,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+    TemplateDeductionInfo &Info) {
+  // Unevaluated SFINAE context.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::SFINAETrap Trap(S);
+
+  Sema::ContextRAII SavedContext(S, getAsDeclContextOrEnclosing(TD));
+
+  // C++ [temp.deduct.type]p2:
+  //   [...] or if any template argument remains neither deduced nor
+  //   explicitly specified, template argument deduction fails.
+  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
+  if (auto Result = ConvertDeducedTemplateArguments(
+          S, TD, /*IsPartialOrdering=*/false, Deduced, Info, SugaredBuilder,
+          CanonicalBuilder);
+      Result != TemplateDeductionResult::Success)
+    return Result;
+
+  if (Trap.hasErrorOccurred())
+    return TemplateDeductionResult::SubstitutionFailure;
+
+  if (auto Result = CheckDeducedArgumentConstraints(S, TD, SugaredBuilder,
+                                                    CanonicalBuilder, Info);
+      Result != TemplateDeductionResult::Success)
+    return Result;
+
+  return TemplateDeductionResult::Success;
+}
 
 /// Perform template argument deduction to determine whether the given template
 /// arguments match the given class or variable template partial specialization
@@ -3303,6 +3337,58 @@ Sema::DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
                               ArrayRef<TemplateArgument> TemplateArgs,
                               TemplateDeductionInfo &Info) {
   return ::DeduceTemplateArguments(*this, Partial, TemplateArgs, Info);
+}
+
+TemplateDeductionResult
+Sema::DeduceTemplateArgumentsFromType(TemplateDecl *TD, QualType FromType,
+                                      sema::TemplateDeductionInfo &Info) {
+  if (TD->isInvalidDecl())
+    return TemplateDeductionResult::Invalid;
+
+  QualType PType;
+  if (const auto *CTD = dyn_cast<ClassTemplateDecl>(TD)) {
+    // Use the InjectedClassNameType.
+    PType = Context.getTypeDeclType(CTD->getTemplatedDecl());
+  } else if (const auto *AliasTemplate = dyn_cast<TypeAliasTemplateDecl>(TD)) {
+    PType = AliasTemplate->getTemplatedDecl()
+                ->getUnderlyingType()
+                .getCanonicalType();
+  } else {
+    assert(false && "Expected a class or alias template");
+  }
+
+  // Unevaluated SFINAE context.
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
+  SFINAETrap Trap(*this);
+
+  // This deduction has no relation to any outer instantiation we might be
+  // performing.
+  LocalInstantiationScope InstantiationScope(*this);
+
+  SmallVector<DeducedTemplateArgument> Deduced(
+      TD->getTemplateParameters()->size());
+  SmallVector<TemplateArgument> PArgs = {TemplateArgument(PType)};
+  SmallVector<TemplateArgument> AArgs = {TemplateArgument(FromType)};
+  if (auto DeducedResult = DeduceTemplateArguments(
+          TD->getTemplateParameters(), PArgs, AArgs, Info, Deduced, false);
+      DeducedResult != TemplateDeductionResult::Success) {
+    return DeducedResult;
+  }
+
+  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
+  InstantiatingTemplate Inst(*this, Info.getLocation(), TD, DeducedArgs, Info);
+  if (Inst.isInvalid())
+    return TemplateDeductionResult::InstantiationDepth;
+
+  if (Trap.hasErrorOccurred())
+    return TemplateDeductionResult::SubstitutionFailure;
+
+  TemplateDeductionResult Result;
+  runWithSufficientStackSpace(Info.getLocation(), [&] {
+    Result = ::FinishTemplateArgumentDeduction(*this, TD, Deduced, Info);
+  });
+  return Result;
 }
 
 /// Determine whether the given type T is a simple-template-id type.
