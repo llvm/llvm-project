@@ -20,7 +20,7 @@ endif()
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
 configure_file(${LIBOMP_INC_DIR}/omp.h.var ${LIBOMP_HEADERS_INTDIR}/omp.h @ONLY)
 configure_file(${LIBOMP_INC_DIR}/ompx.h.var ${LIBOMP_HEADERS_INTDIR}/ompx.h @ONLY)
-configure_file(kmp_config.h.cmake ${LIBOMP_HEADERS_INTDIR}/kmp_config.h @ONLY)
+configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
   configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var ${LIBOMP_HEADERS_INTDIR}/omp-tools.h @ONLY)
 endif()
@@ -55,7 +55,6 @@ include_directories(
   ${LIBOMP_SRC_DIR}/i18n
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
-  ${LIBOMP_HEADERS_INTDIR}
 )
 
 # Building with time profiling support requires LLVM directory includes.
@@ -441,7 +440,7 @@ if(${LIBOMP_OMPT_SUPPORT})
   install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
   # install under legacy name ompt.h
   install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
-  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_HEADERS_INTDIR} PARENT_SCOPE)
+  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 endif()
 if(${BUILD_FORTRAN_MODULES})
   set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
