@@ -117,6 +117,11 @@ libc_support_library(
     hdrs = ["hdr/sys_epoll_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_errno_macros",
+    hdrs = ["hdr/errno_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -1144,6 +1149,7 @@ libc_function(
         ":__support_common",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
+        ":hdr_errno_macros",
     ],
 )
 

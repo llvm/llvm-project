@@ -394,6 +394,21 @@ func.func @test_reshape_6d_down_s2s_auto(%arg0: tensor<1x2x3x5x7x11xf32>) -> ten
 
 // -----
 
+// This test would previously fail on GCC with certain compiler flags.
+// The GCC issue would cause invalid IR after tosa-to-tensor, so this test
+// locks down that the code goes through tosa-to-tensor and verifies.
+//
+// See https://github.com/llvm/llvm-project/pull/91521 for a full description.
+
+// CHECK-LABEL: reshape_bug_fix
+// CHECK: tensor.expand_shape
+func.func @reshape_bug_fix(%arg0: tensor<?xf32>) -> tensor<1x1x1x?xf32> {
+  %0 = tosa.reshape %arg0 {new_shape = array<i64: 1, 1, 1, -1>} : (tensor<?xf32>) -> tensor<1x1x1x?xf32>
+  return %0 : tensor<1x1x1x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_reshape_6d_down_s2s_explicit
 // CHECK-SAME: %[[ARG_0:[a-zA-Z0-9_]+]]: tensor<1x2x3x5x7x11xf32>
 // CHECK: %[[VAL_0:.*]] = tensor.collapse_shape %[[ARG_0]] {{\[\[}}0, 1, 2], [3], [4, 5]] : tensor<1x2x3x5x7x11xf32> into tensor<6x5x77xf32>

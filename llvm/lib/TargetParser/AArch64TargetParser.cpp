@@ -280,3 +280,8 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
   }
   return false;
 }
+
+const AArch64::ExtensionInfo &
+AArch64::getExtensionByID(AArch64::ArchExtKind ExtID) {
+  return lookupExtensionByID(ExtID);
+}

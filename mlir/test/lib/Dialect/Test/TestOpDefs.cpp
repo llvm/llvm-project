@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 using namespace mlir;
 using namespace test;
@@ -1171,4 +1172,62 @@ void TestOpWithVersionedProperties::writeToMlirBytecode(
     const test::VersionedProperties &prop) {
   writer.writeVarInt(prop.value1);
   writer.writeVarInt(prop.value2);
+}
+
+//===----------------------------------------------------------------------===//
+// TestMultiSlotAlloca
+//===----------------------------------------------------------------------===//
+
+llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
+  SmallVector<MemorySlot> slots;
+  for (Value result : getResults()) {
+    slots.push_back(MemorySlot{
+        result, cast<MemRefType>(result.getType()).getElementType()});
+  }
+  return slots;
+}
+
+Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
+                                           OpBuilder &builder) {
+  return builder.create<TestOpConstant>(getLoc(), slot.elemType,
+                                        builder.getI32IntegerAttr(42));
+}
+
+void TestMultiSlotAlloca::handleBlockArgument(const MemorySlot &slot,
+                                              BlockArgument argument,
+                                              OpBuilder &builder) {
+  // Not relevant for testing.
+}
+
+std::optional<PromotableAllocationOpInterface>
+TestMultiSlotAlloca::handlePromotionComplete(const MemorySlot &slot,
+                                             Value defaultValue,
+                                             OpBuilder &builder) {
+  if (defaultValue && defaultValue.use_empty())
+    defaultValue.getDefiningOp()->erase();
+
+  if (getNumResults() == 1) {
+    erase();
+    return std::nullopt;
+  }
+
+  SmallVector<Type> newTypes;
+  SmallVector<Value> remainingValues;
+
+  for (Value oldResult : getResults()) {
+    if (oldResult == slot.ptr)
+      continue;
+    remainingValues.push_back(oldResult);
+    newTypes.push_back(oldResult.getType());
+  }
+
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(*this);
+  auto replacement = builder.create<TestMultiSlotAlloca>(getLoc(), newTypes);
+  for (auto [oldResult, newResult] :
+       llvm::zip_equal(remainingValues, replacement.getResults()))
+    oldResult.replaceAllUsesWith(newResult);
+
+  erase();
+  return replacement;
 }

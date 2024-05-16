@@ -21,6 +21,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -120,11 +121,11 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
 
   // For +new, infer availability from -init.
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    if (S.NSAPIObj && ClassReceiver) {
+    if (S.ObjC().NSAPIObj && ClassReceiver) {
       ObjCMethodDecl *Init = ClassReceiver->lookupInstanceMethod(
-          S.NSAPIObj->getInitSelector());
+          S.ObjC().NSAPIObj->getInitSelector());
       if (Init && Result == AR_Available && MD->isClassMethod() &&
-          MD->getSelector() == S.NSAPIObj->getNewSelector() &&
+          MD->getSelector() == S.ObjC().NSAPIObj->getNewSelector() &&
           MD->definedInNSObject(S.getASTContext())) {
         Result = Init->getAvailability(Message);
         D = Init;
@@ -422,19 +423,16 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
         Introduced);
 
-    if (EnvironmentMatchesOrNone) {
-      unsigned DiagKind = UseNewWarning ? diag::warn_unguarded_availability_new
-                                        : diag::warn_unguarded_availability;
+    unsigned DiagKind =
+        EnvironmentMatchesOrNone
+            ? (UseNewWarning ? diag::warn_unguarded_availability_new
+                             : diag::warn_unguarded_availability)
+            : (UseNewWarning ? diag::warn_unguarded_availability_unavailable_new
+                             : diag::warn_unguarded_availability_unavailable);
 
-      S.Diag(Loc, DiagKind)
-          << OffendingDecl << PlatformName << Introduced.getAsString()
-          << UseEnvironment << TargetEnvironment;
-    } else {
-      unsigned DiagKind =
-          UseNewWarning ? diag::warn_unguarded_availability_unavailable_new
-                        : diag::warn_unguarded_availability_unavailable;
-      S.Diag(Loc, DiagKind) << Loc << OffendingDecl;
-    }
+    S.Diag(Loc, DiagKind) << OffendingDecl << PlatformName
+                          << Introduced.getAsString() << UseEnvironment
+                          << TargetEnvironment;
 
     S.Diag(OffendingDecl->getLocation(),
            diag::note_partial_availability_specified_here)
@@ -855,18 +853,17 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     bool UseEnvironment =
         (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
-    if (EnvironmentMatchesOrNone) {
-      unsigned DiagKind = UseNewDiagKind ? diag::warn_unguarded_availability_new
-                                         : diag::warn_unguarded_availability;
-      SemaRef.Diag(Range.getBegin(), DiagKind)
-          << Range << D << PlatformName << Introduced.getAsString()
-          << UseEnvironment << TargetEnvironment;
-    } else {
-      unsigned DiagKind =
-          UseNewDiagKind ? diag::warn_unguarded_availability_unavailable_new
-                         : diag::warn_unguarded_availability_unavailable;
-      SemaRef.Diag(Range.getBegin(), DiagKind) << Range << D;
-    }
+    unsigned DiagKind =
+        EnvironmentMatchesOrNone
+            ? (UseNewDiagKind ? diag::warn_unguarded_availability_new
+                              : diag::warn_unguarded_availability)
+            : (UseNewDiagKind
+                   ? diag::warn_unguarded_availability_unavailable_new
+                   : diag::warn_unguarded_availability_unavailable);
+
+    SemaRef.Diag(Range.getBegin(), DiagKind)
+        << Range << D << PlatformName << Introduced.getAsString()
+        << UseEnvironment << TargetEnvironment;
 
     SemaRef.Diag(OffendingDecl->getLocation(),
                  diag::note_partial_availability_specified_here)

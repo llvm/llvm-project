@@ -1341,7 +1341,8 @@ def : GCNPat <
                        (as_i1timm $bound_ctrl))
 >;
 
-class UpdateDPPPat<ValueType vt> : GCNPat <
+foreach vt = Reg32Types.types in {
+def : GCNPat <
   (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl,
                               timm:$row_mask, timm:$bank_mask,
                               timm:$bound_ctrl)),
@@ -1349,11 +1350,7 @@ class UpdateDPPPat<ValueType vt> : GCNPat <
                  (as_i32timm $row_mask), (as_i32timm $bank_mask),
                  (as_i1timm $bound_ctrl))
 >;
-
-def : UpdateDPPPat<i32>;
-def : UpdateDPPPat<f32>;
-def : UpdateDPPPat<v2i16>;
-def : UpdateDPPPat<v2f16>;
+}
 
 } // End OtherPredicates = [isGFX8Plus]
 

@@ -1550,7 +1550,7 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   for (const SectionRef &Section : Obj->sections()) {
     StringRef Contents = cantFail(Section.getContents());
     StringRef Name = cantFail(Section.getName());
-    if (Name.equals(".debug_types"))
+    if (Name == ".debug_types")
       BC.registerOrUpdateNoteSection(".debug_types", copyByteArray(Contents),
                                      Contents.size());
   }
@@ -1633,10 +1633,10 @@ void DWARFRewriter::finalizeDebugSections(
   for (const SectionRef &Secs : Obj->sections()) {
     StringRef Contents = cantFail(Secs.getContents());
     StringRef Name = cantFail(Secs.getName());
-    if (Name.equals(".debug_abbrev")) {
+    if (Name == ".debug_abbrev") {
       BC.registerOrUpdateNoteSection(".debug_abbrev", copyByteArray(Contents),
                                      Contents.size());
-    } else if (Name.equals(".debug_info")) {
+    } else if (Name == ".debug_info") {
       BC.registerOrUpdateNoteSection(".debug_info", copyByteArray(Contents),
                                      Contents.size());
     }
@@ -1771,7 +1771,7 @@ std::optional<StringRef> updateDebugData(
   };
   switch (SectionIter->second.second) {
   default: {
-    if (!SectionName.equals("debug_str.dwo"))
+    if (SectionName != "debug_str.dwo")
       errs() << "BOLT-WARNING: unsupported debug section: " << SectionName
              << "\n";
     return SectionContents;
@@ -1959,7 +1959,7 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
       continue;
     }
 
-    if (SectionName.equals("debug_str.dwo")) {
+    if (SectionName == "debug_str.dwo") {
       CurStrSection = OutData;
     } else {
       // Since handleDebugDataPatching returned true, we already know this is

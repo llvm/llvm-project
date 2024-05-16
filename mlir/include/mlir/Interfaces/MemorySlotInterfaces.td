@@ -68,8 +68,12 @@ def PromotableAllocationOpInterface
         Hook triggered once the promotion of a slot is complete. This can
         also clean up the created default value if necessary.
         This will only be called for slots declared by this operation.
+
+        Must return a new promotable allocation op if this operation produced
+        multiple promotable slots, nullopt otherwise.
       }],
-      "void", "handlePromotionComplete",
+      "::std::optional<::mlir::PromotableAllocationOpInterface>",
+        "handlePromotionComplete",
       (ins
         "const ::mlir::MemorySlot &":$slot, 
         "::mlir::Value":$defaultValue,

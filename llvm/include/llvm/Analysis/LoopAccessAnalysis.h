@@ -181,8 +181,10 @@ public:
                const SmallVectorImpl<Instruction *> &Instrs) const;
   };
 
-  MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L)
-      : PSE(PSE), InnermostLoop(L) {}
+  MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
+                   unsigned MaxTargetVectorWidthInBits)
+      : PSE(PSE), InnermostLoop(L),
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -313,6 +315,12 @@ private:
   /// Memory dependences collected during the analysis.  Only valid if
   /// RecordDependences is true.
   SmallVector<Dependence, 8> Dependences;
+
+  /// The maximum width of a target's vector registers multiplied by 2 to also
+  /// roughly account for additional interleaving. Is used to decide if a
+  /// backwards dependence with non-constant stride should be classified as
+  /// backwards-vectorizable or unknown (triggering a runtime check).
+  unsigned MaxTargetVectorWidthInBits = 0;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -575,8 +583,9 @@ private:
 /// PSE must be emitted in order for the results of this analysis to be valid.
 class LoopAccessInfo {
 public:
-  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
-                 AAResults *AA, DominatorTree *DT, LoopInfo *LI);
+  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
+                 const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
+                 LoopInfo *LI);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -799,12 +808,14 @@ class LoopAccessInfoManager {
   AAResults &AA;
   DominatorTree &DT;
   LoopInfo &LI;
+  TargetTransformInfo *TTI;
   const TargetLibraryInfo *TLI = nullptr;
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
-                        LoopInfo &LI, const TargetLibraryInfo *TLI)
-      : SE(SE), AA(AA), DT(DT), LI(LI), TLI(TLI) {}
+                        LoopInfo &LI, TargetTransformInfo *TTI,
+                        const TargetLibraryInfo *TLI)
+      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI) {}
 
   const LoopAccessInfo &getInfo(Loop &L);
 

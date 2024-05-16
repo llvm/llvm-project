@@ -616,6 +616,9 @@
 // ================== Check Armv9.5-A Pointer Authentication Enhancements(PAuth_LR).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv9.5-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR-OFF,CHECK-BRANCH-PROTECTION-NO-PC %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv9.5-a+pauth-lr -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv9.5-a+nopauth-lr -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR-OFF,CHECK-BRANCH-PROTECTION-NO-PC %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-LR %s
@@ -636,6 +639,7 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc+b-key -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC-BKEY %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc+leaf -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC-LEAF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth-lr -mbranch-protection=pac-ret+pc+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-LR,CHECK-BRANCH-PROTECTION-PC-LEAF-BKEY %s
+// CHECK-BRANCH-PROTECTION-NO-PC:        #define __ARM_FEATURE_PAC_DEFAULT 1
 // CHECK-BRANCH-PROTECTION-PC:           #define __ARM_FEATURE_PAC_DEFAULT 9
 // CHECK-BRANCH-PROTECTION-PC-BKEY:      #define __ARM_FEATURE_PAC_DEFAULT 10
 // CHECK-BRANCH-PROTECTION-PC-LEAF:      #define __ARM_FEATURE_PAC_DEFAULT 13

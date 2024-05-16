@@ -174,7 +174,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       ArgExprs.push_back(ParseIdentifierLoc());
 
       // Add numeric_constant for fix-it.
-      if (SpaceStr.equals("space") && Tok.is(tok::numeric_constant))
+      if (SpaceStr == "space" && Tok.is(tok::numeric_constant))
         fixSeparateAttrArgAndNumber(SpaceStr, SpaceLoc, Tok, ArgExprs, *this,
                                     Actions.Context, PP);
     }

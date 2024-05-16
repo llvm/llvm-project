@@ -107,5 +107,28 @@ void foo() {
 // CHECK: #pragma acc parallel wait(devnum: i : queues: *iPtr, i)
 #pragma acc parallel wait(devnum:i:queues:*iPtr, i)
   while(true);
+
+  bool SomeB;
+  struct SomeStruct{} SomeStructImpl;
+
+//#pragma acc parallel dtype(SomeB)
+#pragma acc parallel dtype(SomeB)
+  while(true);
+
+//#pragma acc parallel device_type(SomeStruct)
+#pragma acc parallel device_type(SomeStruct)
+  while(true);
+
+//#pragma acc parallel device_type(int)
+#pragma acc parallel device_type(int)
+  while(true);
+
+//#pragma acc parallel dtype(bool)
+#pragma acc parallel dtype(bool)
+  while(true);
+
+//#pragma acc parallel device_type (SomeStructImpl)
+#pragma acc parallel device_type (SomeStructImpl)
+  while(true);
 }
 
