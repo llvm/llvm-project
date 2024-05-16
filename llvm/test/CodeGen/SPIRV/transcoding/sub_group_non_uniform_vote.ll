@@ -5,7 +5,7 @@
 ;; }
 ;;
 ;; kernel void testSubGroupNonUniformAll(global int* dst) {
-;; 	dst[0] = sub_group_non_uniform_all(0); 
+;; 	dst[0] = sub_group_non_uniform_all(0);
 ;; }
 ;;
 ;; kernel void testSubGroupNonUniformAny(global int* dst) {
@@ -62,6 +62,7 @@
 ;; }
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG: OpCapability GroupNonUniformVote
 

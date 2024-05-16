@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV:     %[[#VOID_TY:]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: %[[#]] = OpTypeImage %[[#VOID_TY]] 2D 0 0 0 0 Unknown ReadOnly

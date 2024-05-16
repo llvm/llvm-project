@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
 
 ; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] s_abs
 ; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] s_abs
