@@ -58281,19 +58281,19 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   } else if (Constraint.size() == 2 && Constraint[0] == 'j') {
     switch (Constraint[1]) {
-      default:
-        break;
-      case 'R':
-        if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8RegClass);
-        if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16RegClass);
-        if (VT == MVT::i32 || VT == MVT::f32 ||
-            (!VT.isVector() && !Subtarget.is64Bit()))
-          return std::make_pair(0U, &X86::GR32RegClass);
-        if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64RegClass);
-        break;
+    default:
+      break;
+    case 'R':
+      if (VT == MVT::i8 || VT == MVT::i1)
+        return std::make_pair(0U, &X86::GR8RegClass);
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &X86::GR16RegClass);
+      if (VT == MVT::i32 || VT == MVT::f32 ||
+          (!VT.isVector() && !Subtarget.is64Bit()))
+        return std::make_pair(0U, &X86::GR32RegClass);
+      if (VT != MVT::f80 && !VT.isVector())
+        return std::make_pair(0U, &X86::GR64RegClass);
+      break;
     }
   }
 
