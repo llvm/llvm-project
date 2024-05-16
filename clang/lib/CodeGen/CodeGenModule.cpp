@@ -335,14 +335,13 @@ CodeGenModule::CodeGenModule(ASTContext &C,
                              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                              const HeaderSearchOptions &HSO,
                              const PreprocessorOptions &PPO,
-                             const CodeGenOptions &CGO, llvm::Module &M,
-                             DiagnosticsEngine &diags,
+                             const CodeGenOptions &CGO, const TargetInfo &CGTI,
+                             llvm::Module &M, DiagnosticsEngine &diags,
                              CoverageSourceInfo *CoverageInfo)
     : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
-      Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
-      VMContext(M.getContext()), Types(*this), VTables(*this),
-      SanitizerMD(new SanitizerMetadata(*this)) {
+      Target(CGTI), ABI(createCXXABI(*this)), VMContext(M.getContext()),
+      Types(*this), VTables(*this), SanitizerMD(new SanitizerMetadata(*this)) {
 
   // Initialize the type cache.
   llvm::LLVMContext &LLVMContext = M.getContext();
@@ -355,20 +354,18 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   BFloatTy = llvm::Type::getBFloatTy(LLVMContext);
   FloatTy = llvm::Type::getFloatTy(LLVMContext);
   DoubleTy = llvm::Type::getDoubleTy(LLVMContext);
-  PointerWidthInBits = C.getTargetInfo().getPointerWidth(LangAS::Default);
+  PointerWidthInBits = Target.getPointerWidth(LangAS::Default);
   PointerAlignInBytes =
-      C.toCharUnitsFromBits(C.getTargetInfo().getPointerAlign(LangAS::Default))
+      C.toCharUnitsFromBits(Target.getPointerAlign(LangAS::Default))
           .getQuantity();
   SizeSizeInBytes =
-    C.toCharUnitsFromBits(C.getTargetInfo().getMaxPointerWidth()).getQuantity();
-  IntAlignInBytes =
-    C.toCharUnitsFromBits(C.getTargetInfo().getIntAlign()).getQuantity();
-  CharTy =
-    llvm::IntegerType::get(LLVMContext, C.getTargetInfo().getCharWidth());
-  IntTy = llvm::IntegerType::get(LLVMContext, C.getTargetInfo().getIntWidth());
-  IntPtrTy = llvm::IntegerType::get(LLVMContext,
-    C.getTargetInfo().getMaxPointerWidth());
-  Int8PtrTy = llvm::PointerType::get(LLVMContext, 0);
+      C.toCharUnitsFromBits(Target.getMaxPointerWidth()).getQuantity();
+  IntAlignInBytes = C.toCharUnitsFromBits(Target.getIntAlign()).getQuantity();
+  CharTy = llvm::IntegerType::get(LLVMContext, Target.getCharWidth());
+  IntTy = llvm::IntegerType::get(LLVMContext, Target.getIntWidth());
+  IntPtrTy = llvm::IntegerType::get(LLVMContext, Target.getMaxPointerWidth());
+  Int8PtrTy = Int8Ty->getPointerTo(0);
+  Int8PtrPtrTy = Int8PtrTy->getPointerTo(0);
   const llvm::DataLayout &DL = M.getDataLayout();
   AllocaInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
