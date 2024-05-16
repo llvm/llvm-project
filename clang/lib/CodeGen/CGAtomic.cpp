@@ -2068,7 +2068,7 @@ void CodeGenFunction::EmitAtomicInit(Expr *init, LValue dest) {
 
     // Evaluate the expression directly into the destination.
     AggValueSlot slot = AggValueSlot::forLValue(
-        dest, *this, AggValueSlot::IsNotDestructed,
+        dest, AggValueSlot::IsNotDestructed,
         AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
         AggValueSlot::DoesNotOverlap,
         Zeroed ? AggValueSlot::IsZeroed : AggValueSlot::IsNotZeroed);

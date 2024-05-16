@@ -500,7 +500,7 @@ public:
     return R;
   }
 
-  RValue asAggregateRValue(CodeGenFunction &CGF) const {
+  RValue asAggregateRValue() const {
     return RValue::getAggregate(getAddress(), isVolatileQualified());
   }
 };
@@ -604,7 +604,7 @@ public:
   }
 
   static AggValueSlot
-  forLValue(const LValue &LV, CodeGenFunction &CGF, IsDestructed_t isDestructed,
+  forLValue(const LValue &LV, IsDestructed_t isDestructed,
             NeedsGCBarriers_t needsGC, IsAliased_t isAliased,
             Overlap_t mayOverlap, IsZeroed_t isZeroed = IsNotZeroed,
             IsSanitizerChecked_t isChecked = IsNotSanitizerChecked) {
