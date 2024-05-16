@@ -148,7 +148,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   // of a corresponding module body).
   // But in practice, compilers use declaration attribute with a module in cases
   // where module was defined in another source file (only being used in this
-  // one). The hasInitializationBody() seems to provide the right information
+  // one). The isInitialized() seems to provide the right information
   // but inverted. It is true where module is actually defined but false where
   // it is used.
   // FIXME: Currently we don't have the line number on which a module was
@@ -159,7 +159,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
     return;
 
   scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
-                                line - 1, !globalOp.hasInitializationBody());
+                                line - 1, !globalOp.isInitialized());
 
   auto diType = typeGen.convertType(globalOp.getType(), fileAttr, scope,
                                     globalOp.getLoc());
@@ -167,7 +167,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       context, scope, mlir::StringAttr::get(context, result.second.name),
       mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
       diType, /*isLocalToUnit*/ false,
-      /*isDefinition*/ globalOp.hasInitializationBody(), /* alignInBits*/ 0);
+      /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
   globalOp->setLoc(builder.getFusedLoc({globalOp->getLoc()}, gvAttr));
 }
 
