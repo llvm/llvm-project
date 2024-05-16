@@ -21,8 +21,8 @@ bool operator==(const RISCVISAUtils::ExtensionVersion &A,
 }
 
 TEST(ParseNormalizedArchString, RejectsInvalidChars) {
-  for (StringRef Input :
-       {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0", "rv32e2.0"}) {
+  for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0",
+                          "rv32e2.0", "rva20u64+zbc"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "string may only contain [a-z0-9_]");
@@ -665,6 +665,65 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcf' is only supported for 'rv32'");
   }
+}
+
+TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
+  for (StringRef Input : {"rvi23u99", "rvz23u64", "rva99u32"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+              "profile name");
+  }
+}
+
+TEST(ParseArchString, RejectsProfilesWithUnseparatedExtraExtensions) {
+  for (StringRef Input : {"rvi20u32m", "rvi20u64c"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "additional extensions must be after separator '_'");
+  }
+}
+
+TEST(ParseArchString, AcceptsBareProfileNames) {
+  auto MaybeRVA20U64 = RISCVISAInfo::parseArchString("rva20u64", true);
+  ASSERT_THAT_EXPECTED(MaybeRVA20U64, Succeeded());
+  const auto &Exts = (*MaybeRVA20U64)->getExtensions();
+  EXPECT_EQ(Exts.size(), 13UL);
+  EXPECT_EQ(Exts.count("i"), 1U);
+  EXPECT_EQ(Exts.count("m"), 1U);
+  EXPECT_EQ(Exts.count("f"), 1U);
+  EXPECT_EQ(Exts.count("a"), 1U);
+  EXPECT_EQ(Exts.count("d"), 1U);
+  EXPECT_EQ(Exts.count("c"), 1U);
+  EXPECT_EQ(Exts.count("za128rs"), 1U);
+  EXPECT_EQ(Exts.count("zicntr"), 1U);
+  EXPECT_EQ(Exts.count("ziccif"), 1U);
+  EXPECT_EQ(Exts.count("zicsr"), 1U);
+  EXPECT_EQ(Exts.count("ziccrse"), 1U);
+  EXPECT_EQ(Exts.count("ziccamoa"), 1U);
+  EXPECT_EQ(Exts.count("zicclsm"), 1U);
+
+  auto MaybeRVA23U64 = RISCVISAInfo::parseArchString("rva23u64", true);
+  ASSERT_THAT_EXPECTED(MaybeRVA23U64, Succeeded());
+  EXPECT_GT((*MaybeRVA23U64)->getExtensions().size(), 13UL);
+}
+
+TEST(ParseArchSTring, AcceptsProfileNamesWithSeparatedAdditionalExtensions) {
+  auto MaybeRVI20U64 = RISCVISAInfo::parseArchString("rvi20u64_m_zba", true);
+  ASSERT_THAT_EXPECTED(MaybeRVI20U64, Succeeded());
+  const auto &Exts = (*MaybeRVI20U64)->getExtensions();
+  EXPECT_EQ(Exts.size(), 3UL);
+  EXPECT_EQ(Exts.count("i"), 1U);
+  EXPECT_EQ(Exts.count("m"), 1U);
+  EXPECT_EQ(Exts.count("zba"), 1U);
+}
+
+TEST(ParseArchString,
+     RejectsProfilesWithAdditionalExtensionsGivenAlreadyInProfile) {
+  // This test was added to document the current behaviour. Discussion isn't
+  // believed to have taken place about if this is desirable or not.
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rva20u64_zicntr", true).takeError()),
+      "duplicated standard user-level extension 'zicntr'");
 }
 
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
