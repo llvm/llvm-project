@@ -3050,6 +3050,16 @@ class AMDGPUPermuteAuxDataTwoDest :
 def int_amdgcn_permute_pair_2src_interleave_b64 : AMDGPUPermuteAuxDataTwoDest;
 def int_amdgcn_permute_pack_tensor_2src_b64 : AMDGPUPermuteAuxDataTwoDest;
 
+class AMDGPUDiscard : DefaultAttrsIntrinsic<
+  [],
+  [llvm_anyptr_ty, // vaddr,
+   llvm_i32_ty],   // cachepolicy
+  [IntrWriteMem, ImmArg<ArgIndex<1>>]
+>;
+
+foreach size = ["b32", "b128", "b1024"] in
+  def int_amdgcn_discard_#size : AMDGPUDiscard;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
