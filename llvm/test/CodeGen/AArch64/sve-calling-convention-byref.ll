@@ -74,6 +74,37 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_many_svepred_arg(<
 
 ; Test that arg2 is passed through x0, i.e., x0 = &%arg2; and return values are loaded from x0:
 ;     P0 = ldr [x0]
+define aarch64_sve_vector_pcs <vscale x 16 x i1> @callee_with_svepred_arg_2d_4x_1x([4 x <vscale x 16 x i1>] %arg1, [1 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: callee_with_svepred_arg_2d_4x_1x
+; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
+; CHECK:    [[PRED0:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    $p0 = COPY [[PRED0]]
+; CHECK:    RET_ReallyLR implicit $p0
+  %res = extractvalue [1 x <vscale x 16 x i1>] %arg2, 0
+  ret <vscale x 16 x i1> %res
+}
+
+; Test that arg1 is stored to the stack from p0; and the stack location is passed throuch x0 to setup the call:
+;     str P0, [stack_loc_for_args]
+;     x0 = stack_loc_for_args
+define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_svepred_arg_2d_4x_1x([1 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: caller_with_svepred_arg_2d_4x_1x
+; CHECK: stack:
+; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 2, alignment: 2,
+; CHECK-NEXT:     stack-id: scalable-vector,
+; CHECK:    [[PRED0:%[0-9]+]]:ppr = COPY $p0
+; CHECK:    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
+; CHECK:    [[STACK:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
+; CHECK:    $x0 = COPY [[STACK]]
+; CHECK:    BL @callee_with_svepred_arg_2d_4x_1x, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0
+; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  %res = call <vscale x 16 x i1> @callee_with_svepred_arg_2d_4x_1x([4 x <vscale x 16 x i1>] %arg2, [1 x <vscale x 16 x i1>] %arg1)
+  ret <vscale x 16 x i1> %res
+}
+
+; Test that arg2 is passed through x0, i.e., x0 = &%arg2; and return values are loaded from x0:
+;     P0 = ldr [x0]
 ;     P1 = ldr [x0 +   sizeof(Px)]
 ;     P2 = ldr [x0 + 2*sizeof(Px)]
 ;     P3 = ldr [x0 + 3*sizeof(Px)]
