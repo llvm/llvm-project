@@ -96,7 +96,7 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 // instruction in it takes an address of any basic block, because instruction
 // can only take an address of basic block located in the same function.
 // Set `RefLocalLinkageIFunc` to true if the analyzed value references a
-// local-linkage ifunc;
+// local-linkage ifunc.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                          SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited,
