@@ -4274,8 +4274,6 @@ OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getDestType(), paddingValue))
     return reshapedSource;
-  if (getSource().getDefiningOp<tensor::EmptyOp>())
-    return getDest();
   return {};
 }
 
@@ -4474,8 +4472,6 @@ OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getResult().getType()))
     return reshapedSource;
-  if (getSource().getDefiningOp<tensor::EmptyOp>())
-    return getDest();
   return {};
 }
 
