@@ -54,6 +54,7 @@ namespace plugin {
 struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
+struct RecordReplayTy;
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
@@ -958,7 +959,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr) {}
+      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr),
+        RecordReplay(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -1025,6 +1027,12 @@ struct GenericPluginTy {
   RPCServerTy &getRPCServer() {
     assert(RPCServer && "RPC server not initialized");
     return *RPCServer;
+  }
+
+  /// Get a reference to the record and replay interface for the plugin.
+  RecordReplayTy &getRecordReplay() {
+    assert(RecordReplay && "RR interface not initialized");
+    return *RecordReplay;
   }
 
   /// Initialize a device within the plugin.
@@ -1204,6 +1212,9 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
+
+  /// The interface between the plugin and the GPU for host services.
+  RecordReplayTy *RecordReplay;
 };
 
 namespace Plugin {
