@@ -1435,8 +1435,7 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
-Value *InstCombinerImpl::simplifyReductionOperand(Value *Arg,
-                                                  bool CanReorderLanes) {
+static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
   if (!CanReorderLanes)
     return nullptr;
 
