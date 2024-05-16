@@ -2134,12 +2134,19 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   }
 
   // pow(10.0, x) -> exp10(x)
-  // TODO: There is no exp10() intrinsic yet, but some day there shall be one.
   if (match(Base, m_SpecificFP(10.0)) &&
-      hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l))
+      hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l)) {
+
+    if (Pow->doesNotAccessMemory()) {
+      CallInst *NewExp10 =
+          B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10");
+      return copyFlags(*Pow, NewExp10);
+    }
+
     return copyFlags(*Pow, emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10,
                                                 LibFunc_exp10f, LibFunc_exp10l,
                                                 B, NoAttrs));
+  }
 
   // pow(x, y) -> exp2(log2(x) * y)
   if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && BaseF->isFiniteNonZero() &&
