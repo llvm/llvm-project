@@ -960,6 +960,7 @@ protected:
   bool m_initialized_language_options = false;
   bool m_initialized_search_path_options = false;
   bool m_initialized_clang_importer_options = false;
+  bool m_has_explicit_modules = false;
   mutable bool m_reported_fatal_error = false;
   mutable bool m_logged_fatal_error = false;
 
