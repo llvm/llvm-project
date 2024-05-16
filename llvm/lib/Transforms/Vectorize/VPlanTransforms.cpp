@@ -1463,8 +1463,6 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
-        if (!MemR)
-          continue;
         VPValue *OrigMask = MemR->getMask();
         assert(OrigMask && "Unmasked widen memory recipe when folding tail");
         VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
