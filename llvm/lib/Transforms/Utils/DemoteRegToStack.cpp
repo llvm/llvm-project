@@ -51,11 +51,11 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
       (void)BB;
     }
   } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&I)) {
-    for (int i = 0; i < CBI->getNumSuccessors(); i++) {
+    for (unsigned i = 0; i < CBI->getNumSuccessors(); i++) {
       auto *Succ = CBI->getSuccessor(i);
       if (!Succ->getSinglePredecessor()) {
         assert(isCriticalEdge(II, i) && "Expected a critical edge!");
-        BasicBlock *BB = SplitCriticalEdge(II, i);
+        [[maybe_unused]] BasicBlock *BB = SplitCriticalEdge(II, i);
         assert(BB && "Unable to split critical edge.");
       }
     }
