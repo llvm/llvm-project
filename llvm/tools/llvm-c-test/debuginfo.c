@@ -215,7 +215,7 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
 
   LLVMDIBuilderFinalize(DIB);
 
-  // In the new debug mode, debug records get attached to instructions.
+  // Using the new debug format, debug records get attached to instructions.
   // Insert a `br` and `ret` now to absorb the debug records which are
   // currently "trailing", meaning that they're associated with a block
   // but no particular instruction, which is only valid as a transient state.
