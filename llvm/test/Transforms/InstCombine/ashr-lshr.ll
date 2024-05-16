@@ -627,6 +627,17 @@ define i32 @lshr_mul_times_3_div_2_exact(i32 %x) {
   ret i32 %lshr
 }
 
+define i32 @reduce_shift(i32 %x) {
+; CHECK-LABEL: @reduce_shift(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 12
+  %shr = ashr i32 %mul, 4
+  ret i32 %shr
+}
+
 ; Negative test
 
 define i32 @lshr_mul_times_3_div_2_no_flags(i32 %0) {
@@ -638,6 +649,17 @@ define i32 @lshr_mul_times_3_div_2_no_flags(i32 %0) {
   %mul = mul i32 %0, 3
   %lshr = lshr i32 %mul, 1
   ret i32 %lshr
+}
+
+define i32 @reduce_shift_no_nsw(i32 %x) {
+; CHECK-LABEL: @reduce_shift_no_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 12
+  %shr = ashr i32 %mul, 4
+  ret i32 %shr
 }
 
 ; Negative test
@@ -863,3 +885,24 @@ define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
 }
 
 declare void @use(i32)
+define i32 @reduce_shift_wrong_mul(i32 %x) {
+; CHECK-LABEL: @reduce_shift_wrong_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 11
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 11
+  %shr = ashr i32 %mul, 4
+  ret i32 %shr
+}
+
+define i32 @reduce_shift_exact(i32 %x) {
+; CHECK-LABEL: @reduce_shift_exact(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 12
+  %shr = ashr exact i32 %mul, 4
+  ret i32 %shr
+}

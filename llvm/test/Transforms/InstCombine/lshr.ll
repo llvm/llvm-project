@@ -1523,3 +1523,51 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
   %lshr = lshr <2 x i8> %add, <i8 1, i8 2>
   ret <2 x i8> %lshr
 }
+
+define i32 @reduce_shift(i32 %x) {
+; CHECK-LABEL: @reduce_shift(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 12
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+; Negative test
+
+define i32 @reduce_shift_no_nuw(i32 %x) {
+; CHECK-LABEL: @reduce_shift_no_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 12
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+; Negative test
+
+define i32 @reduce_shift_wrong_mul(i32 %x) {
+; CHECK-LABEL: @reduce_shift_wrong_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 11
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 11
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+define i32 @reduce_shift_exact(i32 %x) {
+; CHECK-LABEL: @reduce_shift_exact(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 12
+  %shr = lshr exact i32 %mul, 4
+  ret i32 %shr
+}
