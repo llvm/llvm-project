@@ -1839,7 +1839,7 @@ bool CombineRuleBuilder::emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
   for (auto &Pat : ApplyPats) {
     auto *CXXPat = cast<CXXPattern>(Pat.second.get());
     CodeExpander Expander(CXXPat->getRawCode(), CE, RuleDef.getLoc(),
-                          /*ShowExpansions*/ false);
+                          /*ShowExpansions=*/ false);
     OS << LS;
     Expander.emit(OS);
   }
