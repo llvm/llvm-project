@@ -1529,6 +1529,317 @@ define amdgpu_kernel void @bfloat_kernel_preload_arg(ptr addrspace(1) %out, bflo
   ret void
 }
 
+define amdgpu_kernel void @v2bfloat_kernel_preload_arg(ptr addrspace(1) %out, <2 x bfloat> %in) {
+; GFX940-NO-PRELOAD-LABEL: v2bfloat_kernel_preload_arg:
+; GFX940-NO-PRELOAD:       ; %bb.0:
+; GFX940-NO-PRELOAD-NEXT:    s_load_dword s4, s[0:1], 0x8
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-2-LABEL: v2bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-8-LABEL: v2bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    s_endpgm
+;
+; GFX90a-NO-PRELOAD-LABEL: v2bfloat_kernel_preload_arg:
+; GFX90a-NO-PRELOAD:       ; %bb.0:
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s2, s[4:5], 0x8
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s2
+; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-2-LABEL: v2bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s8
+; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX90a-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-8-LABEL: v2bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s8
+; GFX90a-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX90a-PRELOAD-8-NEXT:    s_endpgm
+  store <2 x bfloat> %in, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v3bfloat_kernel_preload_arg(ptr addrspace(1) %out, <3 x bfloat> %in) {
+; GFX940-NO-PRELOAD-LABEL: v3bfloat_kernel_preload_arg:
+; GFX940-NO-PRELOAD:       ; %bb.0:
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
+; GFX940-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1] offset:4 sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-2-LABEL: v3bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s5
+; GFX940-PRELOAD-2-NEXT:    global_store_short v0, v1, s[2:3] offset:4 sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-8-LABEL: v3bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s5
+; GFX940-PRELOAD-8-NEXT:    global_store_short v0, v1, s[2:3] offset:4 sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s4
+; GFX940-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    s_endpgm
+;
+; GFX90a-NO-PRELOAD-LABEL: v3bfloat_kernel_preload_arg:
+; GFX90a-NO-PRELOAD:       ; %bb.0:
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s3
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
+; GFX90a-NO-PRELOAD-NEXT:    global_store_short v0, v1, s[0:1] offset:4
+; GFX90a-NO-PRELOAD-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-2-LABEL: v3bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s9
+; GFX90a-PRELOAD-2-NEXT:    global_store_short v0, v1, s[6:7] offset:4
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s8
+; GFX90a-PRELOAD-2-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX90a-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-8-LABEL: v3bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s9
+; GFX90a-PRELOAD-8-NEXT:    global_store_short v0, v1, s[6:7] offset:4
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s8
+; GFX90a-PRELOAD-8-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX90a-PRELOAD-8-NEXT:    s_endpgm
+  store <3 x bfloat> %in, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v6bfloat_kernel_preload_arg(ptr addrspace(1) %out, <6 x bfloat> %in) {
+; GFX940-NO-PRELOAD-LABEL: v6bfloat_kernel_preload_arg:
+; GFX940-NO-PRELOAD:       ; %bb.0:
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
+; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s4
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s5
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s6
+; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-2-LABEL: v6bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s6
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s7
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s8
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
+; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-8-LABEL: v6bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s8
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
+; GFX940-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    s_endpgm
+;
+; GFX90a-NO-PRELOAD-LABEL: v6bfloat_kernel_preload_arg:
+; GFX90a-NO-PRELOAD:       ; %bb.0:
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
+; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s0
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s1
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
+; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-2-LABEL: v6bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s10
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s11
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s12
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
+; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX90a-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-8-LABEL: v6bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s10
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s11
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s12
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
+; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX90a-PRELOAD-8-NEXT:    s_endpgm
+  store <6 x bfloat> %in, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) %out, half %in, <7 x bfloat> %in2, ptr addrspace(1) %out2) {
+; GFX940-NO-PRELOAD-LABEL: half_v7bfloat_kernel_preload_arg:
+; GFX940-NO-PRELOAD:       ; %bb.0:
+; GFX940-NO-PRELOAD-NEXT:    s_load_dword s10, s[0:1], 0x8
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x10
+; GFX940-NO-PRELOAD-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x20
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
+; GFX940-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s10
+; GFX940-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[2:3] sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s7
+; GFX940-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[8:9] offset:12 sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s6
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s4
+; GFX940-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s5
+; GFX940-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9] sc0 sc1
+; GFX940-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-2-LABEL: half_v7bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-2-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x10
+; GFX940-PRELOAD-2-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x20
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s4
+; GFX940-PRELOAD-2-NEXT:    global_store_short v3, v0, s[2:3] sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s11
+; GFX940-PRELOAD-2-NEXT:    global_store_short v3, v0, s[6:7] offset:12 sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s10
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s8
+; GFX940-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s9
+; GFX940-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7] sc0 sc1
+; GFX940-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX940-PRELOAD-8-LABEL: half_v7bfloat_kernel_preload_arg:
+; GFX940-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX940-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX940-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX940-PRELOAD-8-NEXT:    global_store_short v3, v0, s[2:3] sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s9
+; GFX940-PRELOAD-8-NEXT:    global_store_short v3, v0, s[10:11] offset:12 sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s8
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX940-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX940-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[10:11] sc0 sc1
+; GFX940-PRELOAD-8-NEXT:    s_endpgm
+;
+; GFX90a-NO-PRELOAD-LABEL: half_v7bfloat_kernel_preload_arg:
+; GFX90a-NO-PRELOAD:       ; %bb.0:
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dword s10, s[4:5], 0x8
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
+; GFX90a-NO-PRELOAD-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x20
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v3, 0
+; GFX90a-NO-PRELOAD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s10
+; GFX90a-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[6:7]
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s3
+; GFX90a-NO-PRELOAD-NEXT:    global_store_short v3, v0, s[8:9] offset:12
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v2, s2
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v0, s0
+; GFX90a-NO-PRELOAD-NEXT:    v_mov_b32_e32 v1, s1
+; GFX90a-NO-PRELOAD-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
+; GFX90a-NO-PRELOAD-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-2-LABEL: half_v7bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-2:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-2-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-2-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
+; GFX90a-PRELOAD-2-NEXT:    s_load_dwordx2 s[10:11], s[4:5], 0x20
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v3, 0
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s8
+; GFX90a-PRELOAD-2-NEXT:    global_store_short v3, v0, s[6:7]
+; GFX90a-PRELOAD-2-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s3
+; GFX90a-PRELOAD-2-NEXT:    global_store_short v3, v0, s[10:11] offset:12
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v2, s2
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v0, s0
+; GFX90a-PRELOAD-2-NEXT:    v_mov_b32_e32 v1, s1
+; GFX90a-PRELOAD-2-NEXT:    global_store_dwordx3 v3, v[0:2], s[10:11]
+; GFX90a-PRELOAD-2-NEXT:    s_endpgm
+;
+; GFX90a-PRELOAD-8-LABEL: half_v7bfloat_kernel_preload_arg:
+; GFX90a-PRELOAD-8:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
+; GFX90a-PRELOAD-8-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
+; GFX90a-PRELOAD-8-NEXT:  ; %bb.0:
+; GFX90a-PRELOAD-8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v3, 0
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s8
+; GFX90a-PRELOAD-8-NEXT:    global_store_short v3, v0, s[6:7]
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s13
+; GFX90a-PRELOAD-8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90a-PRELOAD-8-NEXT:    global_store_short v3, v0, s[0:1] offset:12
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v2, s12
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v0, s10
+; GFX90a-PRELOAD-8-NEXT:    v_mov_b32_e32 v1, s11
+; GFX90a-PRELOAD-8-NEXT:    global_store_dwordx3 v3, v[0:2], s[0:1]
+; GFX90a-PRELOAD-8-NEXT:    s_endpgm
+  store half %in, ptr addrspace(1) %out
+  store <7 x bfloat> %in2, ptr addrspace(1) %out2
+  ret void
+}
+
 define amdgpu_kernel void @i1_kernel_preload_arg(ptr addrspace(1) %out, i1 %in) {
 ; GFX940-NO-PRELOAD-LABEL: i1_kernel_preload_arg:
 ; GFX940-NO-PRELOAD:       ; %bb.0:
