@@ -210,8 +210,11 @@ void AddDebugInfoPass::runOnOperation() {
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel);
 
-  for (auto globalOp : module.getOps<fir::GlobalOp>())
-    handleGlobalOp(globalOp, fileAttr, cuAttr);
+  if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
+    // Process 'GlobalOp' only if full debug info is requested.
+    for (auto globalOp : module.getOps<fir::GlobalOp>())
+      handleGlobalOp(globalOp, fileAttr, cuAttr);
+  }
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     mlir::Location l = funcOp->getLoc();
