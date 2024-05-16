@@ -222,12 +222,12 @@ define i8 @matches_has_sret() nounwind {
 }
 
 %TSRet = type { i64, i64 }
-define void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind {
-; CHECK-LABEL:    .def    $ientry_thunk$cdecl$m16$v;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$v
+define void @has_aligned_sret(ptr align 32 sret(%TSRet), i32) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$m16$i8;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$i8
 ; CHECK:          // %bb.0:
-; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
-; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     stp     q6, q7, [sp, #-192]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
 ; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
 ; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
@@ -236,17 +236,25 @@ define void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind {
 ; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
 ; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
-; CHECK-NEXT:     stp     x29, x30, [sp, #160]            // 16-byte Folded Spill
-; CHECK-NEXT:     .seh_save_fplr  160
-; CHECK-NEXT:     add     x29, sp, #160
-; CHECK-NEXT:     .seh_add_fp     160
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     add     x29, sp, #168
+; CHECK-NEXT:     .seh_add_fp     168
 ; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     mov     x19, x0
+; CHECK-NEXT:     mov     x8, x0
+; CHECK-NEXT:     mov     x0, x1
 ; CHECK-NEXT:     blr     x9
 ; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
 ; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov     x8, x19
 ; CHECK-NEXT:     .seh_startepilogue
-; CHECK-NEXT:     ldp     x29, x30, [sp, #160]            // 16-byte Folded Reload
-; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
 ; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
@@ -255,8 +263,8 @@ define void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind {
 ; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
 ; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
-; CHECK-NEXT:     ldp     q6, q7, [sp], #176              // 32-byte Folded Reload
-; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     ldp     q6, q7, [sp], #192              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
 ; CHECK-NEXT:     .seh_endepilogue
 ; CHECK-NEXT:     br      x0
 ; CHECK-NEXT:     .seh_endfunclet
@@ -457,7 +465,7 @@ define %T2 @simple_struct(%T1 %0, %T2 %1, %T3, %T4) nounwind {
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$v
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_aligned_sret"
-; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m16$v
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m16$i8
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#small_array"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m2$m2F8
