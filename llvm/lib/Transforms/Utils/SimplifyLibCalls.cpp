@@ -1855,14 +1855,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
 // Replace a libcall \p CI with a call to intrinsic \p IID
 static Value *replaceUnaryCall(CallInst *CI, IRBuilderBase &B,
                                Intrinsic::ID IID) {
-  // Propagate fast-math flags from the existing call to the new call.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(CI->getFastMathFlags());
-
-  Module *M = CI->getModule();
-  Value *V = CI->getArgOperand(0);
-  Function *F = Intrinsic::getDeclaration(M, IID, CI->getType());
-  CallInst *NewCall = B.CreateCall(F, V);
+  CallInst *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
   NewCall->takeName(CI);
   return copyFlags(*CI, NewCall);
 }
@@ -1987,10 +1980,9 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
   Value *RealReal = B.CreateFMul(Real, Real);
   Value *ImagImag = B.CreateFMul(Imag, Imag);
 
-  Function *FSqrt = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::sqrt,
-                                              CI->getType());
-  return copyFlags(
-      *CI, B.CreateCall(FSqrt, B.CreateFAdd(RealReal, ImagImag), "cabs"));
+  return copyFlags(*CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
+                                               B.CreateFAdd(RealReal, ImagImag),
+                                               nullptr, "cabs"));
 }
 
 // Return a properly extended integer (DstWidth bits wide) if the operation is
@@ -2016,7 +2008,6 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
 Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   Module *M = Pow->getModule();
   Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
-  Module *Mod = Pow->getModule();
   Type *Ty = Pow->getType();
   bool Ignored;
 
@@ -2073,11 +2064,10 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
       // Create new exp{,2}() with the product as its argument.
       Value *FMul = B.CreateFMul(BaseFn->getArgOperand(0), Expo, "mul");
       ExpFn = BaseFn->doesNotAccessMemory()
-              ? B.CreateCall(Intrinsic::getDeclaration(Mod, ID, Ty),
-                             FMul, ExpName)
-              : emitUnaryFloatFnCall(FMul, TLI, LibFnDouble, LibFnFloat,
-                                     LibFnLongDouble, B,
-                                     BaseFn->getAttributes());
+                  ? B.CreateUnaryIntrinsic(ID, FMul, nullptr, ExpName)
+                  : emitUnaryFloatFnCall(FMul, TLI, LibFnDouble, LibFnFloat,
+                                         LibFnLongDouble, B,
+                                         BaseFn->getAttributes());
 
       // Since the new exp{,2}() is different from the original one, dead code
       // elimination cannot be trusted to remove it, since it may have side
@@ -2123,9 +2113,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
       double N = NI.logBase2() * (IsReciprocal ? -1.0 : 1.0);
       Value *FMul = B.CreateFMul(Expo, ConstantFP::get(Ty, N), "mul");
       if (Pow->doesNotAccessMemory())
-        return copyFlags(*Pow, B.CreateCall(Intrinsic::getDeclaration(
-                                                Mod, Intrinsic::exp2, Ty),
-                                            FMul, "exp2"));
+        return copyFlags(*Pow, B.CreateUnaryIntrinsic(Intrinsic::exp2, FMul,
+                                                      nullptr, "exp2"));
       else
         return copyFlags(*Pow, emitUnaryFloatFnCall(FMul, TLI, LibFunc_exp2,
                                                     LibFunc_exp2f,
@@ -2165,9 +2154,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
     if (Log) {
       Value *FMul = B.CreateFMul(Log, Expo, "mul");
       if (Pow->doesNotAccessMemory())
-        return copyFlags(*Pow, B.CreateCall(Intrinsic::getDeclaration(
-                                                Mod, Intrinsic::exp2, Ty),
-                                            FMul, "exp2"));
+        return copyFlags(*Pow, B.CreateUnaryIntrinsic(Intrinsic::exp2, FMul,
+                                                      nullptr, "exp2"));
       else if (hasFloatFn(M, TLI, Ty, LibFunc_exp2, LibFunc_exp2f,
                           LibFunc_exp2l))
         return copyFlags(*Pow, emitUnaryFloatFnCall(FMul, TLI, LibFunc_exp2,
@@ -2183,11 +2171,8 @@ static Value *getSqrtCall(Value *V, AttributeList Attrs, bool NoErrno,
                           Module *M, IRBuilderBase &B,
                           const TargetLibraryInfo *TLI) {
   // If errno is never set, then use the intrinsic for sqrt().
-  if (NoErrno) {
-    Function *SqrtFn =
-        Intrinsic::getDeclaration(M, Intrinsic::sqrt, V->getType());
-    return B.CreateCall(SqrtFn, V, "sqrt");
-  }
+  if (NoErrno)
+    return B.CreateUnaryIntrinsic(Intrinsic::sqrt, V, nullptr, "sqrt");
 
   // Otherwise, use the libcall for sqrt().
   if (hasFloatFn(M, TLI, V->getType(), LibFunc_sqrt, LibFunc_sqrtf,
@@ -2232,10 +2217,8 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
     return nullptr;
 
   // Handle signed zero base by expanding to fabs(sqrt(x)).
-  if (!Pow->hasNoSignedZeros()) {
-    Function *FAbsFn = Intrinsic::getDeclaration(Mod, Intrinsic::fabs, Ty);
-    Sqrt = B.CreateCall(FAbsFn, Sqrt, "abs");
-  }
+  if (!Pow->hasNoSignedZeros())
+    Sqrt = B.CreateUnaryIntrinsic(Intrinsic::fabs, Sqrt, nullptr, "abs");
 
   Sqrt = copyFlags(*Pow, Sqrt);
 
@@ -2259,8 +2242,7 @@ static Value *createPowWithIntegerExponent(Value *Base, Value *Expo, Module *M,
                                            IRBuilderBase &B) {
   Value *Args[] = {Base, Expo};
   Type *Types[] = {Base->getType(), Expo->getType()};
-  Function *F = Intrinsic::getDeclaration(M, Intrinsic::powi, Types);
-  return B.CreateCall(F, Args);
+  return B.CreateIntrinsic(Intrinsic::powi, Types, Args);
 }
 
 Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
@@ -2442,9 +2424,8 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
 
   Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
                                                             : Intrinsic::maxnum;
-  Function *F = Intrinsic::getDeclaration(CI->getModule(), IID, CI->getType());
-  return copyFlags(
-      *CI, B.CreateCall(F, {CI->getArgOperand(0), CI->getArgOperand(1)}));
+  return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
+                                                CI->getArgOperand(1)));
 }
 
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
@@ -2563,8 +2544,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   if (ArgLb == PowLb || ArgID == Intrinsic::pow || ArgID == Intrinsic::powi) {
     Value *LogX =
         Log->doesNotAccessMemory()
-            ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
-                           Arg->getOperand(0), "log")
+            ? B.CreateUnaryIntrinsic(LogID, Arg->getOperand(0), nullptr, "log")
             : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, NoAttrs);
     Value *Y = Arg->getArgOperand(1);
     // Cast exponent to FP if integer.
@@ -2590,8 +2570,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     else
       Eul = ConstantFP::get(Log->getType(), 10.0);
     Value *LogE = Log->doesNotAccessMemory()
-                      ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
-                                     Eul, "log")
+                      ? B.CreateUnaryIntrinsic(LogID, Eul, nullptr, "log")
                       : emitUnaryFloatFnCall(Eul, TLI, LogNm, B, NoAttrs);
     Value *MulY = B.CreateFMul(Arg->getArgOperand(0), LogE, "mul");
     // Since exp() may have side effects, e.g. errno,
@@ -2725,15 +2704,14 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
-  Type *ArgType = I->getType();
-  Function *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, ArgType);
-  Value *FabsCall = B.CreateCall(Fabs, RepeatOp, "fabs");
+  Value *FabsCall =
+      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, nullptr, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
     // of the square root calculation.
-    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, ArgType);
-    Value *SqrtCall = B.CreateCall(Sqrt, OtherOp, "sqrt");
+    Value *SqrtCall =
+        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, nullptr, "sqrt");
     return copyFlags(*CI, B.CreateFMul(FabsCall, SqrtCall));
   }
   return copyFlags(*CI, FabsCall);
@@ -3002,9 +2980,8 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilderBase &B) {
   Type *RetType = CI->getType();
   Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Function *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
-                                          Intrinsic::cttz, ArgType);
-  Value *V = B.CreateCall(F, {Op, B.getTrue()}, "cttz");
+  Value *V = B.CreateIntrinsic(Intrinsic::cttz, {ArgType}, {Op, B.getTrue()},
+                               nullptr, "cttz");
   V = B.CreateAdd(V, ConstantInt::get(V->getType(), 1));
   V = B.CreateIntCast(V, RetType, false);
 
@@ -3017,9 +2994,8 @@ Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilderBase &B) {
   // fls{,l,ll}(x) -> (int)(sizeInBits(x) - llvm.ctlz(x, false))
   Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Function *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
-                                          Intrinsic::ctlz, ArgType);
-  Value *V = B.CreateCall(F, {Op, B.getFalse()}, "ctlz");
+  Value *V = B.CreateIntrinsic(Intrinsic::ctlz, {ArgType}, {Op, B.getFalse()},
+                               nullptr, "ctlz");
   V = B.CreateSub(ConstantInt::get(V->getType(), ArgType->getIntegerBitWidth()),
                   V);
   return B.CreateIntCast(V, CI->getType(), false);
