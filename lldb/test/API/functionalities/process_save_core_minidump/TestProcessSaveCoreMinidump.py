@@ -2,16 +2,21 @@
 Test saving a mini dump.
 """
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
-        self, core_path, expected_pid, expected_modules, expected_threads, stacks_to_sps_map
+        self,
+        core_path,
+        expected_pid,
+        expected_modules,
+        expected_threads,
+        stacks_to_sps_map,
     ):
         # To verify, we'll launch with the mini dump
         target = self.dbg.CreateTarget(None)
@@ -58,8 +63,6 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             process.ReadMemory(sp - red_zone - 1, 1, error)
             self.assertTrue(error.Fail(), "No failure when reading past the red zone")
 
-
-
         self.dbg.DeleteTarget(target)
 
     @skipUnlessArch("x86_64")
@@ -102,19 +105,31 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.runCmd(base_command + " --style=stack '%s'" % (core_stack))
             self.assertTrue(os.path.isfile(core_stack))
             self.verify_core_file(
-                core_stack, expected_pid, expected_modules, expected_threads, stacks_to_sp_map
+                core_stack,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
             self.assertTrue(os.path.isfile(core_dirty))
             self.verify_core_file(
-                core_dirty, expected_pid, expected_modules, expected_threads, stacks_to_sp_map
+                core_dirty,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
             self.assertTrue(os.path.isfile(core_full))
             self.verify_core_file(
-                core_full, expected_pid, expected_modules, expected_threads, stacks_to_sp_map
+                core_full,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             # validate saving via SBProcess
@@ -122,14 +137,22 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_stack))
             self.verify_core_file(
-                core_sb_stack, expected_pid, expected_modules, expected_threads, stacks_to_sp_map
+                core_sb_stack,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             error = process.SaveCore(core_sb_dirty, "minidump", lldb.eSaveCoreDirtyOnly)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_dirty))
             self.verify_core_file(
-                core_sb_dirty, expected_pid, expected_modules, expected_threads, stacks_to_sp_map
+                core_sb_dirty,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
@@ -138,7 +161,11 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_full))
             self.verify_core_file(
-                core_sb_full, expected_pid, expected_modules, expected_threads, stacks_to_sp_map
+                core_sb_full,
+                expected_pid,
+                expected_modules,
+                expected_threads,
+                stacks_to_sp_map,
             )
 
             self.assertSuccess(process.Kill())

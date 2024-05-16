@@ -6335,16 +6335,15 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
   ranges.push_back(CreateCoreFileMemoryRange(region));
 }
 
-static void
-SaveOffRegionsWithStackPointers(Process &process,
-                               const MemoryRegionInfos &regions,
-                               Process::CoreFileMemoryRanges &ranges,
-                               std::set<addr_t> &stack_ends) {
+static void SaveOffRegionsWithStackPointers(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
 
-  // Before we take any dump, we want to save off the used portions of the stacks
-  // and mark those memory regions as saved. This prevents us from saving the unused portion
-  // of the stack below the stack pointer. Saving space on the dump.
+  // Before we take any dump, we want to save off the used portions of the
+  // stacks and mark those memory regions as saved. This prevents us from saving
+  // the unused portion of the stack below the stack pointer. Saving space on
+  // the dump.
   for (lldb::ThreadSP thread_sp : process.GetThreadList().Threads()) {
     if (!thread_sp)
       continue;
@@ -6358,12 +6357,12 @@ SaveOffRegionsWithStackPointers(Process &process,
     const size_t red_zone = process.GetABI()->GetRedZoneSize();
     lldb_private::MemoryRegionInfo sp_region;
     if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
-        const size_t stack_head = (sp - red_zone);
-        const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
-        sp_region.GetRange().SetRangeBase(stack_head);
-        sp_region.GetRange().SetByteSize(stack_size);
-        stack_ends.insert(sp_region.GetRange().GetRangeEnd());
-        AddRegion(sp_region, try_dirty_pages, ranges);
+      const size_t stack_head = (sp - red_zone);
+      const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
+      sp_region.GetRange().SetRangeBase(stack_head);
+      sp_region.GetRange().SetByteSize(stack_size);
+      stack_ends.insert(sp_region.GetRange().GetRangeEnd());
+      AddRegion(sp_region, try_dirty_pages, ranges);
     }
   }
 }
@@ -6386,17 +6385,15 @@ const bool try_dirty_pages = false;
 // least some dirty pages, as some OS versions don't support reporting what
 // pages are dirty within an memory region. If no memory regions have dirty
 // page information fall back to saving out all ranges with write permissions.
-static void
-GetCoreFileSaveRangesDirtyOnly(Process &process,
-                               const MemoryRegionInfos &regions,
-                               Process::CoreFileMemoryRanges &ranges,
-                               std::set<addr_t> &stack_ends) {
+static void GetCoreFileSaveRangesDirtyOnly(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
 
   // Iterate over the regions and find all dirty pages.
   bool have_dirty_page_info = false;
   for (const auto &region : regions) {
-    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0
-        && AddDirtyPages(region, ranges))
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+        AddDirtyPages(region, ranges))
       have_dirty_page_info = true;
   }
 
@@ -6405,8 +6402,8 @@ GetCoreFileSaveRangesDirtyOnly(Process &process,
     // plug-in so fall back to any region with write access permissions.
     const bool try_dirty_pages = false;
     for (const auto &region : regions)
-    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0
-        && region.GetWritable() == MemoryRegionInfo::eYes)
+      if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+          region.GetWritable() == MemoryRegionInfo::eYes)
         AddRegion(region, try_dirty_pages, ranges);
   }
 }
@@ -6419,20 +6416,18 @@ GetCoreFileSaveRangesDirtyOnly(Process &process,
 // dirty regions as this will make the core file smaller. If the process
 // doesn't support dirty regions, then it will fall back to adding the full
 // stack region.
-static void
-GetCoreFileSaveRangesStackOnly(Process &process,
-                               const MemoryRegionInfos &regions,
-                               Process::CoreFileMemoryRanges &ranges,
-                              std::set<addr_t> &stack_ends) {
+static void GetCoreFileSaveRangesStackOnly(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
   const bool try_dirty_pages = true;
   // Some platforms support annotating the region information that tell us that
   // it comes from a thread stack. So look for those regions first.
 
   for (const auto &region : regions) {
     // Save all the stack memory ranges not associated with a stack pointer.
-    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0
-        && region.IsStackMemory() == MemoryRegionInfo::eYes)
-        AddRegion(region, try_dirty_pages, ranges);
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+        region.IsStackMemory() == MemoryRegionInfo::eYes)
+      AddRegion(region, try_dirty_pages, ranges);
   }
 }
 
@@ -6446,7 +6441,7 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     return Status("failed to get any valid memory regions from the process");
   if (core_style == eSaveCoreUnspecified)
     return Status("callers must set the core_style to something other than "
-                 "eSaveCoreUnspecified");
+                  "eSaveCoreUnspecified");
 
   std::set<addr_t> stack_ends;
   SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends);
