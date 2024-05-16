@@ -6152,10 +6152,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
     // [64-bit ELF/AIX]
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
-    // Otherwise we generate:
+    // Otherwise for medium code model ELF we generate:
     //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
 
-    // For large code model with TOC data symbols we generate:
+    // And finally for AIX with toc-data we generate:
     // [32-bit AIX]
     //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
     // [64-bit AIX]
@@ -6188,6 +6188,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
 
+    assert(isPPC64 && "TOC_ENTRY already handled for 32-bit.");
     // Build the address relative to the TOC-pointer.
     ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL8, dl, MVT::i64,
                                           SDValue(Tmp, 0), GA));
