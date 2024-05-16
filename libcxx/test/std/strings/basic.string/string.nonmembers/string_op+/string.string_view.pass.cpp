@@ -101,6 +101,9 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
   }
   // string_view + string&&
   {
+    // Create a `basic_string` to workaround clang bug:
+    // https://github.com/llvm/llvm-project/issues/92382
+    // Comparison between pointers to a string literal and some other object results in constant evaluation failure.
     std::basic_string<CharT, TraitsT, AllocT> st_{x, allocator};
     std::basic_string_view<CharT, TraitsT> sv{st_};
     std::basic_string<CharT, TraitsT, AllocT> st{y, allocator};
