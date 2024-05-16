@@ -1654,7 +1654,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   }
 }
 
-static int merge_main(int argc, const char *argv[]) {
+static int merge_main(StringRef ProgName) {
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
     addWeightedInput(WeightedInputs, {std::string(Filename), 1});
@@ -1667,8 +1667,7 @@ static int merge_main(int argc, const char *argv[]) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("no input files specified. See " +
-                  sys::path::filename(argv[0]) + " " + argv[1] + " -help");
+    exitWithError("no input files specified. See " + ProgName + " merge -help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
@@ -2654,7 +2653,7 @@ void overlapSampleProfile(const std::string &BaseFilename,
   OverlapAggr.dumpFuncSimilarity(OS);
 }
 
-static int overlap_main(int argc, const char *argv[]) {
+static int overlap_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3231,15 +3230,16 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   return 0;
 }
 
-static int show_main(int argc, const char *argv[]) {
+static int show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
         DebugInfoFilename.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0]) << " " << argv[1]
-           << ": Input file name cannot be the same as the output file name!\n";
+    errs() << ProgName
+           << " show: Input file name cannot be the same as the output file "
+              "name!\n";
     return 1;
   }
   if (JsonFormat)
@@ -3263,7 +3263,7 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(SFormat, OS);
 }
 
-static int order_main(int argc, const char *argv[]) {
+static int order_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3314,16 +3314,16 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
   if (ShowSubcommand)
-    return show_main(argc, argv);
+    return show_main(ProgName);
 
   if (OrderSubcommand)
-    return order_main(argc, argv);
+    return order_main();
 
   if (OverlapSubcommand)
-    return overlap_main(argc, argv);
+    return overlap_main();
 
   if (MergeSubcommand)
-    return merge_main(argc, argv);
+    return merge_main(ProgName);
 
   errs() << ProgName
          << ": Unknown command. Run llvm-profdata --help for usage.\n";
