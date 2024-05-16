@@ -1,4 +1,4 @@
-//===-------- EVLIndVarSimplify.h - Optimize vectorized loops w/ EVL IV----===//
+//===- EVLIndVarSimplify.h - Optimize vectorized loops w/ EVL IV-*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_VECTORIZE_EVLINDVARSIMPLIFY_H
-#define LLVM_TRANSFORMS_VECTORIZE_EVLINDVARSIMPLIFY_H
+#ifndef LLVM_CODEGEN_EVLINDVARSIMPLIFY_H
+#define LLVM_CODEGEN_EVLINDVARSIMPLIFY_H
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"

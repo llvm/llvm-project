@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
+#include "llvm/CodeGen/EVLIndVarSimplify.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
