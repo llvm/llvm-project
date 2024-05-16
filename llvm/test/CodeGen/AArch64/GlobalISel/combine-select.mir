@@ -897,7 +897,7 @@ body:             |
 
 ...
 ---
-# test failed_select icmp_sle f,t_t_f --> smin(t,f)
+# test failed select icmp_slef,t_t_f --> smin(t,f)
 name:            select_icmp_sle_f_t_t_f_smin_t_f
 body:             |
   bb.1:
