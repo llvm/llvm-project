@@ -16,9 +16,15 @@
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm::omp {
 ArrayRef<Directive> getLeafConstructs(Directive D);
+ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);
+
+ArrayRef<Directive>
+getLeafOrCompositeConstructs(Directive D, SmallVectorImpl<Directive> &Output);
+
 Directive getCompoundConstruct(ArrayRef<Directive> Parts);
 
 bool isLeafConstruct(Directive D);

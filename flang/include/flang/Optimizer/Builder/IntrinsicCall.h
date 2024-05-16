@@ -335,6 +335,8 @@ struct IntrinsicLibrary {
   mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genShape(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue>);
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
@@ -661,8 +663,8 @@ static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
 //===----------------------------------------------------------------------===//
 static inline mlir::Type getConvertedElementType(mlir::MLIRContext *context,
                                                  mlir::Type eleTy) {
-  if (eleTy.isa<mlir::IntegerType>() && !eleTy.isSignlessInteger()) {
-    const auto intTy{eleTy.dyn_cast<mlir::IntegerType>()};
+  if (mlir::isa<mlir::IntegerType>(eleTy) && !eleTy.isSignlessInteger()) {
+    const auto intTy{mlir::dyn_cast<mlir::IntegerType>(eleTy)};
     auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
     return newEleTy;
   }

@@ -101,7 +101,6 @@ define void @frintp_v8f32(ptr %a) {
 define <1 x double> @frintp_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frintp_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintp d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.ceil.v1f64(<1 x double> %op)
@@ -232,7 +231,6 @@ define void @frintm_v8f32(ptr %a) {
 define <1 x double> @frintm_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frintm_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintm d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.floor.v1f64(<1 x double> %op)
@@ -363,7 +361,6 @@ define void @frinti_v8f32(ptr %a) {
 define <1 x double> @frinti_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frinti_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinti d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.nearbyint.v1f64(<1 x double> %op)
@@ -494,7 +491,6 @@ define void @frintx_v8f32(ptr %a) {
 define <1 x double> @frintx_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frintx_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintx d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.rint.v1f64(<1 x double> %op)
@@ -625,7 +621,6 @@ define void @frinta_v8f32(ptr %a) {
 define <1 x double> @frinta_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frinta_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frinta d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.round.v1f64(<1 x double> %op)
@@ -756,7 +751,6 @@ define void @frintn_v8f32(ptr %a) {
 define <1 x double> @frintn_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frintn_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintn d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.roundeven.v1f64(<1 x double> %op)
@@ -887,7 +881,6 @@ define void @frintz_v8f32(ptr %a) {
 define <1 x double> @frintz_v1f64(<1 x double> %op) {
 ; CHECK-LABEL: frintz_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.trunc.v1f64(<1 x double> %op)

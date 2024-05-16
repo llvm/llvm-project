@@ -811,7 +811,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // this may happen while we're comparing two templates' constraint
   // equivalence.
   LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = llvm::dyn_cast<FunctionDecl>(DeclInfo.getDecl()))
+  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
     for (auto *PVD : FD->parameters())
       ScopeForParameters.InstantiatedLocal(PVD, PVD);
 

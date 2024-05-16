@@ -396,7 +396,8 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     const TagDecl *Decl = TagTy->getDecl();
     // Anonymous decl, skip this fragment.
     if (Decl->getName().empty())
-      return Fragments;
+      return Fragments.append("{ ... }",
+                              DeclarationFragments::FragmentKind::Text);
     SmallString<128> TagUSR;
     clang::index::generateUSRForDecl(Decl, TagUSR);
     return Fragments.append(Decl->getName(),
@@ -743,10 +744,15 @@ DeclarationFragmentsBuilder::getFragmentsForEnum(const EnumDecl *EnumDecl) {
 
   QualType IntegerType = EnumDecl->getIntegerType();
   if (!IntegerType.isNull())
-    Fragments.append(": ", DeclarationFragments::FragmentKind::Text)
+    Fragments.appendSpace()
+        .append(": ", DeclarationFragments::FragmentKind::Text)
         .append(
             getFragmentsForType(IntegerType, EnumDecl->getASTContext(), After))
         .append(std::move(After));
+
+  if (EnumDecl->getName().empty())
+    Fragments.appendSpace().append("{ ... }",
+                                   DeclarationFragments::FragmentKind::Text);
 
   return Fragments.appendSemicolon();
 }
@@ -778,9 +784,12 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForRecordDecl(
   else
     Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
 
+  Fragments.appendSpace();
   if (!Record->getName().empty())
-    Fragments.appendSpace().append(
-        Record->getName(), DeclarationFragments::FragmentKind::Identifier);
+    Fragments.append(Record->getName(),
+                     DeclarationFragments::FragmentKind::Identifier);
+  else
+    Fragments.append("{ ... }", DeclarationFragments::FragmentKind::Text);
 
   return Fragments.appendSemicolon();
 }

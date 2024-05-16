@@ -91,6 +91,15 @@ def project_umbrella_header_EQ : Joined<["--"], "project-umbrella-header=">,
   Alias<project_umbrella_header>;
 
 //
+/// X<label> overrides.
+//
+def Xplatform__ : Joined<["-"], "Xplatform_">;
+def Xproject : Joined<["-"], "Xproject">;
+def X__ : Joined<["-"], "X">,
+  HelpText<"Pass <arg> to run unique clang invocation identified as <label>">, 
+  MetaVarName<"<label> <arg>">;
+
+//
 /// Overidden clang options for different behavior.
 //
 
@@ -107,5 +116,26 @@ def reexport_library : Separate<["-"], "reexport_library">, MetaVarName<"<path>"
   HelpText<"Re-export the specified library">;
 def reexport_framework : Separate<["-"], "reexport_framework">,
   HelpText<"Re-export the specified framework">;
+
+// Xproject supported options.
+def fobjc_arc : Flag<["-"], "fobjc-arc">,
+  HelpText<"Synthesize retain and release calls for Objective-C pointers">;
+def include_ : JoinedOrSeparate<["-", "--"], "include">,
+  MetaVarName<"<file>">, HelpText<"Include file before parsing, can only be used with -Xproject">;
+def fvisibility_EQ : Joined<["-"], "fvisibility=">,
+  HelpText<"Set the default symbol visibility for all global declarations">;
+def fmodules : Flag <["-"], "fmodules">,
+  HelpText<"Enable the 'modules' language feature">;
+def fmodules_cache_path : Joined<["-"], "fmodules-cache-path=">,
+  MetaVarName<"<directory>">,
+  HelpText<"Specify the module cache path">;
+
+// Xplatform supported options.
+def iframework : JoinedOrSeparate<["-"], "iframework">,
+  HelpText<"Add directory to SYSTEM framework search path">;
+
+// X<label> prefixes supported options.
+def D : JoinedOrSeparate<["-"], "D">, HelpText<"Define macro">;
+def U : JoinedOrSeparate<["-"], "U">, HelpText<"Undefine macro">;
 
 

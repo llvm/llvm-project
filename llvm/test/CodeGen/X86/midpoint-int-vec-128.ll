@@ -893,27 +893,26 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    pand %xmm5, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[1,1,3,3]
-; SSE41-NEXT:    por %xmm3, %xmm6
-; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
-; SSE41-NEXT:    pand %xmm5, %xmm0
-; SSE41-NEXT:    por %xmm4, %xmm0
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psubq %xmm1, %xmm3
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm3 = [1,1]
+; SSE41-NEXT:    por %xmm0, %xmm3
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    psubq %xmm1, %xmm4
 ; SSE41-NEXT:    psubq %xmm2, %xmm1
-; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    psrlq $1, %xmm0
 ; SSE41-NEXT:    psrlq $33, %xmm1
-; SSE41-NEXT:    pmuludq %xmm6, %xmm1
-; SSE41-NEXT:    movdqa %xmm6, %xmm3
-; SSE41-NEXT:    psrlq $32, %xmm3
-; SSE41-NEXT:    pmuludq %xmm0, %xmm3
-; SSE41-NEXT:    paddq %xmm1, %xmm3
-; SSE41-NEXT:    psllq $32, %xmm3
-; SSE41-NEXT:    pmuludq %xmm6, %xmm0
+; SSE41-NEXT:    pmuludq %xmm3, %xmm1
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    psrlq $32, %xmm4
+; SSE41-NEXT:    pmuludq %xmm0, %xmm4
+; SSE41-NEXT:    paddq %xmm1, %xmm4
+; SSE41-NEXT:    psllq $32, %xmm4
+; SSE41-NEXT:    pmuludq %xmm3, %xmm0
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
-; SSE41-NEXT:    paddq %xmm3, %xmm0
+; SSE41-NEXT:    paddq %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vec128_i64_signed_reg_reg:
@@ -1077,27 +1076,26 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    pand %xmm5, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[1,1,3,3]
-; SSE41-NEXT:    por %xmm3, %xmm6
-; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
-; SSE41-NEXT:    pand %xmm5, %xmm0
-; SSE41-NEXT:    por %xmm4, %xmm0
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    psubq %xmm1, %xmm3
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm3 = [1,1]
+; SSE41-NEXT:    por %xmm0, %xmm3
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    psubq %xmm1, %xmm4
 ; SSE41-NEXT:    psubq %xmm2, %xmm1
-; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    psrlq $1, %xmm0
 ; SSE41-NEXT:    psrlq $33, %xmm1
-; SSE41-NEXT:    pmuludq %xmm6, %xmm1
-; SSE41-NEXT:    movdqa %xmm6, %xmm3
-; SSE41-NEXT:    psrlq $32, %xmm3
-; SSE41-NEXT:    pmuludq %xmm0, %xmm3
-; SSE41-NEXT:    paddq %xmm1, %xmm3
-; SSE41-NEXT:    psllq $32, %xmm3
-; SSE41-NEXT:    pmuludq %xmm6, %xmm0
+; SSE41-NEXT:    pmuludq %xmm3, %xmm1
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    psrlq $32, %xmm4
+; SSE41-NEXT:    pmuludq %xmm0, %xmm4
+; SSE41-NEXT:    paddq %xmm1, %xmm4
+; SSE41-NEXT:    psllq $32, %xmm4
+; SSE41-NEXT:    pmuludq %xmm3, %xmm0
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
-; SSE41-NEXT:    paddq %xmm3, %xmm0
+; SSE41-NEXT:    paddq %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_i64_unsigned_reg_reg:

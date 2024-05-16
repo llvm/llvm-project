@@ -109,10 +109,12 @@ struct Foo {
 };
 
 template <typename X, int Y>
-using Bar = Foo<X, sizeof(X)>;
+using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
+                               // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
+                               // expected-note {{because '__is_deducible}}
 
-// FIXME: we should reject this case? GCC rejects it, MSVC accepts it.
-Bar s = {{1}};
+
+Bar s = {{1}}; // expected-error {{no viable constructor or deduction guide }}
 }  // namespace test9
 
 namespace test10 {
@@ -133,9 +135,13 @@ A a(2);  // Foo<int*>
 namespace test11 {
 struct A {};
 template<class T> struct Foo { T c; };
-template<class X, class Y=A> using AFoo = Foo<Y>;
+template<class X, class Y=A>
+using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{candidate template ignored: constraints not satisfied [with Y = int]}} \
+                    // expected-note {{because '__is_deducible(AFoo, Foo<int>)' evaluated to false}} \
+                    // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
 
-AFoo s = {1};
+AFoo s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}}
 } // namespace test11
 
 namespace test12 {
@@ -190,13 +196,16 @@ template <class T> struct Foo { Foo(T); };
 
 template<class V> using AFoo = Foo<V *>;
 template<typename> concept False = false;
-template<False W> using BFoo = AFoo<W>;
+// FIXME: emit a more descriptive diagnostic for "__is_deducible" constraint failure.
+template<False W>
+using BFoo = AFoo<W>; // expected-note {{candidate template ignored: constraints not satisfied [with V = int]}} \
+                      // expected-note {{because '__is_deducible(BFoo, Foo<int *>)' evaluated to false}} \
+                      // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0 *>' against 'int *'}}
 int i = 0;
 AFoo a1(&i); // OK, deduce Foo<int *>
 
-// FIXME: we should reject this case as the W is not deduced from the deduced
-// type Foo<int *>.
-BFoo b2(&i); 
+// the W is not deduced from the deduced type Foo<int *>.
+BFoo b2(&i); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'BFoo'}}
 } // namespace test15
 
 namespace test16 {
@@ -307,3 +316,85 @@ using AFoo = Foo<int, Derived<U>>;
 
 AFoo a(Derived<int>{});
 } // namespace test22
+
+namespace test23 {
+// We have an aggregate deduction guide "G(T) -> G<T>".
+template<typename T>
+struct G { T t1; };
+
+template<typename X = int>
+using AG = G<int>;
+
+AG ag(1.0);
+// Verify that the aggregate deduction guide "AG(int) -> AG<int>" is built and
+// choosen.
+static_assert(__is_same(decltype(ag.t1), int));
+} // namespace test23
+
+// GH90177
+// verify that the transformed require-clause of the alias deduction gudie has
+// the right depth info.
+namespace test24 {
+class Forward;
+class Key {};
+
+template <typename D>
+constexpr bool C = sizeof(D);
+
+// Case1: the alias template and the underlying deduction guide are in the same
+// scope.
+template <typename T>
+struct Case1 {
+  template <typename U>
+  struct Foo {
+    Foo(U);
+  };
+
+  template <typename V>
+  requires (C<V>)
+  Foo(V) -> Foo<V>;
+
+  template <typename Y>
+  using Alias = Foo<Y>;
+};
+// The require-clause should be evaluated on the type Key.
+Case1<Forward>::Alias t2 = Key();
+
+
+// Case2: the alias template and underlying deduction guide are in different
+// scope.
+template <typename T>
+struct Foo {
+  Foo(T);
+};
+template <typename U>
+requires (C<U>)
+Foo(U) -> Foo<U>;
+
+template <typename T>
+struct Case2 {
+  template <typename Y>
+  using Alias = Foo<Y>;
+};
+// The require-caluse should be evaluated on the type Key.
+Case2<Forward>::Alias t1 = Key();
+
+// Case3: crashes on the constexpr evaluator due to the mixed-up depth in
+// require-expr.
+template <class T1>
+struct A1 {
+  template<class T2>
+  struct A2 {
+    template <class T3>
+    struct Foo {
+      Foo(T3);
+    };
+    template <class T3>
+    requires C<T3>
+    Foo(T3) -> Foo<T3>;
+  };
+};
+template <typename U>
+using AFoo = A1<int>::A2<int>::Foo<U>;
+AFoo case3(1);
+} // namespace test24
