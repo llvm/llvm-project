@@ -2126,6 +2126,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
                                   InsertPointTy AllocaIP,
                                   ArrayRef<ReductionInfo> ReductionInfos,
                                   ArrayRef<bool> IsByRef, bool IsNoWait) {
+  assert(ReductionInfos.size() == IsByRef.size());
   for (const ReductionInfo &RI : ReductionInfos) {
     (void)RI;
     assert(RI.Variable && "expected non-null variable");
