@@ -277,6 +277,10 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
     Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOSSIMULATOR
                                            : MachO::PLATFORM_WATCHOS;
     break;
+  case Triple::XROS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
+    break;
   default:
     return std::nullopt;
   }

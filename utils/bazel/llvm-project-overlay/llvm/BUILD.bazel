@@ -1125,6 +1125,8 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BitstreamReader",
+        ":BitstreamWriter",
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
