@@ -1,4 +1,4 @@
-// REQUIRES: linux, lld-available
+// REQUIRES: linux, lld-available, lto
 
 // FIXME: Investigate and fix.
 // XFAIL: powerpc64-target-arch
@@ -14,7 +14,7 @@
 // RUN: llvm-size -A %t | FileCheck %s -check-prefix=PRF_CNTS
 
 // RUN: rm -rf %t.lto.profraw
-// RUN: %clang_lto_profgen=%t.lto.profraw -fuse-ld=lld -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -o %t.lto %s
+// RUN: %clang_lto_profgen=%t.lto.profraw -fuse-ld=lld -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -ffunction-sections -fdata-sections -Wl,--gc-sections -o %t.lto %s
 // RUN: %run %t.lto
 // RUN: llvm-profdata merge -o %t.lto.profdata %t.lto.profraw
 // RUN: llvm-profdata show --all-functions %t.lto.profdata | FileCheck %s -check-prefix=PROF

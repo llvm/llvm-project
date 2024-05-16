@@ -10,7 +10,7 @@
 // RUN: otool -V -s __DATA __llvm_prf_names %t | FileCheck %s -check-prefix=PRF_NAMES
 // RUN: otool -V -s __DATA __llvm_prf_cnts %t | FileCheck %s -check-prefix=PRF_CNTS
 
-// RUN: %clang_lto_profgen=%t.lto.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip -flto -o %t.lto %s
+// RUN: %clang_lto_profgen=%t.lto.profraw -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -Wl,-dead_strip -o %t.lto %s
 // RUN: %run %t.lto
 // RUN: llvm-profdata merge -o %t.lto.profdata %t.lto.profraw
 // RUN: llvm-profdata show --all-functions %t.lto.profdata | FileCheck %s -check-prefix=PROF
