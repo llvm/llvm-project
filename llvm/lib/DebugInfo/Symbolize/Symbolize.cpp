@@ -73,7 +73,7 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
   DILineInfo LineInfo = Info->symbolizeCode(
       ModuleOffset,
       DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
-                          Opts.ApproximateLine),
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle)
     LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
@@ -120,7 +120,7 @@ Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
   DIInliningInfo InlinedContext = Info->symbolizeInlinedCode(
       ModuleOffset,
       DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
-                          Opts.ApproximateLine),
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle) {
     for (int i = 0, n = InlinedContext.getNumberOfFrames(); i < n; i++) {

@@ -207,7 +207,7 @@ Example 7 - Addresses as symbol names:
   foz
   /tmp/test.h:1:0
 
-Example 8 - Addresses having approximate line info:
+Example 8 - Skip line zero output for an address with no line correspondence (an address associated with line zero):
 
 .. code-block:: console
 

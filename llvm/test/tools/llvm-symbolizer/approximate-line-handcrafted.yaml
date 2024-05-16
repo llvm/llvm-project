@@ -1,0 +1,507 @@
+# REQUIRES: x86-registered-target
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x5000f0 | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-FAIL-ACROSS-SEQ %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x500110 | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-WITHIN-SEQ %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0x500110 0x500137 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=APPROX-WITHIN-SEQ,NO-APPROX %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --verbose 0x500110 | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-VERBOSE %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --output-style=JSON 0x500110 | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-JSON %s
+
+# APPROX-FAIL-ACROSS-SEQ:add
+# APPROX-FAIL-ACROSS-SEQ-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}.{{[/|\]+}}definitions.h:0:49
+# APPROX-WITHIN-SEQ:main
+# APPROX-WITHIN-SEQ-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}.{{[/|\]+}}definitions.h:3:39 (approximate)
+# NO-APPROX:main
+# NO-APPROX-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c:9:3
+
+# APPROX-VERBOSE:main
+# APPROX-VERBOSE-NEXT:  Filename: /tmp/test{{[/|\]}}.{{[/|\]}}definitions.h
+# APPROX-VERBOSE-NEXT:  Function start address: 0x500110
+# APPROX-VERBOSE-NEXT:  Line: 3
+# APPROX-VERBOSE-NEXT:  Column: 39
+# APPROX-VERBOSE-NEXT:  Approximate: 1
+
+# APPROX-JSON:[{"Address":"0x500110","ModuleName":"{{.*}}{{[/|\]+}}test{{[/|\]+}}tools{{[/|\]+}}llvm-symbolizer{{[/|\]+}}Output{{[/|\]+}}approximate-line-handcrafted.yaml.tmp.o","Symbol":[{"Approximate":true,"Column":39,"Discriminator":0,"FileName":"{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}.{{[/|\]+}}definitions.h","FunctionName":"main","Line":3,"StartAddress":"0x500110","StartFileName":"","StartLine":0}]}]
+
+## Generated from C Code
+##
+## // definitions.h
+## extern inline __attribute__((section(".def_section"))) int dummy_function(){ return 1234; }
+## extern inline int add(int x, int y) { return (x + y); }
+## extern inline int sub(int x, int y) { return (x - y); }
+##
+## // main.c
+## include <stdio.h>
+## include "definitions.h"
+##
+## int main(void) {
+## int a = 10;
+## int b = 100;
+## printf("Dummy Function: %d \n",dummy_function());
+## printf("Addition result: %d \n", add(a, b));
+## printf("Subtraction result: %d \n", sub(a, b));
+## return 0;
+## }
+##
+## clang -S -O3 -gline-tables-only --target=x86_64-pc-linux
+##
+## The assembly generated here is modified manually.
+## Manual Edited Entry-1 : Line 81 changed to ".loc   1 0 49 prologue_end". Original ".loc   1 2 49 prologue_end"
+## Manual Edited Entry-2 : Line 114 changed to ".loc   0 0 0 is_stmt 1". Original ".loc   0 4 0 is_stmt 1"
+	#.text
+	#.file	"main.c"
+	#.section	.def_section,"ax",@progbits
+	#.globl	dummy_function                  # -- Begin function dummy_function
+	#.p2align	4, 0x90
+	#.type	dummy_function,@function
+#dummy_function:                         # @dummy_function
+#.Lfunc_begin0:
+	#.file	0 "/tmp/test" "main.c" md5 0xa9238d57e5a29b0bdc61914280f39569
+	#.cfi_startproc
+## %bb.0:                                # %entry
+	#.file	1 "." "definitions.h" md5 0xa4d7d6475311a9cfc74f54416c8ee119
+	#.loc	1 1 78 prologue_end             # ./definitions.h:1:78
+	#movl	$1234, %eax                     # imm = 0x4D2
+	#retq
+#.Ltmp0:
+#.Lfunc_end0:
+	#.size	dummy_function, .Lfunc_end0-dummy_function
+	#.cfi_endproc
+                                        ## -- End function
+	#.text
+	#.globl	add                             # -- Begin function add
+	#.p2align	4, 0x90
+	#.type	add,@function
+#add:                                    # @add
+#.Lfunc_begin1:
+	#.cfi_startproc
+## %bb.0:                                # %entry
+                                        ## kill: def $esi killed $esi def $rsi
+                                        ## kill: def $edi killed $edi def $rdi
+	#.loc	1 0 49 prologue_end             # ./definitions.h:2:49
+	#leal	(%rdi,%rsi), %eax
+	#.loc	1 2 39 is_stmt 0                # ./definitions.h:2:39
+	#retq
+#.Ltmp1:
+#.Lfunc_end1:
+	#.size	add, .Lfunc_end1-add
+	#.cfi_endproc
+                                        ## -- End function
+	#.globl	sub                             # -- Begin function sub
+	#.p2align	4, 0x90
+	#.type	sub,@function
+#sub:                                    # @sub
+#.Lfunc_begin2:
+	#.loc	1 3 0 is_stmt 1                 # ./definitions.h:3:0
+	#.cfi_startproc
+## %bb.0:                                # %entry
+	#movl	%edi, %eax
+#.Ltmp2:
+	#.loc	1 3 49 prologue_end             # ./definitions.h:3:49
+	#subl	%esi, %eax
+	#.loc	1 3 39 is_stmt 0                # ./definitions.h:3:39
+	#retq
+#.Ltmp3:
+#.Lfunc_end2:
+	#.size	sub, .Lfunc_end2-sub
+	#.cfi_endproc
+                                        ## -- End function
+	#.globl	main                            # -- Begin function main
+	#.p2align	4, 0x90
+	#.type	main,@function
+#main:                                   # @main
+#.Lfunc_begin3:
+	#.loc	0 0 0 is_stmt 1                 # main.c:4:0
+	#.cfi_startproc
+## %bb.0:                                # %entry
+	#pushq	%rax
+	#.cfi_def_cfa_offset 16
+#.Ltmp4:
+	#.loc	0 7 2 prologue_end              # main.c:7:2
+	#leaq	.L.str(%rip), %rdi
+	#movl	$1234, %esi                     # imm = 0x4D2
+	#xorl	%eax, %eax
+	#callq	printf@PLT
+#.Ltmp5:
+	#.loc	0 8 3                           # main.c:8:3
+	#leaq	.L.str.1(%rip), %rdi
+	#movl	$110, %esi
+	#xorl	%eax, %eax
+	#callq	printf@PLT
+#.Ltmp6:
+	#.loc	0 9 3                           # main.c:9:3
+	#leaq	.L.str.2(%rip), %rdi
+	#movl	$-90, %esi
+	#xorl	%eax, %eax
+	#callq	printf@PLT
+#.Ltmp7:
+	#.loc	0 10 3                          # main.c:10:3
+	#xorl	%eax, %eax
+	#.loc	0 10 3 epilogue_begin is_stmt 0 # main.c:10:3
+	#popq	%rcx
+	#.cfi_def_cfa_offset 8
+	#retq
+#.Ltmp8:
+#.Lfunc_end3:
+	#.size	main, .Lfunc_end3-main
+	#.cfi_endproc
+                                        ## -- End function
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    VAddr:           0x500540
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    VAddr:           0x500000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    VAddr:           0x5001b0
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_W ]
+    VAddr:           0x50057c
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_W ]
+    FirstSec:        .bss
+    LastSec:         .bss
+    VAddr:           0x500788
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .def_section
+    LastSec:         .def_section
+    VAddr:           0x500790
+    Align:           0x1000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_R, PF_W ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x5005c0
+    Align:           0x8
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    VAddr:           0x5005b0
+    Align:           0x1
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x500480
+    Align:           0x4
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_R, PF_W ]
+    Align:           0x0
+Sections:
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x500580
+    AddressAlign:    0x0
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x500150
+    AddressAlign:    0x1b
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x50016c
+    AddressAlign:    0x0d
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x500588
+    AddressAlign:    0x28
+  - Name:            .data.rel.local
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x500580
+    AddressAlign:    0x8
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x500180
+    AddressAlign:    0x10
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x5001b0
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x500298
+    Link:            .dynsym
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x5002b4
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x500348
+    Link:            .dynsym
+    AddressAlign:    0x8
+  - Name:            .rodata.cst4
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE ]
+    Address:         0x500438
+    AddressAlign:    0x4
+    Content:         '01000200'
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x500480
+    AddressAlign:    0x4
+    Content:         011b03333b3400000005000000100200006400000080fbffff5000000070fcffff7800000080fcffff8c00000090fcffffa0000000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x5004b8
+    AddressAlign:    0x8
+    Content:         1400000000000000017a5200017810011b0c070890010000100000001c00000038fbffff26000000004407101000000030000000a402000006000000000000001000000044000000f0fbffff04000000000000001000000058000000ecfbffff0500000000000000180000006c000000e8fbffff3e00000000410e107c0e08000000000000000000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x500000
+    AddressAlign:    0x10
+    Content:         f30f1efa31ed4989d15e4889e24883e4f050544531c031c9488d3df1000000ff153b070000f4cccccccccccccccccccc488d3d49050000488d05420500004839f87415488b05260700004885c07409ffe00f1f8000000000c30f1f8000000000488d3d19050000488d35120500004829fe4889f048c1ee3f48c1f8034801c648d1fe7414488b05ed0600004885c07408ffe0660f1f440000c30f1f8000000000f30f1efa803ddd06000000752b5548833dca060000004889e5740c488b3dbe040000e8c9000000e864ffffffc605b5060000015dc30f1f00c30f1f8000000000f30f1efae977ffffffcccccccccccccc8d0437c3662e0f1f840000000000669089f829f0c3662e0f1f8400000000009050488d3d24030000bed204000031c0e87c000000488d3d26030000be6e00000031c0e869000000488d3d29030000bea6ffffff31c0e85600000031c059c3
+  - Name:            .def_section
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x500790
+    AddressAlign:    0x10
+    Content:         b8d2040000c3
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x5005c0
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Content:         f30f1efa31ed4989d15e4889e24883e4f050544531c031c9488d3df1000000ff153b070000f4cccccccccccccccccccc488d3d49050000488d05420500004839f87415488b05260700004885c07409ffe00f1f8000000000c30f1f8000000000488d3d19050000488d35120500004829fe4889f048c1ee3f48c1f8034801c648d1fe7414488b05ed0600004885c07408ffe0660f1f440000c30f1f8000000000f30f1efa803ddd06000000752b5548833dca060000004889e5740c488b3dbe040000e8c9000000e864ffffffc605b5060000015dc30f1f00c30f1f8000000000f30f1efae977ffffffcccccccccccccc8d0437c3662e0f1f840000000000669089f829f0c3662e0f1f8400000000009050488d3d24030000bed204000031c0e87c000000488d3d26030000be6e00000031c0e869000000488d3d29030000bea6ffffff31c0e85600000031c059c3
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x50057c
+    AddressAlign:    0x1
+    Content:         00000000
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x500788
+    AddressAlign:    0x1
+    Size:            0x1
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011100252513050325721710171b251101552373177417000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         27000000050001080000000001001d0001080000000000000002000000000000000000080000000c000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         1000000005000000070000000000000078000000
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4c696e6b65723a204c4c442031392e302e3000004743433a20285562756e74752031322e332e302d317562756e7475317e32322e3034292031322e332e3000636c616e672076657273696f6e2031392e302e306769742028676974406769746875622e636f6d3a616d70616e6465792d313939352f6c6c766d2d70726f6a6563742e67697420653436313039303665643231646165353039316338383434653837326433306166626266646161362900
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         a50000000500080050000000010101fb0e0d00010101010000000100000101011f02170000001500000003011f020f051e020000000000a9238d57e5a29b0bdc61914280f395690700000001a4d7d6475311a9cfc74f54416c8ee119054e0a000902900750000000000001020600010105310a000902f000500000000000110527063e050006c905310a2e0527062e0400050006b705020a270503082f082f082f060b2e0202000101
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         1300000005000800010000000400000003000603015e00
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         6d61696e2e6300646566696e6974696f6e732e68002e002f746d702f7465737400
+Symbols:
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+    Binding:         STB_LOCAL
+  - Name:            crtstuff.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+    Binding:         STB_LOCAL
+  - Name:            deregister_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x500030
+    Size:            0x0
+    Binding:         STB_LOCAL
+  - Name:            __do_global_dtors_aux
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x5000a0
+    Size:            0x000000
+    Binding:         STB_LOCAL
+  - Name:            completed.0
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x500788
+    Size:            0x000001
+    Binding:         STB_LOCAL
+  - Name:            frame_dummy
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x5000e0
+    Size:            0x000000
+    Binding:         STB_LOCAL
+  - Name:            __dso_handle
+    Type:            STT_OBJECT
+    Section:         .data.rel.local
+    Value:           0x500580
+    Size:            0x000000
+    Binding:         STB_LOCAL
+    Other:           [ STV_HIDDEN ]
+  - Name:            __FRAME_END__
+    Type:            STT_OBJECT
+    Section:         .eh_frame
+    Value:           0x5004b8
+    Size:            0x000000
+    Binding:         STB_LOCAL
+  - Name:            __TMC_END__
+    Type:            STT_OBJECT
+    Section:         .tm_clone_table
+    Value:           0x500580
+    Size:            0x000000
+    Binding:         STB_LOCAL
+    Other:           [ STV_HIDDEN ]
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Section:         .got.plt
+    Value:           0x500588
+    Size:            0x000000
+    Binding:         STB_LOCAL
+    Other:           [ STV_HIDDEN ]
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x5005c0
+    Size:            0x000000
+    Binding:         STB_LOCAL
+    Other:           [ STV_HIDDEN ]
+  - Name:            _init
+    Type:            STT_FUNC
+    Section:         .init
+    Value:           0x500150
+    Size:            0x000000
+    Binding:         STB_LOCAL
+    Other:           [ STV_HIDDEN ]
+  - Name:            _fini
+    Type:            STT_FUNC
+    Section:         .fini
+    Value:           0x50016c
+    Size:            0x000000
+    Binding:         STB_LOCAL
+    Other:           [ STV_HIDDEN ]
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x500000
+    Size:            0x000026
+    Binding:         STB_GLOBAL
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x500110
+    Size:            0x00003e
+    Binding:         STB_GLOBAL
+  - Name:            data_start
+    Section:         .data
+    Value:           0x50057c
+    Size:            0x000000
+    Binding:         STB_WEAK
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata.cst4
+    Value:           0x500438
+    Size:            0x000004
+    Binding:         STB_GLOBAL
+  - Name:            __data_start
+    Section:         .data
+    Value:           0x50057c
+    Binding:         STB_GLOBAL
+  - Name:            dummy_function
+    Type:            STT_FUNC
+    Section:         .def_section
+    Value:           0x500790
+    Size:            0x000006
+    Binding:         STB_GLOBAL
+  - Name:            add
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x5000f0
+    Size:            0x000000
+    Binding:         STB_GLOBAL
+  - Name:            sub
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x500100
+    Size:            0x000005
+    Binding:         STB_GLOBAL
+  - Name:            printf
+    Type:            STT_FUNC
+    Section:         .data
+    Value:           0x000000
+    Size:            0x000000
+    Binding:         STB_GLOBAL
+DynamicSymbols:
+  - Name:            _libc_start_main@GLIBC_2.34
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x0
+    Size:            0x0
+  - Name:            __gmon_start__
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x0
+    Size:            0x0
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+    Value:           0x0
+    Size:            0x0
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+    Value:           0x0
+    Size:            0x0
+  - Name:            __cxa_finalize@GLIBC_2.2.5
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+    Value:           0x0
+    Size:            0x0
+  - Name:            printf@GLIBC_2.2.5
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x0
+    Size:            0x0
+DWARF:
+  debug_str:
+    - 'main.c'
+    - 'clang version 19.0.0git (git@github.com:ampandey-1995/llvm-project.git e4610906ed21dae5091c8844e872d30afbbfdaa6)'
+    - '/tmp/test'
+  debug_addr:
+    - Length:          0x14
+      Version:         0x05
+      AddressSize:     0x08
+      Entries:
+        - Address:         0x500790
+        - Address:         0x5000f0

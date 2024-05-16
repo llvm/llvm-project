@@ -490,7 +490,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   } else {
     Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
   }
-  Opts.ApproximateLine = Args.hasArg(OPT_skip_line_zero);
+  Opts.SkipLineZero = Args.hasArg(OPT_skip_line_zero);
   Opts.DebugFileDirectory = Args.getAllArgValues(OPT_debug_file_directory_EQ);
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);

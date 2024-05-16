@@ -1341,7 +1341,6 @@ uint32_t DWARFDebugLine::LineTable::lookupAddressImpl(
     return UnknownRowIndex;
 
   uint32_t RowIndex = findRowInSeq(*It, Address);
-
   if (RowIndex == UnknownRowIndex)
     return RowIndex;
 
