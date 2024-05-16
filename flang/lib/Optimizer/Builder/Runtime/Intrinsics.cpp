@@ -106,6 +106,20 @@ void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, callee, args);
 }
 
+void fir::runtime::genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value values, mlir::Value time) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Etime)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(3));
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFuncTy, values, time, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+}
+
 void fir::runtime::genRandomInit(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value repeatable,
                                  mlir::Value imageDistinct) {
