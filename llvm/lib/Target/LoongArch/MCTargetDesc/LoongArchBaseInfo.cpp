@@ -75,13 +75,6 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   ABI ArgProvidedABI = getTargetABI(ABIName);
   ABI TripleABI = getTripleABI(TT);
 
-  auto GetFeatureABI = [=]() {
-    if (FeatureBits[LoongArch::FeatureBasicD])
-      return Is64Bit ? ABI_LP64D : ABI_ILP32D;
-    if (FeatureBits[LoongArch::FeatureBasicF])
-      return Is64Bit ? ABI_LP64F : ABI_ILP32F;
-    return Is64Bit ? ABI_LP64S : ABI_ILP32S;
-  };
   auto IsABIValidForFeature = [=](ABI Abi) {
     switch (Abi) {
     default:
@@ -164,6 +157,13 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   }
 
   // 3. Parse the 'feature-abi', and use it.
+  auto GetFeatureABI = [=]() {
+    if (FeatureBits[LoongArch::FeatureBasicD])
+      return Is64Bit ? ABI_LP64D : ABI_ILP32D;
+    if (FeatureBits[LoongArch::FeatureBasicF])
+      return Is64Bit ? ABI_LP64F : ABI_ILP32F;
+    return Is64Bit ? ABI_LP64S : ABI_ILP32S;
+  };
   if (ABIName.empty())
     errs() << "warning: the triple-implied ABI is invalid, ignoring and using "
               "feature-implied ABI\n";
