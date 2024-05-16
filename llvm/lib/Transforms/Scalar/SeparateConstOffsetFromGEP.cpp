@@ -1001,7 +1001,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
     auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
     IsChainInBounds &= KnownGEPIdx.isNonNegative();
     if (IsChainInBounds) {
-      auto PtrGEPIdx = GEP->indices().begin();
+      auto PtrGEPIdx = PtrGEP->indices().begin();
       auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
       IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
     }
