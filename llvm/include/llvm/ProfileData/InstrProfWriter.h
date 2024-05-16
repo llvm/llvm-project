@@ -51,6 +51,7 @@ private:
   SmallVector<TemporalProfTraceTy> TemporalProfTraces;
   std::mt19937 RNG;
 
+  // The MemProf data.
   memprof::IndexedMemProfData MemProfData;
 
   // List of binary ids.
