@@ -2715,7 +2715,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (S.getLangOpts().HLSL && IsStrict)
-    S.Diag(AL.getStrictLoc(), diag::warn_availability_hlsl_unavailable_strict);
+    S.Diag(AL.getStrictLoc(), diag::err_availability_unexpected_parameter)
+        << "strict" << /* HLSL */ 0;
 
   int PriorityModifier = AL.isPragmaClangAttribute()
                              ? Sema::AP_PragmaClangAttribute
@@ -2732,8 +2733,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         S.Diag(EnvironmentLoc->Loc, diag::warn_availability_unknown_environment)
             << EnvironmentLoc->Ident;
     } else {
-      S.Diag(EnvironmentLoc->Loc,
-             diag::warn_availability_environment_only_in_hlsl);
+      S.Diag(EnvironmentLoc->Loc, diag::err_availability_unexpected_parameter)
+          << "environment" << /* C/C++ */ 1;
     }
   }
 

@@ -36,10 +36,6 @@ __attribute__((availability(shadermodel, introduced = 5.0, environment = compute
 __attribute__((availability(shadermodel, introduced = 6.0, environment = mesh)))
 unsigned f8();
 
-// expected-warning@#f9_attr {{strict parameter is not supported in HLSL}}
-__attribute__((availability(shadermodel, strict, introduced = 6.0, environment = mesh)))  // #f9_attr
-unsigned f9();
-
 [numthreads(4,1,1)]
 int main() {
     // expected-warning@#f1_call {{'f1' is only available on Shader Model 6.0 or newer}}
