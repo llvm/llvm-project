@@ -49,29 +49,27 @@ public:
 
   LIBC_INLINE static MutexError destroy(Mutex *) { return MutexError::NONE; }
 
+  // TODO: record owner and lock count.
   LIBC_INLINE MutexError lock() {
     this->internal::RawMutex::lock(
-        /* timeout */ cpp::nullopt,
-        /* is_pshared */ this->pshared,
-        /* spin_count */ LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT);
-    // TODO: record owner and lock count.
+        /* timeout */ cpp::nullopt, this->pshared);
     return MutexError::NONE;
   }
 
+  // TODO: record owner and lock count.
   LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
-    if (this->internal::RawMutex::lock(
-            abs_time, /* is_shared */ this->pshared,
-            /* spin_count */ LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT))
+    if (this->internal::RawMutex::lock(abs_time, this->pshared))
       return MutexError::NONE;
     return MutexError::TIMEOUT;
   }
 
   LIBC_INLINE MutexError unlock() {
-    if (this->internal::RawMutex::unlock(/* is_shared */ this->pshared))
+    if (this->internal::RawMutex::unlock(this->pshared))
       return MutexError::NONE;
     return MutexError::UNLOCK_WITHOUT_LOCK;
   }
 
+  // TODO: record owner and lock count.
   LIBC_INLINE MutexError try_lock() {
     if (this->internal::RawMutex::try_lock())
       return MutexError::NONE;

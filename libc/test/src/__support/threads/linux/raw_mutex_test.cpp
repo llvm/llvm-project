@@ -1,3 +1,11 @@
+//===-- Unittests for Linux's RawMutex ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "include/llvm-libc-macros/linux/time-macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h"
