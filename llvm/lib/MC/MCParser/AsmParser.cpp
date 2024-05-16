@@ -295,7 +295,7 @@ private:
 
   void checkForBadMacro(SMLoc DirectiveLoc, StringRef Name, StringRef Body,
                         ArrayRef<MCAsmMacroParameter> Parameters);
-  bool expandMacro(raw_svector_ostream &OS, const MCAsmMacro &Macro,
+  bool expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
                    ArrayRef<MCAsmMacroParameter> Parameters,
                    ArrayRef<MCAsmMacroArgument> A, bool EnableAtPseudoVariable);
 
@@ -312,7 +312,7 @@ private:
   ///
   /// \param M The macro.
   /// \param NameLoc Instantiation location.
-  bool handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc);
+  bool handleMacroEntry(MCAsmMacro *M, SMLoc NameLoc);
 
   /// Handle exit from macro instantiation.
   void handleMacroExit();
@@ -1980,9 +1980,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
   // If macros are enabled, check to see if this is a macro instantiation.
   if (areMacrosEnabled())
-    if (const MCAsmMacro *M = getContext().lookupMacro(IDVal)) {
+    if (MCAsmMacro *M = getContext().lookupMacro(IDVal))
       return handleMacroEntry(M, IDLoc);
-    }
 
   // Otherwise, we have a normal instruction or directive.
 
@@ -2495,7 +2494,7 @@ static bool isIdentifierChar(char c) {
          c == '.';
 }
 
-bool AsmParser::expandMacro(raw_svector_ostream &OS, const MCAsmMacro &Macro,
+bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
                             ArrayRef<MCAsmMacroParameter> Parameters,
                             ArrayRef<MCAsmMacroArgument> A,
                             bool EnableAtPseudoVariable) {
@@ -2560,14 +2559,18 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, const MCAsmMacro &Macro,
       }
       Pos += 2;
     } else {
+      // Check for \@ and \+ pseudo variables.
       unsigned I = Pos + 1;
-
-      // Check for the \@ pseudo-variable.
-      if (EnableAtPseudoVariable && Body[I] == '@' && I + 1 != End)
-        ++I;
-      else
-        while (isIdentifierChar(Body[I]) && I + 1 != End)
+      if (I + 1 != End) {
+        if (EnableAtPseudoVariable && Body[I] == '@') {
           ++I;
+        } else if (Body[I] == '+') {
+          ++I;
+        } else {
+          while (isIdentifierChar(Body[I]) && I + 1 != End)
+            ++I;
+        }
+      }
 
       const char *Begin = Body.data() + Pos + 1;
       StringRef Argument(Begin, I - (Pos + 1));
@@ -2575,6 +2578,9 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, const MCAsmMacro &Macro,
 
       if (Argument == "@") {
         OS << NumOfMacroInstantiations;
+        Pos += 2;
+      } else if (Argument == "+") {
+        OS << Macro.Count++;
         Pos += 2;
       } else {
         for (; Index < NParameters; ++Index)
@@ -2860,7 +2866,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
   return TokError("too many positional arguments");
 }
 
-bool AsmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc) {
+bool AsmParser::handleMacroEntry(MCAsmMacro *M, SMLoc NameLoc) {
   // Arbitrarily limit macro nesting depth (default matches 'as'). We can
   // eliminate this, although we should protect against infinite loops.
   unsigned MaxNestingDepth = AsmMacroMaxNestingDepth;
