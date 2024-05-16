@@ -222,6 +222,7 @@ latex_documents = [
 # If false, no module index is generated.
 # latex_domain_indices = True
 
+numfig = True
 
 # -- Options for manual page output --------------------------------------------
 
