@@ -174,3 +174,33 @@ func.func @non_unit_strides(%arg0: memref<512x16x1xf32, strided<[8192, 16, 4], o
 // The inner most unit dims can not be dropped if the strides are not ones.
 // CHECK:     func.func @non_unit_strides
 // CHECK-NOT:   memref.subview
+
+// -----
+
+func.func @leading_scalable_dimension_transfer_read(%dest : memref<24x1xf32>, %index: index) -> vector<[4]x1xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %4 = vector.transfer_read %dest[%index, %c0], %cst_0 {in_bounds = [true, true]} : memref<24x1xf32>, vector<[4]x1xf32>
+  return %4 : vector<[4]x1xf32>
+}
+// CHECK:      func.func @leading_scalable_dimension_transfer_read
+// CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]][0, 0] [24, 1] [1, 1] : memref<24x1xf32> to memref<24xf32, strided<[1]>>
+// CHECK:        %[[READ:.+]] = vector.transfer_read %[[SUBVIEW]][%[[IDX]]], %{{.*}} {in_bounds = [true]} : memref<24xf32, strided<[1]>>, vector<[4]xf32>
+// CHECK:        %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<[4]xf32> to vector<[4]x1xf32>
+// CHECK:        return %[[CAST]]
+
+// -----
+
+// Negative test: [1] (scalable 1) is _not_ a unit dimension.
+func.func @trailing_scalable_one_dim_transfer_read(%dest : memref<24x1xf32>, %index: index) -> vector<4x[1]xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %4 = vector.transfer_read %dest[%index, %c0], %cst_0 {in_bounds = [true, true]} : memref<24x1xf32>, vector<4x[1]xf32>
+  return %4 : vector<4x[1]xf32>
+}
+// CHECK:      func.func @trailing_scalable_one_dim_transfer_read
+// CHECK-NOT:    vector.shape_cast
+// CHECK:        vector.transfer_read {{.*}} : memref<24x1xf32>, vector<4x[1]xf32>
+// CHECK-NOT:    vector.shape_cast
