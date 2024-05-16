@@ -1004,9 +1004,9 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
     if (Constant *C = SymbolicallyEvaluateGEP(GEP, Ops, DL, TLI))
       return C;
 
-    return ConstantExpr::getGetElementPtr(
-        SrcElemTy, Ops[0], Ops.slice(1), GEP->getNoWrapFlags(),
-        GEP->getInRange());
+    return ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], Ops.slice(1),
+                                          GEP->getNoWrapFlags(),
+                                          GEP->getInRange());
   }
 
   if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE)) {

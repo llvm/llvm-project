@@ -4313,8 +4313,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
-      ID.ConstantVal = ConstantExpr::getGetElementPtr(
-          Ty, Elts[0], Indices, NW, InRange);
+      ID.ConstantVal =
+          ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices, NW, InRange);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");

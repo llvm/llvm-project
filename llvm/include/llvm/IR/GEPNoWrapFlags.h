@@ -16,7 +16,7 @@
 namespace llvm {
 
 class GEPNoWrapFlags {
-  enum : unsigned{
+  enum : unsigned {
     InBoundsFlag = (1 << 0),
     NUSWFlag = (1 << 1),
     NUWFlag = (1 << 2),
@@ -56,7 +56,7 @@ public:
     return GEPNoWrapFlags(Flags & ~InBoundsFlag);
   }
   GEPNoWrapFlags withoutNoUnsignedSignedWrap() const {
-    return GEPNoWrapFlags(Flags & ~(InBoundsFlag|NUSWFlag));
+    return GEPNoWrapFlags(Flags & ~(InBoundsFlag | NUSWFlag));
   }
   GEPNoWrapFlags withoutNoUnsignedWrap() const {
     return GEPNoWrapFlags(Flags & ~NUWFlag);
