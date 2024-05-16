@@ -109,10 +109,12 @@ struct Foo {
 };
 
 template <typename X, int Y>
-using Bar = Foo<X, sizeof(X)>;
+using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
+                               // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
+                               // expected-note {{because '__is_deducible}}
 
-// FIXME: we should reject this case? GCC rejects it, MSVC accepts it.
-Bar s = {{1}};
+
+Bar s = {{1}}; // expected-error {{no viable constructor or deduction guide }}
 }  // namespace test9
 
 namespace test10 {
@@ -133,9 +135,13 @@ A a(2);  // Foo<int*>
 namespace test11 {
 struct A {};
 template<class T> struct Foo { T c; };
-template<class X, class Y=A> using AFoo = Foo<Y>;
+template<class X, class Y=A>
+using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{candidate template ignored: constraints not satisfied [with Y = int]}} \
+                    // expected-note {{because '__is_deducible(AFoo, Foo<int>)' evaluated to false}} \
+                    // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
 
-AFoo s = {1};
+AFoo s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}}
 } // namespace test11
 
 namespace test12 {
@@ -190,13 +196,16 @@ template <class T> struct Foo { Foo(T); };
 
 template<class V> using AFoo = Foo<V *>;
 template<typename> concept False = false;
-template<False W> using BFoo = AFoo<W>;
+// FIXME: emit a more descriptive diagnostic for "__is_deducible" constraint failure.
+template<False W>
+using BFoo = AFoo<W>; // expected-note {{candidate template ignored: constraints not satisfied [with V = int]}} \
+                      // expected-note {{because '__is_deducible(BFoo, Foo<int *>)' evaluated to false}} \
+                      // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0 *>' against 'int *'}}
 int i = 0;
 AFoo a1(&i); // OK, deduce Foo<int *>
 
-// FIXME: we should reject this case as the W is not deduced from the deduced
-// type Foo<int *>.
-BFoo b2(&i); 
+// the W is not deduced from the deduced type Foo<int *>.
+BFoo b2(&i); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'BFoo'}}
 } // namespace test15
 
 namespace test16 {
