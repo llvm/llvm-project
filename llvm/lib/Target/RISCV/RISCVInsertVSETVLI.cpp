@@ -868,6 +868,7 @@ private:
 } // end anonymous namespace
 
 char RISCVInsertVSETVLI::ID = 0;
+char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
