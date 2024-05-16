@@ -69,7 +69,8 @@ Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
 /// form.
 ///
 /// In some cases, constant folding may return one value chosen from a set of
-/// multiple legal return values. Using such a result is usually only valid if
+/// multiple legal return values. For example, the exact bit pattern of NaN
+/// results is not guaranteed. Using such a result is usually only valid if
 /// all uses of the original operation are replaced by the constant-folded
 /// result. The \p AllowNonDeterministic parameter controls whether this is
 /// allowed.
