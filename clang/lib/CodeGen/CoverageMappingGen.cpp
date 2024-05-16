@@ -2080,10 +2080,11 @@ struct CounterCoverageMappingBuilder
 
     // Construct the graph and calculate `Indices`.
     mcdc::TVIdxBuilder Builder(CondIDs);
-    auto NumTVs = Builder.NumTestVectors;
-    auto MaxTVs = mcdc::TVIdxBuilder::HardMaxTVs;
+    unsigned NumTVs = Builder.NumTestVectors;
+    unsigned MaxTVs = CVM.getCodeGenModule().getCodeGenOpts().MCDCMaxTVs;
+    assert(MaxTVs < mcdc::TVIdxBuilder::HardMaxTVs);
 
-    if (NumTVs >= MaxTVs) {
+    if (NumTVs > MaxTVs) {
       // NumTVs exceeds MaxTVs -- warn and cancel the Decision.
       cancelDecision(E, Since, NumTVs, MaxTVs);
       return;

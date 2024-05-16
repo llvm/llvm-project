@@ -1078,7 +1078,9 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   // for most embedded applications. Setting a maximum value prevents the
   // bitmap footprint from growing too large without the user's knowledge. In
   // the future, this value could be adjusted with a command-line option.
-  unsigned MCDCMaxConditions = (CGM.getCodeGenOpts().MCDCCoverage) ? 32767 : 0;
+  unsigned MCDCMaxConditions =
+      (CGM.getCodeGenOpts().MCDCCoverage ? CGM.getCodeGenOpts().MCDCMaxConds
+                                         : 0);
 
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
   RegionMCDCState.reset(new MCDC::State);
