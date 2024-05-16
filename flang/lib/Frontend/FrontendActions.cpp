@@ -477,6 +477,15 @@ void DebugUnparseWithSymbolsAction::executeAction() {
   reportFatalSemanticErrors();
 }
 
+void DebugUnparseWithModulesAction::executeAction() {
+  auto &parseTree{*getInstance().getParsing().parseTree()};
+  CompilerInstance &ci{getInstance()};
+  Fortran::semantics::UnparseWithModules(
+      llvm::outs(), ci.getSemantics().context(), parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  reportFatalSemanticErrors();
+}
+
 void DebugDumpSymbolsAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
 
