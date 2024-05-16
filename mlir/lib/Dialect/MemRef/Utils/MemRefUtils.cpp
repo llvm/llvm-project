@@ -178,5 +178,35 @@ computeSuffixProductIRBlock(Location loc, OpBuilder &builder,
   return computeSuffixProductIRBlockImpl(loc, builder, sizes, unit);
 }
 
+MemrefValue skipFullyAliasingOperations(MemrefValue source) {
+  while (auto op = source.getDefiningOp()) {
+    if (auto subViewOp = dyn_cast<memref::SubViewOp>(op);
+        subViewOp && subViewOp.hasZeroOffset() && subViewOp.hasUnitStride()) {
+      // A `memref.subview` with an all zero offset, and all unit strides, still
+      // points to the same memory.
+      source = cast<MemrefValue>(subViewOp.getSource());
+    } else if (auto castOp = dyn_cast<memref::CastOp>(op)) {
+      // A `memref.cast` still points to the same memory.
+      source = castOp.getSource();
+    } else {
+      return source;
+    }
+  }
+  return source;
+}
+
+MemrefValue skipSubViewsAndCasts(MemrefValue source) {
+  while (auto op = source.getDefiningOp()) {
+    if (auto subView = dyn_cast<memref::SubViewOp>(op)) {
+      source = cast<MemrefValue>(subView.getSource());
+    } else if (auto cast = dyn_cast<memref::CastOp>(op)) {
+      source = cast.getSource();
+    } else {
+      return source;
+    }
+  }
+  return source;
+}
+
 } // namespace memref
 } // namespace mlir
