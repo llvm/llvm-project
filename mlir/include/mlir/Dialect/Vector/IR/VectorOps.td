@@ -561,12 +561,12 @@ class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
 
 def SourceVectorEvenElementCount : PredOpTrait<
   "the trailing dimension of the source vector has an even number of elements",
-    CPred<[{
-      [&](){
-        auto srcVec = getSourceVectorType();
-        return srcVec.getDimSize(srcVec.getRank() - 1) % 2 == 0;
-      }()
-    }]>
+  CPred<[{
+    [&](){
+      auto srcVec = getSourceVectorType();
+      return srcVec.getDimSize(srcVec.getRank() - 1) % 2 == 0;
+    }()
+  }]>
 >;
 
 def Vector_DeinterleaveOp :
@@ -592,16 +592,16 @@ def Vector_DeinterleaveOp :
         Example:
         ```mlir
         %0, %1 = vector.deinterleave %a
-                   :vector<8xi8> -> vector<4xi8>
+                   : vector<8xi8> -> vector<4xi8>
         %2, %3 = vector.deinterleave %b
                    : vector<2x8xi8> -> vector<2x4xi8>
-        %4, %5 = vector.deinterleave %b
+        %4, %5 = vector.deinterleave %c
                    : vector<2x8x4xi8> -> vector<2x8x2xi8>
-        %6, %7 = vector.deinterleave %c
+        %6, %7 = vector.deinterleave %d
                    : vector<[8]xf32> -> vector<[4]xf32>
-        %8, %9 = vector.deinterleave %d
+        %8, %9 = vector.deinterleave %e
                    : vector<2x[6]xf64> -> vector<2x[3]xf64>
-        %10, %11 = vector.deinterleave %d
+        %10, %11 = vector.deinterleave %f
                    : vector<2x4x[6]xf64> -> vector<2x4x[3]xf64>
         ```
       }];
