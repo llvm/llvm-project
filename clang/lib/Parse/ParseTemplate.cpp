@@ -169,6 +169,8 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
   // Parse the actual template declaration.
   if (Tok.is(tok::kw_concept)) {
     Decl *ConceptDecl = ParseConceptDefinition(TemplateInfo, DeclEnd);
+    // We need to explicitly pass ConceptDecl to ParsingDeclRAIIObject, so that
+    // delayed diagnostics (e.g. warn_deprecated) have a Decl to work with.
     ParsingTemplateParams.complete(ConceptDecl);
     return Actions.ConvertDeclToDeclGroup(ConceptDecl);
   }
