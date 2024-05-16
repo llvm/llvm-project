@@ -31,9 +31,8 @@ class AddressesMap {
 public:
   virtual ~AddressesMap() = default;
 
-  /// Checks that there are valid relocations in the .debug_info
-  /// section.
-  virtual bool hasValidRelocs() = 0;
+  /// Check if we can quickly detect that there is no any live debug info.
+  virtual bool hasLiveDebugInfo() = 0;
 
   /// Checks that the specified DWARF expression operand \p Op references live
   /// code section and returns the relocation adjustment value (to get the
@@ -64,24 +63,6 @@ public:
   /// \returns true whether any reloc has been applied.
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                                 bool IsLittleEndian) = 0;
-
-  /// Check if the linker needs to gather and save relocation info.
-  virtual bool needToSaveValidRelocs() = 0;
-
-  /// Update and save relocation values to be serialized
-  virtual void updateAndSaveValidRelocs(bool IsDWARF5,
-                                        uint64_t OriginalUnitOffset,
-                                        int64_t LinkedOffset,
-                                        uint64_t StartOffset,
-                                        uint64_t EndOffset) = 0;
-
-  /// Update the valid relocations that used OriginalUnitOffset as the compile
-  /// unit offset, and update their values to reflect OutputUnitOffset.
-  virtual void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                               uint64_t OutputUnitOffset) = 0;
-
-  /// Erases all data.
-  virtual void clear() = 0;
 
   /// This function checks whether variable has DWARF expression containing
   /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
