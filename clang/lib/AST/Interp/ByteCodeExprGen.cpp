@@ -3722,8 +3722,16 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     }
   }
 
-  if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-    return this->emitGetPtrGlobal(*I, E);
+  if (std::optional<unsigned> I = P.getOrCreateDummy(D)) {
+    if (!this->emitGetPtrGlobal(*I, E))
+      return false;
+    // Convert the dummy pointer to another pointer type if we have to.
+    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+      if (!this->emitDecayPtr(PT_Ptr, PT, E))
+        return false;
+    }
+    return true;
+  }
 
   return this->emitInvalidDeclRef(E, E);
 }
