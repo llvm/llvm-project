@@ -654,13 +654,10 @@ let Predicates = [PrefixInstrs] in {
                                  (ins s34imm:$SI),
                                  "pli $RT, $SI", IIC_IntSimple, []>;
   }
+}
 
+let Predicates = [PrefixInstrs, HasFPU] in {
   let mayLoad = 1, mayStore = 0 in {
-    defm PLXV :
-      8LS_DForm_R_SI34_XT6_RA5_MEM_p<25, (outs vsrc:$XST), (ins (memri34 $D, $RA):$addr),
-                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                     (ins s34imm_pcrel:$D),
-                                     "plxv $XST, $addr", "plxv $XST, $D", IIC_LdStLFD>;
     defm PLFS :
       MLS_DForm_R_SI34_RTA5_MEM_p<48, (outs f4rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
@@ -671,6 +668,28 @@ let Predicates = [PrefixInstrs] in {
                                   (ins  (memri34_pcrel $D, $RA):$addr),
                                   (ins s34imm_pcrel:$D), "plfd $RST, $addr",
                                   "plfd $RST, $D", IIC_LdStLFD>;
+  }
+  let mayStore = 1, mayLoad = 0 in {
+    defm PSTFS :
+      MLS_DForm_R_SI34_RTA5_MEM_p<52, (outs), (ins f4rc:$RST, (memri34 $D, $RA):$addr),
+                                  (ins f4rc:$RST, (memri34_pcrel $D, $RA):$addr),
+                                  (ins f4rc:$RST, s34imm_pcrel:$D),
+                                  "pstfs $RST, $addr", "pstfs $RST, $D", IIC_LdStLFD>;
+    defm PSTFD :
+      MLS_DForm_R_SI34_RTA5_MEM_p<54, (outs), (ins f8rc:$RST, (memri34 $D, $RA):$addr),
+                                  (ins f8rc:$RST, (memri34_pcrel $D, $RA):$addr),
+                                  (ins f8rc:$RST, s34imm_pcrel:$D),
+                                  "pstfd $RST, $addr", "pstfd $RST, $D", IIC_LdStLFD>;
+  }
+}
+
+let Predicates = [PrefixInstrs, HasP10Vector] in {
+  let mayLoad = 1, mayStore = 0 in {
+    defm PLXV :
+      8LS_DForm_R_SI34_XT6_RA5_MEM_p<25, (outs vsrc:$XST), (ins (memri34 $D, $RA):$addr),
+                                     (ins (memri34_pcrel $D, $RA):$addr),
+                                     (ins s34imm_pcrel:$D),
+                                     "plxv $XST, $addr", "plxv $XST, $D", IIC_LdStLFD>;
     defm PLXSSP :
       8LS_DForm_R_SI34_RTA5_MEM_p<43, (outs vfrc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
@@ -683,6 +702,28 @@ let Predicates = [PrefixInstrs] in {
                                   (ins s34imm_pcrel:$D),
                                   "plxsd $RST, $addr", "plxsd $RST, $D",
                                   IIC_LdStLFD>;
+  }
+ let mayStore = 1, mayLoad = 0 in {
+    defm PSTXV :
+      8LS_DForm_R_SI34_XT6_RA5_MEM_p<27, (outs), (ins vsrc:$XST, (memri34 $D, $RA):$addr),
+                                     (ins vsrc:$XST, (memri34_pcrel $D, $RA):$addr),
+                                     (ins vsrc:$XST, s34imm_pcrel:$D),
+                                     "pstxv $XST, $addr", "pstxv $XST, $D", IIC_LdStLFD>;
+    defm PSTXSSP :
+      8LS_DForm_R_SI34_RTA5_MEM_p<47, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
+                                  (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
+                                  (ins vfrc:$RST, s34imm_pcrel:$D),
+                                  "pstxssp $RST, $addr", "pstxssp $RST, $D", IIC_LdStLFD>;
+    defm PSTXSD :
+      8LS_DForm_R_SI34_RTA5_MEM_p<46, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
+                                  (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
+                                  (ins vfrc:$RST, s34imm_pcrel:$D),
+                                  "pstxsd $RST, $addr", "pstxsd $RST, $D", IIC_LdStLFD>;
+  }
+}
+
+let Predicates = [PrefixInstrs] in {
+  let mayLoad = 1, mayStore = 0 in {
     let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
       defm PLBZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<34, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
@@ -745,31 +786,6 @@ let Predicates = [PrefixInstrs] in {
   }
 
   let mayStore = 1, mayLoad = 0 in {
-    defm PSTXV :
-      8LS_DForm_R_SI34_XT6_RA5_MEM_p<27, (outs), (ins vsrc:$XST, (memri34 $D, $RA):$addr),
-                                     (ins vsrc:$XST, (memri34_pcrel $D, $RA):$addr),
-                                     (ins vsrc:$XST, s34imm_pcrel:$D),
-                                     "pstxv $XST, $addr", "pstxv $XST, $D", IIC_LdStLFD>;
-    defm PSTFS :
-      MLS_DForm_R_SI34_RTA5_MEM_p<52, (outs), (ins f4rc:$RST, (memri34 $D, $RA):$addr),
-                                  (ins f4rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins f4rc:$RST, s34imm_pcrel:$D),
-                                  "pstfs $RST, $addr", "pstfs $RST, $D", IIC_LdStLFD>;
-    defm PSTFD :
-      MLS_DForm_R_SI34_RTA5_MEM_p<54, (outs), (ins f8rc:$RST, (memri34 $D, $RA):$addr),
-                                  (ins f8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins f8rc:$RST, s34imm_pcrel:$D),
-                                  "pstfd $RST, $addr", "pstfd $RST, $D", IIC_LdStLFD>;
-    defm PSTXSSP :
-      8LS_DForm_R_SI34_RTA5_MEM_p<47, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
-                                  (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins vfrc:$RST, s34imm_pcrel:$D),
-                                  "pstxssp $RST, $addr", "pstxssp $RST, $D", IIC_LdStLFD>;
-    defm PSTXSD :
-      8LS_DForm_R_SI34_RTA5_MEM_p<46, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
-                                  (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins vfrc:$RST, s34imm_pcrel:$D),
-                                  "pstxsd $RST, $addr", "pstxsd $RST, $D", IIC_LdStLFD>;
     let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
       defm PSTB8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<38, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
@@ -1136,7 +1152,7 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
                                []>;
 }
 
-let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs] in {
+let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs, HasP10Vector] in {
   defm PLXVP :
     8LS_DForm_R_XTp5_SI34_MEM_p<58, (outs vsrprc:$XTp), (ins (memri34 $D, $RA):$addr),
                                 (ins (memri34_pcrel $D, $RA):$addr),
@@ -1145,7 +1161,7 @@ let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs] i
                                 IIC_LdStLFD>;
 }
 
-let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] in {
+let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs, HasP10Vector] in {
   defm PSTXVP :
     8LS_DForm_R_XTp5_SI34_MEM_p<62, (outs), (ins vsrprc:$XTp, (memri34 $D, $RA):$addr),
                                 (ins vsrprc:$XTp, (memri34_pcrel $D, $RA):$addr),
@@ -1157,7 +1173,7 @@ let Predicates = [PairedVectorMemops] in {
   // Intrinsics for Paired Vector Loads.
   def : Pat<(v256i1 (int_ppc_vsx_lxvp DQForm:$src)), (LXVP memrix16:$src)>;
   def : Pat<(v256i1 (int_ppc_vsx_lxvp XForm:$src)), (LXVPX XForm:$src)>;
-  let Predicates = [PairedVectorMemops, PrefixInstrs] in {
+  let Predicates = [PairedVectorMemops, PrefixInstrs, HasP10Vector] in {
     def : Pat<(v256i1 (int_ppc_vsx_lxvp PDForm:$src)), (PLXVP memri34:$src)>;
   }
   // Intrinsics for Paired Vector Stores.
@@ -1165,7 +1181,7 @@ let Predicates = [PairedVectorMemops] in {
             (STXVP $XSp, memrix16:$dst)>;
   def : Pat<(int_ppc_vsx_stxvp v256i1:$XSp, XForm:$dst),
             (STXVPX $XSp, XForm:$dst)>;
-  let Predicates = [PairedVectorMemops, PrefixInstrs] in {
+  let Predicates = [PairedVectorMemops, PrefixInstrs, HasP10Vector] in {
     def : Pat<(int_ppc_vsx_stxvp v256i1:$XSp, PDForm:$dst),
               (PSTXVP $XSp, memri34:$dst)>;
   }

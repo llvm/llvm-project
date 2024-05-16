@@ -18258,9 +18258,11 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
     FlagSet |= PPC::MOF_SubtargetBeforeP9;
   else {
     FlagSet |= PPC::MOF_SubtargetP9;
-    if (Subtarget.hasPrefixInstrs())
-      FlagSet |= PPC::MOF_SubtargetP10;
   }
+
+  if (Subtarget.hasPrefixInstrs())
+    FlagSet |= PPC::MOF_SubtargetP10;
+
   if (Subtarget.hasSPE())
     FlagSet |= PPC::MOF_SubtargetSPE;
 
