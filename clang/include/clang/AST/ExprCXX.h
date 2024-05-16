@@ -4381,11 +4381,13 @@ class PackIndexingExpr final
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
-                   ArrayRef<Expr *> SubstitutedExprs = {})
+                   ArrayRef<Expr *> SubstitutedExprs = {},
+                   bool EmptyPack = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()) {
+        TransformedExpressions(EmptyPack ? size_t(-1)
+                                         : SubstitutedExprs.size()) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4408,9 +4410,12 @@ public:
                                   SourceLocation EllipsisLoc,
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
-                                  ArrayRef<Expr *> SubstitutedExprs = {});
+                                  ArrayRef<Expr *> SubstitutedExprs = {},
+                                  bool EmptyPack = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
+
+  bool isEmptyPack() const { return TransformedExpressions == size_t(-1); }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4446,7 +4451,8 @@ public:
   }
 
   ArrayRef<Expr *> getExpressions() const {
-    return {getTrailingObjects<Expr *>(), TransformedExpressions};
+    return {getTrailingObjects<Expr *>(),
+            isEmptyPack() ? 0 : TransformedExpressions};
   }
 
   static bool classof(const Stmt *T) {
