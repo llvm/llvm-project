@@ -299,6 +299,17 @@ define amdgpu_ps float @test_clamp_v2bf16_s(<2 x bfloat> inreg %src) {
   ret float %ret
 }
 
+define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
+; GCN-LABEL: test_clamp_bf16_folding:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_exp_bf16_e64 v0, v0 clamp
+; GCN-NEXT:    ; return to shader part epilog
+  %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
+  %max = call bfloat @llvm.maxnum.bf16(bfloat %exp, bfloat 0.0)
+  %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
+  ret bfloat %clamp
+}
+
 define amdgpu_ps float @test_clamp_v2bf16_folding(<2 x bfloat> %src0, <2 x bfloat> %src1) {
 ; GCN-LABEL: test_clamp_v2bf16_folding:
 ; GCN:       ; %bb.0:

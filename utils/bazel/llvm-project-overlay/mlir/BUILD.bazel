@@ -2217,6 +2217,7 @@ cc_library(
         ":ArithDialect",
         ":ArmSMEDialect",
         ":ArmSMETransforms",
+        ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
 	":FunctionInterfaces",
