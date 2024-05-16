@@ -570,6 +570,9 @@ Bug Fixes in This Version
 - Clang will no longer emit a duplicate -Wunused-value warning for an expression
   `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
 
+- Clang now correctly disallows VLA type compound literals, e.g. ``(int[size]){}``,
+  as the C standard mandates. (#GH89835)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
