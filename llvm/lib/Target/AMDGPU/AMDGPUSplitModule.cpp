@@ -669,7 +669,8 @@ void llvm::splitAMDGPUModule(
     for (const auto &KWD : WorkList) {
       SML << "[Kernel] " << getName(*KWD.Fn) << " (totalCost:" << KWD.TotalCost
           << " indirect:" << KWD.HasIndirectCall
-          << " hasNonDuplicatableDep:" << KWD.HasNonDuplicatableDependecy << ")\n";
+          << " hasNonDuplicatableDep:" << KWD.HasNonDuplicatableDependecy
+          << ")\n";
       for (const auto *Dep : KWD.Dependencies)
         SML << "  [Dep] " << getName(*Dep) << '\n';
     }
