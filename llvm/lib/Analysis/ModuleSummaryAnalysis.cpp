@@ -102,9 +102,9 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 // the same function.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                          SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
-                         SmallPtrSet<const User *, 8> &Visited) {
+                         SmallPtrSet<const User *, 8> &Visited,
+                         bool &RefLocalLinkageIFunc) {
   bool HasBlockAddress = false;
-  bool RefLocalLinkageIFunc = false;
   SmallVector<const User *, 32> Worklist;
   if (Visited.insert(CurUser).second)
     Worklist.push_back(CurUser);
@@ -161,7 +161,7 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
       }
     }
   }
-  return HasBlockAddress || RefLocalLinkageIFunc;
+  return HasBlockAddress;
 }
 
 static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
@@ -329,7 +329,8 @@ static void computeFunctionSummary(
 
   // Add personality function, prefix data and prologue data to function's ref
   // list.
-  bool HasIFunc = findRefEdges(Index, &F, RefEdges, Visited);
+  bool HasIFunc = false;
+  findRefEdges(Index, &F, RefEdges, Visited, HasIFunc);
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -388,11 +389,11 @@ static void computeFunctionSummary(
             // of calling it we should add GV to RefEdges directly.
             RefEdges.insert(Index.getOrInsertValueInfo(GV));
           else if (auto *U = dyn_cast<User>(Stored))
-            HasIFunc |= findRefEdges(Index, U, RefEdges, Visited);
+            findRefEdges(Index, U, RefEdges, Visited, HasIFunc);
           continue;
         }
       }
-      HasIFunc |= findRefEdges(Index, &I, RefEdges, Visited);
+      findRefEdges(Index, &I, RefEdges, Visited, HasIFunc);
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB) {
         if (I.mayThrow())
@@ -571,7 +572,7 @@ static void computeFunctionSummary(
                            SmallPtrSet<const User *, 8> &Cache) {
       for (const auto *I : Instrs) {
         Cache.erase(I);
-        HasIFunc = findRefEdges(Index, I, Edges, Cache);
+        findRefEdges(Index, I, Edges, Cache, HasIFunc);
       }
     };
 
@@ -803,7 +804,8 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    SmallVectorImpl<MDNode *> &Types) {
   SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
+  bool Unused = false;
+  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited, Unused);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
