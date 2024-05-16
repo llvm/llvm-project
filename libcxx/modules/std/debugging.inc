@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING)
+#if _LIBCPP_STD_VER >= 26
   // [debugging.utility], utility
   using std::breakpoint;
   using std::breakpoint_if_debugging;

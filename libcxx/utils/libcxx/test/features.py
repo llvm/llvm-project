@@ -501,24 +501,6 @@ DEFAULT_FEATURES += [
 ]
 
 
-# Detect whether LLDB is on the system.
-def check_lldb(cfg):
-    lldb_path = shutil.which("lldb")
-    if lldb_path is None:
-        return False
-
-    return True
-
-
-DEFAULT_FEATURES += [
-    Feature(
-        name="host-has-lldb-with-python",
-        when=check_lldb,
-        actions=[AddSubstitution("%{lldb}", lambda cfg: shutil.which("lldb"))],
-    )
-]
-
-
 # Detect whether dbx is on the system.
 def check_dbx(cfg):
     dbx_path = shutil.which("dbx")
@@ -533,6 +515,24 @@ DEFAULT_FEATURES += [
         name="host-has-dbx",
         when=check_dbx,
         actions=[AddSubstitution("%{dbx}", lambda cfg: shutil.which("dbx"))],
+    )
+]
+
+
+# Detect whether LLDB is on the system.
+def check_lldb(cfg):
+    lldb_path = shutil.which("lldb")
+    if lldb_path is None:
+        return False
+
+    return True
+
+
+DEFAULT_FEATURES += [
+    Feature(
+        name="host-has-lldb-with-python",
+        when=check_lldb,
+        actions=[AddSubstitution("%{lldb}", lambda cfg: shutil.which("lldb"))],
     )
 ]
 

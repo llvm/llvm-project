@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// UNSUPPORTED: libcpp-has-no-incomplete-debugging
 // REQUIRES: host-has-lldb-with-python
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb.

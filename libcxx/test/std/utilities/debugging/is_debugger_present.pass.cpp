@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// UNSUPPORTED: libcpp-has-no-incomplete-debugging
-// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <debugging>
 

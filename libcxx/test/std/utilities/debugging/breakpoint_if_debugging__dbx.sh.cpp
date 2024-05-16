@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// UNSUPPORTED: libcpp-has-no-incomplete-debugging
 // REQUIRES: host-has-dbx
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}

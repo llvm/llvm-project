@@ -333,7 +333,6 @@ DEFAULT_PARAMETERS = [
             AddFeature("libcpp-has-no-experimental-stop_token"),
             AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
-            AddFeature("libcpp-has-no-incomplete-debugging"),
         ],
     ),
     Parameter(
