@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 %s
 
-#if !__has_attribute(clang_nonblocking)
+#if !__has_attribute(nonblocking)
 #error "the 'nonblocking' attribute is not available"
 #endif
 

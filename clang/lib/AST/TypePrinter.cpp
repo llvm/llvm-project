@@ -1000,8 +1000,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   const FunctionEffectsRef FX = T->getFunctionEffects();
   for (const auto &CFE : FX) {
-    OS << " __attribute__((clang_" << CFE.Effect.name();
-    if (const Expr *E = CFE.Cond.expr()) {
+    OS << " __attribute__((" << CFE.Effect.name();
+    if (const Expr *E = CFE.Cond.getCondition()) {
       OS << '(';
       E->printPretty(OS, nullptr, Policy);
       OS << ')';

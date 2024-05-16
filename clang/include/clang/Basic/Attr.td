@@ -1436,34 +1436,24 @@ def CXX11NoReturn : InheritableAttr {
 }
 
 def NonBlocking : TypeAttr {
-  let Spellings = [CXX11<"clang", "nonblocking">,
-                   C23<"clang", "nonblocking">,
-                   GNU<"clang_nonblocking">];
-
+  let Spellings = [Clang<"nonblocking">];
   let Args = [ExprArgument<"Cond", /*optional*/1>];
   let Documentation = [NonBlockingDocs];
 }
 
 def NonAllocating : TypeAttr {
-  let Spellings = [CXX11<"clang", "nonallocating">,
-                   C23<"clang", "nonallocating">,
-                   GNU<"clang_nonallocating">];
+  let Spellings = [Clang<"nonallocating">];
   let Args = [ExprArgument<"Cond", /*optional*/1>];
   let Documentation = [NonAllocatingDocs];
 }
 
 def Blocking : TypeAttr {
-  let Spellings = [CXX11<"clang", "blocking">,
-                   C23<"clang", "blocking">,
-                   GNU<"clang_blocking">];
-
+  let Spellings = [Clang<"blocking">];
   let Documentation = [BlockingDocs];
 }
 
 def Allocating : TypeAttr {
-  let Spellings = [CXX11<"clang", "allocating">,
-                   C23<"clang", "allocating">,
-                   GNU<"clang_allocating">];
+  let Spellings = [Clang<"allocating">];
   let Documentation = [AllocatingDocs];
 }
 
