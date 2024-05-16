@@ -56,6 +56,9 @@ C++ Specific Potentially Breaking Changes
 
 - Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
 
+- Clang now performs semantic analysis for unary operators with dependent operands
+  that are known to be of non-class non-enumeration type prior to instantiation.
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -566,6 +569,9 @@ Bug Fixes in This Version
 
 - Clang will no longer emit a duplicate -Wunused-value warning for an expression
   `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
+
+- Clang now correctly disallows VLA type compound literals, e.g. ``(int[size]){}``,
+  as the C standard mandates. (#GH89835)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
