@@ -234,6 +234,7 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
   puts(MStr);
   LLVMDisposeMessage(MStr);
 
+  LLVMDisposeBuilder(Builder);
   LLVMDisposeDIBuilder(DIB);
   LLVMDisposeModule(M);
 
