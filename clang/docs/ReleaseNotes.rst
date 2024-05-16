@@ -56,6 +56,9 @@ C++ Specific Potentially Breaking Changes
 
 - Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
 
+- Clang now performs semantic analysis for unary operators with dependent operands
+  that are known to be of non-class non-enumeration type prior to instantiation.
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -491,6 +494,9 @@ Improvements to Clang's diagnostics
 Improvements to Clang's time-trace
 ----------------------------------
 
+- Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
+  appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
 Bug Fixes in This Version
 -------------------------
 - Clang's ``-Wundefined-func-template`` no longer warns on pure virtual
@@ -566,6 +572,9 @@ Bug Fixes in This Version
 
 - Clang will no longer emit a duplicate -Wunused-value warning for an expression
   `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
+
+- Clang now correctly disallows VLA type compound literals, e.g. ``(int[size]){}``,
+  as the C standard mandates. (#GH89835)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -717,6 +726,7 @@ Bug Fixes to C++ Support
 - Clang now ignores template parameters only used within the exception specification of candidate function
   templates during partial ordering when deducing template arguments from a function declaration or when
   taking the address of a function template.
+- Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

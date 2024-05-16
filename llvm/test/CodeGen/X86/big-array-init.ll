@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64 | FileCheck %s
 
 ; CHECK-LABEL: bad_int:
 ; CHECK-NEXT: .long 1

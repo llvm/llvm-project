@@ -2531,6 +2531,51 @@ bool ByteCodeExprGen<Emitter>::VisitConvertVectorExpr(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
+    const ShuffleVectorExpr *E) {
+  assert(Initializing);
+  assert(E->getNumSubExprs() > 2);
+
+  const Expr *Vecs[] = {E->getExpr(0), E->getExpr(1)};
+  assert(Vecs[0]->getType() == Vecs[1]->getType());
+
+  const VectorType *VT = Vecs[0]->getType()->castAs<VectorType>();
+  PrimType ElemT = classifyPrim(VT->getElementType());
+  unsigned NumInputElems = VT->getNumElements();
+  unsigned NumOutputElems = E->getNumSubExprs() - 2;
+  assert(NumOutputElems > 0);
+
+  // Save both input vectors to a local variable.
+  unsigned VectorOffsets[2];
+  for (unsigned I = 0; I != 2; ++I) {
+    VectorOffsets[I] = this->allocateLocalPrimitive(
+        Vecs[I], PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+    if (!this->visit(Vecs[I]))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, VectorOffsets[I], E))
+      return false;
+  }
+  for (unsigned I = 0; I != NumOutputElems; ++I) {
+    APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    if (ShuffleIndex == -1)
+      return this->emitInvalid(E); // FIXME: Better diagnostic.
+
+    assert(ShuffleIndex < (NumInputElems * 2));
+    if (!this->emitGetLocal(PT_Ptr,
+                            VectorOffsets[ShuffleIndex >= NumInputElems], E))
+      return false;
+    unsigned InputVectorIndex = ShuffleIndex.getZExtValue() % NumInputElems;
+    if (!this->emitArrayElemPop(ElemT, InputVectorIndex, E))
+      return false;
+
+    if (!this->emitInitElem(ElemT, I, E))
+      return false;
+  }
+
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);

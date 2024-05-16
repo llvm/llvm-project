@@ -151,7 +151,10 @@ def CFGConversion : Pass<"cfg-conversion"> {
   let options = [
     Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
            /*default=*/"false",
-           "force the body of a loop to execute at least once">
+           "force the body of a loop to execute at least once">,
+    Option<"setNSW", "set-nsw", "bool",
+           /*default=*/"false",
+           "set nsw on loop variable increment">
   ];
 }
 
