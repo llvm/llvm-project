@@ -17,7 +17,6 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "llvm/ADT/ArrayRef.h"
-#include <limits>
 
 namespace clang {
 namespace dataflow {
