@@ -22,9 +22,6 @@
 ; import the declaration or de-serialize summary attributes yet) so there is
 ; nothing to test more than the summary content.
 ;
-; TODO: Extend this test case to test IR once postlink optimizer makes use of
-; the import type for declarations.
-;
 ; RUN: llvm-lto2 run \
 ; RUN:   -debug-only=function-import \
 ; RUN:   -import-instr-limit=7 \
@@ -54,7 +51,6 @@
 ;
 ; Secondly disassemble main's combined summary and test that large callees are
 ; not imported as declarations yet.
-; TODO: Serialize declaration bit and test declaration bits are correctly set.
 ;
 ; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
 ;
@@ -83,13 +79,17 @@
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
 
-; IMPORTDUMP: Not importing function 11825436545918268459 callee from lib.cc
-; IMPORTDUMP: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
-; IMPORTDUMP: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
-; IMPORTDUMP: Is importing function definition 6976996067367342685 small_func from lib.cc
-; IMPORTDUMP: Is importing function declaration 2418497564662708935 large_func from lib.cc
-; IMPORTDUMP: Not importing global 7680325410415171624 calleeAddrs from lib.cc
-; IMPORTDUMP: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
+; Test import status from debugging logs.
+; TODO: Serialize declaration bit and test declaration bits are correctly set,
+; and extend this test case to test IR once postlink optimizer makes use of
+; the import type for declarations.
+; IMPORTDUMP-DAG: Not importing function 11825436545918268459 callee from lib.cc
+; IMPORTDUMP-DAG: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
+; IMPORTDUMP-DAG: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
+; IMPORTDUMP-DAG: Is importing function definition 6976996067367342685 small_func from lib.cc
+; IMPORTDUMP-DAG: Is importing function declaration 2418497564662708935 large_func from lib.cc
+; IMPORTDUMP-DAG: Not importing global 7680325410415171624 calleeAddrs from lib.cc
+; IMPORTDUMP-DAG: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
 
 ; RUN: llvm-dis in-process.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 

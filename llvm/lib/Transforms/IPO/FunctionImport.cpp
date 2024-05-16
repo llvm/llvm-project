@@ -1900,6 +1900,7 @@ Expected<bool> FunctionImporter::importFunctions(
   NumImportedFunctions += (ImportedCount - ImportedGVCount);
   NumImportedGlobalVars += ImportedGVCount;
 
+  // TODO: Print counters for definitions and declarations in the debugging log.
   LLVM_DEBUG(dbgs() << "Imported " << ImportedCount - ImportedGVCount
                     << " functions for Module "
                     << DestModule.getModuleIdentifier() << "\n");

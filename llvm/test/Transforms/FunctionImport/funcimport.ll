@@ -169,8 +169,5 @@ declare void @variadic_va_start(...)
 ; DUMP-NEXT:  15 function definitions and 0 function declarations imported from [[M2:.*]]
 ; DUMP-NEXT:  4 var definitions and 0 var declarations imported from [[M2]]
 
-; The following information are printed from `FunctionImporter::importFunctions`
-; in the postlink pipeline.
-; TODO: Update debug information for postlink pipeline.
 ; DUMP:       Imported 15 functions for Module [[M1]]
 ; DUMP-NEXT:  Imported 4 global variables for Module [[M1]]
