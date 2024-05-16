@@ -1587,9 +1587,11 @@ Preprocessor::serializeSafeBufferOptOutMap() const {
   return SrcSeq;
 }
 
-void Preprocessor::setDeserializedSafeBufferOptOutMap(
+std::optional<StringRef> Preprocessor::setDeserializedSafeBufferOptOutMap(
     const SmallVectorImpl<SourceLocation> &SourceLocations) {
   auto It = SourceLocations.begin();
+  decltype(LoadedSafeBufferOptOutMap)
+      TmpMap; // temporarily hold data for `LoadedSafeBufferOptOutMap`
 
   assert(SourceLocations.size() % 2 == 0 &&
          "ill-formed SourceLocation sequence");
@@ -1599,24 +1601,25 @@ void Preprocessor::setDeserializedSafeBufferOptOutMap(
     SourceLocation FileLoc = SourceMgr.getFileLoc(begin);
     FileID FID = SourceMgr.getDecomposedLoc(FileLoc).first;
 
-    if (FID.isInvalid()) {
-      // I suppose this should not happen:
-      assert(false && "Attempted to read a safe buffer opt-out region whose "
-                      "begin location is associated to an invalid File ID.");
-      break;
-    }
+    assert(!FID.isInvalid() &&
+           "Attempted to read a safe buffer opt-out region whose "
+           "begin location is associated to an invalid File ID.");
     assert(!SourceMgr.isLocalFileID(FID) && "Expected a pch/module file");
-    // Here we assume that
+    // Here we require that
     // `SourceMgr.getFileLoc(begin) == SourceMgr.getFileLoc(end)`.
     // Though it may not hold in very rare and strange cases, i.e., a pair of
     // opt-out pragams written in different files but are always used in a way
     // that they match in a TU (otherwise PP will complaint).
     // FIXME: PP should complaint about cross file safe buffer opt-out pragmas.
-    assert(FID == SourceMgr.getDecomposedLoc(SourceMgr.getFileLoc(end)).first &&
-           "Maybe a safe buffer opt-out region starts and ends at different "
-           "files.");
-    LoadedSafeBufferOptOutMap[FID].emplace_back(begin, end);
+    if (FID != SourceMgr.getDecomposedLoc(SourceMgr.getFileLoc(end)).first) {
+      return "Cannot de-serialize a safe buffer opt-out region that begins and "
+             "ends at different files";
+    }
+    TmpMap[FID].emplace_back(begin, end);
   }
+  for (auto [K, V] : TmpMap)
+    LoadedSafeBufferOptOutMap[K].append(V);
+  return std::nullopt;
 }
 
 ModuleLoader::~ModuleLoader() = default;

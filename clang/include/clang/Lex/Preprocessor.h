@@ -2929,7 +2929,10 @@ public:
 
   /// \param SrcLocSeqs a sequence of SourceLocations deserialized from a
   /// record of code `PP_UNSAFE_BUFFER_USAGE`.
-  void setDeserializedSafeBufferOptOutMap(
+  /// \return `std::nullopt` iff deserialization succeeds and this PP has been
+  /// properly set; Otherwise, a StringRef carrying the message of why
+  /// serialization fails with this PP being untouched.
+  std::optional<StringRef> setDeserializedSafeBufferOptOutMap(
       const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
 
 private:
