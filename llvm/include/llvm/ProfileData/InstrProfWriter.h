@@ -197,21 +197,6 @@ public:
                      const OverlapFuncFilters &FuncFilter);
 
 private:
-  // A profile (with header and payloads) is written out in one pass; profile
-  // header records the byte offsets of individual payload sections.
-  // When the byte size of a payload section is not known before being written
-  // into the output stream, profile writer reserves space for the byte offset
-  // of this section to allow back patching at the specified offset later.
-  //
-  // This struct is produced by `InstrProfWriter::writeHeader` to store the byte
-  // offset of header fields, and used later for back patching.
-  struct HeaderFieldOffsets {
-    uint64_t HashTableStartFieldOffset;
-    uint64_t MemProfSectionOffset;
-    uint64_t BinaryIdSectionOffset;
-    uint64_t TemporalProfTracesOffset;
-    uint64_t VTableNamesOffset;
-  };
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
@@ -221,9 +206,8 @@ private:
   Error writeImpl(ProfOStream &OS);
 
   // Writes known header fields and preserves space for fields whose value are
-  // known only after payloads are written.
-  // Returns the number of bytes written and records the start offset for back
-  // patching in `BackPatchStartOffset`.
+  // known only after payloads are written. Returns the number of bytes written
+  // and records the start offset for back patching in `BackPatchStartOffset`.
   size_t writeHeader(IndexedInstrProf::Header &header,
                      const bool WritePrevVersion, ProfOStream &OS,
                      size_t &BackPatchStartOffset);
