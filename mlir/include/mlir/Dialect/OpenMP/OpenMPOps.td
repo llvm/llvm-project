@@ -274,7 +274,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
     Reductions can be performed in a parallel construct by specifying reduction
     accumulator variables in `reduction_vars`, symbols referring to reduction
     declarations in the `reductions` attribute, and whether the reduction
-    variable should be passed into the redution region by value or by reference
+    variable should be passed into the reduction region by value or by reference
     in `reduction_vars_byref`. Each reduction is identified by the accumulator
     it uses and accumulators must not be repeated in the same reduction. The
     `omp.reduction` operation accepts the accumulator and a partial value which
