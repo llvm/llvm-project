@@ -599,14 +599,22 @@ static void printReductionVarList(OpAsmPrinter &p, Operation *op,
 }
 
 /// Verifies Reduction Clause
-static LogicalResult verifyReductionVarList(Operation *op,
-                                            std::optional<ArrayAttr> reductions,
-                                            OperandRange reductionVars) {
+static LogicalResult
+verifyReductionVarList(Operation *op, std::optional<ArrayAttr> reductions,
+                       OperandRange reductionVars,
+                       std::optional<ArrayRef<bool>> byRef = std::nullopt) {
   if (!reductionVars.empty()) {
     if (!reductions || reductions->size() != reductionVars.size())
       return op->emitOpError()
              << "expected as many reduction symbol references "
                 "as reduction variables";
+    if (mlir::isa<omp::WsloopOp, omp::ParallelOp>(op))
+      assert(byRef);
+    else
+      assert(!byRef); // TODO: support byref reductions on other operations
+    if (byRef && byRef->size() != reductionVars.size())
+      return op->emitError() << "expected as many reduction variable by "
+                                "reference attributes as reduction variables";
   } else {
     if (reductions)
       return op->emitOpError() << "unexpected reduction symbol references";
@@ -1520,14 +1528,8 @@ LogicalResult ParallelOp::verify() {
   if (failed(verifyPrivateVarList(*this)))
     return failure();
 
-  auto reductionVarsByRef = getReductionVarsByref();
-  if (reductionVarsByRef &&
-      reductionVarsByRef->size() != getReductionVars().size())
-    return emitOpError()
-           << "expected as many reduction variable by reference attributes "
-              "as reduction variables";
-
-  return verifyReductionVarList(*this, getReductions(), getReductionVars());
+  return verifyReductionVarList(*this, getReductions(), getReductionVars(),
+                                getReductionVarsByref());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1709,14 +1711,8 @@ LogicalResult WsloopOp::verify() {
       return emitError() << "only supported nested wrapper is 'omp.simd'";
   }
 
-  auto reductionVarsByRef = getReductionVarsByref();
-  if (reductionVarsByRef &&
-      reductionVarsByRef->size() != getReductionVars().size())
-    return emitOpError()
-           << "expected as many reduction variable by reference attributes "
-              "as reduction variables";
-
-  return verifyReductionVarList(*this, getReductions(), getReductionVars());
+  return verifyReductionVarList(*this, getReductions(), getReductionVars(),
+                                getReductionVarsByref());
 }
 
 //===----------------------------------------------------------------------===//
