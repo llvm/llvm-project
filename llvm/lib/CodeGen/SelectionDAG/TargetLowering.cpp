@@ -11239,7 +11239,8 @@ SDValue TargetLowering::expandMCOMPRESS(SDNode *Node, SelectionDAG &DAG) const {
     report_fatal_error(
         "Expanding masked_compress for scalable vectors is undefined.");
 
-  SDValue StackPtr = DAG.CreateStackTemporary(VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));
+  SDValue StackPtr = DAG.CreateStackTemporary(
+      VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));
   SDValue Chain = DAG.getEntryNode();
   SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
 

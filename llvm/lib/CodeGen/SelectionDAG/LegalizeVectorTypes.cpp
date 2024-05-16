@@ -2317,9 +2317,13 @@ void DAGTypeLegalizer::SplitVecRes_MCOMPRESS(SDNode *N, SDValue &Lo,
   SDValue Compressed = TLI.expandMCOMPRESS(N, DAG);
 
   SDLoc DL(N);
-  EVT SubVecVT = Compressed.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
-  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed, DAG.getVectorIdxConstant(0, DL));
-  Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed, DAG.getVectorIdxConstant(SubVecVT.getVectorNumElements(), DL));
+  EVT SubVecVT =
+      Compressed.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
+  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed,
+                   DAG.getVectorIdxConstant(0, DL));
+  Hi = DAG.getNode(
+      ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed,
+      DAG.getVectorIdxConstant(SubVecVT.getVectorNumElements(), DL));
 }
 
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
@@ -5619,8 +5623,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
 SDValue DAGTypeLegalizer::WidenVecRes_MCOMPRESS(SDNode *N) {
   SDValue Vec = N->getOperand(0);
   SDValue Mask = N->getOperand(1);
-  EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), Vec.getValueType());
-  EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType());
+  EVT WideVecVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), Vec.getValueType());
+  EVT WideMaskVT =
+      TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType());
 
   // In the default expanded case, adding UNDEF values for the new widened lanes
   // allows us to remove their access later, which reduces the number os stores.
