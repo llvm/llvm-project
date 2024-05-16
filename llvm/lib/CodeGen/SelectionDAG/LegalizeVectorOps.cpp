@@ -367,6 +367,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::ABS:
+  case ISD::ABDS:
+  case ISD::ABDU:
   case ISD::BSWAP:
   case ISD::BITREVERSE:
   case ISD::CTLZ:
