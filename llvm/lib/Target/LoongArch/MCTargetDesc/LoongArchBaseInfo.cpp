@@ -14,12 +14,40 @@
 #include "LoongArchBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
 namespace LoongArchABI {
+
+// Check if ABI has been standardized; issue a warning if it hasn't.
+// FIXME: Once all ABIs are standardized, this will be removed.
+static ABI checkABIStandardized(ABI Abi) {
+  StringRef ABIName;
+  switch (Abi) {
+  case ABI_ILP32S:
+    ABIName = "ilp32s";
+    break;
+  case ABI_ILP32F:
+    ABIName = "ilp32f";
+    break;
+  case ABI_ILP32D:
+    ABIName = "ilp32d";
+    break;
+  case ABI_LP64F:
+    ABIName = "lp64f";
+    break;
+  case ABI_LP64S:
+  case ABI_LP64D:
+    return Abi;
+  default:
+    llvm_unreachable("");
+  }
+  errs() << "warning: '" << ABIName << "' has not been standardized\n";
+  return Abi;
+}
 
 ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
   ABI ArgProvidedABI = getTargetABI(ABIName);
@@ -50,7 +78,7 @@ ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
       errs() << "'" << ABIName
              << "' is not a recognized ABI for this target, ignoring and using "
                 "triple-implied ABI\n";
-    return TripleABI;
+    return checkABIStandardized(TripleABI);
 
   case LoongArchABI::ABI_ILP32S:
   case LoongArchABI::ABI_ILP32F:
@@ -58,7 +86,7 @@ ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
     if (Is64Bit) {
       errs() << "32-bit ABIs are not supported for 64-bit targets, ignoring "
                 "target-abi and using triple-implied ABI\n";
-      return TripleABI;
+      return checkABIStandardized(TripleABI);
     }
     break;
 
@@ -68,7 +96,7 @@ ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
     if (!Is64Bit) {
       errs() << "64-bit ABIs are not supported for 32-bit targets, ignoring "
                 "target-abi and using triple-implied ABI\n";
-      return TripleABI;
+      return checkABIStandardized(TripleABI);
     }
     break;
   }
@@ -77,7 +105,7 @@ ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
     errs() << "warning: triple-implied ABI conflicts with provided target-abi '"
            << ABIName << "', using target-abi\n";
 
-  return ArgProvidedABI;
+  return checkABIStandardized(ArgProvidedABI);
 }
 
 ABI getTargetABI(StringRef ABIName) {
