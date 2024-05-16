@@ -9492,6 +9492,15 @@ public:
                           ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
+  /// Deduce the template arguments of the given template from \p FromType.
+  /// Used to implement the IsDeducible constraint for alias CTAD per C++
+  /// [over.match.class.deduct]p4.
+  ///
+  /// It only supports class or type alias templates.
+  TemplateDeductionResult
+  DeduceTemplateArgumentsFromType(TemplateDecl *TD, QualType FromType,
+                                  sema::TemplateDeductionInfo &Info);
+
   TemplateDeductionResult DeduceTemplateArguments(
       TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
       ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
