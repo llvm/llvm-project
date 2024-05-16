@@ -709,6 +709,7 @@ public:
   X86LowerAMXCast(Function &F) : Func(F), DT(nullptr) {}
   bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
   bool combineLoadCast(IntrinsicInst *Cast, LoadInst *LD);
+  bool combineTilezero(IntrinsicInst *Cast);
   bool combineLdSt(SmallVectorImpl<Instruction *> &Casts);
   bool combineAMXcast(TargetLibraryInfo *TLI);
   bool transformAMXCast(IntrinsicInst *AMXCast);
@@ -988,6 +989,27 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   return EraseLoad;
 }
 
+// %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+// -->
+// %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+bool X86LowerAMXCast::combineTilezero(IntrinsicInst *Cast) {
+  Value *Row = nullptr, *Col = nullptr;
+  Use &U = *(Cast->use_begin());
+  unsigned OpNo = U.getOperandNo();
+  auto *II = cast<IntrinsicInst>(U.getUser());
+  if (!isAMXIntrinsic(II))
+    return false;
+
+  std::tie(Row, Col) = getShape(II, OpNo);
+  std::array<Value *, 2> Args = {Row, Col};
+
+  IRBuilder<> Builder(Cast);
+  Value *NewInst = Builder.CreateIntrinsic(Intrinsic::x86_tilezero_internal,
+                                           std::nullopt, Args);
+  Cast->replaceAllUsesWith(NewInst);
+  return true;
+}
+
 bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
   bool Change = false;
   for (auto *Cast : Casts) {
@@ -1011,6 +1033,14 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
+      //  %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+      //  -->
+      //  %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+      if (dyn_cast<ConstantAggregateZero>(Cast->getOperand(0))) {
+        Change |= combineTilezero(cast<IntrinsicInst>(Cast));
+        continue;
+      }
+
       SmallVector<Instruction *, 2> DeadLoads;
       auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
@@ -1024,6 +1054,7 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
         // Set the operand is null so that load instruction can be erased.
         Cast->setOperand(0, nullptr);
         Load->eraseFromParent();
+        Change = true;
       }
     }
   }
