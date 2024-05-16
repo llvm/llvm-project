@@ -451,19 +451,25 @@ define void @test_copysign_v4f16_v4f64(ptr %ap, ptr %bp) {
 ;
 ; SVE2-LABEL: test_copysign_v4f16_v4f64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    ldp q0, q1, [x1]
-; SVE2-NEXT:    ptrue p0.d, vl2
-; SVE2-NEXT:    ldr d2, [x0]
-; SVE2-NEXT:    fcvtx z1.s, p0/m, z1.d
-; SVE2-NEXT:    fcvtx z0.s, p0/m, z0.d
-; SVE2-NEXT:    ptrue p0.s, vl2
-; SVE2-NEXT:    splice z0.s, p0, z0.s, z1.s
-; SVE2-NEXT:    ptrue p0.s
-; SVE2-NEXT:    mov z1.h, #32767 // =0x7fff
-; SVE2-NEXT:    fcvt z0.h, p0/m, z0.s
-; SVE2-NEXT:    uzp1 z0.h, z0.h, z0.h
-; SVE2-NEXT:    bsl z2.d, z2.d, z0.d, z1.d
-; SVE2-NEXT:    str d2, [x0]
+; SVE2-NEXT:    sub sp, sp, #16
+; SVE2-NEXT:    .cfi_def_cfa_offset 16
+; SVE2-NEXT:    ldp q2, q1, [x1]
+; SVE2-NEXT:    mov z0.h, #32767 // =0x7fff
+; SVE2-NEXT:    ldr d5, [x0]
+; SVE2-NEXT:    mov z3.d, z1.d[1]
+; SVE2-NEXT:    mov z4.d, z2.d[1]
+; SVE2-NEXT:    fcvt h1, d1
+; SVE2-NEXT:    fcvt h2, d2
+; SVE2-NEXT:    fcvt h3, d3
+; SVE2-NEXT:    fcvt h4, d4
+; SVE2-NEXT:    str h1, [sp, #12]
+; SVE2-NEXT:    str h2, [sp, #8]
+; SVE2-NEXT:    str h3, [sp, #14]
+; SVE2-NEXT:    str h4, [sp, #10]
+; SVE2-NEXT:    ldr d1, [sp, #8]
+; SVE2-NEXT:    bsl z5.d, z5.d, z1.d, z0.d
+; SVE2-NEXT:    str d5, [x0]
+; SVE2-NEXT:    add sp, sp, #16
 ; SVE2-NEXT:    ret
   %a = load <4 x half>, ptr %ap
   %b = load <4 x double>, ptr %bp
