@@ -2309,6 +2309,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   if (CheckReductionOperators(x)) {
     CheckReductionTypeList(x);
   }
+  CheckReductionModifier(x);
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
@@ -2390,6 +2391,55 @@ void OmpStructureChecker::CheckReductionTypeList(
           "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
           symbol->name());
     }
+  }
+}
+
+void OmpStructureChecker::CheckReductionModifier(
+    const parser::OmpClause::Reduction &x) {
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+  const auto &maybeModifier{std::get<std::optional<ReductionModifier>>(x.v.t)};
+  if (!maybeModifier || *maybeModifier == ReductionModifier::Default) {
+    // No modifier, or the default one is always ok.
+    return;
+  }
+  ReductionModifier modifier{*maybeModifier};
+  const DirectiveContext &dirCtx{GetContext()};
+  if (modifier == ReductionModifier::Task) {
+    // "Task" is only allowed on worksharing or "parallel" directive.
+    static llvm::omp::Directive worksharing[]{
+        llvm::omp::Directive::OMPD_do,
+        // llvm::omp::Directive::OMPD_for, C++ only
+        llvm::omp::Directive::OMPD_loop,
+        llvm::omp::Directive::OMPD_scope,
+        llvm::omp::Directive::OMPD_sections,
+        llvm::omp::Directive::OMPD_single,
+        llvm::omp::Directive::OMPD_workshare,
+    };
+    if (dirCtx.directive != llvm::omp::Directive::OMPD_parallel &&
+        !llvm::is_contained(worksharing, dirCtx.directive)) {
+      context_.Say(GetContext().clauseSource,
+                   "Modifier 'TASK' on REDUCTION clause is only allowed with "
+                   "PARALLEL or worksharing directive"_err_en_US);
+    }
+  } else if (modifier == ReductionModifier::Inscan) {
+    // Inscan is only allowed on worksharing-loop, worksharing-loop simd,
+    // or "simd" directive.
+    // The worksharing-loop directives are OMPD_do and OMPD_for. Only the
+    // former is allowed in Fortran.
+    switch (dirCtx.directive) {
+    case llvm::omp::Directive::OMPD_do:      // worksharing-loop
+    case llvm::omp::Directive::OMPD_do_simd: // worksharing-loop simd
+    case llvm::omp::Directive::OMPD_simd:    // "simd"
+      break;
+    default:
+      context_.Say(GetContext().clauseSource,
+                   "Modifier 'INSCAN' on REDUCTION clause is only allowed with "
+                   "worksharing-loop, worksharing-loop simd, "
+                   "or SIMD directive"_err_en_US);
+    }
+  } else {
+    context_.Say(GetContext().clauseSource, "Unexpected modifier on REDUCTION "
+                                            "clause"_err_en_US);
   }
 }
 
