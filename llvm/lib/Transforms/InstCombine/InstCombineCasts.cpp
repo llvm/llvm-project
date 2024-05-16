@@ -2049,16 +2049,28 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(SrcOp)) {
+  if (auto *GEP = dyn_cast<GEPOperator>(SrcOp)) {
     // Fold ptrtoint(gep null, x) to multiply + constant if the GEP has one use.
     // While this can increase the number of instructions it doesn't actually
     // increase the overall complexity since the arithmetic is just part of
     // the GEP otherwise.
     if (GEP->hasOneUse() &&
         isa<ConstantPointerNull>(GEP->getPointerOperand())) {
-      return replaceInstUsesWith(
-          CI, Builder.CreateIntCast(EmitGEPOffset(cast<GEPOperator>(GEP)), Ty,
-                                    /*isSigned=*/false));
+      return replaceInstUsesWith(CI,
+                                 Builder.CreateIntCast(EmitGEPOffset(GEP), Ty,
+                                                       /*isSigned=*/false));
+    }
+
+    // (ptrtoint (gep (inttoptr Base), ...)) -> Base + Offset
+    Value *Base;
+    if (GEP->hasOneUse() &&
+        match(GEP->getPointerOperand(), m_OneUse(m_IntToPtr(m_Value(Base)))) &&
+        Base->getType() == Ty) {
+      Value *Offset = EmitGEPOffset(GEP);
+      auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
+      if (GEP->isInBounds() && isKnownNonNegative(Offset, SQ))
+        NewOp->setHasNoUnsignedWrap(true);
+      return NewOp;
     }
   }
 
@@ -2071,20 +2083,6 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     // p2i (ins (i2p Vec), Scalar, Index --> ins Vec, (p2i Scalar), Index
     Value *NewCast = Builder.CreatePtrToInt(Scalar, Ty->getScalarType());
     return InsertElementInst::Create(Vec, NewCast, Index);
-  }
-
-  // (ptrtoint (gep (inttoptr Base), Offset)) -> Base + Offset
-  Value *Base, *Offset, *GEP;
-  if (match(SrcOp, m_OneUse(m_Value(GEP))) &&
-      match(GEP,
-            m_PtrAdd(m_OneUse(m_IntToPtr(m_Value(Base))), m_Value(Offset))) &&
-      Base->getType() == Ty && Offset->getType() == Ty) {
-    auto *GEPInst = cast<GetElementPtrInst>(GEP);
-
-    auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-    if (GEPInst->isInBounds() && isKnownNonNegative(Offset, SQ))
-      NewOp->setHasNoUnsignedWrap(true);
-    return NewOp;
   }
 
   return commonCastTransforms(CI);
