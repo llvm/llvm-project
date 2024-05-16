@@ -396,6 +396,11 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
          Phase == ThinOrFullLTOPhase::FullLTOPreLink;
 }
 
+static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
+  return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
+         Phase == ThinOrFullLTOPhase::FullLTOPostLink;
+}
+
 // TODO: Investigate the cost/benefit of tail call elimination on debugging.
 FunctionPassManager
 PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
@@ -1030,9 +1035,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(SampleProfileProbePass(TM));
 
   // Instrument function entry and exit before all inlining.
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
-      Phase != ThinOrFullLTOPhase::FullLTOPostLink &&
-      Phase != ThinOrFullLTOPhase::None) {
+  if (!isLTOPostLink(Phase)) {
     MPM.addPass(createModuleToFunctionPassAdaptor(
         EntryExitInstrumenterPass(/*PostInlining=*/false)));
   }
