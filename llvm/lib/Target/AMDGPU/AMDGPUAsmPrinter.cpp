@@ -517,9 +517,12 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   DumpCodeInstEmitter = nullptr;
   if (STM.dumpCode()) {
-    // For -dumpcode, get the assembler out of the streamer. This only works
-    // with -filetype=obj.
+    // For -dumpcode, get the assembler out of the streamer, even if it does
+    // not really want to let us have it. This only works with -filetype=obj.
+    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
+    OutStreamer->setUseAssemblerInfoForParsing(true);
     MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
+    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
     if (Assembler)
       DumpCodeInstEmitter = Assembler->getEmitterPtr();
   }
