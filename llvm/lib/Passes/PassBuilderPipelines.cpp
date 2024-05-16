@@ -1155,6 +1155,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
   // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
   // enable ctx profiling from the frontend.
+  assert(
+      !(IsPGOInstrGen && PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) &&
+      "Enabling both instrumented FDO and contextual instrumentation is not "
+      "supported.");
+  // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
                             PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
 
