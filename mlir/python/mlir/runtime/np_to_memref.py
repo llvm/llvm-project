@@ -6,6 +6,7 @@
 
 import numpy as np
 import ctypes
+import ml_dtypes
 
 
 class C128(ctypes.Structure):
@@ -25,6 +26,11 @@ class F16(ctypes.Structure):
 
     _fields_ = [("f16", ctypes.c_int16)]
 
+class BF16(ctypes.Structure):
+    """A ctype representation for MLIR's BFloat16."""
+
+    _fields_ = [("bf16", ctypes.c_int16)]
+
 
 # https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
 def as_ctype(dtp):
@@ -35,6 +41,8 @@ def as_ctype(dtp):
         return C64
     if dtp == np.dtype(np.float16):
         return F16
+    if dtp == ml_dtypes.bfloat16:
+        return BF16
     return np.ctypeslib.as_ctypes_type(dtp)
 
 
@@ -46,6 +54,8 @@ def to_numpy(array):
         return array.view("complex64")
     if array.dtype == F16:
         return array.view("float16")
+    if array.dtype == BF16:
+        return array.view("bfloat16")
     return array
 
 
