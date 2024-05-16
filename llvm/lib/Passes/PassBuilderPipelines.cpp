@@ -839,10 +839,6 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   MPM.addPass(PGOInstrumentationGen(IsCS));
 
   addPostPGOLoopRotation(MPM, Level);
-  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
-    MPM.addPass(PGOCtxProfLoweringPass());
-    return;
-  }
   // Add the profile lowering pass.
   InstrProfOptions Options;
   if (!ProfileFile.empty())
@@ -1157,8 +1153,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsPGOInstrUse =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRUse;
   const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
+  // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
+  // enable ctx profiling from the frontend.
+  const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
+                            PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
 
-  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse)
+  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1168,9 +1168,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       /*IsCS=*/false, PGOOpt->AtomicCounterUpdate,
                       PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
                       PGOOpt->FS);
+  } else if (IsCtxProfGen) {
+    MPM.addPass(PGOInstrumentationGen(false));
+    addPostPGOLoopRotation(MPM, Level);
+    MPM.addPass(PGOCtxProfLoweringPass());
   }
 
-  if (IsPGOInstrGen || IsPGOInstrUse)
+  if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
     MPM.addPass(PGOIndirectCallPromotion(false, false));
 
   if (IsPGOPreLink && PGOOpt->CSAction == PGOOptions::CSIRInstr)
