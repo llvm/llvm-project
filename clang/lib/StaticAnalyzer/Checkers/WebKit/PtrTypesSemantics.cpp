@@ -525,11 +525,19 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   if (!IsNew)
     return It->second;
 
+  TrivialFunctionAnalysisVisitor V(Cache);
+
+  if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
+    for (auto *CtorInit : CtorDecl->inits()) {
+      if (!V.Visit(CtorInit->getInit()))
+        return false;
+    }
+  }
+
   const Stmt *Body = D->getBody();
   if (!Body)
     return false;
 
-  TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(Body);
   if (Result)
     Cache[D] = true;

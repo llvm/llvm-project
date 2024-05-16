@@ -56,9 +56,9 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
-  bool RematOffset; // True if Offset is a constant that needs to be
-                    // rematerialized before the new load/store.
-  bool IsPre;
+  bool RematOffset = false; // True if Offset is a constant that needs to be
+                            // rematerialized before the new load/store.
+  bool IsPre = false;
 };
 
 struct PtrAddChain {
