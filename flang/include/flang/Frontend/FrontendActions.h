@@ -108,6 +108,10 @@ class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
   void executeAction() override;
 };
 
+class DebugUnparseWithModulesAction : public PrescanAndSemaAction {
+  void executeAction() override;
+};
+
 class DebugUnparseAction : public PrescanAndSemaAction {
   void executeAction() override;
 };
