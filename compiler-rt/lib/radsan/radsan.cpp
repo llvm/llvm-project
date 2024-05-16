@@ -14,8 +14,8 @@
 
 extern "C" {
 
-SANITIZER_INTERFACE_ATTRIBUTE void radsan_init() { 
-  radsan::InitializeInterceptors(); 
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_init() {
+  radsan::InitializeInterceptors();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_enter() {

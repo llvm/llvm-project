@@ -1520,9 +1520,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
         AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
       }
     }
-    if(Sanitize.needsRadsanRt())
-    {
-      assert(Sanitize.needsSharedRt() && "Static sanitizer runtimes not supported");
+    if (Sanitize.needsRadsanRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
       AddLinkSanitizerLibArgs(Args, CmdArgs, "radsan");
     }
     if (Sanitize.needsLsanRt())

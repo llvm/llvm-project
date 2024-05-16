@@ -1,4 +1,5 @@
-//===--- radsan_test_utilities.h - Realtime Sanitizer --------------*- C++ -*-===//
+//===--- radsan_test_utilities.h - Realtime Sanitizer --------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,15 +11,13 @@
 
 #pragma once
 
-#include "gmock/gmock.h"
 #include "radsan.h"
+#include "gmock/gmock.h"
 #include <string>
 
 namespace radsan_testing {
 
-template <typename Function>
-void RealtimeInvoke(Function &&Func) 
-{
+template <typename Function> void RealtimeInvoke(Function &&Func) {
   radsan_realtime_enter();
   std::forward<Function>(Func)();
   radsan_realtime_exit();

@@ -14,7 +14,7 @@
 
 extern "C" {
 
-/**  Initialise radsan interceptors. 
+/**  Initialise radsan interceptors.
 
   A call to this method is added to the preinit array on Linux systems.
 */
@@ -43,7 +43,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void radsan_off();
 
 /** Re-enable all RADSan error reporting.
 
-  The counterpart to `radsan_off`. 
+  The counterpart to `radsan_off`.
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_on();
 
