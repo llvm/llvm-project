@@ -583,3 +583,8 @@ void NonADLCall3() {
   f(x);
 }
 } // namespace test_adl_call_three
+
+struct Sock {};
+void leakNewFn() { new struct Sock; }
+// CHECK: CXXNewExpr {{.*}} <col:20, col:31> 'struct Sock *'
+
