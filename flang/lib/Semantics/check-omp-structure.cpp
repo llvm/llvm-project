@@ -2422,7 +2422,7 @@ void OmpStructureChecker::CheckReductionModifier(
                    "PARALLEL or worksharing directive"_err_en_US);
     }
   } else if (modifier == ReductionModifier::Inscan) {
-    // Inscan is only allowed on worksharing-loop, worksharing-loop simd,
+    // "Inscan" is only allowed on worksharing-loop, worksharing-loop simd,
     // or "simd" directive.
     // The worksharing-loop directives are OMPD_do and OMPD_for. Only the
     // former is allowed in Fortran.

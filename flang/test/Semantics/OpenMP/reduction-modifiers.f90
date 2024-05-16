@@ -22,7 +22,6 @@ subroutine mod_task2(x)
   !$omp end sections
 end
 
-
 subroutine mod_task3(x)
   integer, intent(inout) :: x
 
@@ -88,4 +87,3 @@ subroutine mod_inscan5(x)
   enddo
   !$omp end sections
 end
-
