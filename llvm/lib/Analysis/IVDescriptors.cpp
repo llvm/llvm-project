@@ -635,57 +635,13 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  SelectInst *SI = dyn_cast<SelectInst>(I);
-  Instruction *Cmp = nullptr;
-
-  if (SI) {
-    // Check that SelectInst is related to the this PHI reduction.
-    bool HasOrigPhiUser = false;
-    bool SelectNonPHIUserInLoop = false;
-    for (User *U : SI->users()) {
-      Instruction *Inst = dyn_cast<Instruction>(U);
-      if (!Inst)
-        continue;
-      if (Inst == OrigPhi) {
-        HasOrigPhiUser = true;
-      } else {
-        if (Loop->contains(Inst->getParent()))
-          SelectNonPHIUserInLoop = true;
-      }
-    }
-    Cmp = dyn_cast<CmpInst>(SI->getOperand(0));
-    // Checking the current CmpInst is safe as a recurrent reduction.
-    if (Cmp && !Cmp->hasOneUse() && HasOrigPhiUser && !SelectNonPHIUserInLoop) {
-      bool IsSafeCMP = true;
-      for (User *U : Cmp->users()) {
-        Instruction *UInst = dyn_cast<Instruction>(U);
-        if (!UInst)
-          continue;
-        if (SelectInst *SI1 = dyn_cast<SelectInst>(U)) {
-          if (!llvm::all_of(SI1->users(), [Loop](User *USI) {
-                Instruction *Inst1 = dyn_cast<Instruction>(USI);
-                if (!Inst1 || !Loop->contains(Inst1->getParent()) ||
-                    isa<PHINode>(Inst1))
-                  return true;
-                return false;
-              }))
-            IsSafeCMP = false;
-        }
-        if (IsSafeCMP && !isa<BranchInst>(UInst) && !isa<SelectInst>(UInst) &&
-            Loop->contains(UInst->getParent()))
-          IsSafeCMP = false;
-      }
-      if (!IsSafeCMP)
-        Cmp = nullptr;
-    }
-  }
-
-  // Only match select with single use cmp condition.
-  if (!Cmp && !match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())),
-                                 m_Value(), m_Value())))
+  if (!match(I,
+             m_Select(m_Cmp(Pred, m_Value(), m_Value()), m_Value(), m_Value())))
     return InstDesc(false, I);
 
+  SelectInst *SI = cast<SelectInst>(I);
   Value *NonPhi = nullptr;
+
   if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))
     NonPhi = SI->getFalseValue();
   else if (OrigPhi == dyn_cast<PHINode>(SI->getFalseValue()))
