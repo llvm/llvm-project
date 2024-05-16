@@ -1300,6 +1300,25 @@ private:
     genBranch(targetEval.block);
   }
 
+  /// A construct contains nested evaluations. Some of these evaluations
+  /// may start a new basic block, others will add code to an existing
+  /// block.
+  /// Collect the list of nested evaluations that are last in their block.
+  /// These evaluations may need a branch exiting from their parent construct.
+  void collectFinalEvaluations(
+      Fortran::lower::pft::Evaluation &construct,
+      llvm::SmallVector<Fortran::lower::pft::Evaluation *> &finals) {
+    Fortran::lower::pft::Evaluation *previous = nullptr;
+    Fortran::lower::pft::Evaluation *exit = construct.constructExit;
+    for (auto &nested : construct.getNestedEvaluations()) {
+      if (nested.block != nullptr && previous != nullptr && previous != exit)
+        finals.push_back(previous);
+      previous = &nested;
+    }
+    if (previous != exit)
+      finals.push_back(previous);
+  }
+
   /// Generate a SelectOp or branch sequence that compares \p selector against
   /// values in \p valueList and targets corresponding labels in \p labelList.
   /// If no value matches the selector, branch to \p defaultEval.
@@ -2107,6 +2126,9 @@ private:
     }
 
     // Unstructured branch sequence.
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> finals;
+    collectFinalEvaluations(eval, finals);
+
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
       auto genIfBranch = [&](mlir::Value cond) {
         if (e.lexicalSuccessor == e.controlSuccessor) // empty block -> exit
@@ -2127,6 +2149,8 @@ private:
         genIfBranch(genIfCondition(s));
       } else {
         genFIR(e);
+        if (blockIsUnterminated() && llvm::is_contained(finals, &e))
+          genConstructExitBranch(*eval.constructExit);
       }
     }
   }
@@ -2135,11 +2159,17 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(eval, stmtCtx);
+
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> finals;
+    collectFinalEvaluations(eval, finals);
+
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
       if (e.getIf<Fortran::parser::EndSelectStmt>())
         maybeStartBlock(e.block);
       else
         genFIR(e);
+      if (blockIsUnterminated() && llvm::is_contained(finals, &e))
+        genConstructExitBranch(*eval.constructExit);
     }
     popActiveConstruct();
   }
@@ -3005,6 +3035,10 @@ private:
     }
 
     pushActiveConstruct(getEval(), stmtCtx);
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> finals;
+    collectFinalEvaluations(getEval(), finals);
+    Fortran::lower::pft::Evaluation &constructExit = *getEval().constructExit;
+
     for (Fortran::lower::pft::Evaluation &eval :
          getEval().getNestedEvaluations()) {
       setCurrentPosition(eval.position);
@@ -3201,6 +3235,8 @@ private:
       } else {
         genFIR(eval);
       }
+      if (blockIsUnterminated() && llvm::is_contained(finals, &eval))
+        genConstructExitBranch(constructExit);
     }
     popActiveConstruct();
   }
@@ -4535,28 +4571,6 @@ private:
     setCurrentEval(eval);
     setCurrentPosition(eval.position);
     eval.visit([&](const auto &stmt) { genFIR(stmt); });
-
-    // Generate an end-of-block branch for several special cases. For
-    // constructs, this can be done for either the end construct statement,
-    // or for the construct itself, which will skip this code if the
-    // end statement was visited first and generated a branch.
-    Fortran::lower::pft::Evaluation *successor = [&]() {
-      if (eval.isConstruct() ||
-          (eval.isDirective() && eval.hasNestedEvaluations()))
-        return eval.getLastNestedEvaluation().lexicalSuccessor;
-      return eval.lexicalSuccessor;
-    }();
-
-    if (successor && blockIsUnterminated()) {
-      if (successor->isIntermediateConstructStmt() &&
-          successor->parentConstruct->lowerAsUnstructured())
-        // Exit from an intermediate unstructured IF or SELECT construct block.
-        genBranch(successor->parentConstruct->constructExit->block);
-      else if (unstructuredContext && eval.isConstructStmt() &&
-               successor == eval.controlSuccessor)
-        // Exit from a degenerate, empty construct block.
-        genBranch(eval.parentConstruct->constructExit->block);
-    }
   }
 
   /// Map mlir function block arguments to the corresponding Fortran dummy
