@@ -2,6 +2,7 @@
 
 from mlir.ir import *
 from mlir.dialects import sparse_tensor as st
+import textwrap
 
 
 def run(f):
@@ -15,20 +16,25 @@ def run(f):
 def testEncodingAttr1D():
     with Context() as ctx:
         parsed = Attribute.parse(
-            "#sparse_tensor.encoding<{"
-            "  map = (d0) -> (d0 : compressed),"
-            "  posWidth = 16,"
-            "  crdWidth = 32"
-            "}>"
+            textwrap.dedent(
+                """\
+                #sparse_tensor.encoding<{
+                    map = (d0) -> (d0 : compressed),
+                    posWidth = 16,
+                    crdWidth = 32,
+                    explicitVal = 1.0 : f64
+                }>\
+            """
+            )
         )
-        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), posWidth = 16, crdWidth = 32 }>
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), posWidth = 16, crdWidth = 32, explicitVal = 1.000000e+00 : f64 }>
         print(parsed)
 
         casted = st.EncodingAttr(parsed)
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [131072]
+        # CHECK: lvl_types: [262144]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0) -> (d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")
@@ -38,9 +44,16 @@ def testEncodingAttr1D():
         print(f"pos_width: {casted.pos_width}")
         # CHECK: crd_width: 32
         print(f"crd_width: {casted.crd_width}")
+        # CHECK: explicit_val: 1.000000e+00
+        print(f"explicit_val: {casted.explicit_val}")
+        # CHECK: implicit_val: None
+        print(f"implicit_val: {casted.implicit_val}")
 
-        created = st.EncodingAttr.get(casted.lvl_types, None, None, 0, 0)
-        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+        new_explicit_val = FloatAttr.get_f64(1.0)
+        created = st.EncodingAttr.get(
+            casted.lvl_types, None, None, 0, 0, new_explicit_val
+        )
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), explicitVal = 1.000000e+00 : f64 }>
         print(created)
         # CHECK: created_equal: False
         print(f"created_equal: {created == casted}")
@@ -57,12 +70,16 @@ def testEncodingAttr1D():
 def testEncodingAttrStructure():
     with Context() as ctx:
         parsed = Attribute.parse(
-            "#sparse_tensor.encoding<{"
-            "  map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense,"
-            "  d1 mod 4 : structured[2, 4]),"
-            "  posWidth = 16,"
-            "  crdWidth = 32"
-            "}>"
+            textwrap.dedent(
+                """\
+                #sparse_tensor.encoding<{
+                    map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense,
+                    d1 mod 4 : structured[2, 4]),
+                    posWidth = 16,
+                    crdWidth = 32,
+                }>\
+            """
+            )
         )
         # CHECK: #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 floordiv 4 : dense, d1 mod 4 : structured[2, 4]), posWidth = 16, crdWidth = 32 }>
         print(parsed)
@@ -71,9 +88,9 @@ def testEncodingAttrStructure():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [65536, 65536, 4406637494272]
+        # CHECK: lvl_types: [65536, 65536, 4406638542848]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: lvl_formats_enum: [<LevelFormat.dense: 65536>, <LevelFormat.dense: 65536>, <LevelFormat.n_out_of_m: 1048576>]
+        # CHECK: lvl_formats_enum: [<LevelFormat.dense: 65536>, <LevelFormat.dense: 65536>, <LevelFormat.n_out_of_m: 2097152>]
         print(f"lvl_formats_enum: {casted.lvl_formats_enum}")
         # CHECK: structured_n: 2
         print(f"structured_n: {casted.structured_n}")
@@ -144,11 +161,15 @@ def testEncodingAttrStructure():
 def testEncodingAttr2D():
     with Context() as ctx:
         parsed = Attribute.parse(
-            "#sparse_tensor.encoding<{"
-            "  map = (d0, d1) -> (d1 : dense, d0 : compressed),"
-            "  posWidth = 8,"
-            "  crdWidth = 32"
-            "}>"
+            textwrap.dedent(
+                """\
+                #sparse_tensor.encoding<{
+                    map = (d0, d1) -> (d1 : dense, d0 : compressed),
+                    posWidth = 8,
+                    crdWidth = 32,
+                }>\
+            """
+            )
         )
         # CHECK: #sparse_tensor.encoding<{ map = (d0, d1) -> (d1 : dense, d0 : compressed), posWidth = 8, crdWidth = 32 }>
         print(parsed)
@@ -157,7 +178,7 @@ def testEncodingAttr2D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [65536, 131072]
+        # CHECK: lvl_types: [65536, 262144]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0, d1) -> (d1, d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")
@@ -187,11 +208,15 @@ def testEncodingAttrOnTensorType():
     with Context() as ctx, Location.unknown():
         encoding = st.EncodingAttr(
             Attribute.parse(
-                "#sparse_tensor.encoding<{"
-                "  map = (d0) -> (d0 : compressed), "
-                "  posWidth = 64,"
-                "  crdWidth = 32"
-                "}>"
+                textwrap.dedent(
+                    """\
+                    #sparse_tensor.encoding<{
+                        map = (d0) -> (d0 : compressed),
+                        posWidth = 64,
+                        crdWidth = 32,
+                    }>\
+                """
+                )
             )
         )
         tt = RankedTensorType.get((1024,), F32Type.get(), encoding=encoding)

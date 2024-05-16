@@ -33,8 +33,10 @@ def SDT_RISCVReadCSR  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDT_RISCVWriteCSR : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDT_RISCVSwapCSR  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
                                              SDTCisInt<2>]>;
-def SDT_RISCVReadCycleWide : SDTypeProfile<2, 0, [SDTCisVT<0, i32>,
-                                                  SDTCisVT<1, i32>]>;
+def SDT_RISCVReadCounterWide : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
+                                                    SDTCisVT<1, i32>,
+                                                    SDTCisInt<2>,
+                                                    SDTCisInt<3>]>;
 def SDT_RISCVIntUnaryOpW : SDTypeProfile<1, 1, [
   SDTCisSameAs<0, 1>, SDTCisVT<0, i64>
 ]>;
@@ -67,6 +69,8 @@ def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
 def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
+def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
+                                    SDTBrind, [SDNPHasChain]>;
 def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
 def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
 def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
@@ -77,9 +81,9 @@ def riscv_write_csr : SDNode<"RISCVISD::WRITE_CSR", SDT_RISCVWriteCSR,
 def riscv_swap_csr  : SDNode<"RISCVISD::SWAP_CSR", SDT_RISCVSwapCSR,
                              [SDNPHasChain]>;
 
-def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
-                                   SDT_RISCVReadCycleWide,
-                                   [SDNPHasChain, SDNPSideEffect]>;
+def riscv_read_counter_wide : SDNode<"RISCVISD::READ_COUNTER_WIDE",
+                                     SDT_RISCVReadCounterWide,
+                                     [SDNPHasChain, SDNPSideEffect]>;
 
 def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
 def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
@@ -363,7 +367,7 @@ def CSRSystemRegister : AsmOperandClass {
   let DiagnosticType = "InvalidCSRSystemRegister";
 }
 
-def csr_sysreg : RISCVOp {
+def csr_sysreg : RISCVOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
   let ParserMatchClass = CSRSystemRegister;
   let PrintMethod = "printCSRSystemRegister";
   let DecoderMethod = "decodeUImmOperand<12>";
@@ -1257,6 +1261,10 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
 }]>;
 def : PatGprSimm12<or_is_add, ADDI>;
 
+def add_like : PatFrags<(ops node:$lhs, node:$rhs),
+                        [(or_is_add node:$lhs, node:$rhs),
+                         (add  node:$lhs, node:$rhs)]>;
+
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
 def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
@@ -1403,7 +1411,8 @@ multiclass BccPat<CondCode Cond, RVInstB Inst> {
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
     : Pat<(riscv_brcc GPR:$lhs, simm12_no6:$Constant, Cond, bb:$place),
-          (Inst (ADDI GPR:$lhs, (NegImm simm12:$Constant)), (XLenVT X0), bb:$place)>;
+          (Inst (XLenVT (ADDI GPR:$lhs, (NegImm simm12:$Constant))),
+                (XLenVT X0), bb:$place)>;
 
 defm : BccPat<SETEQ, BEQ>;
 defm : BccPat<SETNE, BNE>;
@@ -1412,7 +1421,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtC, OptForMinSize] in {
+let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -1441,13 +1450,36 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
-let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+let Predicates = [NoStdExtZicfilp],
+    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
 def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
 
+let Predicates = [HasStdExtZicfilp],
+    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
+def PseudoBRINDNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12:$imm12), []>,
+                       PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
+def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12:$imm12), []>,
+                    PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
+}
+
+// For Zicfilp, need to avoid using X7/T2 for indirect branches which need
+// landing pad.
+let Predicates = [HasStdExtZicfilp] in {
+def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
+def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12:$imm12)),
+          (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, simm12:$imm12)>;
+
+def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
+def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12:$imm12)),
+          (PseudoBRINDX7 GPRX7:$rs1, simm12:$imm12)>;
+}
+
+let Predicates = [NoStdExtZicfilp] in {
 def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
 def : Pat<(brind (add GPRJALR:$rs1, simm12:$imm12)),
           (PseudoBRIND GPRJALR:$rs1, simm12:$imm12)>;
+}
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1477,10 +1509,16 @@ def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 def : Pat<(riscv_sret_glue), (SRET (XLenVT X0), (XLenVT X0))>;
 def : Pat<(riscv_mret_glue), (MRET (XLenVT X0), (XLenVT X0))>;
 
-let isCall = 1, Defs = [X1] in
+let isCall = 1, Defs = [X1] in {
+let Predicates = [NoStdExtZicfilp] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
                                 [(riscv_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+let Predicates = [HasStdExtZicfilp] in
+def PseudoCALLIndirectNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
+                                     [(riscv_call GPRJALRNonX7:$rs1)]>,
+                              PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+}
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
@@ -1495,10 +1533,16 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                         "tail", "$dst">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
+let Predicates = [NoStdExtZicfilp] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                                 [(riscv_tail GPRTC:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
+let Predicates = [HasStdExtZicfilp] in
+def PseudoTAILIndirectNonX7 : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
+                                     [(riscv_tail GPRTCNonX7:$rs1)]>,
+                              PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
+}
 
 def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL tglobaladdr:$dst)>;
@@ -1806,6 +1850,8 @@ def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 
 // Use binop_allwusers to recover immediates that may have been broken by
 // SimplifyDemandedBits.
+def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
+          (COPY GPR:$rs1)>;
 def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
           (ANDI GPR:$rs1, u32simm12:$imm)>;
 
@@ -1827,16 +1873,21 @@ def : StPat<truncstorei32, SW, GPR, i64>;
 def : StPat<store, SD, GPR, i64>;
 } // Predicates = [IsRV64]
 
+// On RV64, we can directly read these 64-bit counter CSRs.
+let Predicates = [IsRV64] in {
 /// readcyclecounter
-// On RV64, we can directly read the 64-bit "cycle" CSR.
-let Predicates = [IsRV64] in
 def : Pat<(i64 (readcyclecounter)), (CSRRS CYCLE.Encoding, (XLenVT X0))>;
-// On RV32, ReadCycleWide will be expanded to the suggested loop reading both
-// halves of the 64-bit "cycle" CSR.
+/// readsteadycounter
+def : Pat<(i64 (readsteadycounter)), (CSRRS TIME.Encoding, (XLenVT X0))>;
+}
+
+// On RV32, ReadCounterWide will be expanded to the suggested loop reading both
+// halves of 64-bit counter CSRs.
 let Predicates = [IsRV32], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
-def ReadCycleWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins),
-                           [(set GPR:$lo, GPR:$hi, (riscv_read_cycle_wide))],
-                           "", "">;
+def ReadCounterWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins i32imm:$csr_lo, i32imm:$csr_hi),
+                             [(set GPR:$lo, GPR:$hi,
+                              (riscv_read_counter_wide csr_sysreg:$csr_lo, csr_sysreg:$csr_hi))],
+                             "", "">;
 
 /// traps
 
@@ -1849,7 +1900,7 @@ def : Pat<(trap), (UNIMP)>;
 def : Pat<(debugtrap), (EBREAK)>;
 
 let Predicates = [IsRV64], Uses = [X5],
-    Defs = [X1, X6, X7, X28, X29, X30, X31] in
+    Defs = [X1, X6, X7, X28, X29, X30, X31], Size = 8 in
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
   : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
            [(int_hwasan_check_memaccess_shortgranules (i64 X5), GPRJALR:$ptr,

@@ -4,9 +4,9 @@
 define void @lshr_v32i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: lshr_v32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsrl.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsrl.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -20,9 +20,9 @@ entry:
 define void @lshr_v16i16(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: lshr_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsrl.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsrl.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -36,9 +36,9 @@ entry:
 define void @lshr_v8i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: lshr_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsrl.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsrl.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -52,9 +52,9 @@ entry:
 define void @lshr_v4i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: lshr_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsrl.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsrl.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

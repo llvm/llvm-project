@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/numeric.h"
+#include "numeric-templates.h"
 #include "terminator.h"
+#include "tools.h"
 #include "flang/Common/float128.h"
 #include <cfloat>
 #include <climits>
@@ -17,30 +19,30 @@
 namespace Fortran::runtime {
 
 template <typename RES>
-inline RT_API_ATTRS RES getIntArgValue(const char *source, int line, void *arg,
-    int kind, std::int64_t defaultValue, int resKind) {
+inline RT_API_ATTRS RES GetIntArgValue(const char *source, int line,
+    const void *arg, int kind, std::int64_t defaultValue, int resKind) {
   RES res;
   if (!arg) {
     res = static_cast<RES>(defaultValue);
   } else if (kind == 1) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 1> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(arg));
   } else if (kind == 2) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 2> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 2> *>(arg));
   } else if (kind == 4) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 4> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 4> *>(arg));
   } else if (kind == 8) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 8> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(arg));
 #ifdef __SIZEOF_INT128__
   } else if (kind == 16) {
     if (resKind != 16) {
       Terminator{source, line}.Crash("Unexpected integer kind in runtime");
     }
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 16> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 16> *>(arg));
 #endif
   } else {
     Terminator{source, line}.Crash("Unexpected integer kind in runtime");
@@ -68,58 +70,6 @@ inline RT_API_ATTRS RESULT Floor(ARG x) {
   return std::floor(x);
 }
 
-// EXPONENT (16.9.75)
-template <typename RESULT, typename ARG>
-inline RT_API_ATTRS RESULT Exponent(ARG x) {
-  if (std::isinf(x) || std::isnan(x)) {
-    return std::numeric_limits<RESULT>::max(); // +/-Inf, NaN -> HUGE(0)
-  } else if (x == 0) {
-    return 0; // 0 -> 0
-  } else {
-    return std::ilogb(x) + 1;
-  }
-}
-
-// Suppress the warnings about calling __host__-only std::frexp,
-// defined in C++ STD header files, from __device__ code.
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
-
-// FRACTION (16.9.80)
-template <typename T> inline RT_API_ATTRS T Fraction(T x) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return x; // 0 -> same 0
-  } else {
-    int ignoredExp;
-    return std::frexp(x, &ignoredExp);
-  }
-}
-
-RT_DIAG_POP
-
-// SET_EXPONENT (16.9.171)
-template <typename T> inline RT_API_ATTRS T SetExponent(T x, std::int64_t p) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return x; // return negative zero if x is negative zero
-  } else {
-    int expo{std::ilogb(x) + 1};
-    auto ip{static_cast<int>(p - expo)};
-    if (ip != p - expo) {
-      ip = p < 0 ? std::numeric_limits<int>::min()
-                 : std::numeric_limits<int>::max();
-    }
-    return std::ldexp(x, ip); // x*2**(p-e)
-  }
-}
-
 // MOD & MODULO (16.9.135, .136)
 template <bool IS_MODULO, typename T>
 inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
@@ -133,94 +83,6 @@ inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
   }
   return mod;
 }
-template <bool IS_MODULO, typename T>
-inline RT_API_ATTRS T RealMod(
-    T a, T p, const char *sourceFile, int sourceLine) {
-  if (p == 0) {
-    Terminator{sourceFile, sourceLine}.Crash(
-        IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
-  }
-  if (std::isnan(a) || std::isnan(p) || std::isinf(a)) {
-    return std::numeric_limits<T>::quiet_NaN();
-  } else if (std::isinf(p)) {
-    return a;
-  }
-  T aAbs{std::abs(a)};
-  T pAbs{std::abs(p)};
-  if (aAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max()) &&
-      pAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max())) {
-    if (auto aInt{static_cast<std::int64_t>(a)}; a == aInt) {
-      if (auto pInt{static_cast<std::int64_t>(p)}; p == pInt) {
-        // Fast exact case for integer operands
-        auto mod{aInt - (aInt / pInt) * pInt};
-        if (IS_MODULO && (aInt > 0) != (pInt > 0)) {
-          mod += pInt;
-        }
-        return static_cast<T>(mod);
-      }
-    }
-  }
-  if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ||
-      std::is_same_v<T, long double>) {
-    // std::fmod() semantics on signed operands seems to match
-    // the requirements of MOD().  MODULO() needs adjustment.
-    T result{std::fmod(a, p)};
-    if constexpr (IS_MODULO) {
-      if ((a < 0) != (p < 0)) {
-        if (result == 0.) {
-          result = -result;
-        } else {
-          result += p;
-        }
-      }
-    }
-    return result;
-  } else {
-    // The standard defines MOD(a,p)=a-AINT(a/p)*p and
-    // MODULO(a,p)=a-FLOOR(a/p)*p, but those definitions lose
-    // precision badly due to cancellation when ABS(a) is
-    // much larger than ABS(p).
-    // Insights:
-    //  - MOD(a,p)=MOD(a-n*p,p) when a>0, p>0, integer n>0, and a>=n*p
-    //  - when n is a power of two, n*p is exact
-    //  - as a>=n*p, a-n*p does not round.
-    // So repeatedly reduce a by all n*p in decreasing order of n;
-    // what's left is the desired remainder.  This is basically
-    // the same algorithm as arbitrary precision binary long division,
-    // discarding the quotient.
-    T tmp{aAbs};
-    for (T adj{SetExponent(pAbs, Exponent<int>(aAbs))}; tmp >= pAbs; adj /= 2) {
-      if (tmp >= adj) {
-        tmp -= adj;
-        if (tmp == 0) {
-          break;
-        }
-      }
-    }
-    if (a < 0) {
-      tmp = -tmp;
-    }
-    if constexpr (IS_MODULO) {
-      if ((a < 0) != (p < 0)) {
-        tmp += p;
-      }
-    }
-    return tmp;
-  }
-}
-
-// RRSPACING (16.9.164)
-template <int PREC, typename T> inline RT_API_ATTRS T RRSpacing(T x) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    return 0; // 0 -> 0
-  } else {
-    return std::ldexp(std::abs(x), PREC - (std::ilogb(x) + 1));
-  }
-}
 
 // SCALE (16.9.166)
 template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
@@ -229,7 +91,7 @@ template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
     ip = p < 0 ? std::numeric_limits<int>::min()
                : std::numeric_limits<int>::max();
   }
-  return std::ldexp(x, p); // x*2**p
+  return std::ldexp(x, ip); // x*2**p
 }
 
 // SELECTED_INT_KIND (16.9.169)
@@ -247,6 +109,22 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
   } else if (x <= 38) {
     return 16;
 #endif
+  }
+  return -1;
+}
+
+// SELECTED_LOGICAL_KIND (F'2023 16.9.182)
+template <typename T>
+inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedLogicalKind(
+    T x) {
+  if (x <= 2) {
+    return 1;
+  } else if (x <= 4) {
+    return 2;
+  } else if (x <= 9) {
+    return 4;
+  } else if (x <= 18) {
+    return 8;
   }
   return -1;
 }
@@ -298,23 +176,6 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
   }
 
   return error ? error : kind;
-}
-
-// SPACING (16.9.180)
-template <int PREC, typename T> inline RT_API_ATTRS T Spacing(T x) {
-  if (std::isnan(x)) {
-    return x; // NaN -> same NaN
-  } else if (std::isinf(x)) {
-    return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
-  } else if (x == 0) {
-    // The standard-mandated behavior seems broken, since TINY() can't be
-    // subnormal.
-    return std::numeric_limits<T>::min(); // 0 -> TINY(x)
-  } else {
-    T result{
-        std::ldexp(static_cast<T>(1.0), std::ilogb(x) + 1 - PREC)}; // 2**(e-p)
-    return result == 0 ? /*TINY(x)*/ std::numeric_limits<T>::min() : result;
-  }
 }
 
 // NEAREST (16.9.139)
@@ -480,15 +341,6 @@ CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent16_4)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);
-}
-CppTypeFor<TypeCategory::Integer, 8> RTDEF(Exponent16_8)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
-}
 #endif
 
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Floor4_1)(
@@ -596,11 +448,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Fraction10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Fraction(x);
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Fraction16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Fraction(x);
-}
 #endif
 
 bool RTDEF(IsFinite4)(CppTypeFor<TypeCategory::Real, 4> x) {
@@ -683,12 +530,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ModReal10)(
     const char *sourceFile, int sourceLine) {
   return RealMod<false>(x, p, sourceFile, sourceLine);
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(ModReal16)(
-    CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
-    const char *sourceFile, int sourceLine) {
-  return RealMod<false>(x, p, sourceFile, sourceLine);
-}
 #endif
 
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(ModuloInteger1)(
@@ -739,12 +580,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ModuloReal10)(
     const char *sourceFile, int sourceLine) {
   return RealMod<true>(x, p, sourceFile, sourceLine);
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(ModuloReal16)(
-    CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
-    const char *sourceFile, int sourceLine) {
-  return RealMod<true>(x, p, sourceFile, sourceLine);
-}
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTDEF(Nearest4)(
@@ -759,11 +594,6 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Nearest8)(
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Nearest10)(
     CppTypeFor<TypeCategory::Real, 10> x, bool positive) {
   return Nearest<64>(x, positive);
-}
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Nearest16)(
-    CppTypeFor<TypeCategory::Real, 16> x, bool positive) {
-  return Nearest<113>(x, positive);
 }
 #endif
 
@@ -872,11 +702,6 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(RRSpacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return RRSpacing<64>(x);
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(RRSpacing16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return RRSpacing<113>(x);
-}
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTDEF(SetExponent4)(
@@ -890,11 +715,6 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(SetExponent8)(
 #if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTDEF(SetExponent10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
-  return SetExponent(x, p);
-}
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(SetExponent16)(
-    CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
   return SetExponent(x, p);
 }
 #endif
@@ -912,25 +732,52 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Scale10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
   return Scale(x, p);
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Scale16)(
-    CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
-  return Scale(x, p);
-}
 #endif
 
+// SELECTED_CHAR_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedCharKind)(
+    const char *source, int line, const char *x, std::size_t length) {
+  static const char *keywords[]{
+      "ASCII", "DEFAULT", "UCS-2", "ISO_10646", "UCS-4", nullptr};
+  switch (IdentifyValue(x, length, keywords)) {
+  case 0: // ASCII
+  case 1: // DEFAULT
+    return 1;
+  case 2: // UCS-2
+    return 2;
+  case 3: // ISO_10646
+  case 4: // UCS-4
+    return 4;
+  default:
+    return -1;
+  }
+}
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKind)(
     const char *source, int line, void *x, int xKind) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> r =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
 #else
-  std::int64_t r = getIntArgValue<std::int64_t>(
+  std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
 #endif
   return SelectedIntKind(r);
+}
+
+// SELECTED_LOGICAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedLogicalKind)(
+    const char *source, int line, void *x, int xKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
+#else
+  std::int64_t r = GetIntArgValue<std::int64_t>(
+      source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
+#endif
+  return SelectedLogicalKind(r);
 }
 
 // SELECTED_REAL_KIND
@@ -939,20 +786,20 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKind)(const char *source,
     int dKind) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> p =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 16);
   CppTypeFor<TypeCategory::Integer, 16> r =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 16);
   CppTypeFor<TypeCategory::Integer, 16> d =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 16);
 #else
-  std::int64_t p = getIntArgValue<std::int64_t>(
+  std::int64_t p = GetIntArgValue<std::int64_t>(
       source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 8);
-  std::int64_t r = getIntArgValue<std::int64_t>(
+  std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 8);
-  std::int64_t d = getIntArgValue<std::int64_t>(
+  std::int64_t d = GetIntArgValue<std::int64_t>(
       source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 8);
 #endif
   return SelectedRealKind(p, r, d);
@@ -970,11 +817,6 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Spacing8)(
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Spacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Spacing<64>(x);
-}
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Spacing16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Spacing<113>(x);
 }
 #endif
 

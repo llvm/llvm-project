@@ -15,8 +15,8 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -57,6 +57,7 @@ public:
 
 const uint64_t dtpOffset = 0x800;
 
+namespace {
 enum Op {
   ADDI = 0x13,
   AUIPC = 0x17,
@@ -78,6 +79,7 @@ enum Reg {
   X_A0 = 10,
   X_T3 = 28,
 };
+} // namespace
 
 static uint32_t hi20(uint32_t val) { return (val + 0x800) >> 12; }
 static uint32_t lo12(uint32_t val) { return val & 4095; }
@@ -1055,7 +1057,7 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
+static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
@@ -1072,19 +1074,19 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
     mergedXlen = info.getXLen();
   } else {
     for (const auto &ext : info.getExtensions()) {
-      if (auto it = mergedExts.find(ext.first); it != mergedExts.end()) {
-        if (std::tie(it->second.Major, it->second.Minor) >=
+      auto p = mergedExts.insert(ext);
+      if (!p.second) {
+        if (std::tie(p.first->second.Major, p.first->second.Minor) <
             std::tie(ext.second.Major, ext.second.Minor))
-          continue;
+          p.first->second = ext.second;
       }
-      mergedExts[ext.first] = ext.second;
     }
   }
 }
 
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
-  RISCVISAInfo::OrderedExtensionMap exts;
+  RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;

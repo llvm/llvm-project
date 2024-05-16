@@ -13,7 +13,7 @@ from lldbsuite.test.lldbtest import *
 
 class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluate(self, expression, regex):
-        self.assertRegexpMatches(
+        self.assertRegex(
             self.dap_server.request_evaluate(expression, context=self.context)["body"][
                 "result"
             ],
@@ -78,9 +78,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                re.escape("{foo:15}")
-                if enableAutoVariableSummaries
-                else "my_struct @ 0x",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
             )
             self.assertEvaluate(
                 "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
@@ -127,9 +129,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                re.escape("{foo:15}")
-                if enableAutoVariableSummaries
-                else "my_struct @ 0x",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
             )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")

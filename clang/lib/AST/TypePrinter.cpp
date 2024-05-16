@@ -268,6 +268,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
 
     case Type::Adjusted:
     case Type::Decayed:
+    case Type::ArrayParameter:
     case Type::Pointer:
     case Type::BlockPointer:
     case Type::LValueReference:
@@ -286,6 +287,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::CountAttributed:
       CanPrefixQualifiers = false;
       break;
 
@@ -537,7 +539,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
-  OS << T->getSize().getZExtValue() << ']';
+  OS << T->getZExtSize() << ']';
   printAfter(T->getElementType(), OS);
 }
 
@@ -592,6 +594,16 @@ void TypePrinter::printAdjustedAfter(const AdjustedType *T, raw_ostream &OS) {
 void TypePrinter::printDecayedBefore(const DecayedType *T, raw_ostream &OS) {
   // Print as though it's a pointer.
   printAdjustedBefore(T, OS);
+}
+
+void TypePrinter::printArrayParameterAfter(const ArrayParameterType *T,
+                                           raw_ostream &OS) {
+  printConstantArrayAfter(T, OS);
+}
+
+void TypePrinter::printArrayParameterBefore(const ArrayParameterType *T,
+                                            raw_ostream &OS) {
+  printConstantArrayBefore(T, OS);
 }
 
 void TypePrinter::printDecayedAfter(const DecayedType *T, raw_ostream &OS) {
@@ -1070,6 +1082,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveNone:
       OS << " __attribute__((preserve_none))";
       break;
+    case CC_RISCVVectorCall:
+      OS << "__attribute__((riscv_vector_cc))";
+      break;
     }
   }
 
@@ -1198,10 +1213,13 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
 
 void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
                                           raw_ostream &OS) {
-  if (T->hasSelectedType())
+  if (T->hasSelectedType()) {
     OS << T->getSelectedType();
-  else
-    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
+  } else {
+    OS << T->getPattern() << "...[";
+    T->getIndexExpr()->printPretty(OS, nullptr, Policy);
+    OS << "]";
+  }
   spaceBeforePlaceHolder(OS);
 }
 
@@ -1454,21 +1472,18 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
 
   // If this is a class template specialization, print the template
   // arguments.
-  if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    ArrayRef<TemplateArgument> Args;
-    TypeSourceInfo *TAW = Spec->getTypeAsWritten();
-    if (!Policy.PrintCanonicalTypes && TAW) {
-      const TemplateSpecializationType *TST =
-        cast<TemplateSpecializationType>(TAW->getType());
-      Args = TST->template_arguments();
-    } else {
-      const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-      Args = TemplateArgs.asArray();
-    }
+  if (auto *S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    const TemplateParameterList *TParams =
+        S->getSpecializedTemplate()->getTemplateParameters();
+    const ASTTemplateArgumentListInfo *TArgAsWritten =
+        S->getTemplateArgsAsWritten();
     IncludeStrongLifetimeRAII Strong(Policy);
-    printTemplateArgumentList(
-        OS, Args, Policy,
-        Spec->getSpecializedTemplate()->getTemplateParameters());
+    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+      printTemplateArgumentList(OS, TArgAsWritten->arguments(), Policy,
+                                TParams);
+    else
+      printTemplateArgumentList(OS, S->getTemplateArgs().asArray(), Policy,
+                                TParams);
   }
 
   spaceBeforePlaceHolder(OS);
@@ -1635,6 +1650,17 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (!Policy.SuppressTagKeyword && Policy.SuppressScope &&
+        !Policy.SuppressUnwrittenScope) {
+      bool OldTagKeyword = Policy.SuppressTagKeyword;
+      bool OldSupressScope = Policy.SuppressScope;
+      Policy.SuppressTagKeyword = true;
+      Policy.SuppressScope = false;
+      printBefore(T->getNamedType(), OS);
+      Policy.SuppressTagKeyword = OldTagKeyword;
+      Policy.SuppressScope = OldSupressScope;
+      return;
+    }
     if (Qualifier)
       Qualifier->print(OS, Policy);
   }
@@ -1715,6 +1741,37 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
                                           raw_ostream &OS) {
   printAfter(T->getPattern(), OS);
   OS << "...";
+}
+
+static void printCountAttributedImpl(const CountAttributedType *T,
+                                     raw_ostream &OS,
+                                     const PrintingPolicy &Policy) {
+  OS << ' ';
+  if (T->isCountInBytes() && T->isOrNull())
+    OS << "__sized_by_or_null(";
+  else if (T->isCountInBytes())
+    OS << "__sized_by(";
+  else if (T->isOrNull())
+    OS << "__counted_by_or_null(";
+  else
+    OS << "__counted_by(";
+  if (T->getCountExpr())
+    T->getCountExpr()->printPretty(OS, nullptr, Policy);
+  OS << ')';
+}
+
+void TypePrinter::printCountAttributedBefore(const CountAttributedType *T,
+                                             raw_ostream &OS) {
+  printBefore(T->desugar(), OS);
+  if (!T->isArrayType())
+    printCountAttributedImpl(T, OS, Policy);
+}
+
+void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
+                                            raw_ostream &OS) {
+  printAfter(T->desugar(), OS);
+  if (T->isArrayType())
+    printCountAttributedImpl(T, OS, Policy);
 }
 
 void TypePrinter::printAttributedBefore(const AttributedType *T,
@@ -1847,6 +1904,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // AttributedType nodes for them.
     break;
 
+  case attr::CountedBy:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
@@ -1916,6 +1974,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::PreserveNone:
     OS << "preserve_none";
+    break;
+  case attr::RISCVVectorCC:
+    OS << "riscv_vector_cc";
     break;
   case attr::NoDeref:
     OS << "noderef";

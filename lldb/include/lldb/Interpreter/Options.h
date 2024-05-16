@@ -336,6 +336,41 @@ public:
   bool m_did_finalize = false;
 };
 
+/// Creates an error that represents the failure to parse an command line option
+/// argument. This creates an error containing all information needed to show
+/// the developer what went wrong when parsing their command. It is recommended
+/// to use this instead of writing an error by hand.
+///
+/// \param[in] option_arg
+///   The argument that was attempted to be parsed.
+///
+/// \param[in] short_option
+///   The short form of the option. For example, if the flag is -f, the short
+///   option is "f".
+///
+/// \param[in] long_option
+///   The long form of the option. This field is optional. If the flag is
+///   --force, then the long option is "force".
+///
+/// \param[in] additional_context
+///   This is extra context that will get included in the error. This field is
+///   optional.
+///
+/// \return
+///   An llvm::Error that contains a standardized format for what went wrong
+///   when parsing and why.
+llvm::Error CreateOptionParsingError(llvm::StringRef option_arg,
+                                     const char short_option,
+                                     llvm::StringRef long_option = {},
+                                     llvm::StringRef additional_context = {});
+
+static constexpr llvm::StringLiteral g_bool_parsing_error_message =
+    "Failed to parse as boolean";
+static constexpr llvm::StringLiteral g_int_parsing_error_message =
+    "Failed to parse as integer";
+static constexpr llvm::StringLiteral g_language_parsing_error_message =
+    "Unknown language";
+
 } // namespace lldb_private
 
 #endif // LLDB_INTERPRETER_OPTIONS_H

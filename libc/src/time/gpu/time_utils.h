@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H
 
+#include "hdr/time_macros.h"
+#include "hdr/types/clock_t.h"
 #include "src/__support/GPU/utils.h"
-
 namespace LIBC_NAMESPACE {
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)

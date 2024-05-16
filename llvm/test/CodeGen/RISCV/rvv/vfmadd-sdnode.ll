@@ -35,6 +35,28 @@ define <vscale x 1 x half> @vfmadd_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x
   ret <vscale x 1 x half> %vd
 }
 
+define <vscale x 1 x half> @vfmadd_vv_nxv1f16_commuted(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x half> %vc) {
+; ZVFH-LABEL: vfmadd_vv_nxv1f16_commuted:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfmacc.vv v8, v10, v9
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: vfmadd_vv_nxv1f16_commuted:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfmadd.vv v9, v8, v11
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    ret
+  %vd = call <vscale x 1 x half> @llvm.fma.v1f16(<vscale x 1 x half> %vb, <vscale x 1 x half> %vc, <vscale x 1 x half> %va)
+  ret <vscale x 1 x half> %vd
+}
+
 define <vscale x 1 x half> @vfmadd_vf_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, half %c) {
 ; ZVFH-LABEL: vfmadd_vf_nxv1f16:
 ; ZVFH:       # %bb.0:
@@ -410,14 +432,14 @@ define <vscale x 32 x half> @vfmadd_vf_nxv32f16(<vscale x 32 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmv.v.f v24, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v0, v24
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v4, v24
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
 ; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v0
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v4
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    csrr a0, vlenb

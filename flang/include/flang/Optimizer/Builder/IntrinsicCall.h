@@ -208,6 +208,9 @@ struct IntrinsicLibrary {
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCPtrCompare(mlir::Type,
+                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -332,12 +335,15 @@ struct IntrinsicLibrary {
   mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genShape(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue>);
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -494,12 +500,13 @@ struct RuntimeFunction {
   fir::runtime::FuncTypeBuilderFunc typeGenerator;
 };
 
-/// Callback type for generating lowering for a math operation.
-using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
-                                        llvm::StringRef, mlir::FunctionType,
-                                        llvm::ArrayRef<mlir::Value>);
-
 struct MathOperation {
+  // Callback type for generating lowering for a math operation.
+  using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
+                                          const MathOperation &,
+                                          mlir::FunctionType,
+                                          llvm::ArrayRef<mlir::Value>);
+
   // Overrides fir::runtime::FuncTypeBuilderFunc to add FirOpBuilder argument.
   using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *,
                                                      fir::FirOpBuilder &);
@@ -656,8 +663,8 @@ static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
 //===----------------------------------------------------------------------===//
 static inline mlir::Type getConvertedElementType(mlir::MLIRContext *context,
                                                  mlir::Type eleTy) {
-  if (eleTy.isa<mlir::IntegerType>() && !eleTy.isSignlessInteger()) {
-    const auto intTy{eleTy.dyn_cast<mlir::IntegerType>()};
+  if (mlir::isa<mlir::IntegerType>(eleTy) && !eleTy.isSignlessInteger()) {
+    const auto intTy{mlir::dyn_cast<mlir::IntegerType>(eleTy)};
     auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
     return newEleTy;
   }
@@ -681,25 +688,25 @@ getTypesForArgs(llvm::ArrayRef<mlir::Value> args) {
 }
 
 mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                       llvm::StringRef libFuncName,
+                       const MathOperation &mathOp,
                        mlir::FunctionType libFuncType,
                        llvm::ArrayRef<mlir::Value> args);
 
 template <typename T>
 mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                      llvm::StringRef mathLibFuncName,
+                      const MathOperation &mathOp,
                       mlir::FunctionType mathLibFuncType,
                       llvm::ArrayRef<mlir::Value> args);
 
 template <typename T>
 mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                             llvm::StringRef mathLibFuncName,
+                             const MathOperation &mathOp,
                              mlir::FunctionType mathLibFuncType,
                              llvm::ArrayRef<mlir::Value> args);
 
 mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
-                                       llvm::StringRef libFuncName,
+                                       const MathOperation &mathOp,
                                        mlir::FunctionType libFuncType,
                                        llvm::ArrayRef<mlir::Value> args);
 

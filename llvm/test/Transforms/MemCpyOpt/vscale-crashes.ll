@@ -71,7 +71,7 @@ define void @callslotoptzn(<vscale x 4 x float> %val, ptr %out) {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca <vscale x 4 x float>, align 16
 ; CHECK-NEXT:    [[IDX:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 ; CHECK-NEXT:    [[STRIDE:%.*]] = getelementptr inbounds float, ptr [[ALLOC]], <vscale x 4 x i32> [[IDX]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[STRIDE]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[STRIDE]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[LI:%.*]] = load <vscale x 4 x float>, ptr [[ALLOC]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x float> [[LI]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -79,7 +79,7 @@ define void @callslotoptzn(<vscale x 4 x float> %val, ptr %out) {
   %alloc = alloca <vscale x 4 x float>, align 16
   %idx = tail call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
   %stride = getelementptr inbounds float, ptr %alloc, <vscale x 4 x i32> %idx
-  call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %val, <vscale x 4 x ptr> %stride, i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+  call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %val, <vscale x 4 x ptr> %stride, i32 4, <vscale x 4 x i1> splat (i1 true))
   %li = load <vscale x 4 x float>, ptr %alloc, align 4
   store <vscale x 4 x float> %li, ptr %out, align 4
   ret void

@@ -90,11 +90,11 @@ TYPE("ir",                       LLVM_BC,      INVALID,         "bc",     phases
 TYPE("lto-ir",                   LTO_IR,       INVALID,         "s",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("lto-bc",                   LTO_BC,       INVALID,         "o",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
+TYPE("cir",                      CIR,          INVALID,         "cir",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 // Misc.
 TYPE("ast",                      AST,          INVALID,         "ast",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("ifs",                      IFS,          INVALID,         "ifs",    phases::IfsMerge)
 TYPE("ifs-cpp",                  IFS_CPP,      INVALID,         "ifs",    phases::Compile, phases::IfsMerge)
-TYPE("tbd",                      TextAPI,      INVALID,         "tbd",    phases::Precompile)
 TYPE("pcm",                      ModuleFile,   INVALID,         "pcm",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("header-unit",              HeaderUnit,   INVALID,         "pcm",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("plist",                    Plist,        INVALID,         "plist",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)

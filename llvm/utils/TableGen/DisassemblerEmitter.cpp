@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
+#include "Common/CodeGenTarget.h"
 #include "TableGenBackends.h"
 #include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
@@ -130,6 +130,8 @@ static void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     PredicateNamespace = "ARM";
   EmitDecoder(Records, OS, PredicateNamespace);
 }
+
+cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
 
 static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
                                 "Generate disassembler");

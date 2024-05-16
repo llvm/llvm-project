@@ -10668,3 +10668,111 @@ define amdgpu_kernel void @srem_v2i64_pow2_shl_denom(ptr addrspace(1) %out, <2 x
   store <2 x i64> %r, ptr addrspace(1) %out
   ret void
 }
+
+define <2 x i32> @v_sdiv_i32_exact(<2 x i32> %num) {
+; CHECK-LABEL:  @v_sdiv_i32_exact(
+; CHECK:        %1 = extractelement <2 x i32> %num, i64 0
+; CHECK-NEXT:   %2 = sdiv exact i32 %1, 4096
+; CHECK-NEXT:   %3 = insertelement <2 x i32> poison, i32 %2, i64 0
+; CHECK-NEXT:   %4 = extractelement <2 x i32> %num, i64 1
+; CHECK-NEXT:   %5 = sdiv exact i32 %4, 1024
+; CHECK-NEXT:   %6 = insertelement <2 x i32> %3, i32 %5, i64 1
+; CHECK-NEXT:   ret <2 x i32> %6
+;
+; GFX6-LABEL: v_sdiv_i32_exact:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 12, v0
+; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 10, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_sdiv_i32_exact:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_ashrrev_i32_e32 v0, 12, v0
+; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 10, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+   %result = sdiv exact <2 x i32> %num, <i32 4096, i32 1024>
+   ret <2 x i32> %result
+}
+
+define <2 x i64> @v_sdiv_i64_exact(<2 x i64> %num) {
+; CHECK-LABEL:  @v_sdiv_i64_exact(
+; CHECK:        %1 = extractelement <2 x i64> %num, i64 0
+; CHECK-NEXT:   %2 = sdiv exact i64 %1, 4096
+; CHECK-NEXT:   %3 = insertelement <2 x i64> poison, i64 %2, i64 0
+; CHECK-NEXT:   %4 = extractelement <2 x i64> %num, i64 1
+; CHECK-NEXT:   %5 = sdiv exact i64 %4, 1024
+; CHECK-NEXT:   %6 = insertelement <2 x i64> %3, i64 %5, i64 1
+; CHECK-NEXT:   ret <2 x i64> %6
+;
+; GFX6-LABEL: v_sdiv_i64_exact:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ashr_i64 v[0:1], v[0:1], 12
+; GFX6-NEXT:    v_ashr_i64 v[2:3], v[2:3], 10
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_sdiv_i64_exact:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_ashrrev_i64 v[0:1], 12, v[0:1]
+; GFX9-NEXT:    v_ashrrev_i64 v[2:3], 10, v[2:3]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+   %result = sdiv exact <2 x i64> %num, <i64 4096, i64 1024>
+   ret <2 x i64> %result
+}
+
+define <2 x i32> @v_udiv_i32_exact(<2 x i32> %num) {
+; CHECK-LABEL:  @v_udiv_i32_exact(
+; CHECK:        %1 = extractelement <2 x i32> %num, i64 0
+; CHECK-NEXT:   %2 = udiv exact i32 %1, 4096
+; CHECK-NEXT:   %3 = insertelement <2 x i32> poison, i32 %2, i64 0
+; CHECK-NEXT:   %4 = extractelement <2 x i32> %num, i64 1
+; CHECK-NEXT:   %5 = udiv exact i32 %4, 1024
+; CHECK-NEXT:   %6 = insertelement <2 x i32> %3, i32 %5, i64 1
+; CHECK-NEXT:   ret <2 x i32> %6
+;
+; GFX6-LABEL: v_udiv_i32_exact:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 12, v0
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 10, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_udiv_i32_exact:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 12, v0
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 10, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+   %result = udiv exact <2 x i32> %num, <i32 4096, i32 1024>
+   ret <2 x i32> %result
+}
+
+define <2 x i64> @v_udiv_i64_exact(<2 x i64> %num) {
+; CHECK-LABEL:  @v_udiv_i64_exact(
+; CHECK:        %1 = extractelement <2 x i64> %num, i64 0
+; CHECK-NEXT:   %2 = udiv exact i64 %1, 4096
+; CHECK-NEXT:   %3 = insertelement <2 x i64> poison, i64 %2, i64 0
+; CHECK-NEXT:   %4 = extractelement <2 x i64> %num, i64 1
+; CHECK-NEXT:   %5 = udiv exact i64 %4, 1024
+; CHECK-NEXT:   %6 = insertelement <2 x i64> %3, i64 %5, i64 1
+; CHECK-NEXT:   ret <2 x i64> %6
+;
+; GFX6-LABEL: v_udiv_i64_exact:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_lshr_b64 v[0:1], v[0:1], 12
+; GFX6-NEXT:    v_lshr_b64 v[2:3], v[2:3], 10
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_udiv_i64_exact:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 12, v[0:1]
+; GFX9-NEXT:    v_lshrrev_b64 v[2:3], 10, v[2:3]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+   %result = udiv exact <2 x i64> %num, <i64 4096, i64 1024>
+   ret <2 x i64> %result
+}

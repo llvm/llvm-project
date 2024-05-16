@@ -46,9 +46,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit FLAT = 0;
   field bit DS = 0;
 
-  // Pseudo instruction formats.
-  field bit VGPRSpill = 0;
-  field bit SGPRSpill = 0;
+  // Combined SGPR/VGPR spill bit
+  field bit Spill = 0;
 
   // LDSDIR instruction format.
   field bit LDSDIR = 0;
@@ -187,8 +186,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{24} = FLAT;
   let TSFlags{25} = DS;
 
-  let TSFlags{26} = VGPRSpill;
-  let TSFlags{27} = SGPRSpill;
+  let TSFlags{26} = Spill;
+
+  // Reserved, must be 0
+  let TSFlags{27} = 0;
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;

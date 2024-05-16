@@ -20,6 +20,7 @@
 #include "ChainedComparisonCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
 #include "CopyConstructorInitCheck.h"
+#include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
@@ -53,6 +54,7 @@
 #include "PosixReturnCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
+#include "ReturnConstRefFromParameterCheck.h"
 #include "SharedPtrArrayMismatchCheck.h"
 #include "SignalHandlerCheck.h"
 #include "SignedCharMisuseCheck.h"
@@ -72,6 +74,7 @@
 #include "SuspiciousReallocUsageCheck.h"
 #include "SuspiciousSemicolonCheck.h"
 #include "SuspiciousStringCompareCheck.h"
+#include "SuspiciousStringviewDataUsageCheck.h"
 #include "SwappedArgumentsCheck.h"
 #include "SwitchMissingDefaultCaseCheck.h"
 #include "TerminatingContinueCheck.h"
@@ -135,6 +138,8 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectEnableIfCheck>(
         "bugprone-incorrect-enable-if");
+    CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
+        "bugprone-return-const-ref-from-parameter");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
     CheckFactories.registerCheck<IncDecInConditionsCheck>(
@@ -217,6 +222,8 @@ public:
         "bugprone-suspicious-semicolon");
     CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
         "bugprone-suspicious-string-compare");
+    CheckFactories.registerCheck<SuspiciousStringviewDataUsageCheck>(
+        "bugprone-suspicious-stringview-data-usage");
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "bugprone-swapped-arguments");
     CheckFactories.registerCheck<TerminatingContinueCheck>(
@@ -237,6 +244,8 @@ public:
         "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UniquePtrArrayMismatchCheck>(
         "bugprone-unique-ptr-array-mismatch");
+    CheckFactories.registerCheck<CrtpConstructorAccessibilityCheck>(
+        "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(

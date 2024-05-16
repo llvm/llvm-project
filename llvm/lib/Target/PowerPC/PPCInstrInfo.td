@@ -213,12 +213,14 @@ def PPCaddTls     : SDNode<"PPCISD::ADD_TLS", SDTIntBinOp, []>;
 def PPCaddisTlsgdHA : SDNode<"PPCISD::ADDIS_TLSGD_HA", SDTIntBinOp>;
 def PPCaddiTlsgdL   : SDNode<"PPCISD::ADDI_TLSGD_L", SDTIntBinOp>;
 def PPCgetTlsAddr   : SDNode<"PPCISD::GET_TLS_ADDR", SDTIntBinOp>;
+def PPCgetTlsMod   : SDNode<"PPCISD::GET_TLS_MOD_AIX", SDTIntUnaryOp>;
 def PPCgetTpointer : SDNode<"PPCISD::GET_TPOINTER", SDTIntLeaf, []>;
 def PPCaddiTlsgdLAddr : SDNode<"PPCISD::ADDI_TLSGD_L_ADDR",
                                SDTypeProfile<1, 3, [
                                  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                                  SDTCisSameAs<0, 3>, SDTCisInt<0> ]>>;
 def PPCTlsgdAIX     : SDNode<"PPCISD::TLSGD_AIX", SDTIntBinOp>;
+def PPCTlsldAIX     : SDNode<"PPCISD::TLSLD_AIX", SDTIntUnaryOp>;
 def PPCaddisTlsldHA : SDNode<"PPCISD::ADDIS_TLSLD_HA", SDTIntBinOp>;
 def PPCaddiTlsldL   : SDNode<"PPCISD::ADDI_TLSLD_L", SDTIntBinOp>;
 def PPCgetTlsldAddr : SDNode<"PPCISD::GET_TLSLD_ADDR", SDTIntBinOp>;
@@ -334,7 +336,7 @@ def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
 
-def retglue       : SDNode<"PPCISD::RET_GLUE", SDTNone,
+def PPCretglue   : SDNode<"PPCISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def PPCtc_return : SDNode<"PPCISD::TC_RETURN", SDT_PPCTC_ret,
@@ -1297,7 +1299,7 @@ def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isPredicable = 1, isReturn = 1, Uses = [LR, RM] in
     def BLR : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
-                           [(retglue)]>, Requires<[In32BitMode]>;
+                           [(PPCretglue)]>, Requires<[In32BitMode]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR] in {
     let isPredicable = 1 in
       def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -3249,11 +3251,16 @@ def GETtlsADDR32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$s
 // The rest of the Defs are the exact set of registers that will be clobbered by
 // the call.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
-    Defs = [R0,R4,R5,R11,LR,CR0] in
+    Defs = [R0,R4,R5,R11,LR,CR0] in {
 def GETtlsADDR32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handle),
                           "GETtlsADDR32AIX",
                           [(set i32:$rD,
                             (PPCgetTlsAddr i32:$offset, i32:$handle))]>;
+def GETtlsMOD32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
+                          "GETtlsMOD32AIX",
+                          [(set i32:$rD,
+                            (PPCgetTlsMod i32:$handle))]>;
+}
 
 // For local-exec accesses on 32-bit AIX, a call to .__get_tpointer is
 // generated to retrieve the thread pointer. GETtlsTpointer32AIX clobbers both
@@ -3293,6 +3300,9 @@ def TLSGDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handl
                           "#TLSGDAIX",
                           [(set i32:$rD,
                             (PPCTlsgdAIX i32:$offset, i32:$handle))]>;
+// This pseudo is expanded to the call to GETtlsMOD32AIX.
+def TLSLDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
+                          "#TLSLDAIX", [(set i32:$rD, (PPCTlsldAIX i32:$handle))]>;
 // LR is a true define, while the rest of the Defs are clobbers.  R3 is
 // explicitly defined when this op is created, so not mentioned here.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
@@ -3336,11 +3346,13 @@ def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentr
                        "#ADDIStocHA",
                        [(set i32:$rD,
                          (PPCtoc_entry i32:$reg, tglobaladdr:$disp))]>;
-// Local Data Transform
+// TOC Data Transform AIX
 def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),
                    "#ADDItoc",
                    [(set i32:$rD,
                      (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
+def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
+                   "#ADDItocL", []>;
 
 // Get Global (GOT) Base Register offset, from the word immediately preceding
 // the function label.
@@ -4179,6 +4191,7 @@ def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETUGT)),
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETNE)),
           (SELECT_VRRC (CRXOR $lhs, $rhs), $tval, $fval)>;
 
+let Defs = [CR0] in {
 def ANDI_rec_1_EQ_BIT : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins gprc:$in),
                              "#ANDI_rec_1_EQ_BIT",
                              [(set i1:$dst, (trunc (not i32:$in)))]>;
@@ -4192,6 +4205,7 @@ def ANDI_rec_1_EQ_BIT8 : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins g8rc:
 def ANDI_rec_1_GT_BIT8 : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins g8rc:$in),
                               "#ANDI_rec_1_GT_BIT8",
                               [(set i1:$dst, (trunc i64:$in))]>;
+}
 
 def : Pat<(i1 (not (trunc i32:$in))),
            (ANDI_rec_1_EQ_BIT $in)>;
@@ -5035,12 +5049,12 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(atomic_load_8  DForm:$src), (LBZ  memri:$src)>;
-def : Pat<(atomic_load_16 DForm:$src), (LHZ  memri:$src)>;
-def : Pat<(atomic_load_32 DForm:$src), (LWZ  memri:$src)>;
-def : Pat<(atomic_load_8  XForm:$src), (LBZX memrr:$src)>;
-def : Pat<(atomic_load_16 XForm:$src), (LHZX memrr:$src)>;
-def : Pat<(atomic_load_32 XForm:$src), (LWZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
 def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;

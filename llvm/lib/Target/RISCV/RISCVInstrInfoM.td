@@ -41,9 +41,9 @@ def DIV     : ALU_rr<0b0000001, 0b100, "div">,
 def DIVU    : ALU_rr<0b0000001, 0b101, "divu">,
               Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
 def REM     : ALU_rr<0b0000001, 0b110, "rem">,
-              Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
+              Sched<[WriteIRem, ReadIRem, ReadIRem]>;
 def REMU    : ALU_rr<0b0000001, 0b111, "remu">,
-              Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
+              Sched<[WriteIRem, ReadIRem, ReadIRem]>;
 } // Predicates = [HasStdExtM]
 
 let Predicates = [HasStdExtMOrZmmul, IsRV64], IsSignExtendingOpW = 1 in {
@@ -57,9 +57,9 @@ def DIVW    : ALUW_rr<0b0000001, 0b100, "divw">,
 def DIVUW   : ALUW_rr<0b0000001, 0b101, "divuw">,
               Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
 def REMW    : ALUW_rr<0b0000001, 0b110, "remw">,
-              Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
+              Sched<[WriteIRem32, ReadIRem32, ReadIRem32]>;
 def REMUW   : ALUW_rr<0b0000001, 0b111, "remuw">,
-              Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
+              Sched<[WriteIRem32, ReadIRem32, ReadIRem32]>;
 } // Predicates = [HasStdExtM, IsRV64]
 
 //===----------------------------------------------------------------------===//

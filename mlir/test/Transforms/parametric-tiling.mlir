@@ -40,12 +40,10 @@ func.func @rectangular(%arg0: memref<?x?xf32>) {
  scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = arith.addi %[[i]], %[[step]]
-    // COMMON-NEXT: arith.cmpi slt, %c44, %[[stepped]]
-    // COMMON-NEXT: %[[ub:.*]] = arith.select {{.*}}, %c44, %[[stepped]]
+    // COMMON-NEXT: %[[ub:.*]] = arith.minsi %c44, %[[stepped]]
     //
     // TILE_74:      %[[stepped2:.*]] = arith.addi %[[j]], %[[step2]]
-    // TILE_74-NEXT: arith.cmpi slt, %c44, %[[stepped2]]
-    // TILE_74-NEXT: %[[ub2:.*]] = arith.select {{.*}}, %c44, %[[stepped2]]
+    // TILE_74-NEXT: %[[ub2:.*]] = arith.minsi %c44, %[[stepped2]]
 
     // Created inner scf.
     // COMMON:scf.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
@@ -108,11 +106,9 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
  scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = arith.addi %[[i]], %[[step]]
-    // COMMON-NEXT: arith.cmpi slt, %c44, %[[stepped]]
-    // COMMON-NEXT: %[[ub:.*]] = arith.select {{.*}}, %c44, %[[stepped]]
+    // COMMON-NEXT: %[[ub:.*]] = arith.minsi %c44, %[[stepped]]
     // TILE_74:      %[[stepped2:.*]] = arith.addi %[[j]], %[[step2]]
-    // TILE_74-NEXT: arith.cmpi slt, %[[i]], %[[stepped2]]
-    // TILE_74-NEXT: %[[ub2:.*]] = arith.select {{.*}}, %[[i]], %[[stepped2]]
+    // TILE_74-NEXT: %[[ub2:.*]] = arith.minsi %[[i]], %[[stepped2]]
     //
     // Created inner scf.
     // COMMON:scf.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1

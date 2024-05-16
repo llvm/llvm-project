@@ -19,11 +19,11 @@ void parmsNoFix(int *p, int *q) {
 // CHECK: fix-it:{{.*}}:{[[@LINE+14]]:2-[[@LINE+14]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void parmsSingleton(int *p) {return parmsSingleton(std::span<int>(p, <# size #>));}\n"
 void parmsSingleton(int *p) { //expected-warning{{'p' is an unsafe pointer used for buffer access}} \
 			        expected-note{{change type of 'p' to 'std::span' to preserve bounds information}}
-  // CHECK: fix-it:{{.*}}:{[[@LINE+3]]:3-[[@LINE+3]]:12}:"std::span<int> a"
+  // CHECK: fix-it:{{.*}}:{[[@LINE+3]]:3-[[@LINE+3]]:8}:"std::span<int>"
   // CHECK: fix-it:{{.*}}:{[[@LINE+2]]:13-[[@LINE+2]]:13}:"{"
   // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:24-[[@LINE+1]]:24}:", 10}"
   int * a = new int[10];
-  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:10}:"std::span<int> b"
+  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:8}:"std::span<int>"
   int * b; //expected-warning{{'b' is an unsafe pointer used for buffer access}} \
 	     expected-note{{change type of 'b' to 'std::span' to preserve bounds information, and change 'a' to 'std::span' to propagate bounds information between them}}
 
@@ -269,10 +269,10 @@ void noneParmSomeLocalFix(int * p, int * q, int * r) { // expected-warning{{'p' 
 
   //`x` and `y` can be fixed
   int * x = new int[10];
-  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> x"
+  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int>"
   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
-  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:10}:"std::span<int> y"
+  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:8}:"std::span<int>"
   int * y;   // expected-warning{{'y' is an unsafe pointer used for buffer access}} \
 	        expected-note{{change type of 'y' to 'std::span' to preserve bounds information, and change 'x' to 'std::span' to propagate bounds information between them}}
   y = x;
@@ -286,10 +286,10 @@ void noneParmSomeLocalFix(int * p, int * q, int * r) { // expected-warning{{'p' 
 // CHECK: fix-it:{{.*}}:{[[@LINE+2]]:39-[[@LINE+2]]:46}:"std::span<int> q"
 // CHECK: fix-it:{{.*}}:{[[@LINE+20]]:2-[[@LINE+20]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void parmsFromLambdaAndBlock(int * p, int * q) {return parmsFromLambdaAndBlock(std::span<int>(p, <# size #>), std::span<int>(q, <# size #>));}\n"
 void parmsFromLambdaAndBlock(int * p, int * q) {
-  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:10}:"std::span<int> a"
+  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:8}:"std::span<int>"
   int * a; // expected-warning{{'a' is an unsafe pointer used for buffer access}} \
 	      expected-note{{change type of 'a' to 'std::span' to preserve bounds information, and change 'p', 'b', and 'q' to safe types to make function 'parmsFromLambdaAndBlock' bounds-safe}}
-  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:10}:"std::span<int> b"
+  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:8}:"std::span<int>"
   int * b; // expected-warning{{'b' is an unsafe pointer used for buffer access}} \
               expected-note{{change type of 'b' to 'std::span' to preserve bounds information, and change 'a', 'p', and 'q' to safe types to make function 'parmsFromLambdaAndBlock' bounds-safe}}
   auto Lamb = [](int * x) -> void { // expected-warning{{'x' is an unsafe pointer used for buffer access}}

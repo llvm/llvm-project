@@ -1,6 +1,6 @@
 # System modules
-from distutils.version import LooseVersion
 from functools import wraps
+from pkg_resources import packaging
 import ctypes
 import locale
 import os
@@ -65,10 +65,10 @@ def _check_expected_version(comparison, expected, actual):
         ">=": fn_geq,
         "<=": fn_leq,
     }
-    expected_str = ".".join([str(x) for x in expected])
-    actual_str = ".".join([str(x) for x in actual])
 
-    return op_lookup[comparison](LooseVersion(actual_str), LooseVersion(expected_str))
+    return op_lookup[comparison](
+        packaging.version.parse(actual), packaging.version.parse(expected)
+    )
 
 
 def _match_decorator_property(expected, actual):
@@ -206,6 +206,7 @@ def _decorateTest(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     def fn(actual_debug_info=None):
         skip_for_os = _match_decorator_property(
@@ -238,7 +239,9 @@ def _decorateTest(
             )
         )
         skip_for_py_version = (py_version is None) or _check_expected_version(
-            py_version[0], py_version[1], sys.version_info
+            py_version[0],
+            py_version[1],
+            "{}.{}".format(sys.version_info.major, sys.version_info.minor),
         )
         skip_for_macos_version = (macos_version is None) or (
             (platform.mac_ver()[0] != "")
@@ -254,6 +257,7 @@ def _decorateTest(
             )
         )
         skip_for_setting = (setting is None) or (setting in configuration.settings)
+        skip_for_asan = (asan is None) or is_running_under_asan()
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
@@ -271,6 +275,7 @@ def _decorateTest(
             (remote, skip_for_remote, "platform locality (remote/local)"),
             (dwarf_version, skip_for_dwarf_version, "dwarf version"),
             (setting, skip_for_setting, "setting"),
+            (asan, skip_for_asan, "running under asan"),
         ]
         reasons = []
         final_skip_result = True
@@ -329,6 +334,7 @@ def expectedFailureAll(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     return _decorateTest(
         DecorateMode.Xfail,
@@ -346,6 +352,7 @@ def expectedFailureAll(
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
+        asan=asan,
     )
 
 
@@ -354,7 +361,7 @@ def expectedFailureAll(
 # for example,
 # @skipIf, skip for all platform/compiler/arch,
 # @skipIf(compiler='gcc'), skip for gcc on all platform/architecture
-# @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386
+# @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386 (all conditions must be true)
 def skipIf(
     bugnumber=None,
     oslist=None,
@@ -370,6 +377,7 @@ def skipIf(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     return _decorateTest(
         DecorateMode.Skip,
@@ -387,6 +395,7 @@ def skipIf(
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
+        asan=asan,
     )
 
 
@@ -407,10 +416,6 @@ def add_test_categories(cat):
     cat = test_categories.validate(cat, True)
 
     def impl(func):
-        if isinstance(func, type) and issubclass(func, unittest.TestCase):
-            raise Exception(
-                "@add_test_categories can only be used to decorate a test method"
-            )
         try:
             if hasattr(func, "categories"):
                 cat.extend(func.categories)
@@ -746,18 +751,14 @@ def skipUnlessTargetAndroid(func):
     )(func)
 
 
-def skipIfHostIncompatibleWithRemote(func):
-    """Decorate the item to skip tests if binaries built on this host are incompatible."""
+def skipIfHostIncompatibleWithTarget(func):
+    """Decorate the item to skip tests when the host and target are incompatible."""
 
     def is_host_incompatible_with_remote():
         host_arch = lldbplatformutil.getLLDBArchitecture()
         host_platform = lldbplatformutil.getHostPlatform()
         target_arch = lldbplatformutil.getArchitecture()
-        target_platform = (
-            "darwin"
-            if lldbplatformutil.platformIsDarwin()
-            else lldbplatformutil.getPlatform()
-        )
+        target_platform = lldbplatformutil.getPlatform()
         if (
             not (target_arch == "x86_64" and host_arch == "i386")
             and host_arch != target_arch
@@ -1097,7 +1098,7 @@ def skipUnlessFeature(feature):
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.
-                if re.match("%s: 1\s*" % feature, output):
+                if re.match(r"%s: 1\s*" % feature, output):
                     return None
                 else:
                     return "%s is not supported on this system." % feature

@@ -140,9 +140,20 @@ LIBC_INLINE uint32_t get_lane_size() {
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 }
 
+/// Waits for all pending memory operations to complete in program order.
+[[clang::convergent]] LIBC_INLINE void memory_fence() {
+  __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "");
+}
+
 /// Wait for all threads in the wavefront to converge, this is a noop on AMDGPU.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t) {
   __builtin_amdgcn_wave_barrier();
+}
+
+/// Shuffles the the lanes inside the wavefront according to the given index.
+[[clang::convergent]] LIBC_INLINE uint32_t shuffle(uint64_t, uint32_t idx,
+                                                   uint32_t x) {
+  return __builtin_amdgcn_ds_bpermute(idx << 2, x);
 }
 
 /// Returns the current value of the GPU's processor clock.

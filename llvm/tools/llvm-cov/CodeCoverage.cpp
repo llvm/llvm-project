@@ -1217,7 +1217,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                           ShowFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
-    ThreadPool Pool(S);
+    DefaultThreadPool Pool(S);
     for (const std::string &SourceFile : SourceFiles)
       Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
                  Coverage.get(), Printer.get(), ShowFilenames);

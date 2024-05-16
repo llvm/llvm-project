@@ -7,11 +7,11 @@ define i64 @scalable_int_min_max(ptr %arg, ptr %arg1, <vscale x 2 x ptr> %i37, <
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w8, #3745 // =0xea1
 ; CHECK-NEXT:    movk w8, #16618, lsl #16
+; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0]
 ; CHECK-NEXT:    mov z4.s, w8
 ; CHECK-NEXT:    mov w8, #57344 // =0xe000
 ; CHECK-NEXT:    movk w8, #17535, lsl #16
 ; CHECK-NEXT:    mov z5.s, w8
-; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0]
 ; CHECK-NEXT:    fmul z4.s, p0/m, z4.s, z3.s
 ; CHECK-NEXT:    fadd z4.s, p0/m, z4.s, z5.s
 ; CHECK-NEXT:    mov z5.d, #1023 // =0x3ff
@@ -19,8 +19,8 @@ define i64 @scalable_int_min_max(ptr %arg, ptr %arg1, <vscale x 2 x ptr> %i37, <
 ; CHECK-NEXT:    smax z4.d, z4.d, #0
 ; CHECK-NEXT:    smin z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
-; CHECK-NEXT:    ld1w { z4.d }, p1/z, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p1/z, [z0.d]
+; CHECK-NEXT:    ld1w { z4.d }, p1/z, [x1]
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z4.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z3.s
 ; CHECK-NEXT:    add z0.d, z2.d, z1.d
@@ -33,11 +33,11 @@ define i64 @scalable_int_min_max(ptr %arg, ptr %arg1, <vscale x 2 x ptr> %i37, <
 entry:
   %i56 = getelementptr inbounds float, ptr %arg, i64 0
   %i57 = load <vscale x 2 x float>, ptr %i56, align 4
-  %i58 = fmul <vscale x 2 x float> %i57, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 0x401D41D420000000, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
-  %i59 = fadd <vscale x 2 x float> %i58, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.023500e+03, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
+  %i58 = fmul <vscale x 2 x float> %i57, splat (float 0x401D41D420000000)
+  %i59 = fadd <vscale x 2 x float> %i58, splat (float 1.023500e+03)
   %i60 = fptosi <vscale x 2 x float> %i59 to <vscale x 2 x i32>
   %i61 = tail call <vscale x 2 x i32> @llvm.smax.nxv2i32(<vscale x 2 x i32> %i60, <vscale x 2 x i32> zeroinitializer)
-  %i62 = tail call <vscale x 2 x i32> @llvm.smin.nxv2i32(<vscale x 2 x i32> %i61, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1023, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer))
+  %i62 = tail call <vscale x 2 x i32> @llvm.smin.nxv2i32(<vscale x 2 x i32> %i61, <vscale x 2 x i32> splat (i32 1023))
   %i63 = icmp ne <vscale x 2 x i32> %i62, zeroinitializer
   %i64 = getelementptr float, ptr %arg1, i64 0
   %i65 = tail call <vscale x 2 x float> @llvm.masked.load.nxv2f32.p0(ptr %i64, i32 4, <vscale x 2 x i1> %i63, <vscale x 2 x float> poison)

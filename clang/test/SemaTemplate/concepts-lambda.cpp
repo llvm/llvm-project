@@ -90,6 +90,64 @@ struct Foo {
 
 static_assert(ConstructibleWithN<Foo>);
 
+namespace GH56556 {
+
+template <typename It>
+inline constexpr It declare ();
+
+template <typename It, template <typename> typename Template>
+concept D = requires {
+	{ [] <typename T1> (Template<T1> &) {}(declare<It &>()) };
+};
+
+template <typename T>
+struct B {};
+
+template <typename T>
+struct Adapter;
+
+template <D<B> T>
+struct Adapter<T> {};
+
+template struct Adapter<B<int>>;
+
+} // namespace GH56556
+
+namespace GH82849 {
+
+template <class T>
+concept C = requires(T t) {
+  requires requires (T u) {
+    []<class V>(V) {
+      return requires(V v) {
+        [](V w) {}(v);
+      };
+    }(t);
+  };
+};
+
+template <class From>
+struct Widget;
+
+template <C F>
+struct Widget<F> {
+  static F create(F from) {
+    return from;
+  }
+};
+
+template <class>
+bool foo() {
+  return C<int>;
+}
+
+void bar() {
+  // https://github.com/llvm/llvm-project/issues/49570#issuecomment-1664966972
+  Widget<char>::create(0);
+}
+
+} // namespace GH82849
+
 }
 
 // GH60642 reported an assert being hit, make sure we don't assert.

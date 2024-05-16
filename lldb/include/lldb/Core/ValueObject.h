@@ -465,7 +465,7 @@ public:
   /// Returns a unique id for this ValueObject.
   lldb::user_id_t GetID() const { return m_id.GetID(); }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx,
+  virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx,
                                               bool can_create = true);
 
   // The method always creates missing children in the path, if necessary.
@@ -476,7 +476,13 @@ public:
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
-  size_t GetNumChildren(uint32_t max = UINT32_MAX);
+  llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
+  /// Like \c GetNumChildren but returns 0 on error.  You probably
+  /// shouldn't be using this function. It exists primarily to ease the
+  /// transition to more pervasive error handling while not all APIs
+  /// have been updated.
+  uint32_t GetNumChildrenIgnoringErrors(uint32_t max = UINT32_MAX);
+  bool HasChildren() { return GetNumChildrenIgnoringErrors() > 0; }
 
   const Value &GetValue() const { return m_value; }
 
@@ -791,7 +797,7 @@ protected:
       return (m_children.find(idx) != m_children.end());
     }
 
-    ValueObject *GetChildAtIndex(size_t idx) {
+    ValueObject *GetChildAtIndex(uint32_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);
       const auto iter = m_children.find(idx);
       return ((iter == m_children.end()) ? nullptr : iter->second);
@@ -958,9 +964,10 @@ protected:
                                           int32_t synthetic_index);
 
   /// Should only be called by ValueObject::GetNumChildren().
-  virtual size_t CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
+  virtual llvm::Expected<uint32_t>
+  CalculateNumChildren(uint32_t max = UINT32_MAX) = 0;
 
-  void SetNumChildren(size_t num_children);
+  void SetNumChildren(uint32_t num_children);
 
   void SetValueDidChange(bool value_changed) {
     m_flags.m_value_did_change = value_changed;

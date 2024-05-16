@@ -18,7 +18,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM undef %1:sgpr_64, 24, 0 :: (dereferenceable invariant load (s64), addrspace 4)
+  ; CHECK-NEXT:   dead [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM undef %1:sgpr_64, 24, 0 :: (dereferenceable invariant load (s64), addrspace 4)
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

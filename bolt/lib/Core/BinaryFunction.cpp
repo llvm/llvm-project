@@ -12,7 +12,6 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
-#include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -35,6 +34,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Regex.h"
@@ -1166,6 +1167,21 @@ void BinaryFunction::handleAArch64IndirectCall(MCInst &Instruction,
   }
 }
 
+std::optional<MCInst>
+BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
+  assert(CurrentState == State::Empty && "Function should not be disassembled");
+  assert(Offset < MaxSize && "Invalid offset");
+  ErrorOr<ArrayRef<unsigned char>> FunctionData = getData();
+  assert(FunctionData && "Cannot get function as data");
+  MCInst Instr;
+  uint64_t InstrSize = 0;
+  const uint64_t InstrAddress = getAddress() + Offset;
+  if (BC.DisAsm->getInstruction(Instr, InstrSize, FunctionData->slice(Offset),
+                                InstrAddress, nulls()))
+    return Instr;
+  return std::nullopt;
+}
+
 Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1424,7 +1440,7 @@ add_instruction:
     InstrMapType::iterator II = Instructions.find(Offset);
     assert(II != Instructions.end() && "reference to non-existing instruction");
 
-    BC.MIB->setLabel(II->second, Label);
+    BC.MIB->setInstLabel(II->second, Label);
   }
 
   // Reset symbolizer for the disassembler.
@@ -1443,6 +1459,16 @@ add_instruction:
   updateState(State::Disassembled);
 
   return Error::success();
+}
+
+MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
+  assert(CurrentState == State::Disassembled &&
+         "Cannot register branch unless function is in disassembled state.");
+  assert(containsAddress(Src) && containsAddress(Dst) &&
+         "Cannot register external branch.");
+  MCSymbol *Target = getOrCreateLocalLabel(Dst);
+  TakenBranches.emplace_back(Src - getAddress(), Dst - getAddress());
+  return Target;
 }
 
 bool BinaryFunction::scanExternalRefs() {
@@ -1759,13 +1785,6 @@ void BinaryFunction::postProcessJumpTables() {
       }
     }
   }
-
-  // Remove duplicates branches. We can get a bunch of them from jump tables.
-  // Without doing jump table value profiling we don't have use for extra
-  // (duplicate) branches.
-  llvm::sort(TakenBranches);
-  auto NewEnd = std::unique(TakenBranches.begin(), TakenBranches.end());
-  TakenBranches.erase(NewEnd, TakenBranches.end());
 }
 
 bool BinaryFunction::validateExternallyReferencedOffsets() {
@@ -2127,6 +2146,13 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   // TODO: handle properly calls to no-return functions,
   // e.g. exit(3), etc. Otherwise we'll see a false fall-through
   // blocks.
+
+  // Remove duplicates branches. We can get a bunch of them from jump tables.
+  // Without doing jump table value profiling we don't have a use for extra
+  // (duplicate) branches.
+  llvm::sort(TakenBranches);
+  auto NewEnd = std::unique(TakenBranches.begin(), TakenBranches.end());
+  TakenBranches.erase(NewEnd, TakenBranches.end());
 
   for (std::pair<uint32_t, uint32_t> &Branch : TakenBranches) {
     LLVM_DEBUG(dbgs() << "registering branch [0x"
@@ -3226,12 +3252,9 @@ bool BinaryFunction::validateCFG() const {
   if (CurrentState == State::CFG_Finalized)
     return true;
 
-  bool Valid = true;
   for (BinaryBasicBlock *BB : BasicBlocks)
-    Valid &= BB->validateSuccessorInvariants();
-
-  if (!Valid)
-    return Valid;
+    if (!BB->validateSuccessorInvariants())
+      return false;
 
   // Make sure all blocks in CFG are valid.
   auto validateBlock = [this](const BinaryBasicBlock *BB, StringRef Desc) {
@@ -3300,7 +3323,7 @@ bool BinaryFunction::validateCFG() const {
     }
   }
 
-  return Valid;
+  return true;
 }
 
 void BinaryFunction::fixBranches() {
@@ -3340,6 +3363,16 @@ void BinaryFunction::fixBranches() {
 
       // Eliminate unnecessary conditional branch.
       if (TSuccessor == FSuccessor) {
+        // FIXME: at the moment, we cannot safely remove static key branches.
+        if (MIB->isDynamicBranch(*CondBranch)) {
+          if (opts::Verbosity) {
+            BC.outs()
+                << "BOLT-INFO: unable to remove redundant dynamic branch in "
+                << *this << '\n';
+          }
+          continue;
+        }
+
         BB->removeDuplicateConditionalSuccessor(CondBranch);
         if (TSuccessor != NextBB)
           BB->addBranchInstruction(TSuccessor);
@@ -3348,8 +3381,13 @@ void BinaryFunction::fixBranches() {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (MIB->isUnsupportedBranch(*CondBranch))
+        if (MIB->isUnsupportedBranch(*CondBranch)) {
+          if (opts::Verbosity) {
+            BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
+                      << '\n';
+          }
           return false;
+        }
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
@@ -3522,7 +3560,7 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   if (!isMultiEntry())
     return nullptr;
 
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   if (hasCFG()) {
     for (BinaryBasicBlock *BB : BasicBlocks) {
       MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
@@ -3555,7 +3593,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return 0;
 
   // Check all secondary entries available as either basic blocks or lables.
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
     if (!EntrySymbol)
@@ -3564,7 +3602,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-  NumEntries = 0;
+  NumEntries = 1;
   for (const std::pair<const uint32_t, MCSymbol *> &KV : Labels) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(KV.second);
     if (!EntrySymbol)
@@ -4051,12 +4089,17 @@ BinaryFunction::~BinaryFunction() {
     delete BB;
 }
 
+void BinaryFunction::constructDomTree() {
+  BDT.reset(new BinaryDominatorTree);
+  BDT->recalculate(*this);
+}
+
 void BinaryFunction::calculateLoopInfo() {
+  if (!hasDomTree())
+    constructDomTree();
   // Discover loops.
-  BinaryDominatorTree DomTree;
-  DomTree.recalculate(*this);
   BLI.reset(new BinaryLoopInfo());
-  BLI->analyze(DomTree);
+  BLI->analyze(getDomTree());
 
   // Traverse discovered loops and add depth and profile information.
   std::stack<BinaryLoop *> St;

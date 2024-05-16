@@ -283,7 +283,7 @@ define amdgpu_kernel void @k123() {
 ; OPT: !0 = !{i32 0, i32 1}
 ; OPT: !1 = !{i32 4, i32 5}
 ; OPT: !2 = !{i32 8, i32 9}
-; OPT: !3 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+; OPT: !3 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; OPT: !4 = !{i32 1}
 ; OPT: !5 = !{!6}
 ; OPT: !6 = distinct !{!6, !7}
@@ -313,4 +313,4 @@ attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; GCN-NEXT: .size	llvm.amdgcn.lds.offset.table, 8
 
 !llvm.module.flags = !{!3}
-!3 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!3 = !{i32 1, !"amdhsa_code_object_version", i32 500}

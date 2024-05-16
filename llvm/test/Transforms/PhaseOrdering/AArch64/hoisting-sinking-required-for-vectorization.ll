@@ -164,10 +164,10 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP2]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd <4 x float> [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP3]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD11]]
-; CHECK-NEXT:    [[PREDPHI12:%.*]] = fadd <4 x float> [[TMP7]], [[TMP11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP6]], [[WIDE_LOAD10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP7]], [[WIDE_LOAD11]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP6]], <4 x float> [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI12:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP8]], align 4, !alias.scope [[META9]], !noalias [[META11]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP12]], align 4, !alias.scope [[META9]], !noalias [[META11]]

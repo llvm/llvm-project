@@ -275,14 +275,13 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
   auto transposeOp =
       b.create<GenericOp>(loc, resultTensorType, inputTensor, outputTensor,
                           indexingMaps, iteratorTypes);
-  Region &body = transposeOp.getRegion();
-  body.push_back(new Block());
-  body.front().addArguments({elementType, elementType}, {loc, loc});
 
   // Create the body of the transpose operation.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPointToEnd(&body.front());
-  b.create<YieldOp>(loc, transposeOp.getRegion().front().getArgument(0));
+  Region &body = transposeOp.getRegion();
+  Block *bodyBlock = b.createBlock(&body, /*insertPt=*/{},
+                                   {elementType, elementType}, {loc, loc});
+  b.create<YieldOp>(loc, bodyBlock->getArgument(0));
   return transposeOp;
 }
 
@@ -871,7 +870,7 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
         {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.getDim()]});
     Value materialized =
         getValueOrCreateConstantIndexOp(b, indexOp.getLoc(), applied);
-    b.replaceOpWithIf(indexOp, materialized, [&](OpOperand &use) {
+    b.replaceUsesWithIf(indexOp, materialized, [&](OpOperand &use) {
       return use.getOwner() != materialized.getDefiningOp();
     });
   }

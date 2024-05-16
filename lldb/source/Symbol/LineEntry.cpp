@@ -14,12 +14,14 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file(), is_start_of_statement(0), is_start_of_basic_block(0),
-      is_prologue_end(0), is_epilogue_begin(0), is_terminal_entry(0) {}
+    : range(), file_sp(std::make_shared<SupportFile>()),
+      original_file_sp(std::make_shared<SupportFile>()),
+      is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
+      is_epilogue_begin(0), is_terminal_entry(0) {}
 
 void LineEntry::Clear() {
   range.Clear();
-  file.Clear();
+  file_sp = std::make_shared<SupportFile>();
   original_file_sp = std::make_shared<SupportFile>();
   line = LLDB_INVALID_LINE_NUMBER;
   column = 0;
@@ -35,6 +37,7 @@ bool LineEntry::IsValid() const {
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
+  const FileSpec &file = file_sp->GetSpecOnly();
   if (file) {
     if (show_fullpaths)
       file.Dump(s->AsRawOstream());
@@ -67,7 +70,7 @@ bool LineEntry::Dump(Stream *s, Target *target, bool show_file,
       return false;
   }
   if (show_file)
-    *s << ", file = " << file;
+    *s << ", file = " << GetFile();
   if (line)
     s->Printf(", line = %u", line);
   if (column)
@@ -103,7 +106,7 @@ bool LineEntry::GetDescription(Stream *s, lldb::DescriptionLevel level,
                  Address::DumpStyleFileAddress);
     }
 
-    *s << ": " << file;
+    *s << ": " << GetFile();
 
     if (line) {
       s->Printf(":%u", line);
@@ -173,7 +176,7 @@ int LineEntry::Compare(const LineEntry &a, const LineEntry &b) {
   if (a.column > b.column)
     return +1;
 
-  return FileSpec::Compare(a.file, b.file, true);
+  return FileSpec::Compare(a.GetFile(), b.GetFile(), true);
 }
 
 AddressRange LineEntry::GetSameLineContiguousAddressRange(
@@ -242,6 +245,6 @@ void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
             original_file_sp->GetSpecOnly()))
-      file = *new_file_spec;
+      file_sp->Update(*new_file_spec);
   }
 }

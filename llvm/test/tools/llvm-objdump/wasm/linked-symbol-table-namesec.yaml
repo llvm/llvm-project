@@ -3,10 +3,11 @@
 #
 # CHECK:      SYMBOL TABLE:
 # CHECK-NEXT: 00000000   F *UND* 00000000 my_func_import_name
-# CHECK-NEXT: 00000083 g F CODE 00000003 my_func_export_name
-# CHECK-NEXT: 00000086 l F CODE 00000003 my_func_local_name
+# CHECK-NEXT: 0000008c g F CODE 00000003 my_func_export_name
+# CHECK-NEXT: 0000008f l F CODE 00000003 my_func_local_name
 # CHECK-NEXT: 00000000    *UND* 00000000 my_global_import_name
-# CHECK-NEXT: 00000001 g  GLOBAL 00000000 my_global_export_name
+# CHECK-NEXT: 0000004c g  GLOBAL 00000005 my_global_export_name
+# CHECK-NEXT: 00000051 g  GLOBAL 00000009 my_global_local_name
 # CHECK-NEXT: 00000000 l O DATA 00000004 my_datasegment_name
 
 --- !WASM
@@ -44,6 +45,12 @@ Sections:
         InitExpr:
           Opcode:          I32_CONST
           Value:           42
+      - Index:           2
+        Mutable:         true
+        Type:            I64
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           5000000000
   - Type:            EXPORT
     Exports:
       - Name:            my_func_export
@@ -82,6 +89,8 @@ Sections:
        Name:         my_global_import_name
      - Index:        1
        Name:         my_global_export_name
+     - Index:        2
+       Name:         my_global_local_name
     DataSegmentNames:
      - Index:        0
        Name:         my_datasegment_name

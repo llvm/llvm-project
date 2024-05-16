@@ -244,7 +244,7 @@ public:
   static int64_t Find(Value *Idx, GetElementPtrInst *GEP);
 
 private:
-  ConstantOffsetExtractor(Instruction *InsertionPt)
+  ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
       : IP(InsertionPt), DL(InsertionPt->getModule()->getDataLayout()) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
@@ -332,7 +332,7 @@ private:
   SmallVector<CastInst *, 16> ExtInsts;
 
   /// Insertion position of cloned instructions.
-  Instruction *IP;
+  BasicBlock::iterator IP;
 
   const DataLayout &DL;
 };
@@ -670,7 +670,7 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
 
     Instruction *Ext = I->clone();
     Ext->setOperand(0, Current);
-    Ext->insertBefore(IP);
+    Ext->insertBefore(*IP->getParent(), IP);
     Current = Ext;
   }
   return Current;
@@ -780,7 +780,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         User *&UserChainTail) {
-  ConstantOffsetExtractor Extractor(GEP);
+  ConstantOffsetExtractor Extractor(GEP->getIterator());
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
       Extractor.find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
@@ -797,7 +797,7 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
 
 int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
   // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
-  return ConstantOffsetExtractor(GEP)
+  return ConstantOffsetExtractor(GEP->getIterator())
       .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
             GEP->isInBounds())
       .getSExtValue();
@@ -813,7 +813,8 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
     // Skip struct member indices which must be i32.
     if (GTI.isSequential()) {
       if ((*I)->getType() != PtrIdxTy) {
-        *I = CastInst::CreateIntegerCast(*I, PtrIdxTy, true, "idxprom", GEP);
+        *I = CastInst::CreateIntegerCast(*I, PtrIdxTy, true, "idxprom",
+                                         GEP->getIterator());
         Changed = true;
       }
     }
@@ -971,22 +972,13 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
 
 bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
-  Type *GEPType = GEP->getResultElementType();
-  // TODO: support reordering for non-trivial GEP chains
-  if (GEPType->isAggregateType() || GEP->getNumIndices() != 1)
+  if (GEP->getNumIndices() != 1)
     return false;
 
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!PtrGEP)
     return false;
-  Type *PtrGEPType = PtrGEP->getResultElementType();
-  // TODO: support reordering for non-trivial GEP chains
-  if (PtrGEPType->isAggregateType() || PtrGEP->getNumIndices() != 1)
-    return false;
-
-  // TODO: support reordering for non-trivial GEP chains
-  if (PtrGEPType != GEPType ||
-      PtrGEP->getSourceElementType() != GEP->getSourceElementType())
+  if (PtrGEP->getNumIndices() != 1)
     return false;
 
   bool NestedNeedsExtraction;
@@ -1001,8 +993,6 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                  /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
     return false;
 
-  IRBuilder<> Builder(GEP);
-  Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
   bool GEPInBounds = GEP->isInBounds();
   bool PtrGEPInBounds = PtrGEP->isInBounds();
   bool IsChainInBounds = GEPInBounds && PtrGEPInBounds;
@@ -1011,19 +1001,20 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
     auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
     IsChainInBounds &= KnownGEPIdx.isNonNegative();
     if (IsChainInBounds) {
-      auto PtrGEPIdx = GEP->indices().begin();
+      auto PtrGEPIdx = PtrGEP->indices().begin();
       auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
       IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
     }
   }
 
-  // For trivial GEP chains, we can swap the indicies.
-  auto NewSrc = Builder.CreateGEP(PtrGEPType, PtrGEP->getPointerOperand(),
-                                  SmallVector<Value *, 4>(GEP->indices()));
-  cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
-  auto NewGEP = Builder.CreateGEP(GEPType, NewSrc,
-                                  SmallVector<Value *, 4>(PtrGEP->indices()));
-  cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
+  IRBuilder<> Builder(GEP);
+  // For trivial GEP chains, we can swap the indices.
+  Value *NewSrc = Builder.CreateGEP(
+      GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
+      SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);
+  Value *NewGEP = Builder.CreateGEP(PtrGEP->getSourceElementType(), NewSrc,
+                                    SmallVector<Value *, 4>(PtrGEP->indices()),
+                                    "", IsChainInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   RecursivelyDeleteTriviallyDeadInstructions(GEP);
   return true;
@@ -1249,7 +1240,8 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
     if (LHS->getType() == RHS->getType()) {
       ExprKey Key = createNormalizedCommutablePair(LHS, RHS);
       if (auto *Dom = findClosestMatchingDominator(Key, I, DominatingAdds)) {
-        Instruction *NewSExt = new SExtInst(Dom, I->getType(), "", I);
+        Instruction *NewSExt =
+            new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
         RecursivelyDeleteTriviallyDeadInstructions(I);
@@ -1260,7 +1252,8 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
     if (LHS->getType() == RHS->getType()) {
       if (auto *Dom =
               findClosestMatchingDominator({LHS, RHS}, I, DominatingSubs)) {
-        Instruction *NewSExt = new SExtInst(Dom, I->getType(), "", I);
+        Instruction *NewSExt =
+            new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
         RecursivelyDeleteTriviallyDeadInstructions(I);

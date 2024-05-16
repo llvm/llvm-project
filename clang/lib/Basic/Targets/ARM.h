@@ -60,7 +60,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   llvm::ARM::ArchKind ArchKind = llvm::ARM::ArchKind::ARMV4T;
   llvm::ARM::ProfileKind ArchProfile;
   unsigned ArchVersion;
-  unsigned ArchMinorVersion;
 
   LLVM_PREFERRED_TYPE(FPUMode)
   unsigned FPU : 5;
@@ -88,8 +87,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned AES : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Unaligned : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
   LLVM_PREFERRED_TYPE(bool)
@@ -228,6 +225,10 @@ public:
   bool hasBitIntType() const override { return true; }
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

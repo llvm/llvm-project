@@ -204,9 +204,9 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     CallBase *NewCB = nullptr;
     if (InvokeInst *II = dyn_cast<InvokeInst>(CB)) {
       NewCB = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                                 Args, OpBundles, "", CB);
+                                 Args, OpBundles, "", CB->getIterator());
     } else {
-      NewCB = CallInst::Create(NF, Args, OpBundles, "", CB);
+      NewCB = CallInst::Create(NF, Args, OpBundles, "", CB->getIterator());
       cast<CallInst>(NewCB)->setTailCallKind(
           cast<CallInst>(CB)->getTailCallKind());
     }
@@ -946,7 +946,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       NewCB = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
                                  Args, OpBundles, "", CB.getParent());
     } else {
-      NewCB = CallInst::Create(NFTy, NF, Args, OpBundles, "", &CB);
+      NewCB = CallInst::Create(NFTy, NF, Args, OpBundles, "", CB.getIterator());
       cast<CallInst>(NewCB)->setTailCallKind(
           cast<CallInst>(&CB)->getTailCallKind());
     }
@@ -1070,7 +1070,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
         }
         // Replace the return instruction with one returning the new return
         // value (possibly 0 if we became void).
-        auto *NewRet = ReturnInst::Create(F->getContext(), RetVal, RI);
+        auto *NewRet =
+            ReturnInst::Create(F->getContext(), RetVal, RI->getIterator());
         NewRet->setDebugLoc(RI->getDebugLoc());
         RI->eraseFromParent();
       }

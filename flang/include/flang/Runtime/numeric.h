@@ -356,8 +356,16 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(Scale16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
 
+// SELECTED_CHAR_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedCharKind)(
+    const char *, int, const char *, std::size_t);
+
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKind)(
+    const char *, int, void *, int);
+
+// SELECTED_LOGICAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedLogicalKind)(
     const char *, int, void *, int);
 
 // SELECTED_REAL_KIND

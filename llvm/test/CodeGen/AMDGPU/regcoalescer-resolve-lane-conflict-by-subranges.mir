@@ -21,11 +21,11 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_]].sub0:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub1, implicit $exec
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub1, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   dead %3:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub2, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
+  ; GCN-NEXT:   dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub2, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
@@ -71,7 +71,7 @@ body:             |
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   dead %3:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub2, [[COPY1]], implicit $exec
+  ; GCN-NEXT:   dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub2, [[COPY1]], implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
@@ -112,12 +112,12 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_]].sub0:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub1, implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_]].sub1:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub1, implicit $exec
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub1:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   dead %3:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub1, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
+  ; GCN-NEXT:   dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub1, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
@@ -133,7 +133,6 @@ body:             |
     successors: %bb.2
 
     %2:vgpr_32 = V_AND_B32_e64 %1.sub0, %1.sub1, implicit $exec
-    ; %1.sub1 was re-defined
     %1.sub1:vreg_128 = V_AND_B32_e64 %2, %2, implicit $exec
     S_BRANCH %bb.2
 
@@ -161,13 +160,13 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_]].sub0:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub1, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_]].sub2:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub1, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub2:vreg_128 = V_AND_B32_e64 [[GLOBAL_LOAD_DWORDX4_]].sub0, [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   dead %3:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub1, [[GLOBAL_LOAD_DWORDX4_]].sub2, implicit $exec
+  ; GCN-NEXT:   dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORDX4_]].sub1, [[GLOBAL_LOAD_DWORDX4_]].sub2, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2

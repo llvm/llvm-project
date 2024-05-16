@@ -27,12 +27,12 @@ public:
 
   ~LibcxxStdRangesRefViewSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     // __range_ will be the sole child of this type
     return 1;
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     // Since we only have a single child, return it
     assert(idx == 0);
     return m_range_sp;

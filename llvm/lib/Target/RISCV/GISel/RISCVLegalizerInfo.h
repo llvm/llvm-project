@@ -38,12 +38,13 @@ public:
 
 private:
   bool shouldBeInConstantPool(APInt APImm, bool ShouldOptForSize) const;
-  bool emitLoadFromConstantPool(Register DstReg, const Constant *CPVal,
-                                MachineIRBuilder &MIRBuilder) const;
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
 
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeVScale(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeExt(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeSplatVector(MachineInstr &MI, MachineIRBuilder &MIB) const;
 };
 } // end namespace llvm
 #endif

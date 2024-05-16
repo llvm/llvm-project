@@ -239,7 +239,7 @@ private:
   bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
   const wasm::WasmFunction &getDefinedFunction(uint32_t Index) const;
-  wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
+  const wasm::WasmGlobal &getDefinedGlobal(uint32_t Index) const;
   wasm::WasmTag &getDefinedTag(uint32_t Index);
 
   const WasmSection &getWasmSection(DataRefImpl Ref) const;

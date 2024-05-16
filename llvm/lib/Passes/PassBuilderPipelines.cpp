@@ -74,6 +74,7 @@
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -209,6 +210,15 @@ static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
                                        cl::Hidden,
                                        cl::desc("Enable the LoopFlatten Pass"));
 
+// Experimentally allow loop header duplication. This should allow for better
+// optimization at Oz, since loop-idiom recognition can then recognize things
+// like memcpy. If this ends up being useful for many targets, we should drop
+// this flag and make a code generation option that can be controlled
+// independent of the opt level and exposed through the frontend.
+static cl::opt<bool> EnableLoopHeaderDuplication(
+    "enable-loop-header-duplication", cl::init(false), cl::Hidden,
+    cl::desc("Enable loop header duplication at any optimization level"));
+
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
@@ -290,9 +300,7 @@ static cl::opt<bool> UseLoopVersioningLICM(
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
 namespace llvm {
-cl::opt<bool> EnableMemProfContextDisambiguation(
-    "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
+extern cl::opt<bool> EnableMemProfContextDisambiguation;
 
 extern cl::opt<bool> EnableInferAlignmentPass;
 } // namespace llvm
@@ -630,8 +638,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                         /*AllowSpeculation=*/false));
 
   // Disable header duplication in loop rotation at -Oz.
-  LPM1.addPass(
-      LoopRotatePass(Level != OptimizationLevel::Oz, isLTOPreLink(Phase)));
+  LPM1.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
+                                  Level != OptimizationLevel::Oz,
+                              isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/true));
@@ -642,6 +651,13 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(IndVarSimplifyPass());
+
+  {
+    ExtraSimpleLoopUnswitchPassManager ExtraPasses;
+    ExtraPasses.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
+                                               OptimizationLevel::O3));
+    LPM2.addPass(std::move(ExtraPasses));
+  }
 
   invokeLateLoopOptimizationsEPCallbacks(LPM2, Level);
 
@@ -707,7 +723,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Re-consider control flow based optimizations after redundancy elimination,
   // redo DCE, etc.
-  if (EnableDFAJumpThreading && Level.getSizeLevel() == 0)
+  if (EnableDFAJumpThreading)
     FPM.addPass(DFAJumpThreadingPass());
 
   FPM.addPass(JumpThreadingPass());
@@ -812,12 +828,17 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
     // Disable header duplication in loop rotation at -Oz.
     MPM.addPass(createModuleToFunctionPassAdaptor(
         createFunctionToLoopPassAdaptor(
-            LoopRotatePass(Level != OptimizationLevel::Oz),
+            LoopRotatePass(EnableLoopHeaderDuplication ||
+                           Level != OptimizationLevel::Oz),
             /*UseMemorySSA=*/false,
             /*UseBlockFrequencyInfo=*/false),
         PTO.EagerlyInvalidateAnalyses));
   }
 
+  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
+    MPM.addPass(PGOCtxProfLoweringPass());
+    return;
+  }
   // Add the profile lowering pass.
   InstrProfOptions Options;
   if (!ProfileFile.empty())
@@ -1153,7 +1174,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnablePGOForceFunctionAttrs)
+  if (EnablePGOForceFunctionAttrs && PGOOpt)
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
@@ -1422,7 +1443,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   LoopPassManager LPM;
   // First rotate loops that may have been un-rotated by prior passes.
   // Disable header duplication at -Oz.
-  LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink));
+  LPM.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
+                                 Level != OptimizationLevel::Oz,
+                             LTOPreLink));
   // Some loops may have become dead by now. Try to delete them.
   // FIXME: see discussion in https://reviews.llvm.org/D112851,
   //        this may need to be revisited once we run GVN before loop deletion

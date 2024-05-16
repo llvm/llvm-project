@@ -27,10 +27,10 @@ double Finish(Counter const& c, IterationCount iterations, double cpu_time,
     v /= num_threads;
   }
   if (c.flags & Counter::kIsIterationInvariant) {
-    v *= iterations;
+    v *= static_cast<double>(iterations);
   }
   if (c.flags & Counter::kAvgIterations) {
-    v /= iterations;
+    v /= static_cast<double>(iterations);
   }
 
   if (c.flags & Counter::kInvert) {  // Invert is *always* last.

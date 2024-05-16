@@ -8,7 +8,6 @@ from typing import (
     Sequence as _Sequence,
     Tuple as _Tuple,
     Type as _Type,
-    TypeVar as _TypeVar,
     Union as _Union,
 )
 
@@ -142,12 +141,6 @@ def get_op_result_or_op_results(
         if len(op.results) > 0
         else op
     )
-
-
-# This is the standard way to indicate subclass/inheritance relationship
-# see the typing.Type doc string.
-_U = _TypeVar("_U", bound=_cext.ir.Value)
-SubClassValueT = _Type[_U]
 
 ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
 ResultValueT = _Union[ResultValueTypeTuple]

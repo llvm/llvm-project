@@ -34,9 +34,9 @@ static_assert(
     "MlirSparseTensorLevelFormat (C-API) and LevelFormat (C++) mismatch");
 
 static_assert(static_cast<int>(MLIR_SPARSE_PROPERTY_NON_ORDERED) ==
-                      static_cast<int>(LevelPropertyNondefault::Nonordered) &&
+                      static_cast<int>(LevelPropNonDefault::Nonordered) &&
                   static_cast<int>(MLIR_SPARSE_PROPERTY_NON_UNIQUE) ==
-                      static_cast<int>(LevelPropertyNondefault::Nonunique),
+                      static_cast<int>(LevelPropNonDefault::Nonunique),
               "MlirSparseTensorLevelProperty (C-API) and "
               "LevelPropertyNondefault (C++) mismatch");
 
@@ -44,18 +44,20 @@ bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
   return isa<SparseTensorEncodingAttr>(unwrap(attr));
 }
 
-MlirAttribute
-mlirSparseTensorEncodingAttrGet(MlirContext ctx, intptr_t lvlRank,
-                                MlirSparseTensorLevelType const *lvlTypes,
-                                MlirAffineMap dimToLvl, MlirAffineMap lvlToDim,
-                                int posWidth, int crdWidth) {
+MlirAttribute mlirSparseTensorEncodingAttrGet(
+    MlirContext ctx, intptr_t lvlRank,
+    MlirSparseTensorLevelType const *lvlTypes, MlirAffineMap dimToLvl,
+    MlirAffineMap lvlToDim, int posWidth, int crdWidth,
+    MlirAttribute explicitVal, MlirAttribute implicitVal) {
   SmallVector<LevelType> cppLvlTypes;
+
   cppLvlTypes.reserve(lvlRank);
   for (intptr_t l = 0; l < lvlRank; ++l)
     cppLvlTypes.push_back(static_cast<LevelType>(lvlTypes[l]));
-  return wrap(SparseTensorEncodingAttr::get(unwrap(ctx), cppLvlTypes,
-                                            unwrap(dimToLvl), unwrap(lvlToDim),
-                                            posWidth, crdWidth));
+
+  return wrap(SparseTensorEncodingAttr::get(
+      unwrap(ctx), cppLvlTypes, unwrap(dimToLvl), unwrap(lvlToDim), posWidth,
+      crdWidth, unwrap(explicitVal), unwrap(implicitVal)));
 }
 
 MlirAffineMap mlirSparseTensorEncodingAttrGetDimToLvl(MlirAttribute attr) {
@@ -80,7 +82,7 @@ enum MlirSparseTensorLevelFormat
 mlirSparseTensorEncodingAttrGetLvlFmt(MlirAttribute attr, intptr_t lvl) {
   LevelType lt =
       static_cast<LevelType>(mlirSparseTensorEncodingAttrGetLvlType(attr, lvl));
-  return static_cast<MlirSparseTensorLevelFormat>(*getLevelFormat(lt));
+  return static_cast<MlirSparseTensorLevelFormat>(lt.getLvlFmt());
 }
 
 int mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr) {
@@ -91,14 +93,22 @@ int mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr) {
   return cast<SparseTensorEncodingAttr>(unwrap(attr)).getCrdWidth();
 }
 
+MlirAttribute mlirSparseTensorEncodingAttrGetExplicitVal(MlirAttribute attr) {
+  return wrap(cast<SparseTensorEncodingAttr>(unwrap(attr)).getExplicitVal());
+}
+
+MlirAttribute mlirSparseTensorEncodingAttrGetImplicitVal(MlirAttribute attr) {
+  return wrap(cast<SparseTensorEncodingAttr>(unwrap(attr)).getImplicitVal());
+}
+
 MlirSparseTensorLevelType mlirSparseTensorEncodingAttrBuildLvlType(
     enum MlirSparseTensorLevelFormat lvlFmt,
     const enum MlirSparseTensorLevelPropertyNondefault *properties,
     unsigned size, unsigned n, unsigned m) {
 
-  std::vector<LevelPropertyNondefault> props;
+  std::vector<LevelPropNonDefault> props;
   for (unsigned i = 0; i < size; i++)
-    props.push_back(static_cast<LevelPropertyNondefault>(properties[i]));
+    props.push_back(static_cast<LevelPropNonDefault>(properties[i]));
 
   return static_cast<MlirSparseTensorLevelType>(
       *buildLevelType(static_cast<LevelFormat>(lvlFmt), props, n, m));

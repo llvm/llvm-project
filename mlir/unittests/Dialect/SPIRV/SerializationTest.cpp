@@ -77,7 +77,7 @@ protected:
   }
 
   // Inserts an Integer or a Vector of Integers constant of value 'val'.
-  spirv::ConstantOp AddConstInt(Type type, APInt val) {
+  spirv::ConstantOp addConstInt(Type type, const APInt &val) {
     OpBuilder builder(module->getRegion());
     auto loc = UnknownLoc::get(&context);
 
@@ -181,8 +181,8 @@ TEST_F(SerializationTest, SignlessVsSignedIntegerConstantBitExtension) {
   APInt signedIntConstVal(signedInt16Type.getWidth(), -1,
                           signedInt16Type.getSignedness());
 
-  AddConstInt(signlessInt16Type, signlessIntConstVal);
-  AddConstInt(signedInt16Type, signedIntConstVal);
+  addConstInt(signlessInt16Type, signlessIntConstVal);
+  addConstInt(signedInt16Type, signedIntConstVal);
   ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
 
   auto hasSignlessVal = [&](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {

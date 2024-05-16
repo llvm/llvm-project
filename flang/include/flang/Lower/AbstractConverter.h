@@ -23,6 +23,10 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
 
+namespace mlir {
+class SymbolTable;
+}
+
 namespace fir {
 class KindMapping;
 class FirOpBuilder;
@@ -53,6 +57,7 @@ class DerivedTypeSpec;
 
 namespace lower {
 class SymMap;
+struct SymbolBox;
 namespace pft {
 struct Variable;
 }
@@ -121,14 +126,20 @@ public:
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
+  virtual void copyVar(mlir::Location loc, mlir::Value dst,
+                       mlir::Value src) = 0;
+
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.
   virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
-  /// region if \p collectSymbols is true. Likewise, collect the
+  /// region if \p collectSymbols is true. Otherwise, collect the
   /// set of the host symbols with \p flag of the associated symbols in \p eval
-  /// region if collectHostAssociatedSymbols is true.
+  /// region if collectHostAssociatedSymbols is true. This allows gathering
+  /// host association details of symbols particularly in nested directives
+  /// irrespective of \p flag \p, and can be useful where host
+  /// association details are needed in flag-agnostic manner.
   virtual void collectSymbolSet(
       pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
@@ -207,6 +218,18 @@ public:
   /// Record a binding for the ssa-value of the host assoications tuple for this
   /// function.
   virtual void bindHostAssocTuple(mlir::Value val) = 0;
+
+  /// Returns fir.dummy_scope operation's result value to be used
+  /// as dummy_scope operand of hlfir.declare operations for the dummy
+  /// arguments of this function.
+  virtual mlir::Value dummyArgsScopeValue() const = 0;
+
+  /// Returns true if the given symbol is a dummy argument of this function.
+  /// Note that it returns false for all the symbols after all the variables
+  /// are instantiated for this function, i.e. it can only be used reliably
+  /// during the instatiation of the variables.
+  virtual bool
+  isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -295,6 +318,20 @@ public:
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
     return loweringOptions;
   }
+
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  virtual Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) = 0;
+
+  /// Return the mlir::SymbolTable associated to the ModuleOp.
+  /// Look-ups are faster using it than using module.lookup<>,
+  /// but the module op should be queried in case of failure
+  /// because this symbol table is not guaranteed to contain
+  /// all the symbols from the ModuleOp (the symbol table should
+  /// always be provided to the builder helper creating globals and
+  /// functions in order to be in sync).
+  virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
 
 private:
   /// Options controlling lowering behavior.

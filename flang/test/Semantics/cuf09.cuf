@@ -7,9 +7,26 @@ module m
     do k=1,10
     end do
   end
+  attributes(device) subroutine devsub2
+    real, device :: x(10)
+    print*,'from device'
+    print '(f10.5)', (x(ivar), ivar = 1, 10)
+    write(*,*), "Hello world from device!"
+    !WARNING: I/O statement might not be supported on device
+    write(12,'(10F4.1)'), x
+  end
 end
 
 program main
+  !$cuf kernel do <<< *, * >>> ! ok
+  do j = 1, 0
+  end do
+  !$cuf kernel do <<< (*), (*) >>> ! ok
+  do j = 1, 0
+  end do
+  !$cuf kernel do <<< (1,*), (2,*) >>> ! ok
+  do j = 1, 0
+  end do
   !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
   !$cuf kernel do <<< 1, 2 >>>
   do while (.false.)

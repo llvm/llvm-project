@@ -87,7 +87,7 @@ static std::error_code getHostID(SmallVectorImpl<char> &HostID) {
   struct timespec wait = {1, 0}; // 1 second.
   uuid_t uuid;
   if (gethostuuid(uuid, &wait) != 0)
-    return std::error_code(errno, std::system_category());
+    return errnoAsErrorCode();
 
   uuid_string_t UUIDStr;
   uuid_unparse(uuid, UUIDStr);
@@ -205,6 +205,8 @@ LockFileManager::LockFileManager(StringRef FileName)
       S.append(std::string(UniqueLockFileName));
       setError(Out.error(), S);
       sys::fs::remove(UniqueLockFileName);
+      // Don't call report_fatal_error.
+      Out.clear_error();
       return;
     }
   }

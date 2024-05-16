@@ -525,16 +525,7 @@ it supports. Such code objects may not perform as well as those for the non-gene
 
 Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
 
-Generic processor code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
-The version of non-generic code objects is always set to 0.
-
-For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
-so it can continue to execute on the previously supported processors as well as on the new one.
-When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
-
-Each supported processor of a generic target is mapped to the version it was introduced in.
-A generic code object can execute on a supported processor if the version of the code object being loaded is
-greater than or equal to the version in which the processor was added to the generic target.
+Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor-versioning` for more information on how versioning works.
 
   .. table:: AMDGPU Generic Processors
      :name: amdgpu-generic-processor-table
@@ -621,6 +612,21 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                 - ``gfx1151``
      ==================== ============== ================= ================== ================= =================================
 
+.. _amdgpu-generic-processor-versioning:
+
+Generic Processor Versioning
+----------------------------
+
+Generic processor (see :ref:`amdgpu-generic-processor-table`) code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
+The version of non-generic code objects is always set to 0.
+
+For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
+so it can continue to execute on the previously supported processors as well as on the new one.
+When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
+
+Each supported processor of a generic target is mapped to the version it was introduced in.
+A generic code object can execute on a supported processor if the version of the code object being loaded is
+greater than or equal to the version in which the processor was added to the generic target.
 
 .. _amdgpu-target-features:
 
@@ -818,8 +824,8 @@ supported for the ``amdgcn`` target.
      Constant                              4               constant    *same as global* 64      0x0000000000000000
      Private                               5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                       6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental)     7               *TODO*
-     Buffer Resource (experimental)        8               *TODO*
+     Buffer Fat Pointer                    7               N/A         N/A              160     0
+     Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1151,6 +1157,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
+  :ref:`llvm.set.rounding<int_set_rounding>`       Input value expected to be one of the valid results
+                                                   from '``llvm.get.rounding``'. Rounding mode is
+                                                   undefined if not passed a valid input. This should be
+                                                   a wave uniform value. In case of a divergent input
+                                                   value, the first active lane's value will be used.
+
+  :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
+                                                   This stores information related to the current rounding mode,
+                                                   denormalization mode, enabled traps, and floating point exceptions.
+                                                   The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
+
+  :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand
@@ -1299,8 +1318,30 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu_metadata:
+
+LLVM IR Metadata
+================
+
+The AMDGPU backend implements the following target custom LLVM IR
+metadata.
+
+.. _amdgpu_last_use:
+
+'``amdgpu.last.use``' Metadata
+------------------------------
+
+Sets TH_LOAD_LU temporal hint on load instructions that support it.
+Takes priority over nontemporal hint (TH_LOAD_NT). This takes no
+arguments.
+
+.. code-block:: llvm
+
+  %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
+
+
 LLVM IR Attributes
-------------------
+==================
 
 The AMDGPU backend supports the following LLVM IR attributes.
 
@@ -1414,10 +1455,56 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              the frame. This is an internal detail of how LDS variables are lowered,
                                              language front ends should not set this attribute.
 
+     "amdgpu-gds-size"                       Bytes expected to be allocated at the start of GDS memory at entry.
+
+     "amdgpu-git-ptr-high"                   The hard-wired high half of the address of the global information table
+                                             for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
+                                             current hardware only allows a 16 bit value.
+
+     "amdgpu-32bit-address-high-bits"        Assumed high 32-bits for 32-bit address spaces which are really truncated
+                                             64-bit addresses (i.e., addrspace(6))
+
+     "amdgpu-color-export"                   Indicates shader exports color information if set to 1.
+                                             Defaults to 1 for :ref:`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
+                                             conventions. Determines the necessity and type of null exports when a shader
+                                             terminates early by killing lanes.
+
+     "amdgpu-depth-export"                   Indicates shader exports depth information if set to 1. Determines the
+                                             necessity and type of null exports when a shader terminates early by killing
+                                             lanes. A depth-only shader will export to depth channel when no null export
+                                             target is available (GFX11+).
+
+     "InitialPSInputAddr"                    Set the initial value of the `spi_ps_input_addr` register for
+                                             :ref:`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
+                                             be enabled in the final register value.
+
+     "amdgpu-wave-priority-threshold"        VALU instruction count threshold for adjusting wave priority. If exceeded,
+                                             temporarily raise the wave priority at the start of the shader function
+                                             until its last VMEM instructions to allow younger waves to issue their VMEM
+                                             instructions as well.
+
+     "amdgpu-memory-bound"                   Set internally by backend
+
+     "amdgpu-wave-limiter"                   Set internally by backend
+
+     "amdgpu-unroll-threshold"               Set base cost threshold preference for loop unrolling within this function,
+                                             default is 300. Actual threshold may be varied by per-loop metadata or
+                                             reduced by heuristics.
+
+     "amdgpu-max-num-workgroups"="x,y,z"     Specify the maximum number of work groups for the kernel dispatch in the
+                                             X, Y, and Z dimensions. Generated by the ``amdgpu_max_num_work_groups``
+                                             CLANG attribute [CLANG-ATTR]_. Clang only emits this attribute when all
+                                             the three numbers are >= 1.
+
+     "amdgpu-no-agpr"                        Indicates the function will not require allocating AGPRs. This is only
+                                             relevant on subtargets with AGPRs. The behavior is undefined if a
+                                             function which requires AGPRs is reached through any function marked
+                                             with this attribute.
+
      ======================================= ==========================================================
 
 Calling Conventions
--------------------
+===================
 
 The AMDGPU backend supports the following calling conventions:
 
@@ -1512,6 +1599,25 @@ The AMDGPU backend supports the following calling conventions:
 
      =============================== ==========================================================
 
+AMDGPU MCExpr
+-------------
+
+As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+``MCExpr``\s.
+
+  .. table:: AMDGPU MCExpr types:
+     :name: amdgpu-mcexpr-table
+
+     =================== ================= ========================================================
+     MCExpr              Operands          Return value
+     =================== ================= ========================================================
+     ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
+                                           value of all its arguments.
+
+     ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
+                                           result of all its arguments.
+
+     =================== ================= ========================================================
 
 .. _amdgpu-elf-code-object:
 
@@ -1781,7 +1887,7 @@ The AMDGPU backend uses the following ELF header:
                                                              mask. This is a value between 1 and 255,
                                                              stored in the most significant byte
                                                              of EFLAGS.
-                                                             See :ref:`amdgpu-generic-processor-table`
+                                                             See :ref:`amdgpu-generic-processor-versioning`
      ============================================ ========== =========================================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
@@ -3889,6 +3995,11 @@ same *vendor-name*.
 
                                                                   If omitted, "normal" is
                                                                   assumed.
+     ".max_num_work_groups_{x,y,z}"      integer                  The max number of
+                                                                  launched work-groups
+                                                                  in the X, Y, and Z
+                                                                  dimensions. Each number
+                                                                  must be >=1.
      =================================== ============== ========= ================================
 
 ..
@@ -4547,7 +4658,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     351:272 20                                      Reserved, must be 0.
+     351:192 20                                      Reserved, must be 0.
              bytes
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
@@ -5143,14 +5254,14 @@ The fields used by CP for code objects before V3 also match those specified in
      5:0     6 bits  ACCUM_OFFSET                    Offset of a first AccVGPR in the unified register file. Granularity 4.
                                                      Value 0-63. 0 - accum-offset = 4, 1 - accum-offset = 8, ...,
                                                      63 - accum-offset = 256.
-     6:15    10                                      Reserved, must be 0.
+     15:6    10                                      Reserved, must be 0.
              bits
      16      1 bit   TG_SPLIT                        - If 0 the waves of a work-group are
                                                        launched in the same CU.
                                                      - If 1 the waves of a work-group can be
                                                        launched in different CUs. The waves
                                                        cannot use S_BARRIER or LDS.
-     17:31   15                                      Reserved, must be 0.
+     31:17   15                                      Reserved, must be 0.
              bits
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
@@ -15919,7 +16030,7 @@ Additional Documentation
 .. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__
-.. [HRF] `Heterogeneous-race-free Memory Models <http://benedictgaster.org/wp-content/uploads/2014/01/asplos269-FINAL.pdf>`__
+.. [HRF] `Heterogeneous-race-free Memory Models <https://research.cs.wisc.edu/multifacet/papers/asplos14_hrf.pdf>`__
 .. [HSA] `Heterogeneous System Architecture (HSA) Foundation <http://www.hsafoundation.com/>`__
 .. [MsgPack] `Message Pack <http://www.msgpack.org/>`__
 .. [OpenCL] `The OpenCL Specification Version 2.0 <http://www.khronos.org/registry/cl/specs/opencl-2.0.pdf>`__

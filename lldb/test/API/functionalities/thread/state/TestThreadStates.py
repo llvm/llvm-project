@@ -38,8 +38,10 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin("llvm.org/pr23669")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     @expectedFailureNetBSD
+    # This actually passes on Windows on Arm but it's hard to describe that
+    # and xfail it everywhere else.
+    @skipIfWindows
     # thread states not properly maintained
     @unittest.expectedFailure  # llvm.org/pr16712
     def test_state_after_expression(self):
@@ -100,10 +102,6 @@ class ThreadStateTestCase(TestBase):
 
     def wait_for_running_event(self, process):
         listener = self.dbg.GetListener()
-        if lldb.remote_platform:
-            lldbutil.expect_state_changes(
-                self, listener, process, [lldb.eStateConnected]
-            )
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
     def thread_state_after_continue_test(self):

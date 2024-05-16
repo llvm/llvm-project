@@ -159,7 +159,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    8
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295
@@ -204,7 +204,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    16
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295
@@ -249,7 +249,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    32
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295

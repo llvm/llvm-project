@@ -1,5 +1,5 @@
 ! Test derived type finalization
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Missing tests:
 ! - finalization within BLOCK construct

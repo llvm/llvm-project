@@ -7,7 +7,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ; Make sure generate empty entry for lib profile.
 ;CHECK:![[empty_entry]] = !{null, !"", null, null, ![[shader_flags:[0-9]+]]}
 ; Make sure double is marked for shader flags.
-;CHECK:![[shader_flags]] = !{i32 0, i64 1}
+;CHECK:![[shader_flags]] = !{i32 0, i64 4}
 ;CHECK:![[entry]] = !{ptr @entry, !"entry", null, null, ![[extra:[0-9]+]]}
 ;CHECK:![[extra]] = !{i32 8, i32 5, i32 4, ![[numthreads:[0-9]+]]}
 ;CHECK:![[numthreads]] = !{i32 1, i32 2, i32 1}

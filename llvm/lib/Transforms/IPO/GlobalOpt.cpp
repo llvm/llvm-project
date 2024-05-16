@@ -87,6 +87,7 @@ STATISTIC(NumNestRemoved   , "Number of nest attributes removed");
 STATISTIC(NumAliasesResolved, "Number of global aliases resolved");
 STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
+STATISTIC(NumAtExitRemoved, "Number of atexit handlers removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
@@ -296,7 +297,7 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       // A load from a uniform value is always the same, regardless of any
       // applied offset.
       Type *Ty = LI->getType();
-      if (Constant *Res = ConstantFoldLoadFromUniformValue(Init, Ty)) {
+      if (Constant *Res = ConstantFoldLoadFromUniformValue(Init, Ty, DL)) {
         LI->replaceAllUsesWith(Res);
         EraseFromParent(LI);
         continue;
@@ -306,6 +307,10 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       APInt Offset(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
       PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(PtrOp)) {
+        if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+          PtrOp = II->getArgOperand(0);
+      }
       if (PtrOp == GV) {
         if (auto *Value = ConstantFoldLoadFromConst(Init, Ty, Offset, DL)) {
           LI->replaceAllUsesWith(Value);
@@ -318,6 +323,9 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U)) { // memset/cpy/mv
       if (getUnderlyingObject(MI->getRawDest()) == GV)
         EraseFromParent(MI);
+    } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+        append_range(WorkList, II->users());
     }
   }
 
@@ -953,7 +961,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
                         GV->getContext(),
                         !isa<ConstantPointerNull>(SI->getValueOperand())),
                     InitBool, false, Align(1), SI->getOrdering(),
-                    SI->getSyncScopeID(), SI);
+                    SI->getSyncScopeID(), SI->getIterator());
       SI->eraseFromParent();
       continue;
     }
@@ -970,7 +978,8 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       // Replace the cmp X, 0 with a use of the bool value.
       Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
                                InitBool->getName() + ".val", false, Align(1),
-                               LI->getOrdering(), LI->getSyncScopeID(), LI);
+                               LI->getOrdering(), LI->getSyncScopeID(),
+                               LI->getIterator());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -982,7 +991,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
         break;
       case ICmpInst::ICMP_ULE:
       case ICmpInst::ICMP_EQ:
-        LV = BinaryOperator::CreateNot(LV, "notinit", ICI);
+        LV = BinaryOperator::CreateNot(LV, "notinit", ICI->getIterator());
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
@@ -1260,9 +1269,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         if (LoadInst *LI = dyn_cast<LoadInst>(StoredVal)) {
           assert(LI->getOperand(0) == GV && "Not a copy!");
           // Insert a new load, to preserve the saved value.
-          StoreVal = new LoadInst(NewGV->getValueType(), NewGV,
-                                  LI->getName() + ".b", false, Align(1),
-                                  LI->getOrdering(), LI->getSyncScopeID(), LI);
+          StoreVal =
+              new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
+                           false, Align(1), LI->getOrdering(),
+                           LI->getSyncScopeID(), LI->getIterator());
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
                  "This is not a form that we understand!");
@@ -1272,19 +1282,19 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       }
       StoreInst *NSI =
           new StoreInst(StoreVal, NewGV, false, Align(1), SI->getOrdering(),
-                        SI->getSyncScopeID(), SI);
+                        SI->getSyncScopeID(), SI->getIterator());
       NSI->setDebugLoc(SI->getDebugLoc());
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
-      LoadInst *NLI = new LoadInst(NewGV->getValueType(), NewGV,
-                                   LI->getName() + ".b", false, Align(1),
-                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
+      LoadInst *NLI = new LoadInst(
+          NewGV->getValueType(), NewGV, LI->getName() + ".b", false, Align(1),
+          LI->getOrdering(), LI->getSyncScopeID(), LI->getIterator());
       Instruction *NSI;
       if (IsOneZero)
-        NSI = new ZExtInst(NLI, LI->getType(), "", LI);
+        NSI = new ZExtInst(NLI, LI->getType(), "", LI->getIterator());
       else
-        NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI);
+        NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI->getIterator());
       NSI->takeName(LI);
       // Since LI is split into two instructions, NLI and NSI both inherit the
       // same DebugLoc
@@ -1462,14 +1472,14 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     const DataLayout &DL = GV->getParent()->getDataLayout();
 
     LLVM_DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
-    Instruction &FirstI = const_cast<Instruction&>(*GS.AccessingFunction
-                                                   ->getEntryBlock().begin());
+    BasicBlock::iterator FirstI =
+        GS.AccessingFunction->getEntryBlock().begin().getNonConst();
     Type *ElemTy = GV->getValueType();
     // FIXME: Pass Global's alignment when globals have alignment
-    AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(), nullptr,
-                                        GV->getName(), &FirstI);
+    AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(),
+                                        nullptr, GV->getName(), FirstI);
     if (!isa<UndefValue>(GV->getInitializer()))
-      new StoreInst(GV->getInitializer(), Alloca, &FirstI);
+      new StoreInst(GV->getInitializer(), Alloca, FirstI);
 
     GV->replaceAllUsesWith(Alloca);
     GV->eraseFromParent();
@@ -1859,7 +1869,7 @@ static void RemovePreallocated(Function *F) {
 
     assert((isa<CallInst>(CB) || isa<InvokeInst>(CB)) &&
            "Unknown indirect call type");
-    CallBase *NewCB = CallBase::Create(CB, OpBundles, CB);
+    CallBase *NewCB = CallBase::Create(CB, OpBundles, CB->getIterator());
     CB->replaceAllUsesWith(NewCB);
     NewCB->takeName(CB);
     CB->eraseFromParent();
@@ -2319,18 +2329,19 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *
-FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+FindAtExitLibFunc(Module &M,
+                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                  LibFunc Func) {
   // Hack to get a default TLI before we have actual Function.
   auto FuncIter = M.begin();
   if (FuncIter == M.end())
     return nullptr;
   auto *TLI = &GetTLI(*FuncIter);
 
-  LibFunc F = LibFunc_cxa_atexit;
-  if (!TLI->has(F))
+  if (!TLI->has(Func))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(F));
+  Function *Fn = M.getFunction(TLI->getName(Func));
   if (!Fn)
     return nullptr;
 
@@ -2338,17 +2349,18 @@ FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc_cxa_atexit)
+  LibFunc F;
+  if (!TLI->getLibFunc(*Fn, F) || F != Func)
     return nullptr;
 
   return Fn;
 }
 
-/// Returns whether the given function is an empty C++ destructor and can
-/// therefore be eliminated.
-/// Note that we assume that other optimization passes have already simplified
-/// the code so we simply check for 'ret'.
-static bool cxxDtorIsEmpty(const Function &Fn) {
+/// Returns whether the given function is an empty C++ destructor or atexit
+/// handler and can therefore be eliminated. Note that we assume that other
+/// optimization passes have already simplified the code so we simply check for
+/// 'ret'.
+static bool IsEmptyAtExitFunction(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
   if (Fn.isDeclaration())
@@ -2364,7 +2376,7 @@ static bool cxxDtorIsEmpty(const Function &Fn) {
   return false;
 }
 
-static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
+static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   /// Itanium C++ ABI p3.3.5:
   ///
   ///   After constructing a global (or local static) object, that will require
@@ -2377,8 +2389,8 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   ///   registered before this one. It returns zero if registration is
   ///   successful, nonzero on failure.
 
-  // This pass will look for calls to __cxa_atexit where the function is trivial
-  // and remove them.
+  // This pass will look for calls to __cxa_atexit or atexit where the function
+  // is trivial and remove them.
   bool Changed = false;
 
   for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
@@ -2391,14 +2403,17 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 
     Function *DtorFn =
       dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
-    if (!DtorFn || !cxxDtorIsEmpty(*DtorFn))
+    if (!DtorFn || !IsEmptyAtExitFunction(*DtorFn))
       continue;
 
     // Just remove the call.
     CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
     CI->eraseFromParent();
 
-    ++NumCXXDtorsRemoved;
+    if (isCXX)
+      ++NumCXXDtorsRemoved;
+    else
+      ++NumAtExitRemoved;
 
     Changed |= true;
   }
@@ -2516,9 +2531,12 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
-    if (CXAAtExitFn)
-      LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
+    if (Function *CXAAtExitFn =
+            FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
+
+    if (Function *AtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_atexit))
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
 
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);

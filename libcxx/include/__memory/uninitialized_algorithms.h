@@ -25,10 +25,8 @@
 #include <__type_traits/extent.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_trivially_copy_assignable.h>
-#include <__type_traits/is_trivially_copy_constructible.h>
-#include <__type_traits/is_trivially_move_assignable.h>
-#include <__type_traits/is_trivially_move_constructible.h>
+#include <__type_traits/is_trivially_assignable.h>
+#include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/negation.h>
@@ -366,7 +364,7 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 // the correct type.
 template <class _Alloc,
           class _BidirIter,
-          class = __enable_if_t< __has_bidirectional_iterator_category<_BidirIter>::value >>
+          __enable_if_t<__has_bidirectional_iterator_category<_BidirIter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr void
 __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _BidirIter __last) noexcept {
   using _ValueType = typename iterator_traits<_BidirIter>::value_type;
@@ -569,8 +567,9 @@ template <class _Alloc,
           __enable_if_t<
               // using _RawTypeIn because of the allocator<T const> extension
               is_trivially_copy_constructible<_RawTypeIn>::value && is_trivially_copy_assignable<_RawTypeIn>::value &&
-              is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
-              __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value>* = nullptr>
+                  is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
+                  __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value,
+              int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
 __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
   // TODO: Remove the const_cast once we drop support for std::allocator<T const>

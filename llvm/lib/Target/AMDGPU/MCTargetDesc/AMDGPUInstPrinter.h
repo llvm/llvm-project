@@ -86,8 +86,10 @@ private:
                       raw_ostream &O);
   void printImmediateInt16(uint32_t Imm, const MCSubtargetInfo &STI,
                            raw_ostream &O);
-  void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
-                        raw_ostream &O);
+  void printImmediateBF16(uint32_t Imm, const MCSubtargetInfo &STI,
+                          raw_ostream &O);
+  void printImmediateF16(uint32_t Imm, const MCSubtargetInfo &STI,
+                         raw_ostream &O);
   void printImmediateV216(uint32_t Imm, uint8_t OpType,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   bool printImmediateFloat32(uint32_t Imm, const MCSubtargetInfo &STI,
@@ -184,6 +186,8 @@ private:
                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpTgt(const MCInst *MI, unsigned OpNo,
                    const MCSubtargetInfo &STI, raw_ostream &O);
+  void printByteSel(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
 
 public:
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,

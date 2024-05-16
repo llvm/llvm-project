@@ -59,7 +59,7 @@
 // SILENT-NOT: warning:
 // CC1AS-DID-YOU-MEAN: error: unknown argument '-hell'; did you mean '-help'?
 // CC1AS-DID-YOU-MEAN: error: unknown argument '--version'; did you mean '-version'?
-// UNKNOWN-INTEGRATED: error: unknown integrated tool '-cc1asphalt'. Valid tools include '-cc1' and '-cc1as'.
+// UNKNOWN-INTEGRATED: error: unknown integrated tool '-cc1asphalt'. Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.
 
 // RUN: %clang -S %s -o %t.s  -Wunknown-to-clang-option 2>&1 | FileCheck --check-prefix=IGNORED %s
 

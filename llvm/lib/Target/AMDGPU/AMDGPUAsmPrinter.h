@@ -28,14 +28,11 @@ class MCCodeEmitter;
 class MCOperand;
 
 namespace AMDGPU {
+struct MCKernelDescriptor;
 namespace HSAMD {
 class MetadataStreamer;
 }
 } // namespace AMDGPU
-
-namespace amdhsa {
-struct kernel_descriptor_t;
-}
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
 private:
@@ -75,11 +72,13 @@ private:
   uint16_t getAmdhsaKernelCodeProperties(
       const MachineFunction &MF) const;
 
-  amdhsa::kernel_descriptor_t getAmdhsaKernelDescriptor(
-      const MachineFunction &MF,
-      const SIProgramInfo &PI) const;
+  AMDGPU::MCKernelDescriptor
+  getAmdhsaKernelDescriptor(const MachineFunction &MF,
+                            const SIProgramInfo &PI) const;
 
   void initTargetStreamer(Module &M);
+
+  static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

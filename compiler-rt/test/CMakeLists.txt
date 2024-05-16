@@ -1,14 +1,6 @@
 # Needed for lit support in standalone builds.
 include(AddLLVM)
 
-option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
-  "When set to ON and testing in a standalone build, test the runtime \
-  libraries built by this standalone build rather than the runtime libraries \
-  shipped with the compiler (used for testing). When set to OFF and testing \
-  in a standalone build, test the runtime libraries shipped with the compiler \
-  (used for testing). This option has no effect if the compiler and this \
-  build are configured to use the same runtime library path."
-  ON)
 pythonize_bool(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
 
 pythonize_bool(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -100,6 +92,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
     compiler_rt_test_runtime(profile)
   endif()
+  if(COMPILER_RT_BUILD_CTX_PROFILE)
+    compiler_rt_test_runtime(ctx_profile)
+  endif()
   if(COMPILER_RT_BUILD_MEMPROF)
     compiler_rt_test_runtime(memprof)
   endif()
@@ -116,7 +111,11 @@ endif()
 
 # Now that we've traversed all the directories and know all the lit testsuites,
 # introduce a rule to run to run all of them.
-add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
+add_custom_target(compiler-rt-test-depends)
+if(LLVM_COMPILER_RT_LIT_DEPENDS)
+  add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
+endif()
 umbrella_lit_testsuite_end(check-compiler-rt)
 
 if(COMPILER_RT_STANDALONE_BUILD)

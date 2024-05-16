@@ -65,5 +65,5 @@ jobs:
           release-workflow \
           --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
-          --requested-by ${{ github.event.issue.user.login }} \
+          --requested-by ${{ (github.event.action == 'opened' && github.event.issue.user.login) || github.event.comment.user.login }} \
           auto

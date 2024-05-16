@@ -24,6 +24,7 @@ add_llvm_target(BPFCodeGen
   BPFAbstractMemberAccess.cpp
   BPFAdjustOpt.cpp
   BPFAsmPrinter.cpp
+  BPFASpaceCastSimplifyPass.cpp
   BPFCheckAndAdjustIR.cpp
   BPFFrameLowering.cpp
   BPFInstrInfo.cpp
@@ -53,6 +54,7 @@ add_llvm_target(BPFCodeGen
   GlobalISel
   IPO
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

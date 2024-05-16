@@ -39,18 +39,18 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         else:
             expected_line = self.recurse_invocation
             expected_name = "main"
-        self.assertEquals(
+        self.assertEqual(
             frame_name,
             expected_name,
             'frame #%i name "%s" == "%s"' % (frame_idx, frame_name, expected_name),
         )
-        self.assertEquals(
+        self.assertEqual(
             frame_source,
             self.source_path,
             'frame #%i source "%s" == "%s"'
             % (frame_idx, frame_source, self.source_path),
         )
-        self.assertEquals(
+        self.assertEqual(
             frame_line,
             expected_line,
             "frame #%i line %i == %i" % (frame_idx, frame_line, expected_line),
@@ -74,7 +74,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
 
         # Set breakpoint at a point of deepest recuusion
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEquals(
+        self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
 
@@ -83,10 +83,10 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         # Verify we get all stack frames with no arguments
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
         frameCount = len(stackFrames)
-        self.assertTrue(
-            frameCount >= 20, "verify we get at least 20 frames for all frames"
+        self.assertGreaterEqual(
+            frameCount, 20, "verify we get at least 20 frames for all frames"
         )
-        self.assertEquals(
+        self.assertEqual(
             totalFrames, frameCount, "verify we get correct value for totalFrames count"
         )
         self.verify_stackFrames(startFrame, stackFrames)
@@ -94,7 +94,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         # Verify all stack frames by specifying startFrame = 0 and levels not
         # specified
         stackFrames = self.get_stackFrames(startFrame=startFrame)
-        self.assertEquals(
+        self.assertEqual(
             frameCount,
             len(stackFrames),
             ("verify same number of frames with startFrame=%i") % (startFrame),
@@ -104,7 +104,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         # Verify all stack frames by specifying startFrame = 0 and levels = 0
         levels = 0
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
-        self.assertEquals(
+        self.assertEqual(
             frameCount,
             len(stackFrames),
             ("verify same number of frames with startFrame=%i and" " levels=%i")
@@ -116,7 +116,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         # levels = 1
         levels = 1
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
-        self.assertEquals(
+        self.assertEqual(
             levels,
             len(stackFrames),
             ("verify one frame with startFrame=%i and" " levels=%i")
@@ -128,7 +128,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         # levels = 3
         levels = 3
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
-        self.assertEquals(
+        self.assertEqual(
             levels,
             len(stackFrames),
             ("verify %i frames with startFrame=%i and" " levels=%i")
@@ -141,7 +141,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         startFrame = 5
         levels = 16
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
-        self.assertEquals(
+        self.assertEqual(
             levels,
             len(stackFrames),
             ("verify %i frames with startFrame=%i and" " levels=%i")
@@ -155,13 +155,13 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
             startFrame=startFrame, levels=levels
         )
-        self.assertEquals(
+        self.assertEqual(
             len(stackFrames),
             frameCount - startFrame,
             ("verify less than 1000 frames with startFrame=%i and" " levels=%i")
             % (startFrame, levels),
         )
-        self.assertEquals(
+        self.assertEqual(
             totalFrames,
             frameCount,
             "verify we get correct value for totalFrames count "
@@ -173,7 +173,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         startFrame = 5
         levels = 0
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
-        self.assertEquals(
+        self.assertEqual(
             len(stackFrames),
             frameCount - startFrame,
             ("verify less than 1000 frames with startFrame=%i and" " levels=%i")
@@ -185,7 +185,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         startFrame = 1000
         levels = 1
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
-        self.assertEquals(
+        self.assertEqual(
             0, len(stackFrames), "verify zero frames with startFrame out of bounds"
         )
 
@@ -203,4 +203,4 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_next_stop()
         frame = self.get_stackFrames()[0]
-        self.assertEquals(frame["name"], "recurse(x=1)")
+        self.assertEqual(frame["name"], "recurse(x=1)")

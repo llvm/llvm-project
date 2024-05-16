@@ -353,7 +353,7 @@ public:
     dwarf::Index Index;
     dwarf::Form Form;
   };
-  DebugNamesAbbrev(uint32_t DieTag) : DieTag(DieTag) {}
+  DebugNamesAbbrev(uint32_t DieTag) : DieTag(DieTag), Number(0) {}
   /// Add attribute encoding to an abbreviation.
   void addAttribute(const DebugNamesAbbrev::AttributeEncoding &Attr) {
     AttrVect.push_back(Attr);

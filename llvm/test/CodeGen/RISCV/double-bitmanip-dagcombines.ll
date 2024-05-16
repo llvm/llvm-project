@@ -141,21 +141,7 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcopysign_fneg:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fsgnjn.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fcopysign_fneg:

@@ -28,6 +28,7 @@ on:
       - 'polly/docs/**'
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'llvm/docs/**'
@@ -45,6 +46,7 @@ on:
       - 'polly/docs/**'
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - '.github/workflows/docs.yml'
 
 jobs:
   check-docs-build:
@@ -162,8 +164,6 @@ jobs:
           TZ=UTC ninja -C polly-build docs-polly-html docs-polly-man
       - name: Build Flang docs
         if: steps.docs-changed-subprojects.outputs.flang_any_changed == 'true'
-        # TODO(boomanaiden154): Remove the SPHINX_WARNINGS_AS_ERRORS from the
-        # CMake invocation once the warnings in the flang docs build are fixed.
         run: |
-          cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF ./llvm
-          TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man
+          cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C flang-build docs-flang-html

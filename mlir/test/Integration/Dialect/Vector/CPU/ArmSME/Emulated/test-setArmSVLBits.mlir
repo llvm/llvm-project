@@ -1,5 +1,6 @@
 // DEFINE: %{entry_point} = main
-// DEFINE: %{compile} = mlir-opt %s -convert-arm-sme-to-llvm -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE: --pass-pipeline="builtin.module(func.func(convert-arm-sme-to-llvm),test-lower-to-llvm)"
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
@@ -12,13 +13,13 @@ func.func @checkSVL() {
   %svl_h = arm_sme.streaming_vl <half>
   %svl_w = arm_sme.streaming_vl <word>
   %svl_d = arm_sme.streaming_vl <double>
-  vector.print str "SVL.b"
+  vector.print str "SVL.b\n"
   vector.print %svl_b : index
-  vector.print str "SVL.h"
+  vector.print str "SVL.h\n"
   vector.print %svl_h : index
-  vector.print str "SVL.w"
+  vector.print str "SVL.w\n"
   vector.print %svl_w : index
-  vector.print str "SVL.d"
+  vector.print str "SVL.d\n"
   vector.print %svl_d : index
   return
 }

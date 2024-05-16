@@ -12,6 +12,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr3 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX1150-LABEL: name: trans_use_1_hazard
     ; GFX1150: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1150-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
@@ -61,6 +62,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr3 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX1150-LABEL: name: trans_use_2_hazard
     ; GFX1150: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1150-NEXT: $sgpr0 = S_MOV_B32 0
@@ -108,6 +110,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr3 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX1150-LABEL: name: trans_use_3_hazard
     ; GFX1150: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1150-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
@@ -207,6 +210,7 @@ body:            |
     ; GFX11-NEXT: $vgpr5 = V_ADD_F32_e32 $vgpr1, $vgpr4, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr7 = V_ADD_F32_e32 $vgpr3, $vgpr6, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX1150-LABEL: name: trans_use_4_one_depctr_1
     ; GFX1150: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1150-NEXT: $vgpr3 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
@@ -231,6 +235,7 @@ body:            |
     ; GFX11-NEXT: $vgpr5 = V_ADD_F32_e32 $vgpr3, $vgpr4, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr7 = V_ADD_F32_e32 $vgpr1, $vgpr6, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX1150-LABEL: name: trans_use_4_one_depctr_2
     ; GFX1150: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1150-NEXT: $vgpr3 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
@@ -255,6 +260,7 @@ body:            |
     ; GFX11-NEXT: S_WAITCNT_DEPCTR 4095
     ; GFX11-NEXT: $vgpr3 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0
+    ;
     ; GFX1150-LABEL: name: trans_use_4
     ; GFX1150: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX1150-NEXT: $vgpr10 = V_SQRT_F32_e32 $vgpr11, implicit $mode, implicit $exec
@@ -293,6 +299,7 @@ body:            |
   ; GFX11-NEXT:   S_WAITCNT_DEPCTR 4095
   ; GFX11-NEXT:   $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
   ; GFX11-NEXT:   S_ENDPGM 0
+  ;
   ; GFX1150-LABEL: name: trans_use_branching_1a
   ; GFX1150: bb.0:
   ; GFX1150-NEXT:   successors: %bb.2(0x80000000)
@@ -353,6 +360,7 @@ body:            |
   ; GFX11-NEXT:   S_WAITCNT_DEPCTR 4095
   ; GFX11-NEXT:   $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
   ; GFX11-NEXT:   S_ENDPGM 0
+  ;
   ; GFX1150-LABEL: name: trans_use_branching_1b
   ; GFX1150: bb.0:
   ; GFX1150-NEXT:   successors: %bb.2(0x80000000)

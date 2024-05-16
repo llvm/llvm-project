@@ -544,7 +544,7 @@ TEST(DiagnosticTest, RespectsDiagnosticConfig) {
                   Diag(Main.range("ret"),
                        "void function 'x' should not return a value")));
   Config Cfg;
-  Cfg.Diagnostics.Suppress.insert("return-type");
+  Cfg.Diagnostics.Suppress.insert("return-mismatch");
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(Diag(Main.range(),
@@ -918,12 +918,14 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
       "prefer using 'override' or (rarely) 'final' "
       "instead of 'virtual'",
       {TextEdit{Main.range("override1"), " override"},
-       TextEdit{Main.range("virtual1"), ""}}};
+       TextEdit{Main.range("virtual1"), ""}},
+      {}};
   clangd::Fix const ExpectedFix2{
       "prefer using 'override' or (rarely) 'final' "
       "instead of 'virtual'",
       {TextEdit{Main.range("override2"), " override"},
-       TextEdit{Main.range("virtual2"), ""}}};
+       TextEdit{Main.range("virtual2"), ""}},
+      {}};
   // Note that in the Fix we expect the "virtual" keyword and the following
   // whitespace to be deleted
   EXPECT_THAT(TU.build().getDiagnostics(),
