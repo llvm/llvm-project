@@ -56,6 +56,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
          for each dynamic offset (resp. size, stride).
       5. `offsets`, `sizes` and `strides` operands are specified in this order
          at operand index starting at `getOffsetSizeAndStrideStartOperandIndex`.
+      6. `offsets` and `sizes` operands are non-negative.
 
     This interface is useful to factor out common behavior and provide support
     for carrying or injecting static behavior through the use of the static
@@ -157,7 +158,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return a vector of all the static or dynamic sizes of the op.
+        Return a vector of all the static or dynamic offsets of the op.
       }],
       /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
       /*methodName=*/"getMixedOffsets",

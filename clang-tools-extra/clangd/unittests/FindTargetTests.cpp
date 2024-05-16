@@ -427,7 +427,7 @@ TEST_F(TargetDeclTest, Types) {
     [[auto]] X = S{};
   )cpp";
   // FIXME: deduced type missing in AST. https://llvm.org/PR42914
-  EXPECT_DECLS("AutoTypeLoc");
+  EXPECT_DECLS("AutoTypeLoc", );
 
   Code = R"cpp(
     template <typename... E>
@@ -642,10 +642,7 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"std::strong_ordering operator<=>(const Foo &) const = default",
-                Rel::TemplatePattern},
-               {"bool operator==(const Foo &) const noexcept = default",
-                Rel::TemplateInstantiation});
+               {"bool operator==(const Foo &) const noexcept = default"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -707,6 +704,33 @@ TEST_F(TargetDeclTest, TypeAliasTemplate) {
                {"class SmallVector", Rel::TemplatePattern | Rel::Underlying},
                {"using TinyVector = SmallVector<U, 1>",
                 Rel::Alias | Rel::TemplatePattern});
+}
+
+TEST_F(TargetDeclTest, BuiltinTemplates) {
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence {};
+    [[__make_integer_seq]]<integer_sequence, int, 3> X;
+  )cpp";
+  EXPECT_DECLS(
+      "TemplateSpecializationTypeLoc",
+      {"struct integer_sequence", Rel::TemplatePattern | Rel::Underlying},
+      {"template<> struct integer_sequence<int, <0, 1, 2>>",
+       Rel::TemplateInstantiation | Rel::Underlying});
+
+  // Dependent context.
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence;
+
+    template <class T, int N>
+    using make_integer_sequence = [[__make_integer_seq]]<integer_sequence, T, N>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <int N, class... Pack>
+    using type_pack_element = [[__type_pack_element]]<N, Pack...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, MemberOfTemplate) {
@@ -827,7 +851,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but base expression involves a function call.
   Code = R"cpp(
@@ -845,7 +869,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but uses a function pointer.
   Code = R"cpp(
@@ -864,7 +888,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Base expression involves a member access into this.
   Code = R"cpp(
@@ -935,7 +959,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           void Foo() { this->[[find]](); }
         };
   )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void find()");
+  EXPECT_DECLS("MemberExpr", "void find()");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
@@ -982,6 +1006,33 @@ TEST_F(TargetDeclTest, DependentTypes) {
       )cpp";
   EXPECT_DECLS("DependentTemplateSpecializationTypeLoc",
                "template <typename> struct B");
+
+  // Dependent name with recursive definition. We don't expect a
+  // result, but we shouldn't get into a stack overflow either.
+  Code = R"cpp(
+        template <int N>
+        struct waldo {
+          typedef typename waldo<N - 1>::type::[[next]] type;
+        };
+  )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", );
+
+  // Similar to above but using mutually recursive templates.
+  Code = R"cpp(
+        template <int N>
+        struct odd;
+
+        template <int N>
+        struct even {
+          using type = typename odd<N - 1>::type::next;
+        };
+
+        template <int N>
+        struct odd {
+          using type = typename even<N - 1>::type::[[next]];
+        };
+  )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, TypedefCascade) {
@@ -1209,14 +1260,14 @@ TEST_F(TargetDeclTest, ObjC) {
     + ([[id]])sharedInstance;
     @end
   )cpp";
-  EXPECT_DECLS("TypedefTypeLoc");
+  EXPECT_DECLS("TypedefTypeLoc", );
 
   Code = R"cpp(
     @interface Foo
     + ([[instancetype]])sharedInstance;
     @end
   )cpp";
-  EXPECT_DECLS("TypedefTypeLoc");
+  EXPECT_DECLS("TypedefTypeLoc", );
 }
 
 class FindExplicitReferencesTest : public ::testing::Test {

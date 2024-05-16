@@ -39,6 +39,7 @@ enum Kind {
   KwConstant,
   KwData,
   KwExports,
+  KwExportAs,
   KwHeapsize,
   KwLibrary,
   KwName,
@@ -74,7 +75,7 @@ static bool isDecorated(StringRef Sym, bool MingwDef) {
   // We can't check for a leading underscore here, since function names
   // themselves can start with an underscore, while a second one still needs
   // to be added.
-  return Sym.startswith("@") || Sym.contains("@@") || Sym.startswith("?") ||
+  return Sym.starts_with("@") || Sym.contains("@@") || Sym.starts_with("?") ||
          (!MingwDef && Sym.contains('@'));
 }
 
@@ -97,10 +98,8 @@ public:
     }
     case '=':
       Buf = Buf.drop_front();
-      if (Buf.startswith("=")) {
-        Buf = Buf.drop_front();
+      if (Buf.consume_front("="))
         return Token(EqualEqual, "==");
-      }
       return Token(Equal, "=");
     case ',':
       Buf = Buf.drop_front();
@@ -118,6 +117,7 @@ public:
                    .Case("CONSTANT", KwConstant)
                    .Case("DATA", KwData)
                    .Case("EXPORTS", KwExports)
+                   .Case("EXPORTAS", KwExportAs)
                    .Case("HEAPSIZE", KwHeapsize)
                    .Case("LIBRARY", KwLibrary)
                    .Case("NAME", KwName)
@@ -281,12 +281,21 @@ private:
       }
       if (Tok.K == EqualEqual) {
         read();
-        E.AliasTarget = std::string(Tok.Value);
-        if (AddUnderscores && !isDecorated(E.AliasTarget, MingwDef))
-          E.AliasTarget = std::string("_").append(E.AliasTarget);
+        E.ImportName = std::string(Tok.Value);
+        if (AddUnderscores && !isDecorated(E.ImportName, MingwDef))
+          E.ImportName = std::string("_").append(E.ImportName);
         continue;
       }
-      unget();
+      // EXPORTAS must be at the end of export definition
+      if (Tok.K == KwExportAs) {
+        read();
+        if (Tok.K == Eof)
+          return createError(
+              "unexpected end of file, EXPORTAS identifier expected");
+        E.ExportAs = std::string(Tok.Value);
+      } else {
+        unget();
+      }
       Info.Exports.push_back(E);
       return Error::success();
     }

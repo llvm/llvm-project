@@ -225,7 +225,7 @@ ItaniumManglingCanonicalizer::addEquivalence(FragmentKind Kind, StringRef First,
       // arguments. This mostly just falls out, as almost all template names
       // are valid as <name>s, but we also want to parse <substitution>s as
       // <name>s, even though they're not.
-      else if (Str.startswith("S"))
+      else if (Str.starts_with("S"))
         // Parse the substitution and optional following template arguments.
         N = P->Demangler.parseType();
       else
@@ -289,8 +289,8 @@ parseMaybeMangledName(CanonicalizingDemangler &Demangler, StringRef Mangling,
   //   encoding 6memcpy 7memmove
   // consistent with how they are encoded as local-names inside a C++ mangling.
   Node *N;
-  if (Mangling.startswith("_Z") || Mangling.startswith("__Z") ||
-      Mangling.startswith("___Z") || Mangling.startswith("____Z"))
+  if (Mangling.starts_with("_Z") || Mangling.starts_with("__Z") ||
+      Mangling.starts_with("___Z") || Mangling.starts_with("____Z"))
     N = Demangler.parse();
   else
     N = Demangler.make<itanium_demangle::NameType>(

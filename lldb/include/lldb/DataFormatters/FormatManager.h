@@ -138,7 +138,7 @@ public:
   }
 
   static bool GetFormatFromCString(const char *format_cstr,
-                                   bool partial_match_ok, lldb::Format &format);
+                                   lldb::Format &format);
 
   static char GetFormatAsFormatChar(lldb::Format format);
 

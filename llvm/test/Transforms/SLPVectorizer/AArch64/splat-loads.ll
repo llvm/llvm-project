@@ -101,7 +101,7 @@ define void @splat_loads_i64(ptr %array1, ptr %array2, ptr %ptrA, ptr %ptrB) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP0]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[ARRAY1]], align 4
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[ARRAY1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

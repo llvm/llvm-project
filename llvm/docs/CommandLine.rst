@@ -1521,8 +1521,7 @@ passed to the constructor as ``const char*``.
 Note that declaring an option category and associating it with an option before
 parsing options (e.g. statically) will change the output of ``-help`` from
 uncategorized to categorized. If an option category is declared but not
-associated with an option then it will be hidden from the output of ``-help``
-but will be shown in the output of ``-help-hidden``.
+associated with an option then it will be hidden from the output of ``-help``.
 
 .. _different parser:
 .. _discussed previously:

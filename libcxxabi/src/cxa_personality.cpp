@@ -660,10 +660,9 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
     //       dwarf emission
     // Parse LSDA header.
     uint8_t lpStartEncoding = *lsda++;
-    const uint8_t* lpStart =
-        (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding, base);
-    if (lpStart == 0)
-        lpStart = (const uint8_t*)funcStart;
+    const uint8_t* lpStart = lpStartEncoding == DW_EH_PE_omit
+                                 ? (const uint8_t*)funcStart
+                                 : (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding, base);
     uint8_t ttypeEncoding = *lsda++;
     if (ttypeEncoding != DW_EH_PE_omit)
     {
@@ -718,9 +717,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
             if (actionEntry == 0)
             {
                 // Found a cleanup
-                results.reason = actions & _UA_SEARCH_PHASE
-                                     ? _URC_CONTINUE_UNWIND
-                                     : _URC_HANDLER_FOUND;
+                results.reason = (actions & _UA_SEARCH_PHASE) ? _URC_CONTINUE_UNWIND : _URC_HANDLER_FOUND;
                 return;
             }
             // Convert 1-based byte offset into

@@ -14,12 +14,27 @@
 #ifndef MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVM_H
 #define MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVM_H
 
+#include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
+
 namespace mlir {
 
+namespace LLVM {
+class LLVMFuncOp;
+} // namespace LLVM
+
+class ConversionPatternRewriter;
 class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class SymbolTable;
+
+/// Convert input FunctionOpInterface operation to LLVMFuncOp by using the
+/// provided LLVMTypeConverter. Return failure if failed to so.
+FailureOr<LLVM::LLVMFuncOp>
+convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
+                          ConversionPatternRewriter &rewriter,
+                          const LLVMTypeConverter &converter);
 
 /// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
 /// `emitCWrappers` is set, the pattern will also produce functions

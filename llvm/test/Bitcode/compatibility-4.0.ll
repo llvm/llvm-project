@@ -361,8 +361,6 @@ declare ghccc void @f.ghccc()
 ; CHECK: declare ghccc void @f.ghccc()
 declare cc11 void @f.cc11()
 ; CHECK: declare cc11 void @f.cc11()
-declare webkit_jscc void @f.webkit_jscc()
-; CHECK: declare webkit_jscc void @f.webkit_jscc()
 declare anyregcc void @f.anyregcc()
 ; CHECK: declare anyregcc void @f.anyregcc()
 declare preserve_mostcc void @f.preserve_mostcc()
@@ -1320,16 +1318,16 @@ define void @instructions.va_arg(i8* %v, ...) {
   %ap2 = bitcast i8** %ap to i8*
 
   call void @llvm.va_start(i8* %ap2)
-  ; CHECK: call void @llvm.va_start(ptr %ap2)
+  ; CHECK: call void @llvm.va_start.p0(ptr %ap2)
 
   va_arg i8* %ap2, i32
   ; CHECK: va_arg ptr %ap2, i32
 
   call void @llvm.va_copy(i8* %v, i8* %ap2)
-  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap2)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap2)
 
   call void @llvm.va_end(i8* %ap2)
-  ; CHECK: call void @llvm.va_end(ptr %ap2)
+  ; CHECK: call void @llvm.va_end.p0(ptr %ap2)
 
   ret void
 }
@@ -1611,7 +1609,7 @@ declare void @f.writeonly() writeonly
 ;; Constant Expressions
 
 define i8** @constexpr() {
-  ; CHECK: ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
+  ; CHECK: ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
   ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
 }
 
@@ -1651,11 +1649,11 @@ define i8** @constexpr() {
 ; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { nounwind memory(argmem: read) }
-; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #40 = { nocallback nounwind }
+; CHECK: attributes #36 = { nounwind memory(argmem: read) }
+; CHECK: attributes #37 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #39 = { nocallback nounwind }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #41 = { memory(write) }
 ; CHECK: attributes #42 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #43 = { builtin }

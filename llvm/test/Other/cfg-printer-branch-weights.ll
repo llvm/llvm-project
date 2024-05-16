@@ -6,11 +6,11 @@ entry:
   %check = icmp sgt i32 %0, 0
   br i1 %check, label %if, label %exit, !prof !0
 
-; CHECK: label="W:7"
+; CHECK: label="W:89623871094784"
 ; CHECK-NOT: ["];
 if:                     ; preds = %entry
   br label %exit
-; CHECK: label="W:1600"
+; CHECK: label="W:17924774638387200"
 ; CHECK-NOT: ["];
 exit:                   ; preds = %entry, %if
   ret void

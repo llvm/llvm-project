@@ -36,8 +36,8 @@ MIR patterns use the DAG datatype in TableGen.
 
   (inst operand0, operand1, ...)
 
-``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``)
-or ``GICombinePatFrag``.
+``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``),
+``Intrinsic`` or ``GICombinePatFrag``.
 
 Operands essentially fall into one of two categories:
 
@@ -101,6 +101,48 @@ pattern, you can try naming your patterns to see exactly where the issue is.
   // using $x again here copies operand 1 from G_AND into the new inst.
   (apply (COPY $root, $x))
 
+Types
+-----
+
+ValueType
+~~~~~~~~~
+
+Subclasses of ``ValueType`` are valid types, e.g. ``i32``.
+
+GITypeOf
+~~~~~~~~
+
+``GITypeOf<"$x">`` is a ``GISpecialType`` that allows for the creation of a
+register or immediate with the same type as another (register) operand.
+
+Operand:
+
+* An operand name as a string, prefixed by ``$``.
+
+Semantics:
+
+* Can only appear in an 'apply' pattern.
+* The operand name used must appear in the 'match' pattern of the
+  same ``GICombineRule``.
+
+.. code-block:: text
+  :caption: Example: Immediate
+
+  def mul_by_neg_one: GICombineRule <
+    (defs root:$root),
+    (match (G_MUL $dst, $x, -1)),
+    (apply (G_SUB $dst, (GITypeOf<"$x"> 0), $x))
+  >;
+
+.. code-block:: text
+  :caption: Example: Temp Reg
+
+  def Test0 : GICombineRule<
+    (defs root:$dst),
+    (match (G_FMUL $dst, $src, -1)),
+    (apply (G_FSUB $dst, $src, $tmp),
+           (G_FNEG GITypeOf<"$dst">:$tmp, $src))>;
+
 Builtin Operations
 ------------------
 
@@ -141,13 +183,50 @@ Semantics:
 * The root cannot have any output operands.
 * The root must be a CodeGenInstruction
 
+Instruction Flags
+-----------------
+
+MIR Patterns support both matching & writing ``MIFlags``.
+
+.. code-block:: text
+  :caption: Example
+
+  def Test : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs))),
+    (apply (G_BAR $dst, $src, (MIFlags FmReassoc)))>;
+
+In ``apply`` patterns, we also support referring to a matched instruction to
+"take" its MIFlags.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoNans/NoInfs, but $zext may have more flags.
+  ; Copy them all into the output instruction, and set Reassoc on the output inst.
+  def TestCpyFlags : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs)):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, FmReassoc)))>;
+
+The ``not`` operator can be used to check that a flag is NOT present
+on a matched instruction, and to remove a flag from a generated instruction.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoInfs but we don't want NoNans/Reassoc to be set. $zext may have more flags.
+  ; Copy them all into the output instruction but remove NoInfs on the output inst.
+  def TestNot : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoInfs, (not FmNoNans, FmReassoc))):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, (not FmNoInfs))))>;
 
 Limitations
 -----------
 
 This a non-exhaustive list of known issues with MIR patterns at this time.
 
-* Matching intrinsics is not yet possible.
 * Using ``GICombinePatFrag`` within another ``GICombinePatFrag`` is not
   supported.
 * ``GICombinePatFrag`` can only have a single root.
@@ -195,8 +274,32 @@ it's less verbose.
 
 
 Combine Rules also allow mixing C++ code with MIR patterns, so that you
-may perform additional checks when matching, or run additional code after
-rewriting a pattern.
+may perform additional checks when matching, or run a C++ action after
+matching.
+
+Note that C++ code in ``apply`` pattern is mutually exclusive with
+other patterns. However, you can freely mix C++ code with other
+types of patterns in ``match`` patterns.
+C++ code in ``match`` patterns is always run last, after all other
+patterns matched.
+
+.. code-block:: text
+  :caption: Apply Pattern Examples with C++ code
+
+  // Valid
+  def Foo : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $tmp, (i32 0)),
+           (G_STORE $tmp, $ptr):$root,
+           "return myFinalCheck()"),
+    (apply "runMyAction(${root})")>;
+
+  // error: 'apply' patterns cannot mix C++ code with other types of patterns
+  def Bar : GICombineRule<
+    (defs root:$dst),
+    (match (G_ZEXT $dst, $src):$mi),
+    (apply (G_MUL $dst, $src, $src),
+           "runMyAction(${root})")>;
 
 The following expansions are available for MIR patterns:
 
@@ -257,8 +360,8 @@ Common Pattern #3: Emitting a Constant Value
 When an immediate operand appears in an 'apply' pattern, the behavior
 depends on whether it's typed or not.
 
-* If the immediate is typed, a ``G_CONSTANT`` is implicitly emitted
-  (= a register operand is added to the instruction).
+* If the immediate is typed, ``MachineIRBuilder::buildConstant`` is used
+  to create a ``G_CONSTANT``. A ``G_BUILD_VECTOR`` will be used for vectors.
 * If the immediate is untyped, a simple immediate is added
   (``MachineInstrBuilder::addImm``).
 
@@ -435,3 +538,40 @@ of operands.
     (match (does_not_bind $tmp, $x)
            (G_MUL $dst, $x, $tmp)),
     (apply (COPY $dst, $x))>;
+
+
+
+
+Gallery
+=======
+
+We should use precise patterns that state our intentions. Please avoid
+using wip_match_opcode in patterns.
+
+.. code-block:: text
+  :caption: Example fold zext(trunc:nuw)
+
+  // Imprecise: matches any G_ZEXT
+  def zext : GICombineRule<
+    (defs root:$root),
+    (match (wip_match_opcode G_ZEXT):$root,
+    [{ return Helper.matchZextOfTrunc(*${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+
+  // Imprecise: matches G_ZEXT of G_TRUNC
+  def zext_of_trunc : GICombineRule<
+    (defs root:$root),
+    (match (G_TRUNC $src, $x),
+           (G_ZEXT $root, $src),
+    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: matches G_ZEXT of G_TRUNC with nuw flag
+  def zext_of_trunc_nuw : GICombineRule<
+    (defs root:$root),
+    (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
+           (G_ZEXT $root, $src),
+    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;

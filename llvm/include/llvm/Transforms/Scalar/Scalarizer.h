@@ -24,7 +24,6 @@
 namespace llvm {
 
 class Function;
-class FunctionPass;
 
 struct ScalarizerPassOptions {
   // These options correspond 1:1 to cl::opt options defined in
@@ -51,10 +50,6 @@ public:
   void setScalarizeLoadStore(bool Value) { Options.ScalarizeLoadStore = Value; }
   void setScalarizeMinBits(unsigned Value) { Options.ScalarizeMinBits = Value; }
 };
-
-/// Create a legacy pass manager instance of the Scalarizer pass
-FunctionPass *createScalarizerPass();
-
 }
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */

@@ -118,8 +118,8 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   std::string getKind(const Decl *D) { return D->getDeclKindName(); }
   std::string getKind(const Stmt *S) {
     std::string Result = S->getStmtClassName();
-    if (llvm::StringRef(Result).endswith("Stmt") ||
-        llvm::StringRef(Result).endswith("Expr"))
+    if (llvm::StringRef(Result).ends_with("Stmt") ||
+        llvm::StringRef(Result).ends_with("Expr"))
       Result.resize(Result.size() - 4);
     return Result;
   }
@@ -143,6 +143,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_ARGUMENT_KIND(Declaration);
       TEMPLATE_ARGUMENT_KIND(Template);
       TEMPLATE_ARGUMENT_KIND(TemplateExpansion);
+      TEMPLATE_ARGUMENT_KIND(StructuralValue);
 #undef TEMPLATE_ARGUMENT_KIND
     }
     llvm_unreachable("Unhandled ArgKind enum");

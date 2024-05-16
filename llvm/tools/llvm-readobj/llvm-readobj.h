@@ -16,7 +16,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
-#include <string>
 
 namespace llvm {
   namespace object {
@@ -39,7 +38,6 @@ extern bool SectionRelocations;
 extern bool SectionSymbols;
 extern bool SectionData;
 extern bool ExpandRelocs;
-extern bool RawRelr;
 extern bool CodeViewSubsectionBytes;
 extern bool Demangle;
 enum OutputStyleTy { LLVM, GNU, JSON, UNKNOWN };

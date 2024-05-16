@@ -3,11 +3,11 @@
 ; Instcombine pulls the addrspacecast out of the select, make sure
 ;  this doesn't do something insane on non-canonical IR.
 
-; CHECK-LABEL: @return_select_group_flat(
-; CHECK-NEXT: %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-; CHECK-NEXT: %cast1 = addrspacecast ptr addrspace(3) %group.ptr.1 to ptr
-; CHECK-NEXT: %select = select i1 %c, ptr %cast0, ptr %cast1
-; CHECK-NEXT: ret ptr %select
+; CHECK-LABEL: define ptr @return_select_group_flat(
+; CHECK-SAME: i1 [[C:%.*]], ptr addrspace(3) [[GROUP_PTR_0:%.*]], ptr addrspace(3) [[GROUP_PTR_1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C]], ptr addrspace(3) [[GROUP_PTR_0]], ptr addrspace(3) [[GROUP_PTR_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(3) [[SELECT]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP1]]
 define ptr @return_select_group_flat(i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) %group.ptr.1) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
   %cast1 = addrspacecast ptr addrspace(3) %group.ptr.1 to ptr

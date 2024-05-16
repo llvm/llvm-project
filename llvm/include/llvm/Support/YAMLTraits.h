@@ -567,10 +567,10 @@ inline bool isNumeric(StringRef S) {
 
   // Make S.front() and S.drop_front().front() (if S.front() is [+-]) calls
   // safe.
-  if (S.empty() || S.equals("+") || S.equals("-"))
+  if (S.empty() || S == "+" || S == "-")
     return false;
 
-  if (S.equals(".nan") || S.equals(".NaN") || S.equals(".NAN"))
+  if (S == ".nan" || S == ".NaN" || S == ".NAN")
     return true;
 
   // Infinity and decimal numbers can be prefixed with sign.
@@ -578,17 +578,17 @@ inline bool isNumeric(StringRef S) {
 
   // Check for infinity first, because checking for hex and oct numbers is more
   // expensive.
-  if (Tail.equals(".inf") || Tail.equals(".Inf") || Tail.equals(".INF"))
+  if (Tail == ".inf" || Tail == ".Inf" || Tail == ".INF")
     return true;
 
   // Section 10.3.2 Tag Resolution
   // YAML 1.2 Specification prohibits Base 8 and Base 16 numbers prefixed with
   // [-+], so S should be used instead of Tail.
-  if (S.startswith("0o"))
+  if (S.starts_with("0o"))
     return S.size() > 2 &&
            S.drop_front(2).find_first_not_of("01234567") == StringRef::npos;
 
-  if (S.startswith("0x"))
+  if (S.starts_with("0x"))
     return S.size() > 2 && S.drop_front(2).find_first_not_of(
                                "0123456789abcdefABCDEF") == StringRef::npos;
 
@@ -598,12 +598,12 @@ inline bool isNumeric(StringRef S) {
   // Handle cases when the number starts with '.' and hence needs at least one
   // digit after dot (as opposed by number which has digits before the dot), but
   // doesn't have one.
-  if (S.startswith(".") &&
-      (S.equals(".") ||
+  if (S.starts_with(".") &&
+      (S == "." ||
        (S.size() > 1 && std::strchr("0123456789", S[1]) == nullptr)))
     return false;
 
-  if (S.startswith("E") || S.startswith("e"))
+  if (S.starts_with("E") || S.starts_with("e"))
     return false;
 
   enum ParseState {
@@ -656,14 +656,13 @@ inline bool isNumeric(StringRef S) {
 }
 
 inline bool isNull(StringRef S) {
-  return S.equals("null") || S.equals("Null") || S.equals("NULL") ||
-         S.equals("~");
+  return S == "null" || S == "Null" || S == "NULL" || S == "~";
 }
 
 inline bool isBool(StringRef S) {
   // FIXME: using parseBool is causing multiple tests to fail.
-  return S.equals("true") || S.equals("True") || S.equals("TRUE") ||
-         S.equals("false") || S.equals("False") || S.equals("FALSE");
+  return S == "true" || S == "True" || S == "TRUE" || S == "false" ||
+         S == "False" || S == "FALSE";
 }
 
 // 5.1. Character Set
@@ -671,7 +670,11 @@ inline bool isBool(StringRef S) {
 // (except for TAB #x9, LF #xA, and CR #xD which are allowed), DEL #x7F, the C1
 // control block #x80-#x9F (except for NEL #x85 which is allowed), the surrogate
 // block #xD800-#xDFFF, #xFFFE, and #xFFFF.
-inline QuotingType needsQuotes(StringRef S) {
+//
+// Some strings are valid YAML values even unquoted, but without quotes are
+// interpreted as non-string type, for instance null, boolean or numeric values.
+// If ForcePreserveAsString is set, such strings are quoted.
+inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
   if (S.empty())
     return QuotingType::Single;
 
@@ -679,12 +682,14 @@ inline QuotingType needsQuotes(StringRef S) {
   if (isSpace(static_cast<unsigned char>(S.front())) ||
       isSpace(static_cast<unsigned char>(S.back())))
     MaxQuotingNeeded = QuotingType::Single;
-  if (isNull(S))
-    MaxQuotingNeeded = QuotingType::Single;
-  if (isBool(S))
-    MaxQuotingNeeded = QuotingType::Single;
-  if (isNumeric(S))
-    MaxQuotingNeeded = QuotingType::Single;
+  if (ForcePreserveAsString) {
+    if (isNull(S))
+      MaxQuotingNeeded = QuotingType::Single;
+    if (isBool(S))
+      MaxQuotingNeeded = QuotingType::Single;
+    if (isNumeric(S))
+      MaxQuotingNeeded = QuotingType::Single;
+  }
 
   // 7.3.3 Plain Style
   // Plain scalars must not begin with most indicators, as this would cause
@@ -1058,6 +1063,19 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   }
 }
 
+namespace detail {
+
+template <typename T, typename Context>
+std::string doValidate(IO &io, T &Val, Context &Ctx) {
+  return MappingContextTraits<T, Context>::validate(io, Val, Ctx);
+}
+
+template <typename T> std::string doValidate(IO &io, T &Val, EmptyContext &) {
+  return MappingTraits<T>::validate(io, Val);
+}
+
+} // namespace detail
+
 template <typename T, typename Context>
 std::enable_if_t<validatedMappingTraits<T, Context>::value, void>
 yamlize(IO &io, T &Val, bool, Context &Ctx) {
@@ -1066,7 +1084,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   else
     io.beginMapping();
   if (io.outputting()) {
-    std::string Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty()) {
       errs() << Err << "\n";
       assert(Err.empty() && "invalid struct trying to be written as yaml");
@@ -1074,7 +1092,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   }
   detail::doMapping(io, Val, Ctx);
   if (!io.outputting()) {
-    std::string Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty())
       io.setError(Err);
   }
@@ -1277,7 +1295,7 @@ struct ScalarTraits<double> {
 // For endian types, we use existing scalar Traits class for the underlying
 // type.  This way endian aware types are supported whenever the traits are
 // defined for the underlying type.
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarTraits<support::detail::packed_endian_specific_integral<
                         value_type, endian, alignment>,
                     std::enable_if_t<has_ScalarTraits<value_type>::value>> {
@@ -1301,7 +1319,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarEnumerationTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
@@ -1317,7 +1335,7 @@ struct ScalarEnumerationTraits<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarBitSetTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
@@ -1623,6 +1641,7 @@ public:
 
 private:
   void output(StringRef s);
+  void output(StringRef, QuotingType);
   void outputUpToEndOfLine(StringRef s);
   void newLineCheck(bool EmptySequence = false);
   void outputNewLine();

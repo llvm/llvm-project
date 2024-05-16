@@ -111,17 +111,7 @@ void EventData::Dump(Stream *s) const { s->PutCString("Generic Event Data"); }
 
 EventDataBytes::EventDataBytes() : m_bytes() {}
 
-EventDataBytes::EventDataBytes(const char *cstr) : m_bytes() {
-  SetBytesFromCString(cstr);
-}
-
-EventDataBytes::EventDataBytes(llvm::StringRef str) : m_bytes() {
-  SetBytes(str.data(), str.size());
-}
-
-EventDataBytes::EventDataBytes(const void *src, size_t src_len) : m_bytes() {
-  SetBytes(src, src_len);
-}
+EventDataBytes::EventDataBytes(llvm::StringRef str) : m_bytes(str.str()) {}
 
 EventDataBytes::~EventDataBytes() = default;
 
@@ -147,20 +137,6 @@ const void *EventDataBytes::GetBytes() const {
 
 size_t EventDataBytes::GetByteSize() const { return m_bytes.size(); }
 
-void EventDataBytes::SetBytes(const void *src, size_t src_len) {
-  if (src != nullptr && src_len > 0)
-    m_bytes.assign(static_cast<const char *>(src), src_len);
-  else
-    m_bytes.clear();
-}
-
-void EventDataBytes::SetBytesFromCString(const char *cstr) {
-  if (cstr != nullptr && cstr[0])
-    m_bytes.assign(cstr);
-  else
-    m_bytes.clear();
-}
-
 const void *EventDataBytes::GetBytesFromEvent(const Event *event_ptr) {
   const EventDataBytes *e = GetEventDataFromEvent(event_ptr);
   if (e != nullptr)
@@ -184,10 +160,6 @@ EventDataBytes::GetEventDataFromEvent(const Event *event_ptr) {
       return static_cast<const EventDataBytes *>(event_data);
   }
   return nullptr;
-}
-
-void EventDataBytes::SwapBytes(std::string &new_bytes) {
-  m_bytes.swap(new_bytes);
 }
 
 llvm::StringRef EventDataReceipt::GetFlavorString() {

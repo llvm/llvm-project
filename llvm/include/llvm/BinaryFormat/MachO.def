@@ -120,5 +120,23 @@ LOAD_COMMAND_STRUCT(fileset_entry_command)
 
 #endif
 
+#ifdef PLATFORM
+// PLATFORM(platform, id, name, build_name, target, tapi_target, marketing)
+PLATFORM(UNKNOWN, 0, unknown, unknown, unknown, unknown, unknown)
+PLATFORM(MACOS, 1, macos, macos, macos, macos, macOS)
+PLATFORM(IOS, 2, ios, ios, ios, ios, iOS)
+PLATFORM(TVOS, 3, tvos, tvos, tvos, tvos, tvOS)
+PLATFORM(WATCHOS, 4, watchos, watchos, watchos, watchos, watchOS)
+PLATFORM(BRIDGEOS, 5, bridgeos, bridgeos, bridgeos, bridgeos, bridgeOS)
+PLATFORM(MACCATALYST, 6, macCatalyst, macCatalyst, ios-macabi, maccatalyst, macCatalyst)
+PLATFORM(IOSSIMULATOR, 7, iossimulator, iossimulator, ios-simulator, ios-simulator, iOS Simulator)
+PLATFORM(TVOSSIMULATOR, 8, tvossimulator, tvossimulator, tvos-simulator, tvos-simulator, tvOS Simulator)
+PLATFORM(WATCHOSSIMULATOR, 9, watchossimulator, watchossimulator, watchos-simulator, watchos-simulator, watchOS Simulator)
+PLATFORM(DRIVERKIT, 10, driverkit, driverkit, driverkit, driverkit, DriverKit)
+PLATFORM(XROS, 11, xros, xros, xros, xros, xrOS)
+PLATFORM(XROS_SIMULATOR, 12, xrsimulator, xrsimulator, xrsimulator, xros-simulator, xrOS Simulator)
+#endif
+
 #undef HANDLE_LOAD_COMMAND
 #undef LOAD_COMMAND_STRUCT
+#undef PLATFORM

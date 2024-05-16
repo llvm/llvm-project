@@ -27,13 +27,13 @@ set(LIBS
   MLIRTransforms
   MLIRTransformUtils
   MLIRTranslateLib
+  MLIRVectorDialect
   MLIRVectorToLLVMPass
   )
 
 add_mlir_library(MLIRGPUTestPasses
   TestGpuMemoryPromotion.cpp
   TestGpuRewrite.cpp
-  TestLowerToNVVM.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/SymbolTable.h"
+#include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
 #include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
@@ -189,7 +191,7 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
   // This marks values of type (2) liveness as "live".
-  lattice->markLive();
+  (void)lattice->markLive();
 }
 
 //===----------------------------------------------------------------------===//

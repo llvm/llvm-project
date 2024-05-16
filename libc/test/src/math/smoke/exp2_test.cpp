@@ -6,21 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-using LIBC_NAMESPACE::testing::tlog;
+using LlvmLibcExp2Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
-DECLARE_SPECIAL_CONSTANTS(double)
-
-TEST(LlvmLibcExp2Test, SpecialNumbers) {
+TEST_F(LlvmLibcExp2Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp2(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp2(neg_inf));

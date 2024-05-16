@@ -56,7 +56,7 @@ typedef struct task {
 typedef struct DEP {
   size_t addr;
   size_t len;
-  int flags;
+  unsigned char flags;
 } dep;
 
 typedef int(* task_entry_t)( int, ptask );

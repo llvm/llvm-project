@@ -16,11 +16,11 @@
 // fixed form character literals on truncated card images, file
 // inclusion, and driving the Fortran source preprocessor.
 
-#include "token-sequence.h"
 #include "flang/Common/Fortran-features.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Parser/token-sequence.h"
 #include <bitset>
 #include <optional>
 #include <string>
@@ -43,6 +43,7 @@ public:
   Messages &messages() { return messages_; }
   const Preprocessor &preprocessor() const { return preprocessor_; }
   Preprocessor &preprocessor() { return preprocessor_; }
+  common::LanguageFeatureControl &features() { return features_; }
 
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;
@@ -68,7 +69,9 @@ public:
   bool IsNextLinePreprocessorDirective() const;
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
+
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
+  const char *IsCompilerDirectiveSentinel(CharBlock) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
@@ -157,7 +160,8 @@ private:
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();
-  void SkipToNextSignificantCharacter();
+  // True when input flowed to a continuation line
+  bool SkipToNextSignificantCharacter();
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
@@ -186,12 +190,15 @@ private:
       const char *) const;
   LineClassification ClassifyLine(const char *) const;
   void SourceFormChange(std::string &&);
+  bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
+  bool SourceLineContinuation(TokenSequence &);
 
   Messages &messages_;
   CookedSource &cooked_;
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};
@@ -214,6 +221,7 @@ private:
   bool slashInCurrentStatement_{false};
   bool preventHollerith_{false}; // CHARACTER*4HIMOM not Hollerith
   bool inCharLiteral_{false};
+  bool continuationInCharLiteral_{false};
   bool inPreprocessorDirective_{false};
 
   // In some edge cases of compiler directive continuation lines, it

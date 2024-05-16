@@ -12,6 +12,8 @@
 // CHECK-DAG: @cabs(complex<f64>) -> f64
 // CHECK-DAG: @carg(complex<f64>) -> f64
 // CHECK-DAG: @clog(complex<f64>) -> complex<f64>
+// CHECK-DAG: @ctanf(complex<f32>) -> complex<f32>
+// CHECK-DAG: @ctan(complex<f64>) -> complex<f64>
 
 // CHECK-LABEL: func @cpow_caller
 // CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
@@ -117,6 +119,18 @@ func.func @clog_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<
   %float_result = complex.log %float : complex<f32>
   // CHECK: %[[DOUBLE_RESULT:.*]] = call @clog(%[[DOUBLE]])
   %double_result = complex.log %double : complex<f64>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : complex<f32>, complex<f64>
+}
+
+// CHECK-LABEL: func @ctan_caller
+// CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
+// CHECK-SAME: %[[DOUBLE:.*]]: complex<f64>
+func.func @ctan_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<f32>, complex<f64>)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @ctanf(%[[FLOAT]])
+  %float_result = complex.tan %float : complex<f32>
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @ctan(%[[DOUBLE]])
+  %double_result = complex.tan %double : complex<f64>
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : complex<f32>, complex<f64>
 }

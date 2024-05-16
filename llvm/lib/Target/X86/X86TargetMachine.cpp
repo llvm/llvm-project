@@ -71,12 +71,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
-  initializeX86PreAMXConfigPassPass(PR);
   initializeX86PreTileConfigPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
-  initializeEvexToVexInstPassPass(PR);
+  initializeCompressEVEXPassPass(PR);
   initializeFixupLEAPassPass(PR);
   initializeFPSPass(PR);
   initializeX86FixupSetCCPassPass(PR);
@@ -103,6 +102,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86FixupInstTuningPassPass(PR);
+  initializeX86FixupVectorConstantsPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -114,6 +115,9 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
+
+  if (TT.getArch() == Triple::x86_64)
+    return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 
@@ -130,12 +134,14 @@ static std::string computeDataLayout(const Triple &TT) {
   Ret += "-p270:32:32-p271:32:32-p272:64:64";
 
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
+  // 128 bit integers are not specified in the 32-bit ABIs but are used
+  // internally for lowering f128, so we match the alignment to that.
   if (TT.isArch64Bit() || TT.isOSWindows() || TT.isOSNaCl())
-    Ret += "-i64:64";
+    Ret += "-i64:64-i128:128";
   else if (TT.isOSIAMCU())
     Ret += "-i64:32-f64:32";
   else
-    Ret += "-f64:32:64";
+    Ret += "-i128:128-f64:32:64";
 
   // Some ABIs align long double to 128 bits, others to 32.
   if (TT.isOSNaCl() || TT.isOSIAMCU())
@@ -205,8 +211,9 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
 }
 
 static CodeModel::Model
-getEffectiveX86CodeModel(std::optional<CodeModel::Model> CM, bool JIT,
-                         bool Is64Bit) {
+getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
+                         bool JIT) {
+  bool Is64Bit = TT.getArch() == Triple::x86_64;
   if (CM) {
     if (*CM == CodeModel::Tiny)
       report_fatal_error("Target does not support the tiny CodeModel", false);
@@ -228,7 +235,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(TT, JIT, RM),
-          getEffectiveX86CodeModel(CM, JIT, TT.getArch() == Triple::x86_64),
+          getEffectiveX86CodeModel(TT, CM, JIT),
           OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
@@ -434,7 +441,7 @@ MachineFunctionInfo *X86TargetMachine::createMachineFunctionInfo(
 }
 
 void X86PassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
@@ -574,7 +581,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }
-  addPass(createX86EvexToVexInsts());
+  addPass(createX86CompressEVEXPass());
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
   addPass(createX86InsertX87waitPass());

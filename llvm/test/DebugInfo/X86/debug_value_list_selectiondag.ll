@@ -2,6 +2,11 @@
 ; RUN: llc %s -fast-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,FAST %s
 ; RUN: llc %s -global-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,GLOBAL %s
 
+;; Run with experimental debuginfo iterators.
+; RUN: llc --try-experimental-debuginfo-iterators %s -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,DAG %s
+; RUN: llc --try-experimental-debuginfo-iterators %s -fast-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,FAST %s
+; RUN: llc --try-experimental-debuginfo-iterators %s -global-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,GLOBAL %s
+
 ;; Run with assignment tracking enabled (use sed to add the module flag).
 ; RUN: sed 's/;Uncomment-with-sed//g' < %s \
 ; RUN: | llc -global-isel=false -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - \

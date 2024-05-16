@@ -17,11 +17,11 @@ define i41 @shl_0(i41 %X) {
   ret i41 %B
 }
 
-define <2 x i41> @shl_0_vec_undef_elt(<2 x i41> %X) {
-; CHECK-LABEL: @shl_0_vec_undef_elt(
+define <2 x i41> @shl_0_vec_poison_elt(<2 x i41> %X) {
+; CHECK-LABEL: @shl_0_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i41> zeroinitializer
 ;
-  %B = shl <2 x i41> <i41 0, i41 undef>, %X
+  %B = shl <2 x i41> <i41 0, i41 poison>, %X
   ret <2 x i41> %B
 }
 
@@ -41,11 +41,11 @@ define i39 @ashr_0(i39 %X) {
   ret i39 %B
 }
 
-define <2 x i141> @ashr_0_vec_undef_elt(<2 x i141> %X) {
-; CHECK-LABEL: @ashr_0_vec_undef_elt(
+define <2 x i141> @ashr_0_vec_poison_elt(<2 x i141> %X) {
+; CHECK-LABEL: @ashr_0_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i141> zeroinitializer
 ;
-  %B = shl <2 x i141> <i141 undef, i141 0>, %X
+  %B = shl <2 x i141> <i141 poison, i141 0>, %X
   ret <2 x i141> %B
 }
 
@@ -113,11 +113,11 @@ define i32 @ashr_all_ones(i32 %A) {
   ret i32 %B
 }
 
-define <3 x i8> @ashr_all_ones_vec_with_undef_elts(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @ashr_all_ones_vec_with_undef_elts(
+define <3 x i8> @ashr_all_ones_vec_with_poison_elts(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @ashr_all_ones_vec_with_poison_elts(
 ; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 -1, i8 -1>
 ;
-  %sh = ashr <3 x i8> <i8 undef, i8 -1, i8 undef>, %y
+  %sh = ashr <3 x i8> <i8 poison, i8 -1, i8 poison>, %y
   ret <3 x i8> %sh
 }
 
@@ -306,11 +306,22 @@ define <2 x i7> @all_ones_left_right_splat(<2 x i7> %x) {
 
 ; Poison could propagate, but undef must not.
 
-define <3 x i7> @all_ones_left_right_splat_poison_undef_elt(<3 x i7> %x) {
-; CHECK-LABEL: @all_ones_left_right_splat_poison_undef_elt(
+define <3 x i7> @all_ones_left_right_splat_undef_elt(<3 x i7> %x) {
+; CHECK-LABEL: @all_ones_left_right_splat_undef_elt(
+; CHECK-NEXT:    [[LEFT:%.*]] = shl <3 x i7> <i7 undef, i7 -1, i7 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[RIGHT:%.*]] = ashr <3 x i7> [[LEFT]], [[X]]
+; CHECK-NEXT:    ret <3 x i7> [[RIGHT]]
+;
+  %left = shl <3 x i7> <i7 undef, i7 -1, i7 undef>, %x
+  %right = ashr <3 x i7> %left, %x
+  ret <3 x i7> %right
+}
+
+define <3 x i7> @all_ones_left_right_splat_poison__elt(<3 x i7> %x) {
+; CHECK-LABEL: @all_ones_left_right_splat_poison__elt(
 ; CHECK-NEXT:    ret <3 x i7> <i7 -1, i7 -1, i7 -1>
 ;
-  %left = shl <3 x i7> <i7 poison, i7 -1, i7 undef>, %x
+  %left = shl <3 x i7> <i7 poison, i7 -1, i7 poison>, %x
   %right = ashr <3 x i7> %left, %x
   ret <3 x i7> %right
 }
@@ -347,7 +358,7 @@ define <vscale x 4 x i16> @lshr_scalable_overshift(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: @lshr_scalable_overshift(
 ; CHECK-NEXT:    ret <vscale x 4 x i16> poison
 ;
-  %vc = lshr <vscale x 4 x i16> %va, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 16, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
+  %vc = lshr <vscale x 4 x i16> %va, splat (i16 16)
   ret <vscale x 4 x i16> %vc
 }
 

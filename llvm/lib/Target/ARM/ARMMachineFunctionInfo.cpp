@@ -13,6 +13,18 @@ using namespace llvm;
 
 void ARMFunctionInfo::anchor() {}
 
+yaml::ARMFunctionInfo::ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI)
+    : LRSpilled(MFI.isLRSpilled()) {}
+
+void yaml::ARMFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
+  MappingTraits<ARMFunctionInfo>::mapping(YamlIO, *this);
+}
+
+void ARMFunctionInfo::initializeBaseYamlFields(
+    const yaml::ARMFunctionInfo &YamlMFI) {
+  LRSpilled = YamlMFI.LRSpilled;
+}
+
 static bool GetBranchTargetEnforcement(const Function &F,
                                        const ARMSubtarget *Subtarget) {
   if (!Subtarget->isMClass() || !Subtarget->hasV7Ops())
@@ -27,9 +39,8 @@ static bool GetBranchTargetEnforcement(const Function &F,
 
   const StringRef BTIEnable =
       F.getFnAttribute("branch-target-enforcement").getValueAsString();
-  assert(BTIEnable.equals_insensitive("true") ||
-         BTIEnable.equals_insensitive("false"));
-  return BTIEnable.equals_insensitive("true");
+  assert(BTIEnable == "true" || BTIEnable == "false");
+  return BTIEnable == "true";
 }
 
 // The pair returns values for the ARMFunctionInfo members
@@ -50,13 +61,13 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
   }
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
+  if (Scope == "none")
     return {false, false};
 
-  if (Scope.equals("all"))
+  if (Scope == "all")
     return {true, true};
 
-  assert(Scope.equals("non-leaf"));
+  assert(Scope == "non-leaf");
   return {true, false};
 }
 

@@ -13,11 +13,13 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Threading.h"
 
 using namespace lldb;
@@ -26,6 +28,35 @@ using namespace lldb_private::formatters;
 
 typedef std::unique_ptr<Language> LanguageUP;
 typedef std::map<lldb::LanguageType, LanguageUP> LanguagesMap;
+
+#define LLDB_PROPERTIES_language
+#include "TargetProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_language
+#include "TargetPropertiesEnum.inc"
+};
+
+LanguageProperties &Language::GetGlobalLanguageProperties() {
+  static LanguageProperties g_settings;
+  return g_settings;
+}
+
+llvm::StringRef LanguageProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("language");
+  return g_setting_name;
+}
+
+LanguageProperties::LanguageProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+  m_collection_sp->Initialize(g_language_properties);
+}
+
+bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {
+  const uint32_t idx = ePropertyEnableFilterForLineBreakpoints;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_language_properties[idx].default_uint_value != 0);
+}
 
 static LanguagesMap &GetLanguagesMap() {
   static LanguagesMap *g_map = nullptr;
@@ -434,12 +465,10 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   Target *target = exe_scope->CalculateTarget().get();
   if (target) {
     const auto &images(target->GetImages());
-    ConstString cs_key(key);
-    llvm::DenseSet<SymbolFile *> searched_sym_files;
-    TypeList matches;
-    images.FindTypes(nullptr, cs_key, false, UINT32_MAX, searched_sym_files,
-                     matches);
-    for (const auto &match : matches.Types()) {
+    TypeQuery query(key);
+    TypeResults type_results;
+    images.FindTypes(nullptr, query, type_results);
+    for (const auto &match : type_results.GetTypeMap().Types()) {
       if (match) {
         CompilerType compiler_type(match->GetFullCompilerType());
         compiler_type = AdjustForInclusion(compiler_type);
@@ -504,3 +533,36 @@ Language::Language() = default;
 
 // Destructor
 Language::~Language() = default;
+
+SourceLanguage::SourceLanguage(lldb::LanguageType language_type) {
+  auto lname =
+      llvm::dwarf::toDW_LNAME((llvm::dwarf::SourceLanguage)language_type);
+  if (!lname)
+    return;
+  name = lname->first;
+  version = lname->second;
+}
+
+lldb::LanguageType SourceLanguage::AsLanguageType() const {
+  if (auto lang = llvm::dwarf::toDW_LANG((llvm::dwarf::SourceLanguageName)name,
+                                         version))
+    return (lldb::LanguageType)*lang;
+  return lldb::eLanguageTypeUnknown;
+}
+
+llvm::StringRef SourceLanguage::GetDescription() const {
+  LanguageType type = AsLanguageType();
+  if (type)
+    return Language::GetNameForLanguageType(type);
+  return llvm::dwarf::LanguageDescription(
+      (llvm::dwarf::SourceLanguageName)name);
+}
+bool SourceLanguage::IsC() const { return name == llvm::dwarf::DW_LNAME_C; }
+
+bool SourceLanguage::IsObjC() const {
+  return name == llvm::dwarf::DW_LNAME_ObjC;
+}
+
+bool SourceLanguage::IsCPlusPlus() const {
+  return name == llvm::dwarf::DW_LNAME_C_plus_plus;
+}

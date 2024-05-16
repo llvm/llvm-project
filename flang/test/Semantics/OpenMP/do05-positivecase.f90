@@ -33,4 +33,13 @@ program omp_do
   !$omp end do
   !$omp end parallel
 
+  !$omp parallel private(i)
+  !DEF: /omp_do/OtherConstruct3/i (OmpPrivate) HostAssoc INTEGER(4)
+  do i=1,10
+     !$omp single
+     print *, "hello"
+     !$omp end single
+  end do
+  !$omp end parallel
+
 end program omp_do

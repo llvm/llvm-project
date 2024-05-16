@@ -15,11 +15,12 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
-#include "mlir/Support/LLVM.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <bitset>
 #include <cassert>
 
 namespace mlir {
@@ -36,9 +37,11 @@ namespace presburger {
 /// This class only works for the types MPInt and Fraction, since the method
 /// implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
-template<typename T>
+template <typename T>
 class Matrix {
-static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
+  static_assert(std::is_same_v<T, MPInt> || std::is_same_v<T, Fraction>,
+                "T must be MPInt or Fraction.");
+
 public:
   Matrix() = delete;
 
@@ -69,9 +72,9 @@ public:
 
   T &operator()(unsigned row, unsigned column) { return at(row, column); }
 
-  T operator()(unsigned row, unsigned column) const {
-    return at(row, column);
-  }
+  T operator()(unsigned row, unsigned column) const { return at(row, column); }
+
+  bool operator==(const Matrix<T> &m) const;
 
   /// Swap the given columns.
   void swapColumns(unsigned column, unsigned otherColumn);
@@ -142,6 +145,9 @@ public:
   /// Add `scale` multiples of the rowVec row to the specified row.
   void addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale);
 
+  /// Multiply the specified row by a factor of `scale`.
+  void scaleRow(unsigned row, const T &scale);
+
   /// Add `scale` multiples of the source column to the target column.
   void addToColumn(unsigned sourceColumn, unsigned targetColumn,
                    const T &scale);
@@ -155,6 +161,9 @@ public:
 
   /// Negate the specified row.
   void negateRow(unsigned row);
+
+  /// Negate the entire matrix.
+  void negateMatrix();
 
   /// The given vector is interpreted as a row vector v. Post-multiply v with
   /// this matrix, say M, and return vM.
@@ -181,6 +190,22 @@ public:
   /// `elems` must be equal to the number of columns.
   unsigned appendExtraRow(ArrayRef<T> elems);
 
+  // Transpose the matrix without modifying it.
+  Matrix<T> transpose() const;
+
+  // Copy the cells in the intersection of
+  // the rows between `fromRows` and `toRows` and
+  // the columns between `fromColumns` and `toColumns`, both inclusive.
+  Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
+                         unsigned toColumn) const;
+
+  /// Split the rows of a matrix into two matrices according to which bits are
+  /// 1 and which are 0 in a given bitset.
+  ///
+  /// The first matrix returned has the rows corresponding to 1 and the second
+  /// corresponding to 2.
+  std::pair<Matrix<T>, Matrix<T>> splitByBitset(ArrayRef<int> indicator);
+
   /// Print the matrix.
   void print(raw_ostream &os) const;
   void dump() const;
@@ -189,7 +214,25 @@ public:
   /// invariants satisfied.
   bool hasConsistentState() const;
 
-private:
+  /// Move the columns in the source range [srcPos, srcPos + num) to the
+  /// specified destination [dstPos, dstPos + num), while moving the columns
+  /// adjacent to the source range to the left/right of the shifted columns.
+  ///
+  /// When moving the source columns right (i.e. dstPos > srcPos), columns that
+  /// were at positions [0, srcPos) and [dstPos + num, nCols) will stay where
+  /// they are; columns that were at positions [srcPos, srcPos + num) will be
+  /// moved to [dstPos, dstPos + num); and columns that were at positions
+  /// [srcPos + num, dstPos + num) will be moved to [srcPos, dstPos).
+  /// Equivalently, the columns [srcPos + num, dstPos + num) are interchanged
+  /// with [srcPos, srcPos + num).
+  /// For example, if m = |0 1 2 3 4 5| then:
+  /// m.moveColumns(1, 3, 2) will result in m = |0 4 1 2 3 5|; or
+  /// m.moveColumns(1, 2, 4) will result in m = |0 3 4 5 1 2|.
+  ///
+  /// The left shift operation (i.e. dstPos < srcPos) works in a similar way.
+  void moveColumns(unsigned srcPos, unsigned num, unsigned dstPos);
+
+protected:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
   /// first nColumns columns are currently in use, and the remaining are
@@ -201,24 +244,20 @@ private:
   SmallVector<T, 16> data;
 };
 
+extern template class Matrix<MPInt>;
+extern template class Matrix<Fraction>;
+
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).
-class IntMatrix : public Matrix<MPInt>
-{
+class IntMatrix : public Matrix<MPInt> {
 public:
   IntMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
-            unsigned reservedColumns = 0) :
-    Matrix<MPInt>(rows, columns, reservedRows, reservedColumns) {};
+            unsigned reservedColumns = 0)
+      : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
 
-  IntMatrix(Matrix<MPInt> m) :
-    Matrix<MPInt>(m.getNumRows(), m.getNumColumns(), m.getNumReservedRows(), m.getNumReservedColumns())
-  {
-    for (unsigned i = 0; i < m.getNumRows(); i++)
-      for (unsigned j = 0; j < m.getNumColumns(); j++)
-        at(i, j) = m(i, j);
-  };
-  
+  IntMatrix(Matrix<MPInt> m) : Matrix<MPInt>(std::move(m)){};
+
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
 
@@ -241,6 +280,52 @@ public:
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
 
+  // Compute the determinant of the matrix (cubic time).
+  // Stores the integer inverse of the matrix in the pointer
+  // passed (if any). The pointer is unchanged if the inverse
+  // does not exist, which happens iff det = 0.
+  // For a matrix M, the integer inverse is the matrix M' such that
+  // M x M' = M'  M = det(M) x I.
+  // Assert-fails if the matrix is not square.
+  MPInt determinant(IntMatrix *inverse = nullptr) const;
+};
+
+// An inherited class for rational matrices, with no new data attributes.
+// This class is for functionality that only applies to matrices of fractions.
+class FracMatrix : public Matrix<Fraction> {
+public:
+  FracMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
+             unsigned reservedColumns = 0)
+      : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns){};
+
+  FracMatrix(Matrix<Fraction> m) : Matrix<Fraction>(std::move(m)){};
+
+  explicit FracMatrix(IntMatrix m);
+
+  /// Return the identity matrix of the specified dimension.
+  static FracMatrix identity(unsigned dimension);
+
+  // Compute the determinant of the matrix (cubic time).
+  // Stores the inverse of the matrix in the pointer
+  // passed (if any). The pointer is unchanged if the inverse
+  // does not exist, which happens iff det = 0.
+  // Assert-fails if the matrix is not square.
+  Fraction determinant(FracMatrix *inverse = nullptr) const;
+
+  // Computes the Gram-Schmidt orthogonalisation
+  // of the rows of matrix (cubic time).
+  // The rows of the matrix must be linearly independent.
+  FracMatrix gramSchmidt() const;
+
+  // Run LLL basis reduction on the matrix, modifying it in-place.
+  // The parameter is what [the original
+  // paper](https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1129_LLL.pdf)
+  // calls `y`, usually 3/4.
+  void LLL(Fraction delta);
+
+  // Multiply each row of the matrix by the LCM of the denominators, thereby
+  // converting it to an integer matrix.
+  IntMatrix normalizeRows() const;
 };
 
 } // namespace presburger

@@ -13,16 +13,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
-#include <numeric>
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <memory>
 #include <optional>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "presburger"
 
@@ -53,6 +67,20 @@ void IntegerRelation::setSpaceExceptLocals(const PresburgerSpace &oSpace) {
   space.insertVar(VarKind::Local, 0, newNumLocals);
 }
 
+void IntegerRelation::setId(VarKind kind, unsigned i, Identifier id) {
+  assert(space.isUsingIds() &&
+         "space must be using identifiers to set an identifier");
+  assert(kind != VarKind::Local && "local variables cannot have identifiers");
+  assert(i < space.getNumVarKind(kind) && "invalid variable index");
+  space.setId(kind, i, id);
+}
+
+ArrayRef<Identifier> IntegerRelation::getIds(VarKind kind) {
+  if (!space.isUsingIds())
+    space.resetIds();
+  return space.getIds(kind);
+}
+
 void IntegerRelation::append(const IntegerRelation &other) {
   assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
 
@@ -80,7 +108,7 @@ bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
-bool IntegerRelation::isPlainEqual(const IntegerRelation &other) const {
+bool IntegerRelation::isObviouslyEqual(const IntegerRelation &other) const {
   if (!space.isEqual(other.getSpace()))
     return false;
   if (getNumEqualities() != other.getNumEqualities())
@@ -436,6 +464,12 @@ void IntegerRelation::swapVar(unsigned posA, unsigned posB) {
   if (posA == posB)
     return;
 
+  VarKind kindA = space.getVarKindAt(posA);
+  VarKind kindB = space.getVarKindAt(posB);
+  unsigned relativePosA = posA - getVarKindOffset(kindA);
+  unsigned relativePosB = posB - getVarKindOffset(kindB);
+  space.swapVar(kindA, kindB, relativePosA, relativePosB);
+
   inequalities.swapColumns(posA, posB);
   equalities.swapColumns(posA, posB);
 }
@@ -699,6 +733,10 @@ bool IntegerRelation::isEmpty() const {
       return true;
   }
   return false;
+}
+
+bool IntegerRelation::isObviouslyEmpty() const {
+  return isEmptyByGCDTest() || hasInvalidConstraint();
 }
 
 // Runs the GCD test on all equality constraints. Returns 'true' if this test
@@ -1079,6 +1117,57 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   return posLimit - posStart;
 }
 
+bool IntegerRelation::gaussianEliminate() {
+  gcdTightenInequalities();
+  unsigned firstVar = 0, vars = getNumVars();
+  unsigned nowDone, eqs, pivotRow;
+  for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
+    // Finds the first non-empty column.
+    for (; firstVar < vars; ++firstVar) {
+      if (!findConstraintWithNonZeroAt(firstVar, true, &pivotRow))
+        continue;
+      break;
+    }
+    // The matrix has been normalized to row echelon form.
+    if (firstVar >= vars)
+      break;
+
+    // The first pivot row found is below where it should currently be placed.
+    if (pivotRow > nowDone) {
+      equalities.swapRows(pivotRow, nowDone);
+      pivotRow = nowDone;
+    }
+
+    // Normalize all lower equations and all inequalities.
+    for (unsigned i = nowDone + 1; i < eqs; ++i) {
+      eliminateFromConstraint(this, i, pivotRow, firstVar, 0, true);
+      equalities.normalizeRow(i);
+    }
+    for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
+      eliminateFromConstraint(this, i, pivotRow, firstVar, 0, false);
+      inequalities.normalizeRow(i);
+    }
+    gcdTightenInequalities();
+  }
+
+  // No redundant rows.
+  if (nowDone == eqs)
+    return false;
+
+  // Check to see if the redundant rows constant is zero, a non-zero value means
+  // the set is empty.
+  for (unsigned i = nowDone; i < eqs; ++i) {
+    if (atEq(i, vars) == 0)
+      continue;
+
+    *this = getEmpty(getSpace());
+    return true;
+  }
+  // Eliminate rows that are confined to be all zeros.
+  removeEqualityRange(nowDone, eqs);
+  return true;
+}
+
 // A more complex check to eliminate redundant inequalities. Uses FourierMotzkin
 // to check if a constraint is redundant.
 void IntegerRelation::removeRedundantInequalities() {
@@ -1212,6 +1301,40 @@ void IntegerRelation::eliminateRedundantLocalVar(unsigned posA, unsigned posB) {
   removeVar(posB);
 }
 
+/// mergeAndAlignSymbols's implementation can be broken down into two steps:
+/// 1. Merge and align identifiers into `other` from `this. If an identifier
+/// from `this` exists in `other` then we align it. Otherwise, we assume it is a
+/// new identifier and insert it into `other` in the same position as `this`.
+/// 2. Add identifiers that are in `other` but not `this to `this`.
+void IntegerRelation::mergeAndAlignSymbols(IntegerRelation &other) {
+  assert(space.isUsingIds() && other.space.isUsingIds() &&
+         "both relations need to have identifers to merge and align");
+
+  unsigned i = 0;
+  for (const Identifier identifier : space.getIds(VarKind::Symbol)) {
+    // Search in `other` starting at position `i` since the left of `i` is
+    // aligned.
+    const Identifier *findBegin =
+        other.space.getIds(VarKind::Symbol).begin() + i;
+    const Identifier *findEnd = other.space.getIds(VarKind::Symbol).end();
+    const Identifier *itr = std::find(findBegin, findEnd, identifier);
+    if (itr != findEnd) {
+      other.swapVar(other.getVarKindOffset(VarKind::Symbol) + i,
+                    other.getVarKindOffset(VarKind::Symbol) + i +
+                        std::distance(findBegin, itr));
+    } else {
+      other.insertVar(VarKind::Symbol, i);
+      other.space.setId(VarKind::Symbol, i, identifier);
+    }
+    ++i;
+  }
+
+  for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; ++i) {
+    insertVar(VarKind::Symbol, i);
+    space.setId(VarKind::Symbol, i, other.space.getId(VarKind::Symbol, i));
+  }
+}
+
 /// Adds additional local ids to the sets such that they both have the union
 /// of the local ids in each set, without changing the set of points that
 /// lie in `this` and `other`.
@@ -1269,6 +1392,20 @@ void IntegerRelation::removeDuplicateDivs() {
   divs.removeDuplicateDivs(merge);
 }
 
+void IntegerRelation::simplify() {
+  bool changed = true;
+  // Repeat until we reach a fixed point.
+  while (changed) {
+    if (isObviouslyEmpty())
+      return;
+    changed = false;
+    normalizeConstraintsByGCD();
+    changed |= gaussianEliminate();
+    changed |= removeDuplicateConstraints();
+  }
+  // Current set is not empty.
+}
+
 /// Removes local variables using equalities. Each equality is checked if it
 /// can be reduced to the form: `e = affine-expr`, where `e` is a local
 /// variable and `affine-expr` is an affine expression not containing `e`.
@@ -1320,28 +1457,22 @@ void IntegerRelation::removeRedundantLocalVars() {
 void IntegerRelation::convertVarKind(VarKind srcKind, unsigned varStart,
                                      unsigned varLimit, VarKind dstKind,
                                      unsigned pos) {
-  assert(varLimit <= getNumVarKind(srcKind) && "Invalid id range");
+  assert(varLimit <= getNumVarKind(srcKind) && "invalid id range");
 
   if (varStart >= varLimit)
     return;
 
-  // Append new local variables corresponding to the dimensions to be converted.
+  unsigned srcOffset = getVarKindOffset(srcKind);
+  unsigned dstOffset = getVarKindOffset(dstKind);
   unsigned convertCount = varLimit - varStart;
-  unsigned newVarsBegin = insertVar(dstKind, pos, convertCount);
+  int forwardMoveOffset = dstOffset > srcOffset ? -convertCount : 0;
 
-  // Swap the new local variables with dimensions.
-  //
-  // Essentially, this moves the information corresponding to the specified ids
-  // of kind `srcKind` to the `convertCount` newly created ids of kind
-  // `dstKind`. In particular, this moves the columns in the constraint
-  // matrices, and zeros out the initially occupied columns (because the newly
-  // created ids we're swapping with were zero-initialized).
-  unsigned offset = getVarKindOffset(srcKind);
-  for (unsigned i = 0; i < convertCount; ++i)
-    swapVar(offset + varStart + i, newVarsBegin + i);
+  equalities.moveColumns(srcOffset + varStart, convertCount,
+                         dstOffset + pos + forwardMoveOffset);
+  inequalities.moveColumns(srcOffset + varStart, convertCount,
+                           dstOffset + pos + forwardMoveOffset);
 
-  // Complete the move by deleting the initially occupied columns.
-  removeVarRange(srcKind, varStart, varLimit);
+  space.convertVarKind(srcKind, varStart, varLimit - varStart, dstKind, pos);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos,
@@ -2216,6 +2347,68 @@ IntegerPolyhedron IntegerRelation::getDomainSet() const {
   return IntegerPolyhedron(std::move(copyRel));
 }
 
+bool IntegerRelation::removeDuplicateConstraints() {
+  bool changed = false;
+  SmallDenseMap<ArrayRef<MPInt>, unsigned> hashTable;
+  unsigned ineqs = getNumInequalities(), cols = getNumCols();
+
+  if (ineqs <= 1)
+    return changed;
+
+  // Check if the non-constant part of the constraint is the same.
+  ArrayRef<MPInt> row = getInequality(0).drop_back();
+  hashTable.insert({row, 0});
+  for (unsigned k = 1; k < ineqs; ++k) {
+    row = getInequality(k).drop_back();
+    if (!hashTable.contains(row)) {
+      hashTable.insert({row, k});
+      continue;
+    }
+
+    // For identical cases, keep only the smaller part of the constant term.
+    unsigned l = hashTable[row];
+    changed = true;
+    if (atIneq(k, cols - 1) <= atIneq(l, cols - 1))
+      inequalities.swapRows(k, l);
+    removeInequality(k);
+    --k;
+    --ineqs;
+  }
+
+  // Check the neg form of each inequality, need an extra vector to store it.
+  SmallVector<MPInt> negIneq(cols - 1);
+  for (unsigned k = 0; k < ineqs; ++k) {
+    row = getInequality(k).drop_back();
+    negIneq.assign(row.begin(), row.end());
+    for (MPInt &ele : negIneq)
+      ele = -ele;
+    if (!hashTable.contains(negIneq))
+      continue;
+
+    // For cases where the neg is the same as other inequalities, check that the
+    // sum of their constant terms is positive.
+    unsigned l = hashTable[row];
+    auto sum = atIneq(l, cols - 1) + atIneq(k, cols - 1);
+    if (sum > 0 || l == k)
+      continue;
+
+    // A sum of constant terms equal to zero combines two inequalities into one
+    // equation, less than zero means the set is empty.
+    changed = true;
+    if (k < l)
+      std::swap(l, k);
+    if (sum == 0) {
+      addEquality(getInequality(k));
+      removeInequality(k);
+      removeInequality(l);
+    } else
+      *this = getEmpty(getSpace());
+    break;
+  }
+
+  return changed;
+}
+
 IntegerPolyhedron IntegerRelation::getRangeSet() const {
   IntegerRelation copyRel = *this;
 
@@ -2302,6 +2495,90 @@ void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);
   os << getNumConstraints() << " constraints\n";
+}
+
+void IntegerRelation::removeTrivialEqualities() {
+  for (int i = getNumEqualities() - 1; i >= 0; --i)
+    if (rangeIsZero(getEquality(i)))
+      removeEquality(i);
+}
+
+bool IntegerRelation::isFullDim() {
+  if (getNumVars() == 0)
+    return true;
+  if (isEmpty())
+    return false;
+
+  // If there is a non-trivial equality, the space cannot be full-dimensional.
+  removeTrivialEqualities();
+  if (getNumEqualities() > 0)
+    return false;
+
+  // The polytope is full-dimensional iff it is not flat along any of the
+  // inequality directions.
+  Simplex simplex(*this);
+  return llvm::none_of(llvm::seq<int>(getNumInequalities()), [&](int i) {
+    return simplex.isFlatAlong(getInequality(i));
+  });
+}
+
+void IntegerRelation::mergeAndCompose(const IntegerRelation &other) {
+  assert(getNumDomainVars() == other.getNumRangeVars() &&
+         "Domain of this and range of other do not match");
+  // assert(std::equal(values.begin(), values.begin() +
+  // other.getNumDomainVars(),
+  //                   otherValues.begin() + other.getNumDomainVars()) &&
+  //        "Domain of this and range of other do not match");
+
+  IntegerRelation result = other;
+
+  const unsigned thisDomain = getNumDomainVars();
+  const unsigned thisRange = getNumRangeVars();
+  const unsigned otherDomain = other.getNumDomainVars();
+  const unsigned otherRange = other.getNumRangeVars();
+
+  // Add dimension variables temporarily to merge symbol and local vars.
+  // Convert `this` from
+  //    [thisDomain] -> [thisRange]
+  // to
+  //    [otherDomain thisDomain] -> [otherRange thisRange].
+  // and `result` from
+  //    [otherDomain] -> [otherRange]
+  // to
+  //    [otherDomain thisDomain] -> [otherRange thisRange]
+  insertVar(VarKind::Domain, 0, otherDomain);
+  insertVar(VarKind::Range, 0, otherRange);
+  result.insertVar(VarKind::Domain, otherDomain, thisDomain);
+  result.insertVar(VarKind::Range, otherRange, thisRange);
+
+  // Merge symbol and local variables.
+  mergeAndAlignSymbols(result);
+  mergeLocalVars(result);
+
+  // Convert `result` from [otherDomain thisDomain] -> [otherRange thisRange] to
+  //                       [otherDomain] -> [thisRange]
+  result.removeVarRange(VarKind::Domain, otherDomain, otherDomain + thisDomain);
+  result.convertToLocal(VarKind::Range, 0, otherRange);
+  // Convert `this` from [otherDomain thisDomain] -> [otherRange thisRange] to
+  //                     [otherDomain] -> [thisRange]
+  convertToLocal(VarKind::Domain, otherDomain, otherDomain + thisDomain);
+  removeVarRange(VarKind::Range, 0, otherRange);
+
+  // Add and match domain of `result` to domain of `this`.
+  for (unsigned i = 0, e = result.getNumDomainVars(); i < e; ++i)
+    if (result.getSpace().getId(VarKind::Domain, i).hasValue())
+      space.setId(VarKind::Domain, i,
+                  result.getSpace().getId(VarKind::Domain, i));
+  // Add and match range of `this` to range of `result`.
+  for (unsigned i = 0, e = getNumRangeVars(); i < e; ++i)
+    if (space.getId(VarKind::Range, i).hasValue())
+      result.space.setId(VarKind::Range, i, space.getId(VarKind::Range, i));
+
+  // Append `this` to `result` and simplify constraints.
+  result.append(*this);
+  result.removeRedundantLocalVars();
+
+  *this = result;
 }
 
 void IntegerRelation::print(raw_ostream &os) const {

@@ -1858,8 +1858,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
     }
 
     if (KMP_MASTER_TID(tid) && __kmp_tasking_mode != tskm_immediate_exec)
-      // use 0 to only setup the current team if nthreads > 1
-      __kmp_task_team_setup(this_thr, team, 0);
+      __kmp_task_team_setup(this_thr, team);
 
     if (cancellable) {
       cancelled = __kmp_linear_barrier_gather_cancellable(
@@ -2042,7 +2041,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
             this_thr->th.th_task_team->tt.tt_hidden_helper_task_encountered ==
                 TRUE);
         __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
-        __kmp_task_team_setup(this_thr, team, 0);
+        __kmp_task_team_setup(this_thr, team);
 
 #if USE_ITT_BUILD
         if (__itt_sync_create_ptr || KMP_ITT_DEBUG)
@@ -2243,9 +2242,7 @@ void __kmp_join_barrier(int gtid) {
                   __kmp_gtid_from_thread(this_thr), team_id,
                   team->t.t_task_team[this_thr->th.th_task_state],
                   this_thr->th.th_task_team));
-    if (this_thr->th.th_task_team)
-      KMP_DEBUG_ASSERT(this_thr->th.th_task_team ==
-                       team->t.t_task_team[this_thr->th.th_task_state]);
+    KMP_DEBUG_ASSERT_TASKTEAM_INVARIANT(team, this_thr);
   }
 #endif /* KMP_DEBUG */
 
@@ -2403,11 +2400,11 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #if USE_ITT_BUILD
   void *itt_sync_obj = NULL;
 #endif /* USE_ITT_BUILD */
+#ifdef KMP_DEBUG
   if (team)
-
-  KA_TRACE(10, ("__kmp_fork_barrier: T#%d(%d:%d) has arrived\n", gtid,
-                (team != NULL) ? team->t.t_id : -1, tid));
-
+    KA_TRACE(10, ("__kmp_fork_barrier: T#%d(%d:%d) has arrived\n", gtid,
+                  (team != NULL) ? team->t.t_id : -1, tid));
+#endif
   // th_team pointer only valid for primary thread here
   if (KMP_MASTER_TID(tid)) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
@@ -2440,10 +2437,8 @@ void __kmp_fork_barrier(int gtid, int tid) {
     }
 #endif
 
-    if (__kmp_tasking_mode != tskm_immediate_exec) {
-      // 0 indicates setup current task team if nthreads > 1
-      __kmp_task_team_setup(this_thr, team, 0);
-    }
+    if (__kmp_tasking_mode != tskm_immediate_exec)
+      __kmp_task_team_setup(this_thr, team);
 
     /* The primary thread may have changed its blocktime between join barrier
        and fork barrier. Copy the blocktime info to the thread, where

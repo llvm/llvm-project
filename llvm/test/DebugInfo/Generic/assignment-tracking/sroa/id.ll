@@ -1,4 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - | FileCheck %s
 
 ;; Check that multiple dbg.assign intrinsics linked to a store that is getting
 ;; split (or at least that is touched by SROA, causing a replacement store to
@@ -51,7 +52,7 @@ entry:
   call void @llvm.dbg.assign(metadata i1 undef, metadata !20, metadata !DIExpression(), metadata !21, metadata ptr %e, metadata !DIExpression()), !dbg !22
   %agg.tmp.ensured = alloca %class.a, align 1
   %0 = bitcast ptr %e to ptr, !dbg !23
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #4, !dbg !23
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0) #4, !dbg !23
   %1 = load i32, ptr @c, align 4, !dbg !24
   %tobool.not = icmp eq i32 %1, 0, !dbg !24
   br i1 %tobool.not, label %if.else, label %if.then, !dbg !30
@@ -78,12 +79,12 @@ if.end:                                           ; preds = %if.else, %if.then
   call void @llvm.dbg.assign(metadata ptr %agg.tmp.ensured, metadata !41, metadata !DIExpression(), metadata !59, metadata ptr undef, metadata !DIExpression()), !dbg !55
   call void @llvm.dbg.assign(metadata i32 %5, metadata !51, metadata !DIExpression(), metadata !60, metadata ptr undef, metadata !DIExpression()), !dbg !55
   call void @llvm.dbg.assign(metadata ptr %e, metadata !52, metadata !DIExpression(), metadata !61, metadata ptr undef, metadata !DIExpression()), !dbg !55
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0) #4, !dbg !62
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0) #4, !dbg !62
   ret void, !dbg !62
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define linkonce_odr dso_local void @_ZN1aC2EiRf(ptr %this, i32 %0, ptr nonnull align 4 dereferenceable(4) %1) unnamed_addr #2 comdat align 2 !dbg !42 {
@@ -98,7 +99,7 @@ entry:
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3

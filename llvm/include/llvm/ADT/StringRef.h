@@ -128,7 +128,7 @@ namespace llvm {
 
     /// data - Get a pointer to the start of the string (which may not be null
     /// terminated).
-    [[nodiscard]] const char *data() const { return Data; }
+    [[nodiscard]] constexpr const char *data() const { return Data; }
 
     /// empty - Check if the string is empty.
     [[nodiscard]] constexpr bool empty() const { return Length == 0; }
@@ -161,7 +161,8 @@ namespace llvm {
 
     /// equals - Check for string equality, this is more efficient than
     /// compare() when the relative ordering of inequal strings isn't needed.
-    [[nodiscard]] bool equals(StringRef RHS) const {
+    [[nodiscard]] LLVM_DEPRECATED("Use == instead",
+                                  "==") bool equals(StringRef RHS) const {
       return (Length == RHS.Length &&
               compareMemory(Data, RHS.Data, RHS.Length) == 0);
     }
@@ -245,7 +246,7 @@ namespace llvm {
     /// @name Type Conversions
     /// @{
 
-    operator std::string_view() const {
+    constexpr operator std::string_view() const {
       return std::string_view(data(), size());
     }
 
@@ -258,18 +259,12 @@ namespace llvm {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
-    [[nodiscard]] bool startswith(StringRef Prefix) const {
-      return starts_with(Prefix);
+    [[nodiscard]] bool starts_with(char Prefix) const {
+      return !empty() && front() == Prefix;
     }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
     [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use starts_with_insensitive instead",
-        "starts_with_insensitive") bool startswith_insensitive(StringRef Prefix)
-        const {
-      return starts_with_insensitive(Prefix);
-    }
 
     /// Check if this string ends with the given \p Suffix.
     [[nodiscard]] bool ends_with(StringRef Suffix) const {
@@ -277,18 +272,12 @@ namespace llvm {
              compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
                  0;
     }
-    [[nodiscard]] bool endswith(StringRef Suffix) const {
-      return ends_with(Suffix);
+    [[nodiscard]] bool ends_with(char Suffix) const {
+      return !empty() && back() == Suffix;
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
     [[nodiscard]] bool ends_with_insensitive(StringRef Suffix) const;
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use ends_with_insensitive instead",
-        "ends_with_insensitive") bool endswith_insensitive(StringRef Suffix)
-        const {
-      return ends_with_insensitive(Suffix);
-    }
 
     /// @}
     /// @name String Searching
@@ -883,7 +872,11 @@ namespace llvm {
   /// @{
 
   inline bool operator==(StringRef LHS, StringRef RHS) {
-    return LHS.equals(RHS);
+    if (LHS.size() != RHS.size())
+      return false;
+    if (LHS.empty())
+      return true;
+    return ::memcmp(LHS.data(), RHS.data(), LHS.size()) == 0;
   }
 
   inline bool operator!=(StringRef LHS, StringRef RHS) { return !(LHS == RHS); }

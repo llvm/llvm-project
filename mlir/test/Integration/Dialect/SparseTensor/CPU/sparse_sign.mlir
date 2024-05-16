@@ -5,12 +5,12 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=4 enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=4 enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
@@ -79,7 +79,7 @@ module {
   }
 
   // Driver method to call and verify sign kernel.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %du = arith.constant 0.0 : f64
 
@@ -110,11 +110,16 @@ module {
     //
     // Verify the results.
     //
-    // CHECK: ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
+    // CHECK-NEXT: pos[0] : ( 0, 12 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 5, 11, 13, 17, 18, 20, 21, 28, 29, 31 )
+    // CHECK-NEXT: values : ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0 )
+    // CHECK-NEXT: ----
     //
-    %1 = sparse_tensor.values %0 : tensor<?xf64, #SparseVector> to memref<?xf64>
-    %2 = vector.transfer_read %1[%c0], %du: memref<?xf64>, vector<13xf64>
-    vector.print %2 : vector<13xf64>
+    sparse_tensor.print %0 : tensor<?xf64, #SparseVector>
 
     // Release the resources.
     bufferization.dealloc_tensor %sv1 : tensor<?xf64, #SparseVector>

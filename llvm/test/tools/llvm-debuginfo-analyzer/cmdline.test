@@ -70,8 +70,6 @@ HELP-ALL:     =system                  -   Display PDB's MS system elements.
 HELP-ALL:     =typename                -   Include Parameters in templates.
 HELP-ALL:     =underlying              -   Underlying type for type definitions.
 HELP-ALL:     =zero                    -   Zero line numbers.
-HELP-ALL: Color Options:
-HELP-ALL:   This option category has no options.
 HELP-ALL: Compare Options:
 HELP-ALL: These control the view comparison.
 HELP-ALL:   --compare=<value>          - Elements to compare.
@@ -81,8 +79,6 @@ HELP-ALL:     =scopes                  -   Scopes.
 HELP-ALL:     =symbols                 -   Symbols.
 HELP-ALL:     =types                   -   Types.
 HELP-ALL:   --compare-context          - Add the view as compare context.
-HELP-ALL: General options:
-HELP-ALL:   This option category has no options.
 HELP-ALL: Generic Options:
 HELP-ALL:   -h                         - Alias for --help
 HELP-ALL:   --help                     - Display available options (--help-hidden for more)

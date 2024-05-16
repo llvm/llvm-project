@@ -9,15 +9,19 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
+#include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/arg_list.h"
-#include "src/__support/common.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
 
 #include <stddef.h>
+
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#include "src/__support/fixed_point/fx_rep.h"
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 
 namespace LIBC_NAMESPACE {
 namespace printf_core {
@@ -26,11 +30,19 @@ template <typename T> struct int_type_of {
   using type = T;
 };
 template <> struct int_type_of<double> {
-  using type = fputil::FPBits<double>::UIntType;
+  using type = fputil::FPBits<double>::StorageType;
 };
 template <> struct int_type_of<long double> {
-  using type = fputil::FPBits<long double>::UIntType;
+  using type = fputil::FPBits<long double>::StorageType;
 };
+
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+template <typename T>
+struct int_type_of<cpp::enable_if<cpp::is_fixed_point_v<T>, T>> {
+  using type = typename fixed_point::FXRep<T>::StorageType;
+};
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+
 template <typename T> using int_type_of_v = typename int_type_of<T>::type;
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
@@ -139,10 +151,10 @@ public:
         }
       }
 
-      LengthModifier lm = parse_length_modifier(&cur_pos);
-
+      auto [lm, bw] = parse_length_modifier(&cur_pos);
       section.length_modifier = lm;
       section.conv_name = str[cur_pos];
+      section.bit_width = bw;
       switch (str[cur_pos]) {
       case ('%'):
         // Regardless of options, a % conversion is always safe. The standard
@@ -162,6 +174,8 @@ public:
       case ('x'):
       case ('X'):
       case ('u'):
+      case ('b'):
+      case ('B'):
         switch (lm) {
         case (LengthModifier::hh):
         case (LengthModifier::h):
@@ -189,6 +203,21 @@ public:
 
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, ptrdiff_t, conv_index);
           break;
+
+        case (LengthModifier::w):
+        case (LengthModifier::wf):
+          if (bw == 0) {
+            section.has_conv = false;
+          } else if (bw <= INT_WIDTH) {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
+          } else if (bw <= LONG_WIDTH) {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
+          } else if (bw <= LLONG_WIDTH) {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
+          } else {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
+          }
+          break;
         }
         break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -207,6 +236,25 @@ public:
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+      // Capitalization represents sign, but we only need to get the right
+      // bitwidth here so we ignore that.
+      case ('r'):
+      case ('R'):
+        // all fract sizes we support are less than 32 bits, and currently doing
+        // va_args with fixed point types just doesn't work.
+        // TODO: Move to fixed point types once va_args supports it.
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, uint32_t, conv_index);
+        break;
+      case ('k'):
+      case ('K'):
+        if (lm == LengthModifier::l) {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, uint64_t, conv_index);
+        } else {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, uint32_t, conv_index);
+        }
+        break;
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('n'):
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
@@ -274,38 +322,54 @@ private:
   // assumes that str[*local_pos] is inside a format specifier. It returns a
   // LengthModifier with the length modifier it found. It will advance local_pos
   // after the format specifier if one is found.
-  LIBC_INLINE LengthModifier parse_length_modifier(size_t *local_pos) {
+  LIBC_INLINE LengthSpec parse_length_modifier(size_t *local_pos) {
     switch (str[*local_pos]) {
     case ('l'):
       if (str[*local_pos + 1] == 'l') {
         *local_pos += 2;
-        return LengthModifier::ll;
+        return {LengthModifier::ll, 0};
       } else {
         ++*local_pos;
-        return LengthModifier::l;
+        return {LengthModifier::l, 0};
       }
+    case ('w'): {
+      LengthModifier lm;
+      if (str[*local_pos + 1] == 'f') {
+        *local_pos += 2;
+        lm = LengthModifier::wf;
+      } else {
+        ++*local_pos;
+        lm = LengthModifier::w;
+      }
+      if (internal::isdigit(str[*local_pos])) {
+        const auto result = internal::strtointeger<int>(str + *local_pos, 10);
+        *local_pos += result.parsed_len;
+        return {lm, static_cast<size_t>(cpp::max(0, result.value))};
+      }
+      return {lm, 0};
+    }
     case ('h'):
       if (str[*local_pos + 1] == 'h') {
         *local_pos += 2;
-        return LengthModifier::hh;
+        return {LengthModifier::hh, 0};
       } else {
         ++*local_pos;
-        return LengthModifier::h;
+        return {LengthModifier::h, 0};
       }
     case ('L'):
       ++*local_pos;
-      return LengthModifier::L;
+      return {LengthModifier::L, 0};
     case ('j'):
       ++*local_pos;
-      return LengthModifier::j;
+      return {LengthModifier::j, 0};
     case ('z'):
       ++*local_pos;
-      return LengthModifier::z;
+      return {LengthModifier::z, 0};
     case ('t'):
       ++*local_pos;
-      return LengthModifier::t;
+      return {LengthModifier::t, 0};
     default:
-      return LengthModifier::none;
+      return {LengthModifier::none, 0};
     }
   }
 
@@ -400,6 +464,22 @@ private:
       else if (cur_type_desc == type_desc_from_type<long double>())
         args_cur.template next_var<long double>();
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+      // Floating point numbers may be stored separately from the other
+      // arguments.
+      else if (cur_type_desc == type_desc_from_type<short fract>())
+        args_cur.template next_var<short fract>();
+      else if (cur_type_desc == type_desc_from_type<fract>())
+        args_cur.template next_var<fract>();
+      else if (cur_type_desc == type_desc_from_type<long fract>())
+        args_cur.template next_var<long fract>();
+      else if (cur_type_desc == type_desc_from_type<short accum>())
+        args_cur.template next_var<short accum>();
+      else if (cur_type_desc == type_desc_from_type<accum>())
+        args_cur.template next_var<accum>();
+      else if (cur_type_desc == type_desc_from_type<long accum>())
+        args_cur.template next_var<long accum>();
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // pointers may be stored separately from normal values.
       else if (cur_type_desc == type_desc_from_type<void *>())
         args_cur.template next_var<void *>();
@@ -416,7 +496,7 @@ private:
   // the type of index, and returns a TypeDesc describing that type. It does not
   // modify cur_pos.
   LIBC_INLINE TypeDesc get_type_desc(size_t index) {
-    // index mode is assumed, and the indicies start at 1, so an index
+    // index mode is assumed, and the indices start at 1, so an index
     // of 0 is invalid.
     size_t local_pos = 0;
 
@@ -461,7 +541,7 @@ private:
           }
         }
 
-        LengthModifier lm = parse_length_modifier(&local_pos);
+        auto [lm, bw] = parse_length_modifier(&local_pos);
 
         // if we don't have an index for this conversion, then its position is
         // unknown and all this information is irrelevant. The rest of this
@@ -487,6 +567,8 @@ private:
         case ('x'):
         case ('X'):
         case ('u'):
+        case ('b'):
+        case ('B'):
           switch (lm) {
           case (LengthModifier::hh):
           case (LengthModifier::h):
@@ -510,6 +592,18 @@ private:
           case (LengthModifier::t):
             conv_size = type_desc_from_type<ptrdiff_t>();
             break;
+          case (LengthModifier::w):
+          case (LengthModifier::wf):
+            if (bw <= INT_WIDTH) {
+              conv_size = type_desc_from_type<int>();
+            } else if (bw <= LONG_WIDTH) {
+              conv_size = type_desc_from_type<long>();
+            } else if (bw <= LLONG_WIDTH) {
+              conv_size = type_desc_from_type<long long>();
+            } else {
+              conv_size = type_desc_from_type<intmax_t>();
+            }
+            break;
           }
           break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -527,6 +621,22 @@ private:
             conv_size = type_desc_from_type<long double>();
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+        // Capitalization represents sign, but we only need to get the right
+        // bitwidth here so we ignore that.
+        case ('r'):
+        case ('R'):
+          conv_size = type_desc_from_type<uint32_t>();
+          break;
+        case ('k'):
+        case ('K'):
+          if (lm == LengthModifier::l) {
+            conv_size = type_desc_from_type<uint64_t>();
+          } else {
+            conv_size = type_desc_from_type<uint32_t>();
+          }
+          break;
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
         case ('n'):
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT

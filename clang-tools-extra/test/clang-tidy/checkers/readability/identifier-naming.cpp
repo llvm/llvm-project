@@ -11,6 +11,7 @@
 // RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
 // RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \
 // RUN:     readability-identifier-naming.ClassMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.ConceptCase: CamelCase, \
 // RUN:     readability-identifier-naming.ConstantCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.ConstantSuffix: '_CST', \
 // RUN:     readability-identifier-naming.ConstexprFunctionCase: lower_case, \
@@ -107,10 +108,12 @@ USER_NS::object g_s2;
 // NO warnings or fixes expected as USER_NS and object are declared in a header file
 
 SYSTEM_MACRO(var1);
-// NO warnings or fixes expected as var1 is from macro expansion
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global variable 'var1' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}SYSTEM_MACRO(g_var1);
 
 USER_MACRO(var2);
-// NO warnings or fixes expected as var2 is declared in a macro expansion
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for global variable 'var2' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}USER_MACRO(g_var2);
 
 #define BLA int FOO_bar
 BLA;
@@ -250,6 +253,15 @@ class my_derived_class : public virtual my_class {};
 
 class CMyWellNamedClass {};
 // No warning expected as this class is well named.
+
+template<typename t_t>
+concept MyConcept = requires (t_t a_t) { {a_t++}; };
+// No warning expected as this concept is well named.
+
+template<typename t_t>
+concept my_concept_2 = requires (t_t a_t) { {a_t++}; };
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for concept 'my_concept_2'
+// CHECK-FIXES: {{^}}concept MyConcept2 = requires (t_t a_t) { {a_t++}; };{{$}}
 
 template <typename t_t>
 class CMyWellNamedClass2 : public my_class {
@@ -413,7 +425,8 @@ class my_other_templated_class : my_templated_class<  my_class>, private my_deri
 
 template<typename t_t>
 using mysuper_tpl_t = my_other_templated_class  <:: FOO_NS  ::my_class>;
-// CHECK-FIXES: {{^}}using mysuper_tpl_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'mysuper_tpl_t'
+// CHECK-FIXES: {{^}}using mysuper_Tpl_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
 
 const int global_Constant = 6;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global constant 'global_Constant'
@@ -591,9 +604,20 @@ static void static_Function() {
 // CHECK-FIXES: {{^}}#define MY_TEST_MACRO(X) X()
 
 void MY_TEST_Macro(function) {}
-// CHECK-FIXES: {{^}}void MY_TEST_MACRO(function) {}
-}
-}
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for global function 'function' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}void MY_TEST_MACRO(Function) {}
+
+#define MY_CAT_IMPL(l, r) l ## r
+#define MY_CAT(l, r) MY_CAT_IMPL(l, r)
+#define MY_MACRO2(foo) int MY_CAT(awesome_, MY_CAT(foo, __COUNTER__)) = 0
+#define MY_MACRO3(foo) int MY_CAT(awesome_, foo) = 0
+MY_MACRO2(myglob);
+MY_MACRO3(myglob);
+// No suggestions should occur even though the resulting decl of awesome_myglob#
+// or awesome_myglob are not entirely within a macro argument.
+
+} // namespace InlineNamespace
+} // namespace FOO_NS
 
 template <typename t_t> struct a {
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: invalid case style for struct 'a'
@@ -755,3 +779,13 @@ STATIC_MACRO void someFunc(MyFunPtr, const MyFunPtr****) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(my_fun_ptr_t, const my_fun_ptr_t****) {}
 #undef STATIC_MACRO
 }
+
+struct Some_struct {
+  int SomeMember;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for public member 'SomeMember' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}  int some_member;
+};
+Some_struct g_s1{ .SomeMember = 1 };
+// CHECK-FIXES: {{^}}Some_struct g_s1{ .some_member = 1 };
+Some_struct g_s2{.SomeMember=1};
+// CHECK-FIXES: {{^}}Some_struct g_s2{.some_member=1};

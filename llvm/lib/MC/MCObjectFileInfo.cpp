@@ -52,6 +52,10 @@ static bool useCompactUnwind(const Triple &T) {
   if (T.isSimulatorEnvironment())
     return true;
 
+  // XROS always has it.
+  if (T.isXROS())
+    return true;
+
   return false;
 }
 
@@ -339,7 +343,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::mips64el:
     // We cannot use DW_EH_PE_sdata8 for the large PositionIndependent case
     // since there is no R_MIPS_PC64 relocation (only a 32-bit version).
-    if (PositionIndependent && !Large)
+    // In fact DW_EH_PE_sdata4 is enough for us now, and GNU ld doesn't
+    // support pcrel|sdata8 well. Let's use sdata4 for now.
+    if (PositionIndependent)
       FDECFIEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     else
       FDECFIEncoding = Ctx->getAsmInfo()->getCodePointerSize() == 4
@@ -547,8 +553,18 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   PPA1Section =
       Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(), TextSection,
                           MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
+  PPA2Section =
+      Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(), TextSection,
+                          MCConstantExpr::create(GOFF::SK_PPA2, *Ctx));
+
+  PPA2ListSection =
+      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(),
+                          nullptr, nullptr);
+
   ADASection =
       Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr, nullptr);
+  IDRLSection =
+      Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr, nullptr);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -928,9 +944,15 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // the ABI or object file format, but various tools rely on the section
   // name being empty (considering named symbols to be "user symbol names").
   TextSection = Ctx->getXCOFFSection(
-      "", SectionKind::getText(),
+      "..text..", // Use a non-null name to work around an AIX assembler bug...
+      SectionKind::getText(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
+
+  // ... but use a null name when generating the symbol table.
+  MCSectionXCOFF *TS = static_cast<MCSectionXCOFF *>(TextSection);
+  TS->getQualNameSymbol()->setSymbolTableName("");
+  TS->setSymbolTableName("");
 
   DataSection = Ctx->getXCOFFSection(
       ".data", SectionKind::getData(),

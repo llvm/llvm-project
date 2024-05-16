@@ -24,6 +24,7 @@
 #include "llvm/ADT/APSInt.h"
 
 namespace clang {
+class OpenACCClause;
 class OMPTraitInfo;
 class OMPChildren;
 
@@ -102,13 +103,6 @@ public:
                                                  DC);
   }
 
-  /// Read the record that describes the visible contents of a DC.
-  bool readVisibleDeclContextStorage(uint64_t Offset,
-                                     serialization::DeclID ID) {
-    return Reader->ReadVisibleDeclContextStorage(*F, F->DeclsCursor, Offset,
-                                                 ID);
-  }
-
   ExplicitSpecifier readExplicitSpec() {
     uint64_t Kind = readInt();
     bool HasExpr = Kind & 0x1;
@@ -142,8 +136,7 @@ public:
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template<typename T>
-  T *GetLocalDeclAs(uint32_t LocalID) {
+  template <typename T> T *GetLocalDeclAs(LocalDeclID LocalID) {
     return cast_or_null<T>(Reader->GetLocalDecl(*F, LocalID));
   }
 
@@ -189,9 +182,7 @@ public:
   /// Reads a declaration ID from the given position in this record.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  serialization::DeclID readDeclID() {
-    return Reader->ReadDeclID(*F, Record, Idx);
-  }
+  GlobalDeclID readDeclID() { return Reader->ReadDeclID(*F, Record, Idx); }
 
   /// Reads a declaration from the given position in a record in the
   /// given module, advancing Idx.
@@ -220,6 +211,8 @@ public:
   Selector readSelector() {
     return Reader->ReadSelector(*F, Record, Idx);
   }
+
+  TypeCoupledDeclRefInfo readTypeCoupledDeclRefInfo();
 
   /// Read a declaration name, advancing Idx.
   // DeclarationName readDeclarationName(); (inherited)
@@ -275,6 +268,18 @@ public:
 
   /// Read an OpenMP children, advancing Idx.
   void readOMPChildren(OMPChildren *Data);
+
+  /// Read a list of Exprs used for a var-list.
+  llvm::SmallVector<Expr *> readOpenACCVarList();
+
+  /// Read a list of Exprs used for a int-expr-list.
+  llvm::SmallVector<Expr *> readOpenACCIntExprList();
+
+  /// Read an OpenACC clause, advancing Idx.
+  OpenACCClause *readOpenACCClause();
+
+  /// Read a list of OpenACC clauses into the passed SmallVector.
+  void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
 
   /// Read a source location, advancing Idx.
   SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
@@ -369,10 +374,6 @@ private:
   llvm::BitstreamCursor &Cursor;
   uint64_t Offset;
 };
-
-inline void PCHValidator::Error(const char *Msg) {
-  Reader.Error(Msg);
-}
 
 } // namespace clang
 

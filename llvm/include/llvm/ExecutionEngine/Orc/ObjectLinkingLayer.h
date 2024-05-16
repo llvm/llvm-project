@@ -15,7 +15,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -122,11 +121,24 @@ public:
     this->ReturnObjectBuffer = std::move(ReturnObjectBuffer);
   }
 
-  /// Add a pass-config modifier.
-  ObjectLinkingLayer &addPlugin(std::unique_ptr<Plugin> P) {
+  /// Add a plugin.
+  ObjectLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {
     std::lock_guard<std::mutex> Lock(LayerMutex);
     Plugins.push_back(std::move(P));
     return *this;
+  }
+
+  /// Remove a plugin. This remove applies only to subsequent links (links
+  /// already underway will continue to use the plugin), and does not of itself
+  /// destroy the plugin -- destruction will happen once all shared pointers
+  /// (including those held by in-progress links) are destroyed.
+  void removePlugin(Plugin &P) {
+    std::lock_guard<std::mutex> Lock(LayerMutex);
+    auto I = llvm::find_if(Plugins, [&](const std::shared_ptr<Plugin> &Elem) {
+      return Elem.get() == &P;
+    });
+    assert(I != Plugins.end() && "Plugin not present");
+    Plugins.erase(I);
   }
 
   /// Add a LinkGraph to the JITDylib targeted by the given tracker.
@@ -182,11 +194,8 @@ public:
 private:
   using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
-  void modifyPassConfig(MaterializationResponsibility &MR,
-                        jitlink::LinkGraph &G,
-                        jitlink::PassConfiguration &PassConfig);
-  void notifyLoaded(MaterializationResponsibility &MR);
-  Error notifyEmitted(MaterializationResponsibility &MR, FinalizedAlloc FA);
+  Error recordFinalizedAlloc(MaterializationResponsibility &MR,
+                             FinalizedAlloc FA);
 
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
@@ -199,7 +208,7 @@ private:
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;
   DenseMap<ResourceKey, std::vector<FinalizedAlloc>> Allocs;
-  std::vector<std::unique_ptr<Plugin>> Plugins;
+  std::vector<std::shared_ptr<Plugin>> Plugins;
 };
 
 class EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {

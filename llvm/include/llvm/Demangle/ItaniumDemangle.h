@@ -20,7 +20,6 @@
 #include "StringViewExtras.h"
 #include "Utility.h"
 #include <algorithm>
-#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -39,13 +38,12 @@
 DEMANGLE_NAMESPACE_BEGIN
 
 template <class T, size_t N> class PODSmallVector {
-  static_assert(std::is_pod<T>::value,
-                "T is required to be a plain old data type");
-
+  static_assert(std::is_trivial<T>::value,
+                "T is required to be a trivial type");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
-  T Inline[N] = {0};
+  T Inline[N] = {};
 
   bool isInline() const { return First == Inline; }
 
@@ -128,12 +126,12 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   void pop_back() {
-    assert(Last != First && "Popping empty vector!");
+    DEMANGLE_ASSERT(Last != First, "Popping empty vector!");
     --Last;
   }
 
   void shrinkToSize(size_t Index) {
-    assert(Index <= size() && "shrinkToSize() can't expand!");
+    DEMANGLE_ASSERT(Index <= size(), "shrinkToSize() can't expand!");
     Last = First + Index;
   }
 
@@ -143,11 +141,11 @@ public:
   bool empty() const { return First == Last; }
   size_t size() const { return static_cast<size_t>(Last - First); }
   T &back() {
-    assert(Last != First && "Calling back() on empty vector!");
+    DEMANGLE_ASSERT(Last != First, "Calling back() on empty vector!");
     return *(Last - 1);
   }
   T &operator[](size_t Index) {
-    assert(Index < size() && "Invalid access!");
+    DEMANGLE_ASSERT(Index < size(), "Invalid access!");
     return *(begin() + Index);
   }
   void clear() { Last = First; }
@@ -886,6 +884,32 @@ public:
     OB.printOpen();
     Types.printWithComma(OB);
     OB.printClose();
+  }
+};
+
+/// Represents the explicitly named object parameter.
+/// E.g.,
+/// \code{.cpp}
+///   struct Foo {
+///     void bar(this Foo && self);
+///   };
+/// \endcode
+class ExplicitObjectParameter final : public Node {
+  Node *Base;
+
+public:
+  ExplicitObjectParameter(Node *Base_)
+      : Node(KExplicitObjectParameter), Base(Base_) {
+    DEMANGLE_ASSERT(
+        Base != nullptr,
+        "Creating an ExplicitObjectParameter without a valid Base Node.");
+  }
+
+  template <typename Fn> void match(Fn F) const { F(Base); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB += "this ";
+    Base->print(OB);
   }
 };
 
@@ -1677,7 +1701,7 @@ public:
     std::string_view SV = ExpandedSpecialSubstitution::getBaseName();
     if (isInstantiation()) {
       // The instantiations are typedefs that drop the "basic_" prefix.
-      assert(starts_with(SV, "basic_"));
+      DEMANGLE_ASSERT(starts_with(SV, "basic_"), "");
       SV.remove_prefix(sizeof("basic_") - 1);
     }
     return SV;
@@ -2568,7 +2592,7 @@ void Node::visit(Fn F) const {
     return F(static_cast<const X *>(this));
 #include "ItaniumNodes.def"
   }
-  assert(0 && "unknown mangling node kind");
+  DEMANGLE_ASSERT(0, "unknown mangling node kind");
 }
 
 /// Determine the kind of a node from its type.
@@ -2610,7 +2634,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       Parser->TemplateParams.push_back(&Params);
     }
     ~ScopedTemplateParamList() {
-      assert(Parser->TemplateParams.size() >= OldNumTemplateParamLists);
+      DEMANGLE_ASSERT(Parser->TemplateParams.size() >= OldNumTemplateParamLists,
+                      "");
       Parser->TemplateParams.shrinkToSize(OldNumTemplateParamLists);
     }
     TemplateParamList *params() { return &Params; }
@@ -2691,7 +2716,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   }
 
   NodeArray popTrailingNodeArray(size_t FromPosition) {
-    assert(FromPosition <= Names.size());
+    DEMANGLE_ASSERT(FromPosition <= Names.size(), "");
     NodeArray res =
         makeNodeArray(Names.begin() + (long)FromPosition, Names.end());
     Names.shrinkToSize(FromPosition);
@@ -2767,7 +2792,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseClassEnumType();
   Node *parseQualifiedType();
 
-  Node *parseEncoding();
+  Node *parseEncoding(bool ParseParams = true);
   bool parseCallOffset();
   Node *parseSpecialName();
 
@@ -2779,6 +2804,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     Qualifiers CVQualifiers = QualNone;
     FunctionRefQual ReferenceQualifier = FrefQualNone;
     size_t ForwardTemplateRefsBegin;
+    bool HasExplicitObjectParameter = false;
 
     NameState(AbstractManglingParser *Enclosing)
         : ForwardTemplateRefsBegin(Enclosing->ForwardTemplateRefs.size()) {}
@@ -2858,8 +2884,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     std::string_view getSymbol() const {
       std::string_view Res = Name;
       if (Kind < Unnameable) {
-        assert(starts_with(Res, "operator") &&
-               "operator name does not start with 'operator'");
+        DEMANGLE_ASSERT(starts_with(Res, "operator"),
+                        "operator name does not start with 'operator'");
         Res.remove_prefix(sizeof("operator") - 1);
         if (starts_with(Res, ' '))
           Res.remove_prefix(1);
@@ -2883,7 +2909,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseDestructorName();
 
   /// Top-level entry point into the parser.
-  Node *parse();
+  Node *parse(bool ParseParams = true);
 };
 
 const char* parse_discriminator(const char* first, const char* last);
@@ -3437,15 +3463,25 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
   if (!consumeIf('N'))
     return nullptr;
 
-  Qualifiers CVTmp = parseCVQualifiers();
-  if (State) State->CVQualifiers = CVTmp;
+  // 'H' specifies that the encoding that follows
+  // has an explicit object parameter.
+  if (!consumeIf('H')) {
+    Qualifiers CVTmp = parseCVQualifiers();
+    if (State)
+      State->CVQualifiers = CVTmp;
 
-  if (consumeIf('O')) {
-    if (State) State->ReferenceQualifier = FrefQualRValue;
-  } else if (consumeIf('R')) {
-    if (State) State->ReferenceQualifier = FrefQualLValue;
-  } else {
-    if (State) State->ReferenceQualifier = FrefQualNone;
+    if (consumeIf('O')) {
+      if (State)
+        State->ReferenceQualifier = FrefQualRValue;
+    } else if (consumeIf('R')) {
+      if (State)
+        State->ReferenceQualifier = FrefQualLValue;
+    } else {
+      if (State)
+        State->ReferenceQualifier = FrefQualNone;
+    }
+  } else if (State) {
+    State->HasExplicitObjectParameter = true;
   }
 
   Node *SoFar = nullptr;
@@ -3693,7 +3729,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName(bool Global) {
     }
   }
 
-  assert(SoFar != nullptr);
+  DEMANGLE_ASSERT(SoFar != nullptr, "");
 
   Node *Base = getDerived().parseBaseUnresolvedName();
   if (Base == nullptr)
@@ -5367,7 +5403,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
 //            ::= <data name>
 //            ::= <special-name>
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
+Node *AbstractManglingParser<Derived, Alloc>::parseEncoding(bool ParseParams) {
   // The template parameters of an encoding are unrelated to those of the
   // enclosing context.
   SaveTemplateParams SaveTemplateParamsScope(this);
@@ -5392,6 +5428,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
 
   if (IsEndOfEncoding())
     return Name;
+
+  // ParseParams may be false at the top level only, when called from parse().
+  // For example in the mangled name _Z3fooILZ3BarEET_f, ParseParams may be
+  // false when demangling 3fooILZ3BarEET_f but is always true when demangling
+  // 3Bar.
+  if (!ParseParams) {
+    while (consume())
+      ;
+    return Name;
+  }
 
   Node *Attrs = nullptr;
   if (consumeIf("Ua9enable_ifI")) {
@@ -5421,6 +5467,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
       Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
+
+      const bool IsFirstParam = ParamsBegin == Names.size();
+      if (NameInfo.HasExplicitObjectParameter && IsFirstParam)
+        Ty = make<ExplicitObjectParameter>(Ty);
+
+      if (Ty == nullptr)
+        return nullptr;
+
       Names.push_back(Ty);
     } while (!IsEndOfEncoding() && look() != 'Q');
     Params = popTrailingNodeArray(ParamsBegin);
@@ -5486,7 +5540,7 @@ Node *AbstractManglingParser<Alloc, Derived>::parseFloatingLiteral() {
     return nullptr;
   std::string_view Data(First, N);
   for (char C : Data)
-    if (!std::isxdigit(C))
+    if (!(C >= '0' && C <= '9') && !(C >= 'a' && C <= 'f'))
       return nullptr;
   First += N;
   if (!consumeIf('E'))
@@ -5634,7 +5688,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
     Node *ForwardRef = make<ForwardTemplateReference>(Index);
     if (!ForwardRef)
       return nullptr;
-    assert(ForwardRef->getKind() == Node::KForwardTemplateReference);
+    DEMANGLE_ASSERT(ForwardRef->getKind() == Node::KForwardTemplateReference,
+                    "");
     ForwardTemplateRefs.push_back(
         static_cast<ForwardTemplateReference *>(ForwardRef));
     return ForwardRef;
@@ -5659,6 +5714,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
 }
 
 // <template-param-decl> ::= Ty                          # type parameter
+//                       ::= Tk <concept name> [<template-args>] # constrained type parameter
 //                       ::= Tn <type>                   # non-type parameter
 //                       ::= Tt <template-param-decl>* E # template parameter
 //                       ::= Tp <template-param-decl>    # parameter pack
@@ -5790,7 +5846,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateArg() {
   }
 }
 
-// <template-args> ::= I <template-arg>* E
+// <template-args> ::= I <template-arg>* [Q <requires-clause expr>] E
 //     extension, the abi says <template-arg>+
 template <typename Derived, typename Alloc>
 Node *
@@ -5848,9 +5904,9 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parse() {
+Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
   if (consumeIf("_Z") || consumeIf("__Z")) {
-    Node *Encoding = getDerived().parseEncoding();
+    Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr)
       return nullptr;
     if (look() == '.') {
@@ -5864,7 +5920,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parse() {
   }
 
   if (consumeIf("___Z") || consumeIf("____Z")) {
-    Node *Encoding = getDerived().parseEncoding();
+    Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr || !consumeIf("_block_invoke"))
       return nullptr;
     bool RequireNumber = consumeIf('_');

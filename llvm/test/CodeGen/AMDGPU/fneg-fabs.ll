@@ -49,7 +49,7 @@ define amdgpu_kernel void @fneg_fabsf_free_f32(ptr addrspace(1) %out, i32 %in) {
 ; R600: |PV.{{[XYZW]}}|
 ; R600: -PV
 
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
+; SI: s_load_dwordx2 s[0:1], s[2:3], 0x9
 define amdgpu_kernel void @fneg_fabsf_fn_free_f32(ptr addrspace(1) %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fabs = call float @fabsf(float %bc)
@@ -109,3 +109,6 @@ declare float @fabsf(float) readnone
 declare float @llvm.fabs.f32(float) readnone
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) readnone
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) readnone
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

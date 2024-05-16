@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Allow the same external or intrinsic procedure to be use-associated
 ! by multiple paths when they are unambiguous.
 module m1

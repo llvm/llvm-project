@@ -18,11 +18,8 @@
 #define LLVM_CLANG_LIB_FORMAT_BREAKABLETOKEN_H
 
 #include "Encoding.h"
-#include "TokenAnnotator.h"
 #include "WhitespaceManager.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Regex.h"
-#include <utility>
 
 namespace clang {
 namespace format {

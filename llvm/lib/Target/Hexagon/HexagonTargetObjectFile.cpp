@@ -86,7 +86,7 @@ static cl::opt<bool>
 static bool isSmallDataSection(StringRef Sec) {
   // sectionName is either ".sdata" or ".sbss". Looking for an exact match
   // obviates the need for checks for section names such as ".sdatafoo".
-  if (Sec.equals(".sdata") || Sec.equals(".sbss") || Sec.equals(".scommon"))
+  if (Sec == ".sdata" || Sec == ".sbss" || Sec == ".scommon")
     return true;
   // If either ".sdata." or ".sbss." is a substring of the section name
   // then put the symbol in small data.
@@ -140,7 +140,7 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
 
   // If the lookup table is used by more than one function, do not place
   // it in text section.
-  if (EmitLutInText && GO->getName().startswith("switch.table")) {
+  if (EmitLutInText && GO->getName().starts_with("switch.table")) {
     if (const Function *Fn = getLutUsedFunction(GO))
       return selectSectionForLookupTable(GO, TM, Fn);
   }

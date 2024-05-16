@@ -61,7 +61,9 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
+namespace llvm {
 extern cl::opt<bool> ImprovedFSDiscriminator;
+}
 char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
@@ -370,7 +372,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   MF.RenumberBlocks();
   if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName().equals(ViewBlockFreqFuncName))) {
+       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
     MBFI->view("MIR_Prof_loader_b." + MF.getName(), false);
   }
 
@@ -380,7 +382,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
 
   if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName().equals(ViewBlockFreqFuncName))) {
+       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
     MBFI->view("MIR_prof_loader_a." + MF.getName(), false);
   }
 

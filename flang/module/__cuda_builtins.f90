@@ -10,10 +10,22 @@
 ! subprograms.
 
 module __CUDA_builtins
-  use __Fortran_builtins, only: &
+  use __fortran_builtins, only: &
     threadIdx => __builtin_threadIdx, &
     blockDim => __builtin_blockDim, &
     blockIdx => __builtin_blockIdx, &
     gridDim => __builtin_gridDim, &
     warpsize => __builtin_warpsize
+
+  implicit none
+
+  ! Set PRIVATE by default to explicitly only export what is meant
+  ! to be exported by this MODULE.
+  private
+
+  public :: threadIdx, &
+    blockDim, &
+    blockIdx, &
+    gridDim, &
+    warpsize
 end module

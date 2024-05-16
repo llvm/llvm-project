@@ -59,6 +59,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<DebugUnparseNoSemaAction>();
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
+  case DebugUnparseWithModules:
+    return std::make_unique<DebugUnparseWithModulesAction>();
   case DebugDumpSymbols:
     return std::make_unique<DebugDumpSymbolsAction>();
   case DebugDumpParseTree:
@@ -131,7 +133,7 @@ updateDiagEngineForOptRemarks(clang::DiagnosticsEngine &diagsEng,
 
     // Check to see if this opt starts with "no-", if so, this is a
     // negative form of the option.
-    bool isPositive = !remarkOpt.startswith("no-");
+    bool isPositive = !remarkOpt.starts_with("no-");
     if (!isPositive)
       remarkOpt = remarkOpt.substr(3);
 

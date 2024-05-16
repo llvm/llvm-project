@@ -152,7 +152,13 @@ RT_API_ATTRS std::size_t Descriptor::Elements() const {
 }
 
 RT_API_ATTRS int Descriptor::Allocate() {
-  std::size_t byteSize{Elements() * ElementBytes()};
+  std::size_t elementBytes{ElementBytes()};
+  if (static_cast<std::int64_t>(elementBytes) < 0) {
+    // F'2023 7.4.4.2 p5: "If the character length parameter value evaluates
+    // to a negative value, the length of character entities declared is zero."
+    elementBytes = raw_.elem_len = 0;
+  }
+  std::size_t byteSize{Elements() * elementBytes};
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
@@ -162,6 +168,11 @@ RT_API_ATTRS int Descriptor::Allocate() {
   }
   // TODO: image synchronization
   raw_.base_addr = p;
+  SetByteStrides();
+  return 0;
+}
+
+RT_API_ATTRS void Descriptor::SetByteStrides() {
   if (int dims{rank()}) {
     std::size_t stride{ElementBytes()};
     for (int j{0}; j < dims; ++j) {
@@ -170,7 +181,6 @@ RT_API_ATTRS int Descriptor::Allocate() {
       stride *= dimension.Extent();
     }
   }
-  return 0;
 }
 
 RT_API_ATTRS int Descriptor::Destroy(
@@ -241,6 +251,22 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     }
   }
   return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
+}
+
+RT_API_ATTRS void Descriptor::ApplyMold(const Descriptor &mold, int rank) {
+  raw_.elem_len = mold.raw_.elem_len;
+  raw_.rank = rank;
+  raw_.type = mold.raw_.type;
+  for (int j{0}; j < rank && j < mold.raw_.rank; ++j) {
+    GetDimension(j) = mold.GetDimension(j);
+  }
+  if (auto *addendum{Addendum()}) {
+    if (auto *moldAddendum{mold.Addendum()}) {
+      *addendum = *moldAddendum;
+    } else {
+      INTERNAL_CHECK(!addendum->derivedType());
+    }
+  }
 }
 
 RT_API_ATTRS void Descriptor::Check() const {

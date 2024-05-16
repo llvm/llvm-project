@@ -1197,9 +1197,35 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   if (!source_file)
     return Status(source_file.takeError());
   Status error;
+
+  bool requires_upload = true;
+  llvm::ErrorOr<llvm::MD5::MD5Result> remote_md5 = CalculateMD5(destination);
+  if (std::error_code ec = remote_md5.getError()) {
+    LLDB_LOG(log, "[PutFile] couldn't get md5 sum of destination: {0}",
+             ec.message());
+  } else {
+    llvm::ErrorOr<llvm::MD5::MD5Result> local_md5 =
+        llvm::sys::fs::md5_contents(source.GetPath());
+    if (std::error_code ec = local_md5.getError()) {
+      LLDB_LOG(log, "[PutFile] couldn't get md5 sum of source: {0}",
+               ec.message());
+    } else {
+      LLDB_LOGF(log, "[PutFile] destination md5: %016" PRIx64 "%016" PRIx64,
+                remote_md5->high(), remote_md5->low());
+      LLDB_LOGF(log, "[PutFile]       local md5: %016" PRIx64 "%016" PRIx64,
+                local_md5->high(), local_md5->low());
+      requires_upload = *remote_md5 != *local_md5;
+    }
+  }
+
+  if (!requires_upload) {
+    LLDB_LOGF(log, "[PutFile] skipping PutFile because md5sums match");
+    return error;
+  }
+
   uint32_t permissions = source_file.get()->GetPermissions(error);
   if (permissions == 0)
-    permissions = lldb::eFilePermissionsFileDefault;
+    permissions = lldb::eFilePermissionsUserRWX;
 
   lldb::user_id_t dest_file = OpenFile(
       destination, File::eOpenOptionCanCreate | File::eOpenOptionWriteOnly |
@@ -1313,15 +1339,11 @@ lldb_private::Status Platform::RunShellCommand(
   return Status("unable to run a remote command without a platform");
 }
 
-bool Platform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                            uint64_t &high) {
+llvm::ErrorOr<llvm::MD5::MD5Result>
+Platform::CalculateMD5(const FileSpec &file_spec) {
   if (!IsHost())
-    return false;
-  auto Result = llvm::sys::fs::md5_contents(file_spec.GetPath());
-  if (!Result)
-    return false;
-  std::tie(high, low) = Result->words();
-  return true;
+    return std::make_error_code(std::errc::not_supported);
+  return llvm::sys::fs::md5_contents(file_spec.GetPath());
 }
 
 void Platform::SetLocalCacheDirectory(const char *local) {
@@ -2014,7 +2036,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
     AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp) {

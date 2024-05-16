@@ -276,10 +276,13 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
 ; FIXEDABI-SDAG-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x40
+; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[4:5], 0xc0
+; FIXEDABI-SDAG-NEXT:    s_load_dword s6, s[4:5], 0x0
+; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[4:5], 0xc4
+; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s5
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s6
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
@@ -297,12 +300,15 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
 ; FIXEDABI-GISEL-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x40
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc0
+; FIXEDABI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x0
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc4
+; FIXEDABI-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s5
-; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
+; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v3, s6
+; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
@@ -325,7 +331,8 @@ define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-LABEL: is_shared_requires_queue_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_load_dword s4, s[6:7], 0x40
+; FIXEDABI-NEXT:    s_mov_b64 s[4:5], 0xc4
+; FIXEDABI-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
 ; FIXEDABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -342,7 +349,8 @@ define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-LABEL: is_private_requires_queue_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_load_dword s4, s[6:7], 0x44
+; FIXEDABI-NEXT:    s_mov_b64 s[4:5], 0xc0
+; FIXEDABI-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
 ; FIXEDABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -359,7 +367,9 @@ define void @trap_requires_queue() #0 {
 ; FIXEDABI-LABEL: trap_requires_queue:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_mov_b64 s[0:1], s[6:7]
+; FIXEDABI-NEXT:    s_mov_b64 s[4:5], 0xc8
+; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIXEDABI-NEXT:    s_trap 2
   call void @llvm.trap()
   unreachable
@@ -390,3 +400,6 @@ declare void @llvm.trap()
 declare void @llvm.debugtrap()
 
 attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

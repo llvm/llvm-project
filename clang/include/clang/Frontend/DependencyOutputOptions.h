@@ -33,15 +33,19 @@ enum ExtraDepKind {
 /// file generation.
 class DependencyOutputOptions {
 public:
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeSystemHeaders : 1; ///< Include system header dependencies.
-  unsigned
-      CanonicalSystemHeaders : 1; ///< canonicalize system header dependencies.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowHeaderIncludes : 1;   ///< Show header inclusions (-H).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UsePhonyTargets : 1;      ///< Include phony targets for each
                                      /// dependency, which can avoid some 'make'
                                      /// problems.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AddMissingHeaderDeps : 1; ///< Add missing headers to dependency list
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeModuleFiles : 1; ///< Include module file dependencies.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowSkippedHeaderIncludes : 1; ///< With ShowHeaderIncludes, show
                                           /// also includes that were skipped
                                           /// due to the "include guard
@@ -84,11 +88,10 @@ public:
 
 public:
   DependencyOutputOptions()
-      : IncludeSystemHeaders(0), CanonicalSystemHeaders(0),
-        ShowHeaderIncludes(0), UsePhonyTargets(0), AddMissingHeaderDeps(0),
-        IncludeModuleFiles(0), ShowSkippedHeaderIncludes(0),
-        HeaderIncludeFormat(HIFMT_Textual), HeaderIncludeFiltering(HIFIL_None) {
-  }
+      : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
+        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
+        ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
+        HeaderIncludeFiltering(HIFIL_None) {}
 };
 
 }  // end namespace clang

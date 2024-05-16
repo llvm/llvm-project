@@ -24,7 +24,7 @@
 ; SUPER-ALIGN_ON:  @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t poison, align 16
 ; SUPER-ALIGN_OFF: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t poison, align 8
 
-; SUPER-ALIGN_ON:  @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t poison, align 16
+; SUPER-ALIGN_ON:  @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t poison, align 8
 ; SUPER-ALIGN_OFF: @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t poison, align 4
 
 ; CHECK-LABEL: @k1
@@ -133,11 +133,9 @@ define amdgpu_kernel void @k3(i64 %x) {
 ; Check that aligment is not propagated if use is not a pointer operand.
 
 ; CHECK-LABEL: @k4
-; SUPER-ALIGN_ON:  store i32 poison, ptr addrspace(3) %gep, align 8
-; SUPER-ALIGN_OFF: store i32 poison, ptr addrspace(3) %gep, align 4
+; CHECK:           store i32 poison, ptr addrspace(3) %gep, align 4
 ; CHECK:           store ptr addrspace(3) %gep, ptr poison, align 4
-; SUPER-ALIGN_ON:  %val1 = cmpxchg volatile ptr addrspace(3) %gep, i32 1, i32 2 monotonic monotonic, align 8
-; SUPER-ALIGN_OFF: %val1 = cmpxchg volatile ptr addrspace(3) %gep, i32 1, i32 2 monotonic monotonic, align 4
+; CHECK:           %val1 = cmpxchg volatile ptr addrspace(3) %gep, i32 1, i32 2 monotonic monotonic, align 4
 ; CHECK:           %val2 = cmpxchg volatile ptr poison, ptr addrspace(3) %gep, ptr addrspace(3) poison monotonic monotonic, align 4
 define amdgpu_kernel void @k4() {
   %gep = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) @lds.6, i64 1

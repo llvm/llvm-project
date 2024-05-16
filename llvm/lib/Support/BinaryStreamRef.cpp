@@ -10,7 +10,6 @@
 #include "llvm/Support/BinaryByteStream.h"
 
 using namespace llvm;
-using namespace llvm::support;
 
 namespace {
 

@@ -15,6 +15,7 @@
 #include "LoongArch.h"
 #include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
+#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -97,13 +98,6 @@ LoongArchRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // variable-sized objects at runtime.
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, LoongArchABI::getBPReg()); // bp
-
-  // FIXME: To avoid generating COPY instructions between CFRs, only use $fcc0.
-  // This is required to work around the fact that COPY instruction between CFRs
-  // is not provided in LoongArch.
-  if (MF.getSubtarget<LoongArchSubtarget>().hasBasicF())
-    for (size_t Reg = LoongArch::FCC1; Reg <= LoongArch::FCC7; ++Reg)
-      markSuperRegs(Reserved, Reg);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -200,4 +194,26 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
   return false;
+}
+
+bool LoongArchRegisterInfo::canRealignStack(const MachineFunction &MF) const {
+  if (!TargetRegisterInfo::canRealignStack(MF))
+    return false;
+
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  const LoongArchFrameLowering *TFI = getFrameLowering(MF);
+
+  // Stack realignment requires a frame pointer.  If we already started
+  // register allocation with frame pointer elimination, it is too late now.
+  if (!MRI->canReserveReg(LoongArch::R22))
+    return false;
+
+  // We may also need a base pointer if there are dynamic allocas or stack
+  // pointer adjustments around calls.
+  if (TFI->hasReservedCallFrame(MF))
+    return true;
+
+  // A base pointer is required and allowed.  Check that it isn't too late to
+  // reserve it.
+  return MRI->canReserveReg(LoongArchABI::getBPReg());
 }

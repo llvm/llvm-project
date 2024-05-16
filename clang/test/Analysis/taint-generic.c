@@ -169,21 +169,21 @@ void bufferScanfDirect(void)
 {
   int n;
   scanf("%d", &n);
-  Buffer[n] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[n] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfArithmetic1(int x) {
   int n;
   scanf("%d", &n);
   int m = (n - 3);
-  Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfArithmetic2(int x) {
   int n;
   scanf("%d", &n);
   int m = 100 - (n + 3) * x;
-  Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfAssignment(int x) {
@@ -192,7 +192,7 @@ void bufferScanfAssignment(int x) {
   int m;
   if (x > 0) {
     m = n;
-    Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+    Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
   }
 }
 
@@ -203,7 +203,7 @@ void scanfArg(void) {
 
 void bufferGetchar(int x) {
   int m = getchar();
-  Buffer[m] = 1;  //expected-warning {{Out of bound memory access (index is tainted)}}
+  Buffer[m] = 1;  //expected-warning {{Potential out of bound access}}
 }
 
 extern const unsigned short int **__ctype_b_loc (void);
@@ -216,7 +216,7 @@ int isdigitImplFalsePositive(void) {
   // macros in ctypes.h.
   int c = getchar();
   return ((*__ctype_b_loc ())[(int) (c)] & (unsigned short int) _ISdigit);
-  //expected-warning@-1 {{Out of bound memory access (index is tainted)}}
+  //expected-warning@-1 {{Potential out of bound access}}
 }
 
 int isdigitSuppressed(void) {
@@ -305,15 +305,21 @@ void testGets_s(void) {
 
 void testTaintedBufferSize(void) {
   size_t ts;
+  // The functions malloc, calloc, bcopy and memcpy are not taint sinks in the
+  // default config of GenericTaintChecker (because that would cause too many
+  // false positives).
+  // FIXME: We should generate warnings when a value passed to these functions
+  // is tainted and _can be very large_ (because that's exploitable). This
+  // functionality probably belongs to the checkers that do more detailed
+  // modeling of these functions (MallocChecker and CStringChecker).
   scanf("%zd", &ts);
-
-  int *buf1 = (int*)malloc(ts*sizeof(int)); // expected-warning {{Untrusted data is used to specify the buffer size}}
-  char *dst = (char*)calloc(ts, sizeof(char)); //expected-warning {{Untrusted data is used to specify the buffer size}}
-  bcopy(buf1, dst, ts); // expected-warning {{Untrusted data is used to specify the buffer size}}
-  __builtin_memcpy(dst, buf1, (ts + 4)*sizeof(char)); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  int *buf1 = (int*)malloc(ts*sizeof(int)); // warn here, ts is unbounded and tainted
+  char *dst = (char*)calloc(ts, sizeof(char)); // warn here, ts is unbounded tainted
+  bcopy(buf1, dst, ts); // no warning here, since the size of buf1, dst equals ts. Cannot overflow.
+  __builtin_memcpy(dst, buf1, (ts + 4)*sizeof(char)); // warn here, dst overflows (whatever the value of ts)
 
   // If both buffers are trusted, do not issue a warning.
-  char *dst2 = (char*)malloc(ts*sizeof(char)); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  char *dst2 = (char*)malloc(ts*sizeof(char)); // warn here, ts in unbounded
   strncat(dst2, dst, ts); // no-warning
 }
 
@@ -353,7 +359,7 @@ void testStruct(void) {
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
   read(sock, &tainted, sizeof(tainted));
-  __builtin_memcpy(buffer, tainted.buf, tainted.length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted.length); // expected-warning {{YES }}
 }
 
 void testStructArray(void) {
@@ -368,17 +374,17 @@ void testStructArray(void) {
   __builtin_memset(srcbuf, 0, sizeof(srcbuf));
 
   read(sock, &tainted[0], sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{YES}}
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   read(sock, &tainted, sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{YES}}
 
   __builtin_memset(&tainted, 0, sizeof(tainted));
   // If we taint element 1, we should not raise an alert on taint for element 0 or element 2
   read(sock, &tainted[1], sizeof(tainted));
-  __builtin_memcpy(dstbuf, srcbuf, tainted[0].length); // no-warning
-  __builtin_memcpy(dstbuf, srcbuf, tainted[2].length); // no-warning
+  clang_analyzer_isTainted_int(tainted[0].length); // expected-warning {{NO}}
+  clang_analyzer_isTainted_int(tainted[2].length); // expected-warning {{NO}}
 }
 
 void testUnion(void) {
@@ -405,7 +411,16 @@ int testDivByZero(void) {
 void testTaintedVLASize(void) {
   int x;
   scanf("%d", &x);
-  int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted size}}
+  int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted (attacker controlled) size that can be 0 or negative}}
+}
+
+// Tainted-sanitized VLAs.
+void testTaintedSanitizedVLASize(void) {
+  int x;
+  scanf("%d", &x);
+  if (x<1)
+    return;
+  int vla[x]; // no-warning
 }
 
 int testTaintedAllocaMem() {
@@ -1113,26 +1128,26 @@ void mySink(int, int, int);
 
 void testConfigurationSources1(void) {
   int x = mySource1();
-  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[x] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationSources2(void) {
   int x;
   mySource2(&x);
-  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[x] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationSources3(void) {
   int x, y;
   myScanf("%d %d", &x, &y);
-  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[y] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationPropagation(void) {
   int x = mySource1();
   int y;
   myPropagator(x, &y);
-  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[y] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationFilter(void) {

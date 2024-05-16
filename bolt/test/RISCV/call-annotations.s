@@ -1,12 +1,13 @@
 /// Test that annotations are properly carried over to fixed calls.
 /// Note that --enable-bat is used to force offsets to be kept.
 
-// RUN: llvm-mc -triple riscv64 -filetype obj -o %t.o %s
+// RUN: llvm-mc -triple riscv64 -mattr=+c -filetype obj -o %t.o %s
 // RUN: ld.lld --emit-relocs -o %t %t.o
 // RUN: llvm-bolt --enable-bat --print-cfg --print-fix-riscv-calls \
-// RUN:     -o /dev/null %t | FileCheck %s
+// RUN:     -o %t.null %t | FileCheck %s
 
   .text
+  .option norvc
   .global f
   .p2align 1
 f:
@@ -15,13 +16,13 @@ f:
 
 // CHECK-LABEL: Binary Function "_start" after building cfg {
 // CHECK:      auipc ra, f
-// CHECK-NEXT: jalr ra, -4(ra) # Offset: 4
+// CHECK-NEXT: jalr ra, -0x4(ra) # Offset: 4
 // CHECK-NEXT: jal ra, f # Offset: 8
 // CHECK-NEXT: jal zero, f # TAILCALL  # Offset: 12
 
 // CHECK-LABEL: Binary Function "long_tail" after building cfg {
 // CHECK:      auipc t1, f
-// CHECK-NEXT: jalr zero, -24(t1) # TAILCALL  # Offset: 8
+// CHECK-NEXT: jalr zero, -0x18(t1) # TAILCALL  # Offset: 8
 
 // CHECK-LABEL: Binary Function "compressed_tail" after building cfg {
 // CHECK:      jr a0 # TAILCALL  # Offset: 0

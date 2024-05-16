@@ -213,7 +213,9 @@ enum class TemplateSubstitutionKind : char {
              "substituted args outside retained args?");
       assert(getKind() == TemplateSubstitutionKind::Specialization);
       TemplateArgumentLists.push_back(
-          {{AssociatedDecl->getCanonicalDecl(), Final}, Args});
+          {{AssociatedDecl ? AssociatedDecl->getCanonicalDecl() : nullptr,
+            Final},
+           Args});
     }
 
     void addOuterTemplateArguments(ArgList Args) {
@@ -562,6 +564,7 @@ enum class TemplateSubstitutionKind : char {
     const MultiLevelTemplateArgumentList &TemplateArgs;
     Sema::LateInstantiatedAttrVec* LateAttrs = nullptr;
     LocalInstantiationScope *StartingScope = nullptr;
+    // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
 
     /// A list of out-of-line class template partial

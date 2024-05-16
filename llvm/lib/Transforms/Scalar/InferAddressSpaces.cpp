@@ -477,7 +477,7 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
 }
 
 // Returns all flat address expressions in function F. The elements are ordered
-// ordered in postorder.
+// in postorder.
 std::vector<WeakTrackingVH>
 InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
   // This function implements a non-recursive postorder traversal of a partial
@@ -523,6 +523,10 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     } else if (auto *I2P = dyn_cast<IntToPtrInst>(&I)) {
       if (isNoopPtrIntCastPair(cast<Operator>(I2P), *DL, TTI))
         PushPtrOperand(cast<Operator>(I2P->getOperand(0))->getOperand(0));
+    } else if (auto *RI = dyn_cast<ReturnInst>(&I)) {
+      if (auto *RV = RI->getReturnValue();
+          RV && RV->getType()->isPtrOrPtrVectorTy())
+        PushPtrOperand(RV);
     }
   }
 
@@ -1166,6 +1170,8 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
+  ValueToValueMapTy VMap;
+  ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   // Replaces the uses of the old address expressions with the new ones.
   for (const WeakTrackingVH &WVH : Postorder) {
@@ -1184,7 +1190,30 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       if (C != Replace) {
         LLVM_DEBUG(dbgs() << "Inserting replacement const cast: " << Replace
                           << ": " << *Replace << '\n');
-        C->replaceAllUsesWith(Replace);
+        SmallVector<User *, 16> WorkList;
+        for (User *U : make_early_inc_range(C->users())) {
+          if (auto *I = dyn_cast<Instruction>(U)) {
+            if (I->getFunction() == F)
+              I->replaceUsesOfWith(C, Replace);
+          } else {
+            WorkList.append(U->user_begin(), U->user_end());
+          }
+        }
+        if (!WorkList.empty()) {
+          VMap[C] = Replace;
+          DenseSet<User *> Visited{WorkList.begin(), WorkList.end()};
+          while (!WorkList.empty()) {
+            User *U = WorkList.pop_back_val();
+            if (auto *I = dyn_cast<Instruction>(U)) {
+              if (I->getFunction() == F)
+                VMapper.remapInstruction(*I);
+              continue;
+            }
+            for (User *U2 : U->users())
+              if (Visited.insert(U2).second)
+                WorkList.push_back(U2);
+          }
+        }
         V = Replace;
       }
     }
@@ -1192,6 +1221,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     Value::use_iterator I, E, Next;
     for (I = V->use_begin(), E = V->use_end(); I != E;) {
       Use &U = *I;
+      User *CurUser = U.getUser();
 
       // Some users may see the same pointer operand in multiple operands. Skip
       // to the next instruction.
@@ -1202,14 +1232,18 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         // If V is used as the pointer operand of a compatible memory operation,
         // sets the pointer operand to NewV. This replacement does not change
         // the element type, so the resultant load/store is still valid.
-        U.set(NewV);
+        CurUser->replaceUsesOfWith(V, NewV);
         continue;
       }
 
-      User *CurUser = U.getUser();
       // Skip if the current user is the new value itself.
       if (CurUser == NewV)
         continue;
+
+      if (auto *CurUserI = dyn_cast<Instruction>(CurUser);
+          CurUserI && CurUserI->getFunction() != F)
+        continue;
+
       // Handle more complex cases like intrinsic that need to be remangled.
       if (auto *MI = dyn_cast<MemIntrinsic>(CurUser)) {
         if (!MI->isVolatile() && handleMemIntrinsicPtrUse(MI, V, NewV))
@@ -1277,10 +1311,13 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
           while (isa<PHINode>(InsertPos))
             ++InsertPos;
-          U.set(new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
+          // This instruction may contain multiple uses of V, update them all.
+          CurUser->replaceUsesOfWith(
+              V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
         } else {
-          U.set(ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
-                                               V->getType()));
+          CurUser->replaceUsesOfWith(
+              V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
+                                                V->getType()));
         }
       }
     }

@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_OWNINGOPREF_H
 #define MLIR_IR_OWNINGOPREF_H
 
+#include <type_traits>
 #include <utility>
 
 namespace mlir {

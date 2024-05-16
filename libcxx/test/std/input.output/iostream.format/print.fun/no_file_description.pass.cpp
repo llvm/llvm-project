@@ -12,6 +12,9 @@
 // XFAIL: msvc, target={{.+}}-windows-gnu
 // XFAIL: availability-fp_to_chars-missing
 
+// fmemopen is available starting in Android M (API 23)
+// XFAIL: target={{.+}}-android{{(eabi)?(21|22)}}
+
 // <print>
 
 // The FILE returned by fmemopen does not have file descriptor.
@@ -22,8 +25,10 @@
 
 // template<class... Args>
 //   void print(FILE* stream, format_string<Args...> fmt, Args&&... args);
+// void println();                                                          // Since C++26
 // template<class... Args>
 //   void println(FILE* stream, format_string<Args...> fmt, Args&&... args);
+// void println(FILE* stream);                                              // Since C++26
 // void vprint_unicode(FILE* stream, string_view fmt, format_args args);
 // void vprint_nonunicode(FILE* stream, string_view fmt, format_args args);
 
@@ -60,13 +65,28 @@ static void test_println() {
   assert(std::string_view(buffer.data(), pos) == "hello world!\n");
 }
 
+static void test_println_blank_line() {
+  std::array<char, 100> buffer{0};
+
+  FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
+  assert(file);
+
+  std::println(file);
+  long pos = std::ftell(file);
+  std::fclose(file);
+
+  assert(pos > 0);
+  assert(std::string_view(buffer.data(), pos) == "\n");
+}
+
 static void test_vprint_unicode() {
   std::array<char, 100> buffer{0};
 
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::vprint_unicode(file, "hello world{}", std::make_format_args('!'));
+  char c = '!';
+  std::vprint_unicode(file, "hello world{}", std::make_format_args(c));
   long pos = std::ftell(file);
   std::fclose(file);
 
@@ -80,7 +100,8 @@ static void test_vprint_nonunicode() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::vprint_nonunicode(file, "hello world{}", std::make_format_args('!'));
+  char c = '!';
+  std::vprint_nonunicode(file, "hello world{}", std::make_format_args(c));
   long pos = std::ftell(file);
   std::fclose(file);
 
@@ -91,6 +112,7 @@ static void test_vprint_nonunicode() {
 int main(int, char**) {
   test_print();
   test_println();
+  test_println_blank_line();
   test_vprint_unicode();
   test_vprint_nonunicode();
 

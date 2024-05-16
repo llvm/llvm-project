@@ -7,7 +7,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
   // CHECK: DIALECT_NAMESPACE = "test"
-  // CHECK: pass
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "Test";
@@ -123,7 +122,7 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:   attributes = {}
   // CHECK:   regions = None
   // CHECK:   attributes["i32attr"] = (i32attr if (
-  // CHECK-NEXT:   issubclass(type(i32attr), _ods_ir.Attribute) or
+  // CHECK-NEXT:   isinstance(i32attr, _ods_ir.Attribute) or
   // CHECK-NEXT:   not _ods_ir.AttrBuilder.contains('I32Attr')
   // CHECK-NEXT:   _ods_ir.AttrBuilder.get('I32Attr')(i32attr, context=_ods_context)
   // CHECK:   if optionalF32Attr is not None: attributes["optionalF32Attr"] = (optionalF32Attr
@@ -615,6 +614,15 @@ def VariadicRegionOp : TestOp<"variadic_region"> {
 
 // CHECK: def variadic_region(num_variadic, *, loc=None, ip=None)
 // CHECK:   return _get_op_result_or_op_results(VariadicRegionOp(num_variadic=num_variadic, loc=loc, ip=ip))
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK: class WithSpecialCharactersOp(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.123with--special.characters"
+def WithSpecialCharactersOp : TestOp<"123with--special.characters"> {
+}
+
+// CHECK: def _123with__special_characters(*, loc=None, ip=None)
+// CHECK:   return _get_op_result_or_op_results(WithSpecialCharactersOp(loc=loc, ip=ip))
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class WithSuccessorsOp(_ods_ir.OpView):

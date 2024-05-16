@@ -38,7 +38,7 @@ define void @foo(ptr nocapture noundef %p1) {
 ; CHECK-NEXT:    li a6, 7
 ; CHECK-NEXT:    li a7, 8
 ; CHECK-NEXT:    sd t0, 0(sp)
-; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s2)

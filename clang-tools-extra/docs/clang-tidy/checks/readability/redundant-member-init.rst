@@ -11,13 +11,14 @@ Example
 
 .. code-block:: c++
 
-  // Explicitly initializing the member s is unnecessary.
+  // Explicitly initializing the member s and v is unnecessary.
   class Foo {
   public:
     Foo() : s() {}
 
   private:
     std::string s;
+    std::vector<int> v {};
   };
 
 Options

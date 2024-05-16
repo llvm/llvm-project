@@ -53,7 +53,7 @@ bool MultipleInheritanceCheck::isCurrentClassInterface(
 
   // Interfaces should have exclusively pure methods.
   return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
-    return M->isUserProvided() && !M->isPure() && !M->isStatic();
+    return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
   });
 }
 
@@ -103,8 +103,8 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
       const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!isInterface(Base)) NumConcrete++;
     }
-    
-    // Check virtual bases to see if there is more than one concrete 
+
+    // Check virtual bases to see if there is more than one concrete
     // non-virtual base.
     for (const auto &V : D->vbases()) {
       const auto *Ty = V.getType()->getAs<RecordType>();

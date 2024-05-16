@@ -9,13 +9,11 @@
 // This file implements a pass to forward affine memref stores to loads, thereby
 // potentially getting rid of intermediate memrefs entirely. It also removes
 // redundant loads.
-// TODO: In the future, similar techniques could be used to eliminate
-// dead memref store's and perform more complex forwarding when support for
-// SSA scalars live out of 'affine.for'/'affine.if' statements is available.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Passes.h"
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
@@ -50,5 +48,6 @@ mlir::affine::createAffineScalarReplacementPass() {
 
 void AffineScalarReplacement::runOnOperation() {
   affineScalarReplace(getOperation(), getAnalysis<DominanceInfo>(),
-                      getAnalysis<PostDominanceInfo>());
+                      getAnalysis<PostDominanceInfo>(),
+                      getAnalysis<AliasAnalysis>());
 }

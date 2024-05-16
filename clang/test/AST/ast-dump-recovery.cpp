@@ -202,27 +202,27 @@ void InvalidInitalizer(int x) {
   // CHECK-NEXT:  `-InitListExpr
   Bar b2 = {1};
   // CHECK:     `-VarDecl {{.*}} b3 'Bar'
-  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar':'Bar' contains-errors
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:    `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b3 = Bar(x);
   // CHECK:     `-VarDecl {{.*}} b4 'Bar'
-  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar':'Bar' contains-errors
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:    `-InitListExpr {{.*}} 'void'
   // CHECK-NEXT:      `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b4 = Bar{x};
   // CHECK:     `-VarDecl {{.*}} b5 'Bar'
-  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar':'Bar' contains-errors 'Bar'
+  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar' contains-errors 'Bar'
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b5 = Bar(invalid());
   // CHECK:     `-VarDecl {{.*}} b6 'Bar'
-  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar':'Bar' contains-errors 'Bar'
+  // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar' contains-errors 'Bar'
   // CHECK-NEXT:  `-InitListExpr {{.*}} contains-errors
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b6 = Bar{invalid()};
 
-  // CHECK:     RecoveryExpr {{.*}} 'Bar':'Bar' contains-errors
+  // CHECK:     RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:  `-IntegerLiteral {{.*}} 'int' 1
   Bar(1);
 
@@ -326,7 +326,7 @@ void CtorInitializer() {
     // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>'
     // CHECK-NEXT: |     `-UnresolvedLookupExpr {{.*}} '<overloaded function type>'
     // CHECK-NEXT: |-CXXCtorInitializer Field {{.*}} 's' 'S'
-    // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'S':'S' contains-errors
+    // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'S' contains-errors
     // CHECK-NEXT: |   |-IntegerLiteral {{.*}} 1
     // CHECK-NEXT: |   `-IntegerLiteral {{.*}} 2
   };
@@ -411,6 +411,19 @@ void RecoveryExprForInvalidDecls(Unknown InvalidDecl) {
   InvalidDecl();
   // CHECK:      CallExpr {{.*}}
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+}
+
+void InitializerOfInvalidDecl() {
+  int ValidDecl;
+  Unkown InvalidDecl = ValidDecl;
+  // CHECK:      VarDecl {{.*}} invalid InvalidDecl
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'ValidDecl'
+
+  Unknown InvalidDeclWithInvalidInit = Invalid;
+  // CHECK:      VarDecl {{.*}} invalid InvalidDeclWithInvalidInit
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NOT:    `-TypoExpr
 }
 
 void RecoverToAnInvalidDecl() {

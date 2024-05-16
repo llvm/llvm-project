@@ -28,8 +28,8 @@ entry:
   %0 = load i32, ptr %a.addr, align 4, !dbg !14
   %cmp = icmp sgt i32 %0, 0, !dbg !18
   br i1 %cmp, label %if.then, label %if.else, !dbg !19
-; CHECK: edge entry -> if.then probability is 0x0167ba82 / 0x80000000 = 1.10%
-; CHECK: edge entry -> if.else probability is 0x7e98457e / 0x80000000 = 98.90% [HOT edge]
+; CHECK: edge %entry -> %if.then probability is 0x0167ba82 / 0x80000000 = 1.10%
+; CHECK: edge %entry -> %if.else probability is 0x7e98457e / 0x80000000 = 98.90% [HOT edge]
 
 if.then:                                          ; preds = %entry
   store i32 10, ptr %retval, align 4, !dbg !20

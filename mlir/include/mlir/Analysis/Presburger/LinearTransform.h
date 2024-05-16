@@ -50,10 +50,6 @@ public:
     return matrix.postMultiplyWithColumn(colVec);
   }
 
-  // Compute the determinant of the transform by converting it to row echelon
-  // form and then taking the product of the diagonal.
-  MPInt determinant();
-
 private:
   IntMatrix matrix;
 };

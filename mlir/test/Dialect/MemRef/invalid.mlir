@@ -142,7 +142,7 @@ func.func @transpose_bad_rank(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(o
 // -----
 
 func.func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
-  // expected-error @+1 {{output type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' does not match transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>'}}
+  // expected-error @+1 {{result type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' is not equivalent to the canonical transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 + s0 + d1 * s1)>>'}}
   memref.transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
@@ -392,9 +392,9 @@ func.func @copy_different_eltype(%arg0: memref<2xf32>, %arg1: memref<2xf16>) {
 
 // -----
 
-func.func @expand_shape(%arg0: memref<?x?xf32>) {
+func.func @expand_shape(%arg0: memref<?x?xf32>, %sz0: index, %sz1: index) {
   // expected-error @+1 {{invalid number of reassociation groups: found 1, expected 2}}
-  %0 = memref.expand_shape %arg0 [[0, 1]] : memref<?x?xf32> into memref<?x5x?xf32>
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [%sz0, 5, %sz1] : memref<?x?xf32> into memref<?x5x?xf32>
   return
 }
 
@@ -402,7 +402,15 @@ func.func @expand_shape(%arg0: memref<?x?xf32>) {
 
 func.func @expand_shape(%arg0: memref<f32>) {
   // expected-error @+1 {{rank 0 memrefs can only be extended/collapsed with/from ones}}
-  %0 = memref.expand_shape %arg0 [] : memref<f32> into memref<1x2xf32>
+  %0 = memref.expand_shape %arg0 [] output_shape [1, 2] : memref<f32> into memref<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_illegal_output_shape(%arg0: memref<2xf32>) {
+  // expected-error @+1 {{expected number of static shape bounds to be equal to the output rank (3) but found 2 inputs instead}}
+  %0 = memref.expand_shape %arg0 [[0, 1, 2]] output_shape [1, 2] : memref<2xf32> into memref<1x1x2xf32>
   return
 }
 
@@ -415,23 +423,9 @@ func.func @collapse_shape_out_of_bounds(%arg0: memref<?x?xf32>) {
 
 // -----
 
-func.func @expand_shape_invalid_ranks(%arg0: memref<?x?xf32>) {
-  // expected-error @+1 {{op expected rank expansion, but found source rank 2 >= result rank 2}}
-  %0 = memref.expand_shape %arg0 [[0], [1]] : memref<?x?xf32> into memref<?x?xf32>
-}
-
-// -----
-
-func.func @collapse_shape_invalid_ranks(%arg0: memref<?x?xf32>) {
-  // expected-error @+1 {{op expected rank reduction, but found source rank 2 <= result rank 2}}
-  %0 = memref.collapse_shape %arg0 [[0], [1]] : memref<?x?xf32> into memref<?x?xf32>
-}
-
-// -----
-
-func.func @expand_shape_out_of_bounds(%arg0: memref<?xf32>) {
+func.func @expand_shape_out_of_bounds(%arg0: memref<?xf32>, %sz0: index) {
   // expected-error @+1 {{op reassociation index 2 is out of bounds}}
-  %0 = memref.expand_shape %arg0 [[0, 1, 2]] : memref<?xf32> into memref<4x?xf32>
+  %0 = memref.expand_shape %arg0 [[0, 1, 2]] output_shape [4, %sz0] : memref<?xf32> into memref<4x?xf32>
 }
 
 // -----
@@ -439,7 +433,7 @@ func.func @expand_shape_out_of_bounds(%arg0: memref<?xf32>) {
 func.func @expand_shape_invalid_result_layout(
     %arg0: memref<30x20xf32, strided<[4000, 2], offset: 100>>) {
   // expected-error @+1 {{expected expanded type to be 'memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>' but found 'memref<2x15x20xf32, strided<[5000, 4000, 2], offset: 100>>'}}
-  %0 = memref.expand_shape %arg0 [[0, 1], [2]] :
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 15, 20] :
       memref<30x20xf32, strided<[4000, 2], offset: 100>>
       into memref<2x15x20xf32, strided<[5000, 4000, 2], offset: 100>>
 }
@@ -458,6 +452,34 @@ func.func @collapse_shape_invalid_reassociation(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{reassociation indices must be contiguous}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [1, 2]] :
     memref<?x?x?xf32> into memref<?x?xf32, strided<[?, 1], offset: 0>>
+}
+
+// -----
+
+// An (invalid) attempt at using collapse_shape to increase the rank might look
+// like this. Verify that a sensible error is emitted in this case.
+func.func @collapse_shape_invalid_reassociation_expansion(%arg0: memref<?xf32>) {
+  // expected-error @+1 {{'memref.collapse_shape' op has source rank 1 and result rank 2. This is not a collapse (1 < 2)}}
+  %0 = memref.collapse_shape %arg0 [[0], [0]] :
+    memref<?xf32> into memref<?x?xf32>
+}
+
+// -----
+
+// An (invalid) attempt at using expand_shape to reduce the rank might look
+// like this. Verify that a sensible error is emitted in this case.
+func.func @expand_shape_invalid_reassociation(%arg0: memref<2x3x1xf32>) {
+  // expected-error @+1 {{'memref.expand_shape' op has source rank 3 and result rank 2. This is not an expansion (3 > 2)}}
+  %0 = memref.expand_shape %arg0 [[0], [1], [1]] output_shape [2, 3] :
+    memref<2x3x1xf32> into memref<2x3xf32>
+}
+
+// -----
+
+func.func @collapse_shape_invalid_reassociation_expansion(%arg0: memref<?x?xf32>) {
+  // expected-error @+1 {{reassociation indices must be contiguous}}
+  %0 = memref.collapse_shape %arg0 [[1], [0]] :
+    memref<?x?xf32> into memref<?x?xf32>
 }
 
 // -----
@@ -481,20 +503,10 @@ func.func @collapse_shape_wrong_collapsed_type(%arg0: memref<?x?x?xf32>) {
 
 // -----
 
-func.func @expand_shape_illegal_dynamic_memref
-  (%arg0: memref<?x?x?xf32>) -> memref<?x?x?x4x?xf32> {
-  // expected-error @+1 {{at most one dimension in a reassociation group may be dynamic}}
-  %0 = memref.expand_shape %arg0 [[0], [1], [2, 3, 4]]
-      : memref<?x?x?xf32> into memref<?x?x?x4x?xf32>
-  return %0 : memref<?x?x?x4x?xf32>
-}
-
-// -----
-
 func.func @expand_shape_illegal_static_memref
   (%arg0: memref<2x3x20xf32>) -> memref<2x3x2x4x5xf32> {
   // expected-error @+1 {{collapsed dim size (20) must equal reassociation group size (40)}}
-  %0 = memref.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+  %0 = memref.expand_shape %arg0 [[0], [1], [2, 3, 4]] output_shape [2, 3, 2, 4, 5]
       : memref<2x3x20xf32> into memref<2x3x2x4x5xf32>
   return %0 : memref<2x3x2x4x5xf32>
 }
@@ -511,30 +523,30 @@ func.func @collapse_shape_illegal_static_memref
 
 // -----
 
-func.func @expand_shape_illegal_mixed_memref(%arg0 : memref<?x?xf32>)
+func.func @expand_shape_illegal_mixed_memref(%arg0 : memref<?x?xf32>, %sz0: index)
     -> memref<?x4x5xf32> {
   // expected-error @+1 {{collapsed dim (1) must be dynamic if and only if reassociation group is dynamic}}
-  %0 = memref.expand_shape %arg0 [[0, 1], [2]]
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [%sz0, 4, 5]
       : memref<?x?xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
 }
 
 // -----
 
-func.func @expand_shape_illegal_mixed_memref_2(%arg0 : memref<?x?xf32>)
+func.func @expand_shape_illegal_mixed_memref_2(%arg0 : memref<?x?xf32>, %sz0: index)
     -> memref<?x4x5xf32> {
   // expected-error @+1 {{collapsed dim (1) must be dynamic if and only if reassociation group is dynamic}}
-  %0 = memref.expand_shape %arg0 [[0], [1, 2]]
+  %0 = memref.expand_shape %arg0 [[0], [1, 2]] output_shape [%sz0, 4, 5]
       : memref<?x?xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
 }
 
 // -----
 
-func.func @expand_shape_invalid_static_dim_size(%arg0 : memref<?x21xf32>)
+func.func @expand_shape_invalid_static_dim_size(%arg0 : memref<?x21xf32>, %sz0: index)
     -> memref<?x4x5xf32> {
   // expected-error @+1 {{collapsed dim size (21) must equal reassociation group size (20)}}
-  %0 = memref.expand_shape %arg0 [[0], [1, 2]]
+  %0 = memref.expand_shape %arg0 [[0], [1, 2]] output_shape [%sz0, 4, 5]
       : memref<?x21xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
 }
@@ -607,6 +619,22 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %1 = memref.view %0[%arg2][%arg0]
     : memref<2048xi8> to memref<?x?xf32>
   return
+}
+
+// -----
+
+func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
+  // expected-error@+1 {{expected offsets to be non-negative, but got -1}}
+  %0 = memref.subview %input[-1, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+}
+
+// -----
+
+func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
+  // expected-error@+1 {{expected sizes to be non-negative, but got -1}}
+  %0 = memref.subview %input[2, 256] [-1, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
 }
 
 // -----
@@ -880,6 +908,15 @@ func.func @bad_alloc_wrong_symbol_count() {
 
 // -----
 
+func.func @load_invalid_memref_indexes() {
+  %0 = memref.alloca() : memref<10xi32>
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{incorrect number of indices for load, expected 1 but got 2}}
+  %1 = memref.load %0[%c0, %c0] : memref<10xi32>
+}
+
+// -----
+
 func.func @test_store_zero_results() {
 ^bb0:
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
@@ -1046,5 +1083,34 @@ func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : memref<f32>, %arg1 : index) {
   memref.dim %arg, %arg1 : memref<f32> // expected-error {{'memref.dim' op operand #0 must be unranked.memref of any type values or non-0-ranked.memref of any type values, but got 'memref<f32>'}}
+  return
+}
+
+// -----
+
+func.func @subview_invalid_strides(%m: memref<7x22x333x4444xi32>) {
+  // expected-error @below{{expected result type to be 'memref<7x11x333x4444xi32, strided<[32556744, 2959704, 4444, 1]>>' or a rank-reduced version. (mismatch of result layout)}}
+  %subview = memref.subview %m[0, 0, 0, 0] [7, 11, 333, 4444] [1, 2, 1, 1]
+      : memref<7x22x333x4444xi32> to memref<7x11x333x4444xi32>
+  return
+}
+
+// -----
+
+func.func @subview_invalid_strides_rank_reduction(%m: memref<7x22x333x4444xi32>) {
+  // expected-error @below{{expected result type to be 'memref<7x11x1x4444xi32, strided<[32556744, 2959704, 4444, 1]>>' or a rank-reduced version. (mismatch of result layout)}}
+  %subview = memref.subview %m[0, 0, 0, 0] [7, 11, 1, 4444] [1, 2, 1, 1]
+      : memref<7x22x333x4444xi32> to memref<7x11x4444xi32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_invalid_output_shape(
+    %arg0: memref<30x20xf32, strided<[4000, 2], offset: 100>>) {
+  // expected-error @+1 {{invalid output shape provided at pos 2}}
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 15, 21] :
+      memref<30x20xf32, strided<[4000, 2], offset: 100>>
+      into memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>
   return
 }

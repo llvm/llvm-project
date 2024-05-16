@@ -110,7 +110,7 @@ AND call SWIG_fail at the same time, because it will result in a double free.
         SWIG_fail;
       }
 
-      if (llvm::StringRef(type_name.get()).startswith("SB")) {
+      if (llvm::StringRef(type_name.get()).starts_with("SB")) {
         std::string error_msg = "Input type is invalid: " + type_name.get();
         PyErr_SetString(PyExc_TypeError, error_msg.c_str());
         SWIG_fail;

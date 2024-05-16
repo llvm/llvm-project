@@ -180,10 +180,10 @@ jr a0
 # CHECK-NEXT:  1      3     0.50                        sext.b	a0, a0
 # CHECK-NEXT:  1      3     0.50                        sext.h	a0, a0
 # CHECK-NEXT:  1      3     0.50                        zext.h	a0, a0
-# CHECK-NEXT:  1      3     0.50                        min	a0, a0, a0
-# CHECK-NEXT:  1      3     0.50                        minu	a0, a0, a0
-# CHECK-NEXT:  1      3     0.50                        max	a0, a0, a0
-# CHECK-NEXT:  1      3     0.50                        maxu	a0, a0, a0
+# CHECK-NEXT:  1      3     1.00                        min	a0, a0, a0
+# CHECK-NEXT:  1      3     1.00                        minu	a0, a0, a0
+# CHECK-NEXT:  1      3     1.00                        max	a0, a0, a0
+# CHECK-NEXT:  1      3     1.00                        maxu	a0, a0, a0
 # CHECK-NEXT:  1      3     1.00                        rol	a0, a0, a0
 # CHECK-NEXT:  1      3     1.00                        ror	a0, a0, a0
 # CHECK-NEXT:  1      3     1.00                        rori	a0, a0, 1
@@ -218,14 +218,14 @@ jr a0
 # CHECK-NEXT: [1]   - SiFive7IDiv
 # CHECK-NEXT: [2]   - SiFive7PipeA
 # CHECK-NEXT: [3]   - SiFive7PipeB
-# CHECK-NEXT: [4]   - SiFive7PipeV
-# CHECK-NEXT: [5]   - SiFive7VA
+# CHECK-NEXT: [4]   - SiFive7VA
+# CHECK-NEXT: [5]   - SiFive7VCQ
 # CHECK-NEXT: [6]   - SiFive7VL
 # CHECK-NEXT: [7]   - SiFive7VS
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     39.00  52.00   -      -      -      -
+# CHECK-NEXT:  -      -     37.00  54.00   -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -289,9 +289,9 @@ jr a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sext.h	a0, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     zext.h	a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     min	a0, a0, a0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     minu	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     minu	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     max	a0, a0, a0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     maxu	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     maxu	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     rol	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ror	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     rori	a0, a0, 1

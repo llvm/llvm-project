@@ -1038,13 +1038,15 @@ public:
 
   ~ObjCClassSyntheticChildrenFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return 0; }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return lldb::ValueObjectSP();
   }
 
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   bool MightHaveChildren() override { return false; }
 

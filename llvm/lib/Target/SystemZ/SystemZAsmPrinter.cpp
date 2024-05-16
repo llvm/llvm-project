@@ -27,7 +27,10 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
+#include "llvm/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -350,9 +353,9 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     EmitToStreamer(*OutStreamer, MCInstBuilder(Op)
                                      .addReg(TargetReg)
-                                     .addReg(IndexReg)
+                                     .addReg(ADAReg)
                                      .addImm(Disp)
-                                     .addReg(ADAReg));
+                                     .addReg(IndexReg));
 
     return;
   }
@@ -886,14 +889,18 @@ static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
     OS << '%' << RegName;
 }
 
+static void printReg(unsigned Reg, const MCAsmInfo *MAI, raw_ostream &OS) {
+  if (!Reg)
+    OS << '0';
+  else
+    printFormattedRegName(MAI, Reg, OS);
+}
+
 static void printOperand(const MCOperand &MCOp, const MCAsmInfo *MAI,
                          raw_ostream &OS) {
-  if (MCOp.isReg()) {
-    if (!MCOp.getReg())
-      OS << '0';
-    else
-      printFormattedRegName(MAI, MCOp.getReg(), OS);
-  } else if (MCOp.isImm())
+  if (MCOp.isReg())
+    printReg(MCOp.getReg(), MAI, OS);
+  else if (MCOp.isImm())
     OS << MCOp.getImm();
   else if (MCOp.isExpr())
     MCOp.getExpr()->print(OS, MAI);
@@ -943,6 +950,21 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
+  if (ExtraCode && ExtraCode[0] && !ExtraCode[1]) {
+    switch (ExtraCode[0]) {
+    case 'A':
+      // Unlike EmitMachineNode(), EmitSpecialNode(INLINEASM) does not call
+      // setMemRefs(), so MI->memoperands() is empty and the alignment
+      // information is not available.
+      return false;
+    case 'O':
+      OS << MI->getOperand(OpNo + 1).getImm();
+      return false;
+    case 'R':
+      ::printReg(MI->getOperand(OpNo).getReg(), MAI, OS);
+      return false;
+    }
+  }
   printAddress(MAI, MI->getOperand(OpNo).getReg(),
                MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
                MI->getOperand(OpNo + 2).getReg(), OS);
@@ -953,6 +975,7 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   auto TT = OutContext.getTargetTriple();
   if (TT.isOSzOS()) {
     emitADASection();
+    emitIDRLSection(M);
   }
   emitAttributes(M);
 }
@@ -1026,6 +1049,72 @@ void SystemZAsmPrinter::emitADASection() {
   OutStreamer->popSection();
 }
 
+static std::string getProductID(Module &M) {
+  std::string ProductID;
+  if (auto *MD = M.getModuleFlag("zos_product_id"))
+    ProductID = cast<MDString>(MD)->getString().str();
+  if (ProductID.empty())
+    ProductID = "LLVM";
+  return ProductID;
+}
+
+static uint32_t getProductVersion(Module &M) {
+  if (auto *VersionVal = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("zos_product_major_version")))
+    return VersionVal->getZExtValue();
+  return LLVM_VERSION_MAJOR;
+}
+
+static uint32_t getProductRelease(Module &M) {
+  if (auto *ReleaseVal = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("zos_product_minor_version")))
+    return ReleaseVal->getZExtValue();
+  return LLVM_VERSION_MINOR;
+}
+
+static uint32_t getProductPatch(Module &M) {
+  if (auto *PatchVal = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("zos_product_patchlevel")))
+    return PatchVal->getZExtValue();
+  return LLVM_VERSION_PATCH;
+}
+
+static time_t getTranslationTime(Module &M) {
+  std::time_t Time = 0;
+  if (auto *Val = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("zos_translation_time"))) {
+    long SecondsSinceEpoch = Val->getSExtValue();
+    Time = static_cast<time_t>(SecondsSinceEpoch);
+  }
+  return Time;
+}
+
+void SystemZAsmPrinter::emitIDRLSection(Module &M) {
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getIDRLSection());
+  constexpr unsigned IDRLDataLength = 30;
+  std::time_t Time = getTranslationTime(M);
+
+  uint32_t ProductVersion = getProductVersion(M);
+  uint32_t ProductRelease = getProductRelease(M);
+
+  std::string ProductID = getProductID(M);
+
+  SmallString<IDRLDataLength + 1> TempStr;
+  raw_svector_ostream O(TempStr);
+  O << formatv("{0,-10}{1,0-2:d}{2,0-2:d}{3:%Y%m%d%H%M%S}{4,0-2}",
+               ProductID.substr(0, 10).c_str(), ProductVersion, ProductRelease,
+               llvm::sys::toUtcTime(Time), "0");
+  SmallString<IDRLDataLength> Data;
+  ConverterEBCDIC::convertToEBCDIC(TempStr, Data);
+
+  OutStreamer->emitInt8(0);               // Reserved.
+  OutStreamer->emitInt8(3);               // Format.
+  OutStreamer->emitInt16(IDRLDataLength); // Length.
+  OutStreamer->emitBytes(Data.str());
+  OutStreamer->popSection();
+}
+
 void SystemZAsmPrinter::emitFunctionBodyEnd() {
   if (TM.getTargetTriple().isOSzOS()) {
     // Emit symbol for the end of function if the z/OS target streamer
@@ -1045,7 +1134,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
 
 static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
                           bool StackProtector, bool FPRMask, bool VRMask,
-                          bool HasName) {
+                          bool EHBlock, bool HasName) {
   enum class PPA1Flag1 : uint8_t {
     DSA64Bit = (0x80 >> 0),
     VarArg = (0x80 >> 7),
@@ -1063,6 +1152,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   enum class PPA1Flag4 : uint8_t {
     EPMOffsetPresent = (0x80 >> 0),
     VRMask = (0x80 >> 2),
+    EHBlock = (0x80 >> 3),
     ProcedureNamePresent = (0x80 >> 7),
     LLVM_MARK_AS_BITMASK_ENUM(EPMOffsetPresent)
   };
@@ -1087,6 +1177,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 
   if (VRMask)
     Flags4 |= PPA1Flag4::VRMask; // Add emit VR mask flag.
+
+  if (EHBlock)
+    Flags4 |= PPA1Flag4::EHBlock; // Add optional EH block.
 
   if (HasName)
     Flags4 |= PPA1Flag4::ProcedureNamePresent; // Add optional name block.
@@ -1118,6 +1211,8 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   OutStreamer->AddComment("PPA1 Flags 4");
   if ((Flags4 & PPA1Flag4::VRMask) == PPA1Flag4::VRMask)
     OutStreamer->AddComment("  Bit 2: 1 = Vector Reg Mask is in optional area");
+  if ((Flags4 & PPA1Flag4::EHBlock) == PPA1Flag4::EHBlock)
+    OutStreamer->AddComment("  Bit 3: 1 = C++ EH block");
   if ((Flags4 & PPA1Flag4::ProcedureNamePresent) ==
       PPA1Flag4::ProcedureNamePresent)
     OutStreamer->AddComment("  Bit 7: 1 = Name Length and Name");
@@ -1150,6 +1245,8 @@ static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
 }
 
 void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
+  assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
+
   const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
   const auto TargetHasVector = Subtarget.hasVector();
@@ -1239,13 +1336,17 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   OutStreamer->emitInt8(0xCE); // CEL signature.
   OutStreamer->AddComment("Saved GPR Mask");
   OutStreamer->emitInt16(SavedGPRMask);
+  OutStreamer->AddComment("Offset to PPA2");
+  OutStreamer->emitAbsoluteSymbolDiff(PPA2Sym, CurrentFnPPA1Sym, 4);
+
+  bool NeedEmitEHBlock = !MF->getLandingPads().empty();
 
   bool HasName =
       MF->getFunction().hasName() && MF->getFunction().getName().size() > 0;
 
   emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
                 MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
-                TargetHasVector && SavedVRMask != 0, HasName);
+                TargetHasVector && SavedVRMask != 0, NeedEmitEHBlock, HasName);
 
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
@@ -1287,6 +1388,29 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
     OutStreamer->emitInt32(FrameAndVROffset);
   }
 
+  // Emit C++ EH information block
+  const Function *Per = nullptr;
+  if (NeedEmitEHBlock) {
+    Per = dyn_cast<Function>(
+        MF->getFunction().getPersonalityFn()->stripPointerCasts());
+    MCSymbol *PersonalityRoutine =
+        Per ? MF->getTarget().getSymbol(Per) : nullptr;
+    assert(PersonalityRoutine && "Missing personality routine");
+
+    OutStreamer->AddComment("Version");
+    OutStreamer->emitInt32(1);
+    OutStreamer->AddComment("Flags");
+    OutStreamer->emitInt32(0); // LSDA field is a WAS offset
+    OutStreamer->AddComment("Personality routine");
+    OutStreamer->emitInt64(ADATable.insert(
+        PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC));
+    OutStreamer->AddComment("LSDA location");
+    MCSymbol *GCCEH = MF->getContext().getOrCreateSymbol(
+        Twine("GCC_except_table") + Twine(MF->getFunctionNumber()));
+    OutStreamer->emitInt64(
+        ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR));
+  }
+
   // Emit name length and name optional section (0x01 of flags 4)
   if (HasName)
     emitPPA1Name(OutStreamer, MF->getFunction().getName());
@@ -1294,6 +1418,127 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   // Emit offset to entry point optional section (0x80 of flags 4).
   OutStreamer->emitAbsoluteSymbolDiff(CurrentFnEPMarkerSym, CurrentFnPPA1Sym,
                                       4);
+}
+
+void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().isOSzOS())
+    emitPPA2(M);
+  AsmPrinter::emitStartOfAsmFile(M);
+}
+
+void SystemZAsmPrinter::emitPPA2(Module &M) {
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getPPA2Section());
+  MCContext &OutContext = OutStreamer->getContext();
+  // Make CELQSTRT symbol.
+  const char *StartSymbolName = "CELQSTRT";
+  MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
+
+  // Create symbol and assign to class field for use in PPA1.
+  PPA2Sym = OutContext.createTempSymbol("PPA2", false);
+  MCSymbol *DateVersionSym = OutContext.createTempSymbol("DVS", false);
+
+  std::time_t Time = getTranslationTime(M);
+  SmallString<15> CompilationTime; // 14 + null
+  raw_svector_ostream O(CompilationTime);
+  O << formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
+
+  uint32_t ProductVersion = getProductVersion(M),
+           ProductRelease = getProductRelease(M),
+           ProductPatch = getProductPatch(M);
+
+  SmallString<7> Version; // 6 + null
+  raw_svector_ostream ostr(Version);
+  ostr << formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion, ProductRelease,
+                  ProductPatch);
+
+  // Drop 0 during conversion.
+  SmallString<sizeof(CompilationTime) - 1> CompilationTimeStr;
+  SmallString<sizeof(Version) - 1> VersionStr;
+
+  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeStr);
+  ConverterEBCDIC::convertToEBCDIC(Version, VersionStr);
+
+  enum class PPA2MemberId : uint8_t {
+    // See z/OS Language Environment Vendor Interfaces v2r5, p.23, for
+    // complete list. Only the C runtime is supported by this backend.
+    LE_C_Runtime = 3,
+  };
+  enum class PPA2MemberSubId : uint8_t {
+    // List of languages using the LE C runtime implementation.
+    C = 0x00,
+    CXX = 0x01,
+    Swift = 0x03,
+    Go = 0x60,
+    LLVMBasedLang = 0xe7,
+  };
+  // PPA2 Flags
+  enum class PPA2Flags : uint8_t {
+    CompileForBinaryFloatingPoint = 0x80,
+    CompiledWithXPLink = 0x01,
+    CompiledUnitASCII = 0x04,
+    HasServiceInfo = 0x20,
+  };
+
+  PPA2MemberSubId MemberSubId = PPA2MemberSubId::LLVMBasedLang;
+  if (auto *MD = M.getModuleFlag("zos_cu_language")) {
+    StringRef Language = cast<MDString>(MD)->getString();
+    MemberSubId = StringSwitch<PPA2MemberSubId>(Language)
+                      .Case("C", PPA2MemberSubId::C)
+                      .Case("C++", PPA2MemberSubId::CXX)
+                      .Case("Swift", PPA2MemberSubId::Swift)
+                      .Case("Go", PPA2MemberSubId::Go)
+                      .Default(PPA2MemberSubId::LLVMBasedLang);
+  }
+
+  // Emit PPA2 section.
+  OutStreamer->emitLabel(PPA2Sym);
+  OutStreamer->emitInt8(static_cast<uint8_t>(PPA2MemberId::LE_C_Runtime));
+  OutStreamer->emitInt8(static_cast<uint8_t>(MemberSubId));
+  OutStreamer->emitInt8(0x22); // Member defined, c370_plist+c370_env
+  OutStreamer->emitInt8(0x04); // Control level 4 (XPLink)
+  OutStreamer->emitAbsoluteSymbolDiff(CELQSTRT, PPA2Sym, 4);
+  OutStreamer->emitInt32(0x00000000);
+  OutStreamer->emitAbsoluteSymbolDiff(DateVersionSym, PPA2Sym, 4);
+  OutStreamer->emitInt32(
+      0x00000000); // Offset to main entry point, always 0 (so says TR).
+  uint8_t Flgs = static_cast<uint8_t>(PPA2Flags::CompileForBinaryFloatingPoint);
+  Flgs |= static_cast<uint8_t>(PPA2Flags::CompiledWithXPLink);
+
+  if (auto *MD = M.getModuleFlag("zos_le_char_mode")) {
+    const StringRef &CharMode = cast<MDString>(MD)->getString();
+    if (CharMode == "ascii") {
+      Flgs |= static_cast<uint8_t>(
+          PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
+    } else if (CharMode != "ebcdic") {
+      report_fatal_error(
+          "Only ascii or ebcdic are valid values for zos_le_char_mode "
+          "metadata");
+    }
+  }
+
+  OutStreamer->emitInt8(Flgs);
+  OutStreamer->emitInt8(0x00);    // Reserved.
+                                  // No MD5 signature before timestamp.
+                                  // No FLOAT(AFP(VOLATILE)).
+                                  // Remaining 5 flag bits reserved.
+  OutStreamer->emitInt16(0x0000); // 16 Reserved flag bits.
+
+  // Emit date and version section.
+  OutStreamer->emitLabel(DateVersionSym);
+  OutStreamer->emitBytes(CompilationTimeStr.str());
+  OutStreamer->emitBytes(VersionStr.str());
+
+  OutStreamer->emitInt16(0x0000); // Service level string length.
+
+  // The binder requires that the offset to the PPA2 be emitted in a different,
+  // specially-named section.
+  OutStreamer->switchSection(getObjFileLowering().getPPA2ListSection());
+  // Emit 8 byte alignment.
+  // Emit pointer to PPA2 label.
+  OutStreamer->AddComment("A(PPA2-CELQSTRT)");
+  OutStreamer->emitAbsoluteSymbolDiff(PPA2Sym, CELQSTRT, 8);
+  OutStreamer->popSection();
 }
 
 void SystemZAsmPrinter::emitFunctionEntryLabel() {
@@ -1318,7 +1563,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     uint32_t DSASize = MFFrame.getStackSize();
     bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
 
-    // Set Flags
+    // Set Flags.
     uint8_t Flags = 0;
     if (IsLeaf)
       Flags |= 0x08;

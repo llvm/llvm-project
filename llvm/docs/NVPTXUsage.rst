@@ -53,15 +53,15 @@ function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
       ret float %add
     }
 
-    define void @my_kernel(float* %ptr) {
-      %val = load float, float* %ptr
+    define void @my_kernel(ptr %ptr) {
+      %val = load float, ptr %ptr
       %ret = call float @my_fmad(float %val, float %val, float %val)
-      store float %ret, float* %ptr
+      store float %ret, ptr %ptr
       ret void
     }
 
     !nvvm.annotations = !{!1}
-    !1 = !{void (float*)* @my_kernel, !"kernel", i32 1}
+    !1 = !{ptr @my_kernel, !"kernel", i32 1}
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
@@ -140,10 +140,10 @@ These are overloaded intrinsics.  You can use these on any pointer types.
 
 .. code-block:: llvm
 
-    declare i8* @llvm.nvvm.ptr.global.to.gen.p0i8.p1i8(i8 addrspace(1)*)
-    declare i8* @llvm.nvvm.ptr.shared.to.gen.p0i8.p3i8(i8 addrspace(3)*)
-    declare i8* @llvm.nvvm.ptr.constant.to.gen.p0i8.p4i8(i8 addrspace(4)*)
-    declare i8* @llvm.nvvm.ptr.local.to.gen.p0i8.p5i8(i8 addrspace(5)*)
+    declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
+    declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
+    declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
+    declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
 
 Overview:
 """""""""
@@ -168,10 +168,10 @@ These are overloaded intrinsics.  You can use these on any pointer types.
 
 .. code-block:: llvm
 
-    declare i8 addrspace(1)* @llvm.nvvm.ptr.gen.to.global.p1i8.p0i8(i8*)
-    declare i8 addrspace(3)* @llvm.nvvm.ptr.gen.to.shared.p3i8.p0i8(i8*)
-    declare i8 addrspace(4)* @llvm.nvvm.ptr.gen.to.constant.p4i8.p0i8(i8*)
-    declare i8 addrspace(5)* @llvm.nvvm.ptr.gen.to.local.p5i8.p0i8(i8*)
+    declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
+    declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
+    declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
+    declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
 
 Overview:
 """""""""
@@ -296,6 +296,10 @@ pipeline, immediately after the link stage. The ``internalize`` pass is also
 recommended to remove unused math functions from the resulting PTX. For an
 input IR module ``module.bc``, the following compilation flow is recommended:
 
+The ``NVVMReflect`` pass will attempt to remove dead code even without
+optimizations. This allows potentially incompatible instructions to be avoided
+at all optimizations levels by using the ``__CUDA_ARCH`` argument.
+
 1. Save list of external functions in ``module.bc``
 2. Link ``module.bc`` with ``libdevice.compute_XX.YY.bc``
 3. Internalize all functions not in list from (1)
@@ -329,7 +333,7 @@ optimization pipeline before dead-code elimination.
 The NVPTX TargetMachine knows how to schedule ``NVVMReflect`` at the beginning
 of your pass manager; just use the following code when setting up your pass
 manager and the PassBuilder will use ``registerPassBuilderCallbacks`` to let
-NVPTXTargetMachine::registerPassBuilderCallbacks add the the pass to the
+NVPTXTargetMachine::registerPassBuilderCallbacks add the pass to the
 pass manager:
 
 .. code-block:: c++
@@ -432,35 +436,33 @@ The Kernel
   ; Intrinsic to read X component of thread ID
   declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
-  define void @kernel(float addrspace(1)* %A,
-                      float addrspace(1)* %B,
-                      float addrspace(1)* %C) {
+  define void @kernel(ptr addrspace(1) %A,
+                      ptr addrspace(1) %B,
+                      ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, ptr addrspace(1) %A, i32 %id
+    %ptrB = getelementptr float, ptr addrspace(1) %B, i32 %id
+    %ptrC = getelementptr float, ptr addrspace(1) %C, i32 %id
 
     ; Read A, B
-    %valA = load float, float addrspace(1)* %ptrA, align 4
-    %valB = load float, float addrspace(1)* %ptrB, align 4
+    %valA = load float, ptr addrspace(1) %ptrA, align 4
+    %valB = load float, ptr addrspace(1) %ptrB, align 4
 
     ; Compute C = A + B
     %valC = fadd float %valA, %valB
 
     ; Store back to C
-    store float %valC, float addrspace(1)* %ptrC, align 4
+    store float %valC, ptr addrspace(1) %ptrC, align 4
 
     ret void
   }
 
   !nvvm.annotations = !{!0}
-  !0 = !{void (float addrspace(1)*,
-               float addrspace(1)*,
-               float addrspace(1)*)* @kernel, !"kernel", i32 1}
+  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -609,9 +611,7 @@ For the previous example, we have:
 .. code-block:: llvm
 
   !nvvm.annotations = !{!0}
-  !0 = !{void (float addrspace(1)*,
-               float addrspace(1)*,
-               float addrspace(1)*)* @kernel, !"kernel", i32 1}
+  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 Here, we have a single metadata declaration in ``nvvm.annotations``. This
 metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
@@ -816,35 +816,33 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   ; libdevice function
   declare float @__nv_powf(float, float)
 
-  define void @kernel(float addrspace(1)* %A,
-                      float addrspace(1)* %B,
-                      float addrspace(1)* %C) {
+  define void @kernel(ptr addrspace(1) %A,
+                      ptr addrspace(1) %B,
+                      ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, ptr addrspace(1) %A, i32 %id
+    %ptrB = getelementptr float, ptr addrspace(1) %B, i32 %id
+    %ptrC = getelementptr float, ptr addrspace(1) %C, i32 %id
 
     ; Read A, B
-    %valA = load float, float addrspace(1)* %ptrA, align 4
-    %valB = load float, float addrspace(1)* %ptrB, align 4
+    %valA = load float, ptr addrspace(1) %ptrA, align 4
+    %valB = load float, ptr addrspace(1) %ptrB, align 4
 
     ; Compute C = pow(A, B)
     %valC = call float @__nv_powf(float %valA, float %valB)
 
     ; Store back to C
-    store float %valC, float addrspace(1)* %ptrC, align 4
+    store float %valC, ptr addrspace(1) %ptrC, align 4
 
     ret void
   }
 
   !nvvm.annotations = !{!0}
-  !0 = !{void (float addrspace(1)*,
-               float addrspace(1)*,
-               float addrspace(1)*)* @kernel, !"kernel", i32 1}
+  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

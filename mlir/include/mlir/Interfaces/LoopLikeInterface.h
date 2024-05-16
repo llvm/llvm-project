@@ -24,7 +24,35 @@ class RewriterBase;
 /// arguments in `newBbArgs`.
 using NewYieldValuesFn = std::function<SmallVector<Value>(
     OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs)>;
+
+namespace detail {
+/// Verify invariants of the LoopLikeOpInterface.
+LogicalResult verifyLoopLikeOpInterface(Operation *op);
+} // namespace detail
+
+//===----------------------------------------------------------------------===//
+// Traits
+//===----------------------------------------------------------------------===//
+
+namespace OpTrait {
+// A trait indicating that the single region contained in the operation has
+// parallel execution semantics. This may have implications in a certain pass.
+// For example, buffer hoisting is illegal in parallel loops, and local buffers
+// may be accessed by parallel threads simultaneously.
+template <typename ConcreteType>
+class HasParallelRegion : public TraitBase<ConcreteType, HasParallelRegion> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifyOneRegion(op);
+  }
+};
+
+} // namespace OpTrait
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// Interfaces
+//===----------------------------------------------------------------------===//
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"

@@ -1,5 +1,5 @@
-// RUN: mlir-opt -finalize-memref-to-llvm='use-opaque-pointers=1' -llvm-request-c-wrappers -convert-func-to-llvm='use-opaque-pointers=1' -reconcile-unrealized-casts %s | FileCheck %s
-// RUN: mlir-opt -finalize-memref-to-llvm='use-opaque-pointers=1' -convert-func-to-llvm='use-opaque-pointers=1' -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
+// RUN: mlir-opt -finalize-memref-to-llvm -llvm-request-c-wrappers -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
 
 // This tests the default memref calling convention and the emission of C
 // wrappers. We don't need to separate runs because the wrapper-emission

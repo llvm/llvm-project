@@ -5,12 +5,12 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -99,20 +99,6 @@ module {
     return
   }
 
-  func.func @dump_mat_perm_9x4(%A: tensor<9x4xf64, #MAT_C_C_P>) {
-    %c = sparse_tensor.convert %A : tensor<9x4xf64, #MAT_C_C_P> to tensor<9x4xf64>
-    %cu = tensor.cast %c : tensor<9x4xf64> to tensor<*xf64>
-    call @printMemrefF64(%cu) : (tensor<*xf64>) -> ()
-
-    %n = sparse_tensor.number_of_entries %A : tensor<9x4xf64, #MAT_C_C_P>
-    vector.print %n : index
-
-    %1 = sparse_tensor.values %A : tensor<9x4xf64, #MAT_C_C_P> to memref<?xf64>
-    call @printMemref1dF64(%1) : (memref<?xf64>) -> ()
-
-    return
-  }
-
   func.func @dump_mat_dense_9x4(%A: tensor<9x4xf64>) {
     %u = tensor.cast %A : tensor<9x4xf64> to tensor<*xf64>
     call @printMemrefF64(%u) : (tensor<*xf64>) -> ()
@@ -120,18 +106,8 @@ module {
     return
   }
 
-  func.func @dump_mat_annotated_dense_9x4(%A: tensor<9x4xf64, #MAT_D_D>) {
-    %n = sparse_tensor.number_of_entries %A : tensor<9x4xf64, #MAT_D_D>
-    vector.print %n : index
-
-    %1 = sparse_tensor.values %A : tensor<9x4xf64, #MAT_D_D> to memref<?xf64>
-    call @printMemref1dF64(%1) : (memref<?xf64>) -> ()
-
-    return
-  }
-
   // Driver method to call and verify kernels.
-  func.func @entry() {
+  func.func @main() {
     %m42 = arith.constant dense<
       [ [ 1.0, 0.0 ],
         [ 3.1, 0.0 ],
@@ -163,20 +139,21 @@ module {
     %sm34cdp = sparse_tensor.convert %m34 : tensor<3x4xf64> to tensor<3x4xf64, #MAT_C_D_P>
     %sm44dcp = sparse_tensor.convert %m44 : tensor<4x4xf64> to tensor<4x4xf64, #MAT_D_C_P>
 
-    // CHECK:      {{\[}}[1,   0,   3,   0],
-    // CHECK-NEXT:  [0,   2,   0,   0],
-    // CHECK-NEXT:  [1,   0,   1,   1],
-    // CHECK-NEXT:  [0,   0.5,   0,   0],
-    // CHECK-NEXT:  [1,   5,   2,   0],
-    // CHECK-NEXT:  [0,   0,   1.5,   1],
-    // CHECK-NEXT:  [0,   3.5,   0,   0],
-    // CHECK-NEXT:  [1,   5,   2,   0],
-    // CHECK-NEXT:  [1,   0.5,   0,   0]]
-    // CHECK-NEXT: 18
-    // CHECK:      [1,  1,  1,  1,  1,  2,  0.5,  5,  3.5,  5,  0.5,  3,  1,  2,  1.5,  2,  1,  1
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 18
+    // CHECK-NEXT: dim = ( 9, 4 )
+    // CHECK-NEXT: lvl = ( 4, 9 )
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 5, 11, 16, 18 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 4, 7, 8, 1, 3, 4, 6, 7, 8, 0, 2, 4, 5, 7, 2, 5 )
+    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 2, 0.5, 5, 3.5, 5, 0.5, 3, 1, 2, 1.5, 2, 1, 1 )
+    // CHECK-NEXT: ----
+    //
     %4 = call @concat_sparse_sparse_perm(%sm24ccp, %sm34cd, %sm44dc)
                : (tensor<2x4xf64, #MAT_C_C_P>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C_P>
-    call @dump_mat_perm_9x4(%4) : (tensor<9x4xf64, #MAT_C_C_P>) -> ()
+    sparse_tensor.print %4 : tensor<9x4xf64, #MAT_C_C_P>
 
     // CHECK:      {{\[}}[1,   0,   3,   0],
     // CHECK-NEXT:  [0,   2,   0,   0],
@@ -191,20 +168,21 @@ module {
                : (tensor<2x4xf64, #MAT_C_C_P>, tensor<3x4xf64, #MAT_C_D_P>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64>
     call @dump_mat_dense_9x4(%5) : (tensor<9x4xf64>) -> ()
 
-    // CHECK:      {{\[}}[1,   0,   3,   0],
-    // CHECK-NEXT:  [0,   2,   0,   0],
-    // CHECK-NEXT:  [1,   0,   1,   1],
-    // CHECK-NEXT:  [0,   0.5,   0,   0],
-    // CHECK-NEXT:  [1,   5,   2,   0],
-    // CHECK-NEXT:  [0,   0,   1.5,   1],
-    // CHECK-NEXT:  [0,   3.5,   0,   0],
-    // CHECK-NEXT:  [1,   5,   2,   0],
-    // CHECK-NEXT:  [1,   0.5,   0,   0]]
-    // CHECK-NEXT: 18
-    // CHECK:      [1,  3,  2,  1,  1,  1,  0.5,  1,  5,  2,  1.5,  1,  3.5,  1,  5,  2,  1,  0.5
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 18
+    // CHECK-NEXT: dim = ( 9, 4 )
+    // CHECK-NEXT: lvl = ( 9, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 9 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 7, 10, 12, 13, 16, 18 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1, 0, 2, 3, 1, 0, 1, 2, 2, 3, 1, 0, 1, 2, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 3, 2, 1, 1, 1, 0.5, 1, 5, 2, 1.5, 1, 3.5, 1, 5, 2, 1, 0.5 )
+    // CHECK-NEXT: ----
+    //
     %6 = call @concat_mix_sparse_perm(%m24, %sm34cdp, %sm44dc)
                : (tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D_P>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C>
-    call @dump_mat_9x4(%6) : (tensor<9x4xf64, #MAT_C_C>) -> ()
+    sparse_tensor.print %6 : tensor<9x4xf64, #MAT_C_C>
 
     // CHECK:      {{\[}}[1,   0,   3,   0],
     // CHECK-NEXT:  [0,   2,   0,   0],

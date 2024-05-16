@@ -191,6 +191,13 @@ void Symbolizer::RefreshModules() {
   modules_fresh_ = true;
 }
 
+const ListOfModules &Symbolizer::GetRefreshedListOfModules() {
+  if (!modules_fresh_)
+    RefreshModules();
+
+  return modules_;
+}
+
 static const LoadedModule *SearchForModule(const ListOfModules &modules,
                                            uptr address) {
   for (uptr i = 0; i < modules.size(); i++) {

@@ -24,7 +24,13 @@ add_flang_library(FortranLower
   LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
-  OpenMP.cpp
+  OpenMP/ClauseProcessor.cpp
+  OpenMP/Clauses.cpp
+  OpenMP/DataSharingProcessor.cpp
+  OpenMP/Decomposer.cpp
+  OpenMP/OpenMP.cpp
+  OpenMP/ReductionProcessor.cpp
+  OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
   SymbolMap.cpp

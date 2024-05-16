@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -15,11 +16,11 @@
 // void resize_file(const path& p, uintmax_t new_size);
 // void resize_file(const path& p, uintmax_t new_size, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void test_signatures()

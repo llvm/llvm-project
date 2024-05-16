@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
 
@@ -35,35 +34,36 @@ using ZeroPaddedHexFmt = IntegerToString<
 // 3. The exponent is always 16 bits wide irrespective of the type of the
 //    floating encoding.
 template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
-  using UIntType = typename fputil::FPBits<T>::UIntType;
+  using StorageType = typename fputil::FPBits<T>::StorageType;
 
   if (x.is_nan())
     return "(NaN)";
   if (x.is_inf())
-    return x.get_sign() ? "(-Infinity)" : "(+Infinity)";
+    return x.is_neg() ? "(-Infinity)" : "(+Infinity)";
 
-  const auto sign_char = [](bool sign) -> char { return sign ? '1' : '0'; };
+  const auto sign_char = [](Sign sign) -> char {
+    return sign.is_neg() ? '1' : '0';
+  };
 
   cpp::string s;
 
-  const details::ZeroPaddedHexFmt<UIntType> bits(x.bits);
+  const details::ZeroPaddedHexFmt<StorageType> bits(x.uintval());
   s += bits.view();
 
   s += " = (S: ";
-  s += sign_char(x.get_sign());
+  s += sign_char(x.sign());
 
   s += ", E: ";
-  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_unbiased_exponent());
+  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());
   s += exponent.view();
 
-  if constexpr (cpp::is_same_v<T, long double> &&
-                fputil::FloatProperties<long double>::MANTISSA_WIDTH == 63) {
+  if constexpr (fputil::get_fp_type<T>() == fputil::FPType::X86_Binary80) {
     s += ", I: ";
-    s += sign_char(x.get_implicit_bit());
+    s += sign_char(x.get_implicit_bit() ? Sign::NEG : Sign::POS);
   }
 
   s += ", M: ";
-  const details::ZeroPaddedHexFmt<UIntType> mantissa(x.get_mantissa());
+  const details::ZeroPaddedHexFmt<StorageType> mantissa(x.get_mantissa());
   s += mantissa.view();
 
   s += ')';
@@ -72,4 +72,4 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H

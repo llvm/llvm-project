@@ -331,7 +331,7 @@ Instruction *
 InstCombinerImpl::foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN) {
   auto *FirstIVI = cast<InsertValueInst>(PN.getIncomingValue(0));
 
-  // Scan to see if all operands are `insertvalue`'s with the same indicies,
+  // Scan to see if all operands are `insertvalue`'s with the same indices,
   // and all have a single use.
   for (Value *V : drop_begin(PN.incoming_values())) {
     auto *I = dyn_cast<InsertValueInst>(V);
@@ -371,7 +371,7 @@ Instruction *
 InstCombinerImpl::foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN) {
   auto *FirstEVI = cast<ExtractValueInst>(PN.getIncomingValue(0));
 
-  // Scan to see if all operands are `extractvalue`'s with the same indicies,
+  // Scan to see if all operands are `extractvalue`'s with the same indices,
   // and all have a single use.
   for (Value *V : drop_begin(PN.incoming_values())) {
     auto *I = dyn_cast<ExtractValueInst>(V);
@@ -1205,7 +1205,8 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
       // Otherwise, Create the new PHI node for this user.
       EltPHI = PHINode::Create(Ty, PN->getNumIncomingValues(),
-                               PN->getName()+".off"+Twine(Offset), PN);
+                               PN->getName() + ".off" + Twine(Offset),
+                               PN->getIterator());
       assert(EltPHI->getType() != PN->getType() &&
              "Truncate didn't shrink phi?");
 
@@ -1378,6 +1379,58 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   return nullptr;
 }
 
+// Fold  iv = phi(start, iv.next = iv2.next op start)
+// where iv2 = phi(iv2.start, iv2.next = iv2 + iv2.step)
+// and   iv2.start op start = start
+// to    iv = iv2 op start
+static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
+  BasicBlock *BB = PN.getParent();
+  if (PN.getNumIncomingValues() != 2)
+    return nullptr;
+
+  Value *Start;
+  Instruction *IvNext;
+  BinaryOperator *Iv2Next;
+  auto MatchOuterIV = [&](Value *V1, Value *V2) {
+    if (match(V2, m_c_BinOp(m_Specific(V1), m_BinOp(Iv2Next))) ||
+        match(V2, m_GEP(m_Specific(V1), m_BinOp(Iv2Next)))) {
+      Start = V1;
+      IvNext = cast<Instruction>(V2);
+      return true;
+    }
+    return false;
+  };
+
+  if (!MatchOuterIV(PN.getIncomingValue(0), PN.getIncomingValue(1)) &&
+      !MatchOuterIV(PN.getIncomingValue(1), PN.getIncomingValue(0)))
+    return nullptr;
+
+  PHINode *Iv2;
+  Value *Iv2Start, *Iv2Step;
+  if (!matchSimpleRecurrence(Iv2Next, Iv2, Iv2Start, Iv2Step) ||
+      Iv2->getParent() != BB)
+    return nullptr;
+
+  auto *BO = dyn_cast<BinaryOperator>(IvNext);
+  Constant *Identity =
+      BO ? ConstantExpr::getBinOpIdentity(BO->getOpcode(), Iv2Start->getType())
+         : Constant::getNullValue(Iv2Start->getType());
+  if (Iv2Start != Identity)
+    return nullptr;
+
+  Builder.SetInsertPoint(&*BB, BB->getFirstInsertionPt());
+  if (!BO) {
+    auto *GEP = cast<GEPOperator>(IvNext);
+    return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",
+                             cast<GEPOperator>(IvNext)->isInBounds());
+  }
+
+  assert(BO->isCommutative() && "Must be commutative");
+  Value *Res = Builder.CreateBinOp(BO->getOpcode(), Iv2, Start);
+  cast<Instruction>(Res)->copyIRFlags(BO);
+  return Res;
+}
+
 // PHINode simplification
 //
 Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
@@ -1440,33 +1493,58 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // are induction variable analysis (sometimes) and ADCE, which is only run
     // late.
     if (PHIUser->hasOneUse() &&
-        (isa<BinaryOperator>(PHIUser) || isa<GetElementPtrInst>(PHIUser)) &&
+        (isa<BinaryOperator>(PHIUser) || isa<UnaryOperator>(PHIUser) ||
+         isa<GetElementPtrInst>(PHIUser)) &&
         PHIUser->user_back() == &PN) {
       return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
     }
-    // When a PHI is used only to be compared with zero, it is safe to replace
-    // an incoming value proved as known nonzero with any non-zero constant.
-    // For example, in the code below, the incoming value %v can be replaced
-    // with any non-zero constant based on the fact that the PHI is only used to
-    // be compared with zero and %v is a known non-zero value:
-    // %v = select %cond, 1, 2
-    // %p = phi [%v, BB] ...
-    //      icmp eq, %p, 0
-    auto *CmpInst = dyn_cast<ICmpInst>(PHIUser);
-    // FIXME: To be simple, handle only integer type for now.
-    if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
-        match(CmpInst->getOperand(1), m_Zero())) {
+  }
+
+  // When a PHI is used only to be compared with zero, it is safe to replace
+  // an incoming value proved as known nonzero with any non-zero constant.
+  // For example, in the code below, the incoming value %v can be replaced
+  // with any non-zero constant based on the fact that the PHI is only used to
+  // be compared with zero and %v is a known non-zero value:
+  // %v = select %cond, 1, 2
+  // %p = phi [%v, BB] ...
+  //      icmp eq, %p, 0
+  // FIXME: To be simple, handle only integer type for now.
+  // This handles a small number of uses to keep the complexity down, and an
+  // icmp(or(phi)) can equally be replaced with any non-zero constant as the
+  // "or" will only add bits.
+  if (!PN.hasNUsesOrMore(3)) {
+    SmallVector<Instruction *> DropPoisonFlags;
+    bool AllUsesOfPhiEndsInCmp = all_of(PN.users(), [&](User *U) {
+      auto *CmpInst = dyn_cast<ICmpInst>(U);
+      if (!CmpInst) {
+        // This is always correct as OR only add bits and we are checking
+        // against 0.
+        if (U->hasOneUse() && match(U, m_c_Or(m_Specific(&PN), m_Value()))) {
+          DropPoisonFlags.push_back(cast<Instruction>(U));
+          CmpInst = dyn_cast<ICmpInst>(U->user_back());
+        }
+      }
+      if (!CmpInst || !isa<IntegerType>(PN.getType()) ||
+          !CmpInst->isEquality() || !match(CmpInst->getOperand(1), m_Zero())) {
+        return false;
+      }
+      return true;
+    });
+    // All uses of PHI results in a compare with zero.
+    if (AllUsesOfPhiEndsInCmp) {
       ConstantInt *NonZeroConst = nullptr;
       bool MadeChange = false;
       for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
         Instruction *CtxI = PN.getIncomingBlock(I)->getTerminator();
         Value *VA = PN.getIncomingValue(I);
-        if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
+        if (isKnownNonZero(VA, getSimplifyQuery().getWithInstruction(CtxI))) {
           if (!NonZeroConst)
             NonZeroConst = getAnyNonZeroConstInt(PN);
-
           if (NonZeroConst != VA) {
             replaceOperand(PN, I, NonZeroConst);
+            // The "disjoint" flag may no longer hold after the transform.
+            for (Instruction *I : DropPoisonFlags)
+              I->dropPoisonGeneratingFlags();
             MadeChange = true;
           }
         }
@@ -1569,6 +1647,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // Ultimately, try to replace this Phi with a dominating condition.
   if (auto *V = simplifyUsingControlFlow(*this, PN, DT))
     return replaceInstUsesWith(PN, V);
+
+  if (Value *Res = foldDependentIVs(PN, Builder))
+    return replaceInstUsesWith(PN, Res);
 
   return nullptr;
 }

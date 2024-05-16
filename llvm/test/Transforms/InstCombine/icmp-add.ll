@@ -9,10 +9,8 @@ declare void @use(i32)
 define i1 @cvt_icmp_0_zext_plus_zext_eq_i16(i16 %arg, i16 %arg1) {
 ; CHECK-LABEL: @cvt_icmp_0_zext_plus_zext_eq_i16(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = zext i16 [[ARG:%.*]] to i32
-; CHECK-NEXT:    [[I2:%.*]] = zext i16 [[ARG1:%.*]] to i32
-; CHECK-NEXT:    [[I3:%.*]] = sub nsw i32 0, [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i32 [[I2]], [[I3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i16 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = icmp eq i16 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[I4]]
 ;
 bb:
@@ -27,10 +25,8 @@ bb:
 define i1 @cvt_icmp_0_zext_plus_zext_eq_i8(i8 %arg, i8 %arg1) {
 ; CHECK-LABEL: @cvt_icmp_0_zext_plus_zext_eq_i8(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = zext i8 [[ARG:%.*]] to i32
-; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[ARG1:%.*]] to i32
-; CHECK-NEXT:    [[I3:%.*]] = sub nsw i32 0, [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i32 [[I2]], [[I3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i8 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[I4]]
 ;
 bb:
@@ -515,6 +511,19 @@ bb:
   ret i1 %t
 }
 
+define <2 x i1> @cvt_icmp_2_sext_plus_zext_ne_vec(<2 x i1> %arg, <2 x i1> %arg1) {
+; CHECK-LABEL: @cvt_icmp_2_sext_plus_zext_ne_vec(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+bb:
+  %i = sext <2 x i1> %arg to <2 x i32>
+  %i2 = zext <2 x i1> %arg1 to <2 x i32>
+  %i3 = add nsw <2 x i32> %i, %i2
+  %i4 = icmp ne <2 x i32> %i3, <i32 2, i32 2>
+  ret <2 x i1> %i4
+}
+
 ; test if zext i1 X + sext i1 Y converted to sext i1 X + zext i1 Y
 ; and then processed
 
@@ -529,6 +538,19 @@ bb:
   %i3 = add i32 %i, %i2
   %t = icmp eq i32 %i3, -2
   ret i1 %t
+}
+
+define <2 x i1> @cvt_icmp_neg_2_zext_plus_sext_eq_vec(<2 x i1> %arg, <2 x i1> %arg1) {
+; CHECK-LABEL: @cvt_icmp_neg_2_zext_plus_sext_eq_vec(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+bb:
+  %i = zext <2 x i1> %arg to <2 x i32>
+  %i2 = sext <2 x i1> %arg1 to <2 x i32>
+  %i3 = add nsw <2 x i32> %i2, %i
+  %i4 = icmp eq <2 x i32> %i3, <i32 2, i32 2>
+  ret <2 x i1> %i4
 }
 
 define i1 @cvt_icmp_neg_1_zext_plus_sext_eq(i1 %arg, i1 %arg1) {
@@ -2974,6 +2996,30 @@ define i1 @icmp_dec_notnonzero(i8 %x) {
 ;
   %i = add i8 %x, -1
   %c = icmp ult i8 %i, 11
+  ret i1 %c
+}
+
+define i1 @icmp_addnuw_nonzero(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_addnuw_nonzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw i8 %x, %y
+  %c = icmp eq i8 %i, 0
+  ret i1 %c
+}
+
+define i1 @icmp_addnuw_nonzero_fail_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_addnuw_nonzero_fail_multiuse(
+; CHECK-NEXT:    [[I:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[I]], 0
+; CHECK-NEXT:    call void @use(i32 [[I]])
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw i32 %x, %y
+  %c = icmp eq i32 %i, 0
+  call void @use(i32 %i)
   ret i1 %c
 }
 

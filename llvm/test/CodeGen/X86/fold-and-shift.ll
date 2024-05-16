@@ -36,8 +36,7 @@ define i32 @t2(ptr %X, i32 %i) {
 ; X64-LABEL: t2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    addl %eax, %eax
-; X64-NEXT:    movl (%rdi,%rax,2), %eax
+; X64-NEXT:    movl (%rdi,%rax,4), %eax
 ; X64-NEXT:    retq
 entry:
   %tmp2 = shl i32 %i, 1

@@ -1,14 +1,16 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file  -canonicalize -cse --verify-diagnostics %s
+// RUN: mlir-opt --transform-interpreter --split-input-file  -canonicalize -cse --verify-diagnostics %s
 
 func.func @map_nested_forall_to_threads_not_gpu_launch() -> () {
   %1 = tensor.empty() : tensor<4xf32>
   return
 }
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{Given target is not a gpu.launch}}
-  %1 = transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1, 1, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{Given target is not a gpu.launch}}
+    %1 = transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1, 1, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -44,12 +46,15 @@ func.func @map_nested_forall_to_threads_excessive_threads(%x: memref<2 x 32 x f3
 
   return %y : memref<2 x 32 x f32>
 }
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (1, 1, 1) block_dims = (1200, 9, 1). It is larger than the limits.}}
-  // expected-note @below {{"block_dims" is too large}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1200, 9, 1] : (!transform.any_op) -> !transform.any_op
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (1, 1, 1) block_dims = (1200, 9, 1). It is larger than the limits.}}
+    // expected-note @below {{"block_dims" is too large}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1200, 9, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -86,11 +91,13 @@ func.func @map_nested_forall_to_threads_fewer_threads(%x: memref<2 x 32 x f32>, 
   return %y : memref<2 x 32 x f32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{the number of required parallel resources (blocks or threads) 6300 overflows the number of available resources 512}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{the number of required parallel resources (blocks or threads) 6300 overflows the number of available resources 512}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -112,11 +119,13 @@ func.func @map_nested_forall_to_threads_dynamic_trip_count(%x: memref<2 x 32 x f
   return %y : memref<2 x 32 x f32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{requires statically sized, normalized forall op}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{requires statically sized, normalized forall op}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -132,14 +141,16 @@ func.func @map_nested_forall_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: te
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  %forall, %tiled = transform.structured.tile_using_forall %matmul num_threads [2, 3, 1] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{only bufferized scf.forall can be mapped}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [96, 4, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %tiled, %forall = transform.structured.tile_using_forall %matmul num_threads [2, 3, 1] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{only bufferized scf.forall can be mapped}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [96, 4, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -150,11 +161,14 @@ func.func @map_forall_to_blocks_not_gpu_launch() -> () {
   %1 = tensor.empty() : tensor<4xf32>
   return
 }
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{Given target is not gpu.launch}}
-  %1 = transform.gpu.map_forall_to_blocks %funcop : (!transform.any_op) -> !transform.any_op
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{Given target is not gpu.launch}}
+    %1 = transform.gpu.map_forall_to_blocks %funcop : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -187,11 +201,13 @@ func.func @map_forall_to_blocks_not_unique(%x: memref<2 x 32 x f32>, %y: memref<
   return %y : memref<2 x 32 x f32>
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{could not find a unique topLevel scf.forall}}
-  %1 = transform.gpu.map_forall_to_blocks %funcop : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{could not find a unique topLevel scf.forall}}
+    %1 = transform.gpu.map_forall_to_blocks %funcop : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -220,11 +236,13 @@ func.func @map_forall_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref<
   return %y : memref<2 x 32 x f32>
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{could not find a unique topLevel scf.forall}}
-  %1 = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch } : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{could not find a unique topLevel scf.forall}}
+    %1 = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -241,11 +259,13 @@ func.func @map_forall_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref<
   return %y : memref<2 x 32 x f32>
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (65535, 65535, 1) block_dims = (1, 1, 1). It is larger than the limits.}}
-  %1 = transform.gpu.map_forall_to_blocks %funcop generate_gpu_launch : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (65535, 65535, 1) block_dims = (1, 1, 1). It is larger than the limits.}}
+    %1 = transform.gpu.map_forall_to_blocks %funcop generate_gpu_launch : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -268,11 +288,13 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
   return %y : !type
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{cannot mix different mapping types, use nesting}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{cannot mix different mapping types, use nesting}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -295,11 +317,13 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
   return %y : !type
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{duplicate attribute, cannot map different loops to the same mapping id}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{duplicate attribute, cannot map different loops to the same mapping id}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -322,23 +346,25 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
   return %y : !type
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{cannot mix linear and non-linear mapping modes}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{cannot mix linear and non-linear mapping modes}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
 
 // expected-note @below {{when applied to this payload op}}
-module {
-transform.sequence failures(propagate) {
-^bb1(%op: !transform.any_op):
-  // expected-error @below {{could not find a unique topLevel scf.forall}}
-  %gpu_launch = transform.gpu.map_forall_to_blocks %op generate_gpu_launch grid_dims = [1, 1, 1]
-    : (!transform.any_op) -> !transform.any_op
-}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%op: !transform.any_op {transform.consumed}) {
+    // expected-error @below {{could not find a unique topLevel scf.forall}}
+    %gpu_launch = transform.gpu.map_forall_to_blocks %op generate_gpu_launch grid_dims = [1, 1, 1]
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -350,11 +376,13 @@ func.func public @improperly_sized_grid_dims(%arg0: memref<32x32xf32>, %arg1: me
   return
 }
 
-transform.sequence  failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %arg0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{transform requires empty or size-3 grid_dims}}
-  %5 = transform.gpu.map_forall_to_blocks %arg1 generate_gpu_launch grid_dims = [50, 16] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
+    %arg0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{transform requires empty or size-3 grid_dims}}
+    %5 = transform.gpu.map_forall_to_blocks %arg1 generate_gpu_launch grid_dims = [50, 16] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -366,11 +394,13 @@ func.func public @missing_mapping_attribute(%arg0: memref<32x32xf32>, %arg1: mem
   return
 }
 
-transform.sequence  failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %arg0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{scf.forall op requires a mapping attribute}}
-  %5 = transform.gpu.map_forall_to_blocks %arg1 generate_gpu_launch grid_dims = [50, 16, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
+    %arg0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{scf.forall op requires a mapping attribute}}
+    %5 = transform.gpu.map_forall_to_blocks %arg1 generate_gpu_launch grid_dims = [50, 16, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -382,11 +412,13 @@ func.func public @not_a_block_mapping_attribute(%arg0: memref<32x32xf32>, %arg1:
   return
 }
 
-transform.sequence  failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %arg0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{scf.forall op requires a mapping attribute of kind 'block'}}
-  %5 = transform.gpu.map_forall_to_blocks %arg1 generate_gpu_launch grid_dims = [50, 16, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
+    %arg0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{scf.forall op requires a mapping attribute of kind 'block'}}
+    %5 = transform.gpu.map_forall_to_blocks %arg1 generate_gpu_launch grid_dims = [50, 16, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -411,9 +443,11 @@ func.func @not_a_thread_or_warp_mapping_attribute(%x: memref<2 x 32 x f32>, %y: 
   return %y : memref<2 x 32 x f32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{scf.forall op requires a mapping attribute of kind 'thread' or 'warp'}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1, 1, 1] : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{scf.forall op requires a mapping attribute of kind 'thread' or 'warp'}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1, 1, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

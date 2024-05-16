@@ -145,6 +145,8 @@ public:
 
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;
+
+  bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
 };
 
 } // end namespace llvm

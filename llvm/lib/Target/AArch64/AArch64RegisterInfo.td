@@ -147,6 +147,9 @@ def VG : AArch64Reg<0, "vg">, DwarfRegNum<[46]>;
 // Floating-point control register
 def FPCR : AArch64Reg<0, "fpcr">;
 
+// Floating-point status register.
+def FPSR : AArch64Reg<0, "fpsr">;
+
 // GPR register classes with the intersections of GPR32/GPR32sp and
 // GPR64/GPR64sp for use by the coalescer.
 def GPR32common : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 30)> {
@@ -217,11 +220,16 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
                                                      X22, X23, X24, X25, X26,
                                                      X27, X28, FP, LR)>;
 
-// Restricted set of tail call registers, for use when branch target
-// enforcement is enabled. These are the only registers which can be used to
-// indirectly branch (not call) to the "BTI c" instruction at the start of a
-// BTI-protected function.
-def rtcGPR64 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+// Restricted sets of tail call registers, for use when branch target
+// enforcement or PAuthLR are enabled.
+// For BTI, x16 and x17 are the only registers which can be used to indirectly
+// branch (not call) to the "BTI c" instruction at the start of a BTI-protected
+// function.
+// For PAuthLR, x16 must be used in the function epilogue for other purposes,
+// so cannot hold the function pointer.
+def tcGPRx17 : RegisterClass<"AArch64", [i64], 64, (add X17)>;
+def tcGPRx16x17 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+def tcGPRnotx16 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16)>;
 
 // Register set that excludes registers that are reserved for procedure calls.
 // This is used for pseudo-instructions that are actually implemented using a
@@ -467,6 +475,13 @@ def FPR128_lo : RegisterClass<"AArch64",
                                v8bf16],
                               128, (trunc FPR128, 16)>;
 
+// The lower 8 vector registers.  Some instructions can only take registers
+// in this range.
+def FPR128_0to7 : RegisterClass<"AArch64",
+                                [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
+                                 v8bf16],
+                                128, (trunc FPR128, 8)>;
+
 // Pairs, triples, and quads of 64-bit vector registers.
 def DSeqPairs : RegisterTuples<[dsub0, dsub1], [(rotl FPR64, 0), (rotl FPR64, 1)]>;
 def DSeqTriples : RegisterTuples<[dsub0, dsub1, dsub2],
@@ -532,6 +547,15 @@ def V64_lo : RegisterOperand<FPR64_lo, "printVRegOperand"> {
 }
 def V128_lo : RegisterOperand<FPR128_lo, "printVRegOperand"> {
   let ParserMatchClass = VectorRegLoAsmOperand;
+}
+
+def VectorReg0to7AsmOperand : AsmOperandClass {
+  let Name = "VectorReg0to7";
+  let PredicateMethod = "isNeonVectorReg0to7";
+}
+
+def V128_0to7 : RegisterOperand<FPR128_0to7, "printVRegOperand"> {
+  let ParserMatchClass = VectorReg0to7AsmOperand;
 }
 
 class TypedVecListAsmOperand<int count, string vecty, int lanes, int eltsize>
@@ -929,17 +953,6 @@ class PNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
   let ParserMethod   = "tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>";
 }
 
-let RenderMethod = "addPNRasPPRRegOperands" in {
-  def PNRasPPROpAny : PNRAsmOperand<"PNRasPPRPredicateAny", "PNR",  0>;
-  def PNRasPPROp8   : PNRAsmOperand<"PNRasPPRPredicateB",   "PNR",  8>;
-}
-
-class PNRasPPRRegOp<string Suffix, AsmOperandClass C, ElementSizeEnum Size,
-                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
-
-def PNRasPPRAny : PNRasPPRRegOp<"",  PNRasPPROpAny, ElementSizeNone, PPR>;
-def PNRasPPR8   : PNRasPPRRegOp<"b", PNRasPPROp8,   ElementSizeB,    PPR>;
-
 def PNRAsmOpAny: PNRAsmOperand<"PNPredicateAny", "PNR", 0>;
 def PNRAsmOp8  : PNRAsmOperand<"PNPredicateB",   "PNR", 8>;
 def PNRAsmOp16 : PNRAsmOperand<"PNPredicateH",   "PNR", 16>;
@@ -979,6 +992,29 @@ let Namespace = "AArch64" in {
   def psub0 : SubRegIndex<16, -1>;
   def psub1 : SubRegIndex<16, -1>;
 }
+
+class PPRorPNRClass : RegisterClass<
+                                  "AArch64",
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
+                                  (add PPR, PNR)> {
+  let Size = 16;
+}
+
+class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
+  let PredicateMethod = "isSVEPredicateOrPredicateAsCounterRegOfWidth<"
+                            # Width # ", " # "AArch64::"
+                            # RegClass # "RegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addPPRorPNRRegOperands";
+  let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
+}
+
+def PPRorPNR         : PPRorPNRClass;
+def PPRorPNRAsmOp8   : PPRorPNRAsmOperand<"PPRorPNRB", "PPRorPNR", 8>;
+def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
+def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
+def PPRorPNR8        : PPRRegOp<"b", PPRorPNRAsmOp8, ElementSizeB, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
@@ -1252,6 +1288,10 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs> : ZPRVectorList<ElementWid
 
 let EncoderMethod = "EncodeRegAsMultipleOf<2>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+  def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
+    let ParserMatchClass = ZPRVectorListMul<0, 2>;
+  }
+
   def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = ZPRVectorListMul<8, 2>;
   }

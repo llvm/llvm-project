@@ -15,21 +15,26 @@
 #define LLVM_TRANSFORMS_UTILS_VALUEMAPPER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 
 namespace llvm {
 
 class Constant;
+class DIBuilder;
+class DbgRecord;
 class Function;
 class GlobalVariable;
 class Instruction;
 class MDNode;
 class Metadata;
+class Module;
 class Type;
 class Value;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
+using DbgRecordIterator = simple_ilist<DbgRecord>::iterator;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
@@ -175,6 +180,8 @@ public:
   Constant *mapConstant(const Constant &C);
 
   void remapInstruction(Instruction &I);
+  void remapDbgRecord(Module *M, DbgRecord &V);
+  void remapDbgRecordRange(Module *M, iterator_range<DbgRecordIterator> Range);
   void remapFunction(Function &F);
   void remapGlobalObjectMetadata(GlobalObject &GO);
 
@@ -258,6 +265,27 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer).remapInstruction(*I);
+}
+
+/// Remap the Values used in the DbgRecord \a DR using the value map \a
+/// VM.
+inline void RemapDbgRecord(Module *M, DbgRecord *DR, ValueToValueMapTy &VM,
+                           RemapFlags Flags = RF_None,
+                           ValueMapTypeRemapper *TypeMapper = nullptr,
+                           ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDbgRecord(M, *DR);
+}
+
+/// Remap the Values used in the DbgRecords \a Range using the value map \a
+/// VM.
+inline void RemapDbgRecordRange(Module *M,
+                                iterator_range<DbgRecordIterator> Range,
+                                ValueToValueMapTy &VM,
+                                RemapFlags Flags = RF_None,
+                                ValueMapTypeRemapper *TypeMapper = nullptr,
+                                ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer)
+      .remapDbgRecordRange(M, Range);
 }
 
 /// Remap the operands, metadata, arguments, and instructions of a function.

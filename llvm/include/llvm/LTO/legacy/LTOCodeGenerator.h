@@ -37,7 +37,6 @@
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
@@ -98,13 +97,15 @@ struct LTOCodeGenerator {
   void setFileType(CodeGenFileType FT) { Config.CGFileType = FT; }
 
   void setCpu(StringRef MCpu) { Config.CPU = std::string(MCpu); }
-  void setAttrs(std::vector<std::string> MAttrs) { Config.MAttrs = MAttrs; }
+  void setAttrs(std::vector<std::string> MAttrs) {
+    Config.MAttrs = std::move(MAttrs);
+  }
   void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
   void setShouldEmbedUselists(bool Value) { ShouldEmbedUselists = Value; }
   void setSaveIRBeforeOptPath(std::string Value) {
-    SaveIRBeforeOptPath = Value;
+    SaveIRBeforeOptPath = std::move(Value);
   }
 
   /// Restore linkage of globals

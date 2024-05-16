@@ -272,7 +272,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[DEF]], implicit $exec
+  ; CHECK-NEXT:   dead [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[DEF]], implicit $exec
   ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, [[DEF]], implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.4, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.3
@@ -280,7 +280,7 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit undef %1
+  ; CHECK-NEXT:   S_NOP 0, implicit undef [[V_CNDMASK_B32_e64_]]
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -314,7 +314,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %0:sreg_64_xexec = S_MOV_B64 0
+  ; CHECK-NEXT:   dead [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -326,7 +326,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, undef %0, implicit-def $scc
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, undef [[S_MOV_B64_]], implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.4, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -374,7 +374,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = S_ADD_I32 [[DEF]], -1, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.4, implicit $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -440,7 +440,7 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = S_ADD_I32 [[DEF]], -1, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -564,7 +564,6 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   bb.0:
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15, $sgpr16
@@ -615,7 +614,6 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   bb.0:
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15, $sgpr16
@@ -647,9 +645,9 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15, $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; CHECK-NEXT:   undef %1.sub1:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[DEF]], implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_GT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_I32_e64 0, %1.sub1, implicit $exec
-  ; CHECK-NEXT:   %1.sub0:vreg_64 = V_MOV_B32_e32 123, implicit $exec
+  ; CHECK-NEXT:   undef [[V_CNDMASK_B32_e64_:%[0-9]+]].sub1:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[DEF]], implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_GT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_I32_e64 0, [[V_CNDMASK_B32_e64_]].sub1, implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]].sub0:vreg_64 = V_MOV_B32_e32 123, implicit $exec
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[V_CMP_GT_I32_e64_]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -662,7 +660,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit %1.sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_CNDMASK_B32_e64_]].sub0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   bb.0:
@@ -741,7 +739,6 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)

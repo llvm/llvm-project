@@ -210,10 +210,12 @@ define void @test_swifterror_3() sanitize_address {
 
 ;; ctor/dtor have the nounwind attribute. See uwtable.ll, they additionally have
 ;; the uwtable attribute with the module flag "uwtable".
-; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] {{(comdat )?}}{
+; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] comdat {
 ; CHECK: call void @__asan_init()
+;; __asan_register_elf_globals is called even if this module does not contain instrumented global variables.
+; CHECK: call void @__asan_register_elf_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64), i64 ptrtoint (ptr @__start_asan_globals to i64), i64 ptrtoint (ptr @__stop_asan_globals to i64))
 
 ; CHECK: attributes #[[#ATTR]] = { nounwind }
 
 ; PROF
-; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 1048575}

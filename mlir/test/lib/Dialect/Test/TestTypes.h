@@ -14,8 +14,8 @@
 #ifndef MLIR_TESTTYPES_H
 #define MLIR_TESTTYPES_H
 
-#include <tuple>
 #include <optional>
+#include <tuple>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
@@ -31,11 +31,11 @@ class TestAttrWithFormatAttr;
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
 struct FieldInfo {
-  ::llvm::StringRef name;
-  ::mlir::Type type;
+  llvm::StringRef name;
+  mlir::Type type;
 
   // Custom allocation called from generated constructor code
-  FieldInfo allocateInto(::mlir::TypeStorageAllocator &alloc) const {
+  FieldInfo allocateInto(mlir::TypeStorageAllocator &alloc) const {
     return FieldInfo{alloc.copyInto(name), type};
   }
 };
@@ -131,6 +131,8 @@ class TestRecursiveType
                                     ::mlir::TypeTrait::IsMutable> {
 public:
   using Base::Base;
+
+  static constexpr ::mlir::StringLiteral name = "test.recursive";
 
   static TestRecursiveType get(::mlir::MLIRContext *ctx,
                                ::llvm::StringRef name) {

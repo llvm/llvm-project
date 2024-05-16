@@ -30,11 +30,11 @@ namespace LIBC_NAMESPACE {
 
 namespace x86 {
 
-LIBC_INLINE_VAR constexpr size_t kOneCacheline = 64;
-LIBC_INLINE_VAR constexpr size_t kTwoCachelines = 2 * kOneCacheline;
-LIBC_INLINE_VAR constexpr size_t kThreeCachelines = 3 * kOneCacheline;
+LIBC_INLINE_VAR constexpr size_t K_ONE_CACHELINE = 64;
+LIBC_INLINE_VAR constexpr size_t K_TWO_CACHELINES = 2 * K_ONE_CACHELINE;
+LIBC_INLINE_VAR constexpr size_t K_THREE_CACHELINES = 3 * K_ONE_CACHELINE;
 
-LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetching =
+LIBC_INLINE_VAR constexpr bool K_USE_SOFTWARE_PREFETCHING =
     LLVM_LIBC_IS_DEFINED(LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING);
 
 // Whether to use rep;movsb exclusively (0), not at all (SIZE_MAX), or only
@@ -42,20 +42,15 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetching =
 #ifndef LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 #define LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE SIZE_MAX
 #endif
-LIBC_INLINE_VAR constexpr size_t kRepMovsbThreshold =
+LIBC_INLINE_VAR constexpr size_t K_REP_MOVSB_THRESHOLD =
     LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
 
 } // namespace x86
 
-// TODO: Move to a shared header when appropriate.
-[[maybe_unused]] LIBC_INLINE void prefetch_to_local_cache(const void *addr) {
-  __builtin_prefetch(addr, 0, 3);
-}
-
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_sse2_ge64(Ptr __restrict dst, CPtr __restrict src,
                             size_t count) {
-  if (count < 128)
+  if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
   builtin::Memcpy<32>::block(dst, src);
   align_to_next_boundary<32, Arg::Dst>(dst, src, count);
@@ -65,7 +60,7 @@ inline_memcpy_x86_sse2_ge64(Ptr __restrict dst, CPtr __restrict src,
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_avx_ge64(Ptr __restrict dst, CPtr __restrict src,
                            size_t count) {
-  if (count < 128)
+  if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
   if (count < 256)
     return builtin::Memcpy<128>::head_tail(dst, src, count);
@@ -78,10 +73,10 @@ inline_memcpy_x86_avx_ge64(Ptr __restrict dst, CPtr __restrict src,
 inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
   using namespace LIBC_NAMESPACE::x86;
-  prefetch_to_local_cache(src + kOneCacheline);
-  if (count < 128)
+  prefetch_to_local_cache(src + K_ONE_CACHELINE);
+  if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
-  prefetch_to_local_cache(src + kTwoCachelines);
+  prefetch_to_local_cache(src + K_TWO_CACHELINES);
   // Aligning 'dst' on a 32B boundary.
   builtin::Memcpy<32>::block(dst, src);
   align_to_next_boundary<32, Arg::Dst>(dst, src, count);
@@ -94,36 +89,42 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
   // - count >= 128.
   if (count < 352) {
     // Two cache lines at a time.
-    while (offset + kTwoCachelines + 32 <= count) {
-      prefetch_to_local_cache(src + offset + kOneCacheline);
-      prefetch_to_local_cache(src + offset + kTwoCachelines);
-      builtin::Memcpy<kTwoCachelines>::block_offset(dst, src, offset);
-      offset += kTwoCachelines;
+    while (offset + K_TWO_CACHELINES + 32 <= count) {
+      prefetch_to_local_cache(src + offset + K_ONE_CACHELINE);
+      prefetch_to_local_cache(src + offset + K_TWO_CACHELINES);
+      builtin::Memcpy<K_TWO_CACHELINES>::block_offset(dst, src, offset);
+      offset += K_TWO_CACHELINES;
     }
   } else {
     // Three cache lines at a time.
-    while (offset + kThreeCachelines + 32 <= count) {
-      prefetch_to_local_cache(src + offset + kOneCacheline);
-      prefetch_to_local_cache(src + offset + kTwoCachelines);
-      prefetch_to_local_cache(src + offset + kThreeCachelines);
+    while (offset + K_THREE_CACHELINES + 32 <= count) {
+      prefetch_to_local_cache(src + offset + K_ONE_CACHELINE);
+      prefetch_to_local_cache(src + offset + K_TWO_CACHELINES);
+      prefetch_to_local_cache(src + offset + K_THREE_CACHELINES);
       // It is likely that this copy will be turned into a 'rep;movsb' on
       // non-AVX machines.
-      builtin::Memcpy<kThreeCachelines>::block_offset(dst, src, offset);
-      offset += kThreeCachelines;
+      builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
+      offset += K_THREE_CACHELINES;
     }
   }
-  return builtin::Memcpy<32>::loop_and_tail_offset(dst, src, count, offset);
+  // We don't use 'loop_and_tail_offset' because it assumes at least one
+  // iteration of the loop.
+  while (offset + 32 <= count) {
+    builtin::Memcpy<32>::block_offset(dst, src, offset);
+    offset += 32;
+  }
+  return builtin::Memcpy<32>::tail(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
                                           CPtr __restrict src, size_t count) {
   using namespace LIBC_NAMESPACE::x86;
-  prefetch_to_local_cache(src + kOneCacheline);
-  if (count < 128)
+  prefetch_to_local_cache(src + K_ONE_CACHELINE);
+  if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
-  prefetch_to_local_cache(src + kTwoCachelines);
-  prefetch_to_local_cache(src + kThreeCachelines);
+  prefetch_to_local_cache(src + K_TWO_CACHELINES);
+  prefetch_to_local_cache(src + K_THREE_CACHELINES);
   if (count < 256)
     return builtin::Memcpy<128>::head_tail(dst, src, count);
   // Aligning 'dst' on a 32B boundary.
@@ -136,19 +137,34 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
   // - we prefetched cachelines at 'src + 64', 'src + 128', and 'src + 196'
   // - 'dst' is 32B aligned,
   // - count >= 128.
-  while (offset + kThreeCachelines + 64 <= count) {
+  while (offset + K_THREE_CACHELINES + 64 <= count) {
     // Three cache lines at a time.
-    prefetch_to_local_cache(src + offset + kOneCacheline);
-    prefetch_to_local_cache(src + offset + kTwoCachelines);
-    prefetch_to_local_cache(src + offset + kThreeCachelines);
-    builtin::Memcpy<kThreeCachelines>::block_offset(dst, src, offset);
-    offset += kThreeCachelines;
+    prefetch_to_local_cache(src + offset + K_ONE_CACHELINE);
+    prefetch_to_local_cache(src + offset + K_TWO_CACHELINES);
+    prefetch_to_local_cache(src + offset + K_THREE_CACHELINES);
+    builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
+    offset += K_THREE_CACHELINES;
   }
-  return builtin::Memcpy<64>::loop_and_tail_offset(dst, src, count, offset);
+  // We don't use 'loop_and_tail_offset' because it assumes at least one
+  // iteration of the loop.
+  while (offset + 64 <= count) {
+    builtin::Memcpy<64>::block_offset(dst, src, offset);
+    offset += 64;
+  }
+  return builtin::Memcpy<64>::tail(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+#if defined(__AVX512F__)
+  constexpr size_t VECTOR_SIZE = 64;
+#elif defined(__AVX__)
+  constexpr size_t VECTOR_SIZE = 32;
+#elif defined(__SSE2__)
+  constexpr size_t VECTOR_SIZE = 16;
+#else
+  constexpr size_t VECTOR_SIZE = 8;
+#endif
   if (count == 0)
     return;
   if (count == 1)
@@ -161,20 +177,29 @@ inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
     return builtin::Memcpy<4>::block(dst, src);
   if (count < 8)
     return builtin::Memcpy<4>::head_tail(dst, src, count);
-  if (count < 16)
+  // If count is equal to a power of 2, we can handle it as head-tail
+  // of both smaller size and larger size (head-tail are either
+  // non-overlapping for smaller size, or completely collapsed
+  // for larger size). It seems to be more profitable to do the copy
+  // with the larger size, if it's natively supported (e.g. doing
+  // 2 collapsed 32-byte moves for count=64 if AVX2 is supported).
+  // But it's not profitable to use larger size if it's not natively
+  // supported: we will both use more instructions and handle fewer
+  // sizes in earlier branches.
+  if (VECTOR_SIZE >= 16 ? count < 16 : count <= 16)
     return builtin::Memcpy<8>::head_tail(dst, src, count);
-  if (count < 32)
+  if (VECTOR_SIZE >= 32 ? count < 32 : count <= 32)
     return builtin::Memcpy<16>::head_tail(dst, src, count);
-  if (count < 64)
+  if (VECTOR_SIZE >= 64 ? count < 64 : count <= 64)
     return builtin::Memcpy<32>::head_tail(dst, src, count);
-  if constexpr (x86::kAvx) {
-    if constexpr (x86::kUseSoftwarePrefetching) {
+  if constexpr (x86::K_AVX) {
+    if constexpr (x86::K_USE_SOFTWARE_PREFETCHING) {
       return inline_memcpy_x86_avx_ge64_sw_prefetching(dst, src, count);
     } else {
       return inline_memcpy_x86_avx_ge64(dst, src, count);
     }
   } else {
-    if constexpr (x86::kUseSoftwarePrefetching) {
+    if constexpr (x86::K_USE_SOFTWARE_PREFETCHING) {
       return inline_memcpy_x86_sse2_ge64_sw_prefetching(dst, src, count);
     } else {
       return inline_memcpy_x86_sse2_ge64(dst, src, count);
@@ -185,12 +210,12 @@ inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
-  if constexpr (x86::kRepMovsbThreshold == 0) {
+  if constexpr (x86::K_REP_MOVSB_THRESHOLD == 0) {
     return x86::Memcpy::repmovsb(dst, src, count);
-  } else if constexpr (x86::kRepMovsbThreshold == SIZE_MAX) {
+  } else if constexpr (x86::K_REP_MOVSB_THRESHOLD == SIZE_MAX) {
     return inline_memcpy_x86(dst, src, count);
   } else {
-    if (LIBC_UNLIKELY(count >= x86::kRepMovsbThreshold))
+    if (LIBC_UNLIKELY(count >= x86::K_REP_MOVSB_THRESHOLD))
       return x86::Memcpy::repmovsb(dst, src, count);
     else
       return inline_memcpy_x86(dst, src, count);

@@ -101,14 +101,24 @@ if platform.system() == "Windows":
     config.available_features.add(win_runtime_feature)
 
 
-def build_invocation(compile_flags):
-    return " " + " ".join([config.clang] + compile_flags) + " "
+def build_invocation(compile_flags, with_lto=False):
+    lto_flags = []
+    if with_lto and config.lto_supported:
+        lto_flags += config.lto_flags
+
+    return " " + " ".join([config.clang] + lto_flags + compile_flags) + " "
 
 
 config.substitutions.append(("%clang ", build_invocation(target_cflags)))
 config.substitutions.append(("%clangxx ", build_invocation(target_cxxflags)))
 config.substitutions.append(("%clang_asan ", build_invocation(clang_asan_cflags)))
 config.substitutions.append(("%clangxx_asan ", build_invocation(clang_asan_cxxflags)))
+config.substitutions.append(
+    ("%clang_asan_lto ", build_invocation(clang_asan_cflags, True))
+)
+config.substitutions.append(
+    ("%clangxx_asan_lto ", build_invocation(clang_asan_cxxflags, True))
+)
 if config.asan_dynamic:
     if config.host_os in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
         shared_libasan_path = os.path.join(

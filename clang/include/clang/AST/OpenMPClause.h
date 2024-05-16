@@ -2513,6 +2513,129 @@ public:
   }
 };
 
+/// This represents 'weak' clause in the '#pragma omp atomic'
+/// directives.
+///
+/// \code
+/// #pragma omp atomic compare weak
+/// \endcode
+/// In this example directive '#pragma omp atomic' has 'weak' clause.
+class OMPWeakClause final : public OMPClause {
+public:
+  /// Build 'weak' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPWeakClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_weak, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPWeakClause()
+      : OMPClause(llvm::omp::OMPC_weak, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_weak;
+  }
+};
+
+/// This represents 'fail' clause in the '#pragma omp atomic'
+/// directive.
+///
+/// \code
+/// #pragma omp atomic compare fail
+/// \endcode
+/// In this example directive '#pragma omp atomic compare' has 'fail' clause.
+class OMPFailClause final : public OMPClause {
+
+  // FailParameter is a memory-order-clause. Storing the ClauseKind is
+  // sufficient for our purpose.
+  OpenMPClauseKind FailParameter = llvm::omp::Clause::OMPC_unknown;
+  SourceLocation FailParameterLoc;
+  SourceLocation LParenLoc;
+
+  friend class OMPClauseReader;
+
+  /// Sets the location of '(' in fail clause.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Sets the location of memoryOrder clause argument in fail clause.
+  void setFailParameterLoc(SourceLocation Loc) { FailParameterLoc = Loc; }
+
+  /// Sets the mem_order clause for 'atomic compare fail' directive.
+  void setFailParameter(OpenMPClauseKind FailParameter) {
+    this->FailParameter = FailParameter;
+    assert(checkFailClauseParameter(FailParameter) &&
+           "Invalid fail clause parameter");
+  }
+
+public:
+  /// Build 'fail' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPFailClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_fail, StartLoc, EndLoc) {}
+
+  OMPFailClause(OpenMPClauseKind FailParameter, SourceLocation FailParameterLoc,
+                SourceLocation StartLoc, SourceLocation LParenLoc,
+                SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_fail, StartLoc, EndLoc),
+        FailParameterLoc(FailParameterLoc), LParenLoc(LParenLoc) {
+
+    setFailParameter(FailParameter);
+  }
+
+  /// Build an empty clause.
+  OMPFailClause()
+      : OMPClause(llvm::omp::OMPC_fail, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_fail;
+  }
+
+  /// Gets the location of '(' (for the parameter) in fail clause.
+  SourceLocation getLParenLoc() const {
+    return LParenLoc;
+  }
+
+  /// Gets the location of Fail Parameter (type memory-order-clause) in
+  /// fail clause.
+  SourceLocation getFailParameterLoc() const { return FailParameterLoc; }
+
+  /// Gets the parameter (type memory-order-clause) in Fail clause.
+  OpenMPClauseKind getFailParameter() const { return FailParameter; }
+};
+
 /// This represents clause 'private' in the '#pragma omp ...' directives.
 ///
 /// \code
@@ -3918,6 +4041,9 @@ class OMPLinearClause final
   /// Location of ':'.
   SourceLocation ColonLoc;
 
+  /// Location of 'step' modifier.
+  SourceLocation StepModifierLoc;
+
   /// Sets the linear step for clause.
   void setStep(Expr *Step) { *(getFinals().end()) = Step; }
 
@@ -3929,16 +4055,18 @@ class OMPLinearClause final
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param ColonLoc Location of ':'.
+  /// \param StepModifierLoc Location of 'step' modifier.
   /// \param EndLoc Ending location of the clause.
   /// \param NumVars Number of variables.
   OMPLinearClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                   OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
-                  SourceLocation ColonLoc, SourceLocation EndLoc,
-                  unsigned NumVars)
+                  SourceLocation ColonLoc, SourceLocation StepModifierLoc,
+                  SourceLocation EndLoc, unsigned NumVars)
       : OMPVarListClause<OMPLinearClause>(llvm::omp::OMPC_linear, StartLoc,
                                           LParenLoc, EndLoc, NumVars),
         OMPClauseWithPostUpdate(this), Modifier(Modifier),
-        ModifierLoc(ModifierLoc), ColonLoc(ColonLoc) {}
+        ModifierLoc(ModifierLoc), ColonLoc(ColonLoc),
+        StepModifierLoc(StepModifierLoc) {}
 
   /// Build an empty clause.
   ///
@@ -4017,6 +4145,7 @@ public:
   /// \param Modifier Modifier of 'linear' clause.
   /// \param ModifierLoc Modifier location.
   /// \param ColonLoc Location of ':'.
+  /// \param StepModifierLoc Location of 'step' modifier.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
   /// \param PL List of private copies of original variables.
@@ -4030,9 +4159,10 @@ public:
   static OMPLinearClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
-         SourceLocation ColonLoc, SourceLocation EndLoc, ArrayRef<Expr *> VL,
-         ArrayRef<Expr *> PL, ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep,
-         Stmt *PreInit, Expr *PostUpdate);
+         SourceLocation ColonLoc, SourceLocation StepModifierLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PL,
+         ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep, Stmt *PreInit,
+         Expr *PostUpdate);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -4055,8 +4185,14 @@ public:
   /// Sets the location of ':'.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
+  /// Sets the location of 'step' modifier.
+  void setStepModifierLoc(SourceLocation Loc) { StepModifierLoc = Loc; }
+
   /// Returns the location of ':'.
   SourceLocation getColonLoc() const { return ColonLoc; }
+
+  /// Returns the location of 'step' modifier.
+  SourceLocation getStepModifierLoc() const { return StepModifierLoc; }
 
   /// Returns linear step.
   Expr *getStep() { return *(getFinals().end()); }
@@ -7763,10 +7899,10 @@ public:
   /// \param MLoc Location of the modifier
   OMPOrderClause(OpenMPOrderClauseKind A, SourceLocation ALoc,
                  SourceLocation StartLoc, SourceLocation LParenLoc,
-                 SourceLocation EndLoc, OpenMPOrderClauseModifier M,
+                 SourceLocation EndLoc, OpenMPOrderClauseModifier Modifier,
                  SourceLocation MLoc)
       : OMPClause(llvm::omp::OMPC_order, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc), Modifier(M),
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc), Modifier(Modifier),
         ModifierKwLoc(MLoc) {}
 
   /// Build an empty clause.

@@ -17,12 +17,12 @@
 
 // Returns: the product of a + ib and c + id
 
-COMPILER_RT_ABI Lcomplex __mulxc3(long double __a, long double __b,
-                                  long double __c, long double __d) {
-  long double __ac = __a * __c;
-  long double __bd = __b * __d;
-  long double __ad = __a * __d;
-  long double __bc = __b * __c;
+COMPILER_RT_ABI Lcomplex __mulxc3(xf_float __a, xf_float __b, xf_float __c,
+                                  xf_float __d) {
+  xf_float __ac = __a * __c;
+  xf_float __bd = __b * __d;
+  xf_float __ad = __a * __d;
+  xf_float __bc = __b * __c;
   Lcomplex z;
   COMPLEX_REAL(z) = __ac - __bd;
   COMPLEX_IMAGINARY(z) = __ad + __bc;

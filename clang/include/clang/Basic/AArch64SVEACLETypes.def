@@ -71,7 +71,7 @@ SVE_VECTOR_TYPE("__SVFloat16_t", "__SVFloat16_t", SveFloat16, SveFloat16Ty, 8, 1
 SVE_VECTOR_TYPE("__SVFloat32_t", "__SVFloat32_t", SveFloat32, SveFloat32Ty, 4, 32, true, true, false)
 SVE_VECTOR_TYPE("__SVFloat64_t", "__SVFloat64_t", SveFloat64, SveFloat64Ty, 2, 64, true, true, false)
 
-SVE_VECTOR_TYPE("__SVBFloat16_t", "__SVBFloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, true, false, true)
+SVE_VECTOR_TYPE("__SVBfloat16_t", "__SVBfloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, true, false, true)
 
 //
 // x2

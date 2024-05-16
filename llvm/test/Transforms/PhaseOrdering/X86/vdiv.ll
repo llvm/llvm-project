@@ -19,14 +19,14 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[X4:%.*]] = ptrtoint ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[Y5:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X4]], [[Y5]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 128
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_BODY_PREHEADER9:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967280
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483632
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT]]
@@ -37,24 +37,24 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 32
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 64
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP5]], align 8, !tbaa [[TBAA3:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x double>, ptr [[TMP6]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x double>, ptr [[TMP7]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 12
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x double>, ptr [[TMP8]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x double> [[WIDE_LOAD]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <4 x double> [[WIDE_LOAD6]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[WIDE_LOAD7]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <4 x double> [[WIDE_LOAD8]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 32
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 64
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 96
 ; CHECK-NEXT:    store <4 x double> [[TMP9]], ptr [[TMP13]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[TMP13]], i64 4
 ; CHECK-NEXT:    store <4 x double> [[TMP10]], ptr [[TMP14]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP13]], i64 8
 ; CHECK-NEXT:    store <4 x double> [[TMP11]], ptr [[TMP15]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, ptr [[TMP13]], i64 12
 ; CHECK-NEXT:    store <4 x double> [[TMP12]], ptr [[TMP16]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -64,31 +64,31 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[FOR_BODY_PREHEADER9]]
 ; CHECK:       for.body.preheader9:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = xor i64 [[INDVARS_IV_PH]], -1
-; CHECK-NEXT:    [[TMP19:%.*]] = add nsw i64 [[TMP18]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 7
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_BODY_PROL_LOOPEXIT:%.*]], label [[FOR_BODY_PROL_PREHEADER:%.*]]
 ; CHECK:       for.body.prol.preheader:
-; CHECK-NEXT:    [[TMP20:%.*]] = fdiv fast double 1.000000e+00, [[A]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL:%.*]]
 ; CHECK:       for.body.prol:
 ; CHECK-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL:%.*]], [[FOR_BODY_PROL]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PROL_PREHEADER]] ]
 ; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ [[PROL_ITER_NEXT:%.*]], [[FOR_BODY_PROL]] ], [ 0, [[FOR_BODY_PROL_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_PROL]]
 ; CHECK-NEXT:    [[T0_PROL:%.*]] = load double, ptr [[ARRAYIDX_PROL]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP21:%.*]] = fmul fast double [[T0_PROL]], [[TMP20]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fmul fast double [[T0_PROL]], [[TMP18]]
 ; CHECK-NEXT:    [[ARRAYIDX2_PROL:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_PROL]]
-; CHECK-NEXT:    store double [[TMP21]], ptr [[ARRAYIDX2_PROL]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP19]], ptr [[ARRAYIDX2_PROL]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nuw nsw i64 [[INDVARS_IV_PROL]], 1
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
 ; CHECK-NEXT:    [[PROL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP_NOT]], label [[FOR_BODY_PROL_LOOPEXIT]], label [[FOR_BODY_PROL]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       for.body.prol.loopexit:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER9]] ], [ [[INDVARS_IV_NEXT_PROL]], [[FOR_BODY_PROL]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP19]], 7
-; CHECK-NEXT:    br i1 [[TMP22]], label [[FOR_END]], label [[FOR_BODY_PREHEADER9_NEW:%.*]]
+; CHECK-NEXT:    [[TMP20:%.*]] = sub nsw i64 [[INDVARS_IV_PH]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp ugt i64 [[TMP20]], -8
+; CHECK-NEXT:    br i1 [[TMP21]], label [[FOR_END]], label [[FOR_BODY_PREHEADER9_NEW:%.*]]
 ; CHECK:       for.body.preheader9.new:
+; CHECK-NEXT:    [[TMP22:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fdiv fast double 1.000000e+00, [[A]]
@@ -96,57 +96,56 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP27:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = fdiv fast double 1.000000e+00, [[A]]
-; CHECK-NEXT:    [[TMP30:%.*]] = fdiv fast double 1.000000e+00, [[A]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_UNR]], [[FOR_BODY_PREHEADER9_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[T0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP31:%.*]] = fmul fast double [[T0]], [[TMP23]]
+; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast double [[T0]], [[TMP22]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store double [[TMP31]], ptr [[ARRAYIDX2]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP30]], ptr [[ARRAYIDX2]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[T0_1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP32:%.*]] = fmul fast double [[T0_1]], [[TMP24]]
+; CHECK-NEXT:    [[TMP31:%.*]] = fmul fast double [[T0_1]], [[TMP23]]
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store double [[TMP32]], ptr [[ARRAYIDX2_1]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP31]], ptr [[ARRAYIDX2_1]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT_1]]
 ; CHECK-NEXT:    [[T0_2:%.*]] = load double, ptr [[ARRAYIDX_2]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP33:%.*]] = fmul fast double [[T0_2]], [[TMP25]]
+; CHECK-NEXT:    [[TMP32:%.*]] = fmul fast double [[T0_2]], [[TMP24]]
 ; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT_1]]
-; CHECK-NEXT:    store double [[TMP33]], ptr [[ARRAYIDX2_2]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP32]], ptr [[ARRAYIDX2_2]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT_2]]
 ; CHECK-NEXT:    [[T0_3:%.*]] = load double, ptr [[ARRAYIDX_3]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP34:%.*]] = fmul fast double [[T0_3]], [[TMP26]]
+; CHECK-NEXT:    [[TMP33:%.*]] = fmul fast double [[T0_3]], [[TMP25]]
 ; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT_2]]
-; CHECK-NEXT:    store double [[TMP34]], ptr [[ARRAYIDX2_3]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP33]], ptr [[ARRAYIDX2_3]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT_3]]
 ; CHECK-NEXT:    [[T0_4:%.*]] = load double, ptr [[ARRAYIDX_4]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast double [[T0_4]], [[TMP27]]
+; CHECK-NEXT:    [[TMP34:%.*]] = fmul fast double [[T0_4]], [[TMP26]]
 ; CHECK-NEXT:    [[ARRAYIDX2_4:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT_3]]
-; CHECK-NEXT:    store double [[TMP35]], ptr [[ARRAYIDX2_4]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP34]], ptr [[ARRAYIDX2_4]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT_4]]
 ; CHECK-NEXT:    [[T0_5:%.*]] = load double, ptr [[ARRAYIDX_5]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP36:%.*]] = fmul fast double [[T0_5]], [[TMP28]]
+; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast double [[T0_5]], [[TMP27]]
 ; CHECK-NEXT:    [[ARRAYIDX2_5:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT_4]]
-; CHECK-NEXT:    store double [[TMP36]], ptr [[ARRAYIDX2_5]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP35]], ptr [[ARRAYIDX2_5]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT_5]]
 ; CHECK-NEXT:    [[T0_6:%.*]] = load double, ptr [[ARRAYIDX_6]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast double [[T0_6]], [[TMP29]]
+; CHECK-NEXT:    [[TMP36:%.*]] = fmul fast double [[T0_6]], [[TMP28]]
 ; CHECK-NEXT:    [[ARRAYIDX2_6:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT_5]]
-; CHECK-NEXT:    store double [[TMP37]], ptr [[ARRAYIDX2_6]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP36]], ptr [[ARRAYIDX2_6]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 7
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[INDVARS_IV_NEXT_6]]
 ; CHECK-NEXT:    [[T0_7:%.*]] = load double, ptr [[ARRAYIDX_7]], align 8, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP38:%.*]] = fmul fast double [[T0_7]], [[TMP30]]
+; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast double [[T0_7]], [[TMP29]]
 ; CHECK-NEXT:    [[ARRAYIDX2_7:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[INDVARS_IV_NEXT_6]]
-; CHECK-NEXT:    store double [[TMP38]], ptr [[ARRAYIDX2_7]], align 8, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store double [[TMP37]], ptr [[ARRAYIDX2_7]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[EXITCOND_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_7]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_7]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

@@ -431,12 +431,10 @@ define ptr @tautological_select_like_phi(i32 %tc) {
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,102) S: [1,102) Exits: 101 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @tautological_select_like_phi
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 100
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 100
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 100
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 100
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 101
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 100
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 100
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 100
+; CHECK-NEXT:  Loop %loop: Trip multiple is 101
 ;
 entry:
   br label %loop

@@ -8,6 +8,8 @@
 #include "llvm/XRay/BlockVerifier.h"
 #include "llvm/Support/Error.h"
 
+#include <bitset>
+
 namespace llvm {
 namespace xray {
 namespace {

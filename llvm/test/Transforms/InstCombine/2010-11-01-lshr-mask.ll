@@ -8,7 +8,7 @@ define i32 @main(i32 %argc) {
 ; CHECK-NEXT:    [[T3163:%.*]] = xor i8 [[T3151]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[T3163]], 5
 ; CHECK-NEXT:    [[T4127:%.*]] = and i8 [[TMP1]], 64
-; CHECK-NEXT:    [[T4086:%.*]] = zext i8 [[T4127]] to i32
+; CHECK-NEXT:    [[T4086:%.*]] = zext nneg i8 [[T4127]] to i32
 ; CHECK-NEXT:    ret i32 [[T4086]]
 ;
   %t3151 = trunc i32 %argc to i8
@@ -33,9 +33,9 @@ define i8 @foo(i8 %arg, i8 %arg1) {
 ; CHECK-NEXT:    [[T4:%.*]] = and i8 [[ARG1]], 33
 ; CHECK-NEXT:    [[T5:%.*]] = sub nsw i8 40, [[T2]]
 ; CHECK-NEXT:    [[T6:%.*]] = and i8 [[T5]], 84
-; CHECK-NEXT:    [[T7:%.*]] = or i8 [[T4]], [[T6]]
+; CHECK-NEXT:    [[T7:%.*]] = or disjoint i8 [[T4]], [[T6]]
 ; CHECK-NEXT:    [[T8:%.*]] = xor i8 [[T]], [[T3]]
-; CHECK-NEXT:    [[T9:%.*]] = or i8 [[T7]], [[T8]]
+; CHECK-NEXT:    [[T9:%.*]] = or disjoint i8 [[T7]], [[T8]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[T8]], 2
 ; CHECK-NEXT:    [[T11:%.*]] = and i8 [[TMP1]], 32
 ; CHECK-NEXT:    [[T12:%.*]] = xor i8 [[T11]], [[T9]]

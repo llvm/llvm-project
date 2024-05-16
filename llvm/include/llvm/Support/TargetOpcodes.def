@@ -170,15 +170,10 @@ HANDLE_TARGET_OPCODE(LOCAL_ESCAPE)
 /// comparisons into existing memory operations.
 HANDLE_TARGET_OPCODE(FAULTING_OP)
 
-/// Wraps a machine instruction to add patchability constraints.  An
-/// instruction wrapped in PATCHABLE_OP has to either have a minimum
+/// Precedes a machine instruction to add patchability constraints.  An
+/// instruction after PATCHABLE_OP has to either have a minimum
 /// size or be preceded with a nop of that size.  The first operand is
-/// an immediate denoting the minimum size of the instruction, the
-/// second operand is an immediate denoting the opcode of the original
-/// instruction.  The rest of the operands are the operands of the
-/// original instruction.
-/// PATCHABLE_OP can be used as second operand to only insert a nop of
-/// required size.
+/// an immediate denoting the minimum size of the following instruction.
 HANDLE_TARGET_OPCODE(PATCHABLE_OP)
 
 /// This is a marker instruction which gets translated into a nop sled, useful
@@ -229,6 +224,11 @@ HANDLE_TARGET_OPCODE(MEMBARRIER)
 // Provides information about what jump table the following indirect branch is
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
+
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ENTRY)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ANCHOR)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_LOOP)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_GLUE)
 
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
@@ -351,11 +351,17 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUND)
 /// INTRINSIC round to integer intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_LRINT)
 
+/// INTRINSIC long round to integer intrinsic.
+HANDLE_TARGET_OPCODE(G_INTRINSIC_LLRINT)
+
 /// INTRINSIC roundeven intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUNDEVEN)
 
 /// INTRINSIC readcyclecounter
 HANDLE_TARGET_OPCODE(G_READCYCLECOUNTER)
+
+/// INTRINSIC readsteadycounter
+HANDLE_TARGET_OPCODE(G_READSTEADYCOUNTER)
 
 /// Generic load (including anyext load)
 HANDLE_TARGET_OPCODE(G_LOAD)
@@ -415,6 +421,9 @@ HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_END, G_ATOMICRMW_UDEC_WRAP)
 // Generic atomic fence
 HANDLE_TARGET_OPCODE(G_FENCE)
 
+/// Generic prefetch
+HANDLE_TARGET_OPCODE(G_PREFETCH)
+
 /// Generic conditional branch instruction.
 HANDLE_TARGET_OPCODE(G_BRCOND)
 
@@ -454,7 +463,7 @@ HANDLE_TARGET_OPCODE(G_FCONSTANT)
 /// Generic va_start instruction. Stores to its one pointer operand.
 HANDLE_TARGET_OPCODE(G_VASTART)
 
-/// Generic va_start instruction. Stores to its one pointer operand.
+/// Generic va_arg instruction. Stores to its one pointer operand.
 HANDLE_TARGET_OPCODE(G_VAARG)
 
 // Generic sign extend
@@ -684,6 +693,9 @@ HANDLE_TARGET_OPCODE(G_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_FMAXIMUM)
 
 /// Access to FP environment.
+HANDLE_TARGET_OPCODE(G_GET_FPENV)
+HANDLE_TARGET_OPCODE(G_SET_FPENV)
+HANDLE_TARGET_OPCODE(G_RESET_FPENV)
 HANDLE_TARGET_OPCODE(G_GET_FPMODE)
 HANDLE_TARGET_OPCODE(G_SET_FPMODE)
 HANDLE_TARGET_OPCODE(G_RESET_FPMODE)
@@ -718,6 +730,15 @@ HANDLE_TARGET_OPCODE(G_BR)
 /// Generic branch to jump table entry.
 HANDLE_TARGET_OPCODE(G_BRJT)
 
+/// Generic vscale.
+HANDLE_TARGET_OPCODE(G_VSCALE)
+
+/// Generic insert subvector.
+HANDLE_TARGET_OPCODE(G_INSERT_SUBVECTOR)
+
+/// Generic extract subvector.
+HANDLE_TARGET_OPCODE(G_EXTRACT_SUBVECTOR)
+
 /// Generic insertelement.
 HANDLE_TARGET_OPCODE(G_INSERT_VECTOR_ELT)
 
@@ -726,6 +747,9 @@ HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
 
 /// Generic shufflevector.
 HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
+
+/// Generic splatvector.
+HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)
@@ -756,6 +780,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
+
+/// Floating point Tangent.
+HANDLE_TARGET_OPCODE(G_FTAN)
 
 /// Floating point square root.
 HANDLE_TARGET_OPCODE(G_FSQRT)
@@ -815,6 +842,11 @@ HANDLE_TARGET_OPCODE(G_MEMMOVE)
 /// llvm.memset intrinsic
 HANDLE_TARGET_OPCODE(G_MEMSET)
 HANDLE_TARGET_OPCODE(G_BZERO)
+
+/// llvm.trap, llvm.debugtrap and llvm.ubsantrap intrinsics
+HANDLE_TARGET_OPCODE(G_TRAP)
+HANDLE_TARGET_OPCODE(G_DEBUGTRAP)
+HANDLE_TARGET_OPCODE(G_UBSANTRAP)
 
 /// Vector reductions
 HANDLE_TARGET_OPCODE(G_VECREDUCE_SEQ_FADD)

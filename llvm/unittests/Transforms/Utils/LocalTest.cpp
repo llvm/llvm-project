@@ -15,6 +15,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -731,6 +732,67 @@ TEST(Local, FindDbgUsers) {
   EXPECT_EQ(Vals.size(), 1u);
 }
 
+TEST(Local, FindDbgRecords) {
+  // DbgRecord copy of the FindDbgUsers test above.
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+  define dso_local void @fun(ptr %a) #0 !dbg !11 {
+  entry:
+    call void @llvm.dbg.assign(metadata ptr %a, metadata !16, metadata !DIExpression(), metadata !15, metadata ptr %a, metadata !DIExpression()), !dbg !19
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !9}
+  !llvm.ident = !{!10}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !10 = !{!"clang version 17.0.0"}
+  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null}
+  !14 = !{}
+  !15 = distinct !DIAssignID()
+  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !17)
+  !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !DILocation(line: 0, scope: !11)
+  )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+  bool NewDbgInfoFormat = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+  M->convertToNewDbgValues();
+
+  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
+  Value *Arg = Fun.getArg(0);
+
+  SmallVector<DbgVariableIntrinsic *> Users;
+  SmallVector<DbgVariableRecord *> Records;
+  // Arg (%a) is used twice by a single dbg_assign. Check findDbgUsers returns
+  // only 1 pointer to it rather than 2.
+  findDbgUsers(Users, Arg, &Records);
+  EXPECT_EQ(Users.size(), 0u);
+  EXPECT_EQ(Records.size(), 1u);
+
+  SmallVector<DbgValueInst *> Vals;
+  Records.clear();
+  // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
+  // only 1 pointer to it rather than 2.
+  findDbgValues(Vals, Arg, &Records);
+  EXPECT_EQ(Vals.size(), 0u);
+  EXPECT_EQ(Records.size(), 1u);
+  UseNewDbgInfoFormat = NewDbgInfoFormat;
+}
+
 TEST(Local, ReplaceAllDbgUsesWith) {
   using namespace llvm::dwarf;
 
@@ -1087,7 +1149,7 @@ TEST(Local, SimplifyCFGWithNullAC) {
   // Obtain BasicBlock of interest to this test, %test.bb.
   BasicBlock *TestBB = nullptr;
   for (BasicBlock &BB : F) {
-    if (BB.getName().equals("test.bb")) {
+    if (BB.getName() == "test.bb") {
       TestBB = &BB;
       break;
     }
@@ -1160,4 +1222,188 @@ TEST(Local, CanReplaceOperandWithVariable) {
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 2));
 
   BB0->dropAllReferences();
+}
+
+TEST(Local, ExpressionForConstant) {
+  LLVMContext Context;
+  Module M("test_module", Context);
+  DIBuilder DIB(M);
+  DIExpression *Expr = nullptr;
+
+  auto createExpression = [&](Constant *C, Type *Ty) -> DIExpression * {
+    EXPECT_NE(C, nullptr);
+    EXPECT_NE(Ty, nullptr);
+    EXPECT_EQ(C->getType(), Ty);
+    std::unique_ptr<GlobalVariable> GV = std::make_unique<GlobalVariable>(
+        Ty, false, GlobalValue::ExternalLinkage, C, "GV");
+    EXPECT_NE(GV, nullptr);
+
+    DIExpression *Expr = getExpressionForConstant(DIB, *GV->getInitializer(),
+                                                  *GV->getValueType());
+    if (Expr) {
+      EXPECT_EQ(Expr->getNumElements(), 3u);
+      EXPECT_EQ(Expr->getElement(0), dwarf::DW_OP_constu);
+      EXPECT_EQ(Expr->getElement(2), dwarf::DW_OP_stack_value);
+    }
+    return Expr;
+  };
+
+  // Integer.
+  IntegerType *Int1Ty = Type::getInt1Ty(Context);
+  Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+
+  Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0U);
+
+  IntegerType *Int8Ty = Type::getInt8Ty(Context);
+  Expr = createExpression(ConstantInt::get(Int8Ty, 100), Int8Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 100U);
+
+  IntegerType *Int16Ty = Type::getInt16Ty(Context);
+  Expr = createExpression(ConstantInt::getSigned(Int16Ty, -50), Int16Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), -50ULL);
+
+  IntegerType *Int32Ty = Type::getInt32Ty(Context);
+  Expr = createExpression(ConstantInt::get(Int32Ty, 0x7FFFFFFF), Int32Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFU);
+
+  IntegerType *Int64Ty = Type::getInt64Ty(Context);
+  Expr =
+      createExpression(ConstantInt::get(Int64Ty, 0x7FFFFFFFFFFFFFFF), Int64Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
+
+  IntegerType *Int128Ty = Type::getInt128Ty(Context);
+  Expr = createExpression(ConstantInt::get(Int128Ty, 0x7FFFFFFFFFFFFFFF),
+                          Int128Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
+
+  GlobalVariable *String =
+      IRBuilder<>(Context).CreateGlobalString("hello", "hello", 0, &M);
+  Expr = createExpression(ConstantExpr::getPtrToInt(String, Int32Ty), Int32Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  // Float.
+  Type *FloatTy = Type::getFloatTy(Context);
+  Expr = createExpression(ConstantFP::get(FloatTy, 5.55), FloatTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 1085381018U);
+
+  // Double.
+  Type *DoubleTy = Type::getDoubleTy(Context);
+  Expr = createExpression(ConstantFP::get(DoubleTy, -5.55), DoubleTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 13841306799765140275U);
+
+  // Half.
+  Type *HalfTy = Type::getHalfTy(Context);
+  Expr = createExpression(ConstantFP::get(HalfTy, 5.55), HalfTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 17805U);
+
+  // BFloat.
+  Type *BFloatTy = Type::getBFloatTy(Context);
+  Expr = createExpression(ConstantFP::get(BFloatTy, -5.55), BFloatTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 49330U);
+
+  // Pointer.
+  PointerType *PtrTy = PointerType::get(Context, 0);
+  Expr = createExpression(ConstantPointerNull::get(PtrTy), PtrTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0U);
+
+  ConstantInt *K1 = ConstantInt::get(Type::getInt32Ty(Context), 1234);
+  Expr = createExpression(ConstantExpr::getIntToPtr(K1, PtrTy), PtrTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 1234U);
+
+  ConstantInt *K2 = ConstantInt::get(Type::getInt64Ty(Context), 5678);
+  Expr = createExpression(ConstantExpr::getIntToPtr(K2, PtrTy), PtrTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 5678U);
+
+  Type *FP128Ty = Type::getFP128Ty(Context);
+  Expr = createExpression(ConstantFP::get(FP128Ty, 32), FP128Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *X86_FP80Ty = Type::getX86_FP80Ty(Context);
+  Expr = createExpression(ConstantFP::get(X86_FP80Ty, 32), X86_FP80Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *PPC_FP128Ty = Type::getPPC_FP128Ty(Context);
+  Expr = createExpression(ConstantFP::get(PPC_FP128Ty, 32), PPC_FP128Ty);
+  EXPECT_EQ(Expr, nullptr);
+}
+
+TEST(Local, ReplaceDbgVariableRecord) {
+  LLVMContext C;
+
+  // Test that RAUW also replaces the operands of DbgVariableRecord objects,
+  // i.e. non-instruction stored debugging information.
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @llvm.dbg.value(metadata, metadata, metadata)
+      define void @f(i32 %a) !dbg !8 {
+      entry:
+        %foo = add i32 %a, 1, !dbg !13
+        %bar = add i32 %foo, 0, !dbg !13
+        call void @llvm.dbg.value(metadata i32 %bar, metadata !11, metadata !DIExpression()), !dbg !13
+        ret void, !dbg !14
+      }
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
+      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !13 = !DILocation(line: 2, column: 7, scope: !8)
+      !14 = !DILocation(line: 3, column: 1, scope: !8)
+      )");
+  auto *GV = M->getNamedValue("f");
+  ASSERT_TRUE(GV);
+  auto *F = dyn_cast<Function>(GV);
+  ASSERT_TRUE(F);
+  BasicBlock::iterator It = F->front().begin();
+  Instruction *FooInst = &*It;
+  It = std::next(It);
+  Instruction *BarInst = &*It;
+  It = std::next(It);
+  DbgValueInst *DVI = dyn_cast<DbgValueInst>(It);
+  ASSERT_TRUE(DVI);
+  It = std::next(It);
+  Instruction *RetInst = &*It;
+
+  // Convert DVI into a DbgVariableRecord.
+  RetInst->DebugMarker = new DbgMarker();
+  RetInst->DebugMarker->MarkedInstr = RetInst;
+  DbgVariableRecord *DVR = new DbgVariableRecord(DVI);
+  RetInst->DebugMarker->insertDbgRecord(DVR, false);
+  // ... and erase the dbg.value.
+  DVI->eraseFromParent();
+
+  // DVR should originally refer to %bar,
+  EXPECT_EQ(DVR->getVariableLocationOp(0), BarInst);
+
+  // Now try to replace the computation of %bar with %foo -- this should cause
+  // the DbgVariableRecord's to have it's operand updated beneath it.
+  BarInst->replaceAllUsesWith(FooInst);
+  // Check DVR now points at %foo.
+  EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
+
+  // Teardown.
+  RetInst->DebugMarker->eraseFromParent();
 }

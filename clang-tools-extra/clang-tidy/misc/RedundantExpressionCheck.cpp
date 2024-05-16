@@ -1285,7 +1285,7 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
 
     const auto Diag = diag(Op->getExprLoc(), Message);
     for (const auto &KeyValue : Result.Nodes.getMap()) {
-      if (StringRef(KeyValue.first).startswith("duplicate"))
+      if (StringRef(KeyValue.first).starts_with("duplicate"))
         Diag << KeyValue.second.getSourceRange();
     }
   }

@@ -35,23 +35,20 @@
 ; CHECK-EMPTY:
 
 ;; Test a function scope static variable.
-;; FIXME: fix the wrong size 152
 ; CHECK: f()::function_global
-; CHECK-NEXT: 144 152
+; CHECK-NEXT: 144 4
 ; CHECK-NEXT: /t.cpp:8
 ; CHECK-EMPTY:
 
 ;; Test a global scope static variable that is used in current compilation unit.
-;; FIXME: fix the wrong size 152
 ; CHECK: beta
-; CHECK-NEXT: 148 152
+; CHECK-NEXT: 148 4
 ; CHECK-NEXT: /t.cpp:13
 ; CHECK-EMPTY:
 
 ;; Test another global scope static variable that is used in current compilation unit.
-;; FIXME: fix the wrong size 152
 ; CHECK: alpha
-; CHECK-NEXT: 152 152
+; CHECK-NEXT: 152 4
 ; CHECK-NEXT: /t.cpp:12
 ; CHECK-EMPTY:
 

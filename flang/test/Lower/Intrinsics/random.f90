@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPrandom_test_1
 subroutine random_test_1
@@ -45,7 +45,7 @@ subroutine random_test_2
   call foo(size)
   call bar(size, get)
 contains
-  ! CHECK-LABEL: func @_QFrandom_test_2Pfoo
+  ! CHECK-LABEL: func private @_QFrandom_test_2Pfoo
   subroutine foo(size, put, get)
     ! CHECK: [[s1:%[0-9]+]] = fir.is_present %arg0
     ! CHECK: [[s2:%[0-9]+]] = fir.embox %arg0
@@ -70,7 +70,7 @@ contains
     print*, size
   end subroutine
 
-  ! CHECK-LABEL: func @_QFrandom_test_2Pbar
+  ! CHECK-LABEL: func private @_QFrandom_test_2Pbar
   subroutine bar(size, get, put)
     integer, optional :: size
     ! CHECK: [[p1:%[0-9]+]] = fir.is_present %arg2

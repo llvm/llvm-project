@@ -386,7 +386,7 @@ Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
     return std::move(EC);
 
   FileBufferByteStream Buffer(std::move(*OutFileOrError),
-                              llvm::support::little);
+                              llvm::endianness::little);
   BinaryStreamWriter Writer(Buffer);
 
   if (auto EC = Writer.writeObject(*Layout.SB))

@@ -639,13 +639,14 @@ class SizeClassAllocator64 {
   static_assert(kRegionSize >= SizeClassMap::kMaxSize,
                 "Region size exceed largest size");
   // kRegionSize must be <= 2^36, see CompactPtrT.
-  COMPILER_CHECK((kRegionSize) <= (1ULL << (SANITIZER_WORDSIZE / 2 + 4)));
+  COMPILER_CHECK((kRegionSize) <=
+                 (1ULL << (sizeof(CompactPtrT) * 8 + kCompactPtrScale)));
   // Call mmap for user memory with at least this size.
-  static const uptr kUserMapSize = 1 << 16;
+  static const uptr kUserMapSize = 1 << 18;
   // Call mmap for metadata memory with at least this size.
   static const uptr kMetaMapSize = 1 << 16;
   // Call mmap for free array memory with at least this size.
-  static const uptr kFreeArrayMapSize = 1 << 16;
+  static const uptr kFreeArrayMapSize = 1 << 18;
 
   atomic_sint32_t release_to_os_interval_ms_;
 

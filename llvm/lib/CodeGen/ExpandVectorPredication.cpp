@@ -123,9 +123,12 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
   if (isa<VPReductionIntrinsic>(VPI))
     return false;
   // Fallback to whether the intrinsic is speculatable.
-  std::optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
-  unsigned FunctionalOpc = OpcOpt.value_or((unsigned)Instruction::Call);
-  return isSafeToSpeculativelyExecuteWithOpcode(FunctionalOpc, &VPI);
+  if (auto IntrID = VPI.getFunctionalIntrinsicID())
+    return Intrinsic::getAttributes(VPI.getContext(), *IntrID)
+        .hasFnAttr(Attribute::AttrKind::Speculatable);
+  if (auto Opc = VPI.getFunctionalOpcode())
+    return isSafeToSpeculativelyExecuteWithOpcode(*Opc, &VPI);
+  return false;
 }
 
 //// } Helpers
@@ -337,6 +340,8 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
   case Intrinsic::experimental_constrained_fma:
   case Intrinsic::experimental_constrained_fmuladd: {
     Value *Op0 = VPI.getOperand(0);
@@ -344,8 +349,12 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     Value *Op2 = VPI.getOperand(2);
     Function *Fn = Intrinsic::getDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp =
-        Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+    Value *NewOp;
+    if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
+      NewOp =
+          Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+    else
+      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2}, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
@@ -358,7 +367,8 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
   bool Negative = false;
   unsigned EltBits = EltTy->getScalarSizeInBits();
-  switch (VPI.getIntrinsicID()) {
+  Intrinsic::ID VID = VPI.getIntrinsicID();
+  switch (VID) {
   default:
     llvm_unreachable("Expecting a VP reduction intrinsic");
   case Intrinsic::vp_reduce_add:
@@ -378,12 +388,17 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
     return ConstantInt::get(EltTy->getContext(),
                             APInt::getSignedMinValue(EltBits));
   case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmaximum:
     Negative = true;
     [[fallthrough]];
-  case Intrinsic::vp_reduce_fmin: {
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fminimum: {
+    bool PropagatesNaN = VID == Intrinsic::vp_reduce_fminimum ||
+                         VID == Intrinsic::vp_reduce_fmaximum;
     FastMathFlags Flags = VPI.getFastMathFlags();
     const fltSemantics &Semantics = EltTy->getFltSemantics();
-    return !Flags.noNaNs() ? ConstantFP::getQNaN(EltTy, Negative)
+    return (!Flags.noNaNs() && !PropagatesNaN)
+               ? ConstantFP::getQNaN(EltTy, Negative)
            : !Flags.noInfs()
                ? ConstantFP::getInfinity(EltTy, Negative)
                : ConstantFP::get(EltTy,
@@ -470,6 +485,18 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
     transferDecorations(*Reduction, VPI);
     Reduction =
         Builder.CreateBinaryIntrinsic(Intrinsic::minnum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fmaximum:
+    Reduction = Builder.CreateFPMaximumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::maximum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fminimum:
+    Reduction = Builder.CreateFPMinimumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Reduction, Start);
     break;
   case Intrinsic::vp_reduce_fadd:
     Reduction = Builder.CreateFAddReduce(Start, RedOp);
@@ -726,6 +753,10 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:
   case Intrinsic::vp_minnum:
+  case Intrinsic::vp_maximum:
+  case Intrinsic::vp_minimum:
+  case Intrinsic::vp_fma:
+  case Intrinsic::vp_fmuladd:
     return expandPredicationToFPCall(Builder, VPI,
                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:

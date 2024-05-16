@@ -268,7 +268,7 @@ void PDBLinker::pdbMakeAbsolute(SmallVectorImpl<char> &fileName) {
   // decide that it's a unix path if we're fairly certain.  Specifically, if
   // it starts with a forward slash.
   SmallString<128> absoluteFileName = ctx.config.pdbSourcePath;
-  sys::path::Style guessedStyle = absoluteFileName.startswith("/")
+  sys::path::Style guessedStyle = absoluteFileName.starts_with("/")
                                       ? sys::path::Style::posix
                                       : sys::path::Style::windows;
   sys::path::append(absoluteFileName, guessedStyle, fileName);
@@ -656,7 +656,7 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
     auto contents =
         SectionChunk::consumeDebugMagic(sectionContents, ".debug$S");
     DebugSubsectionArray subsections;
-    BinaryStreamReader reader(contents, support::little);
+    BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
 
     uint32_t nextRelocIndex = 0;
@@ -758,7 +758,7 @@ void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
   ArrayRef<uint8_t> contents = debugChunk->getContents();
   contents = SectionChunk::consumeDebugMagic(contents, ".debug$S");
   DebugSubsectionArray subsections;
-  BinaryStreamReader reader(contents, support::little);
+  BinaryStreamReader reader(contents, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, contents.size()));
   debugChunk->sortRelocations();
@@ -832,7 +832,7 @@ void DebugSHandler::advanceRelocIndex(SectionChunk *sc,
   assert(vaBegin > 0);
   auto relocs = sc->getRelocs();
   for (; nextRelocIndex < relocs.size(); ++nextRelocIndex) {
-    if (relocs[nextRelocIndex].VirtualAddress >= vaBegin)
+    if (relocs[nextRelocIndex].VirtualAddress >= (uint32_t)vaBegin)
       break;
   }
 }
@@ -868,7 +868,7 @@ Error UnrelocatedDebugSubsection::commit(BinaryStreamWriter &writer) const {
       debugChunk->file->debugTypesObj) {
     TpiSource *source = debugChunk->file->debugTypesObj;
     DebugInlineeLinesSubsectionRef inlineeLines;
-    BinaryStreamReader storageReader(relocatedBytes, support::little);
+    BinaryStreamReader storageReader(relocatedBytes, llvm::endianness::little);
     ExitOnError exitOnErr;
     exitOnErr(inlineeLines.initialize(storageReader));
     for (const InlineeSourceLine &line : inlineeLines) {
@@ -962,7 +962,7 @@ void DebugSHandler::finish() {
     // Copy each frame data record, add in rvaStart, translate string table
     // indices, and add the record to the PDB.
     DebugFrameDataSubsectionRef fds;
-    BinaryStreamReader reader(subsecData, support::little);
+    BinaryStreamReader reader(subsecData, llvm::endianness::little);
     exitOnErr(fds.initialize(reader));
     for (codeview::FrameData fd : fds) {
       fd.RvaStart += rvaStart;
@@ -1050,7 +1050,8 @@ void PDBLinker::addDebugSymbols(TpiSource *source) {
       ArrayRef<uint8_t> relocatedDebugContents =
           relocateDebugChunk(*debugChunk);
       FixedStreamArray<object::FpoData> fpoRecords;
-      BinaryStreamReader reader(relocatedDebugContents, support::little);
+      BinaryStreamReader reader(relocatedDebugContents,
+                                llvm::endianness::little);
       uint32_t count = relocatedDebugContents.size() / sizeof(object::FpoData);
       exitOnErr(reader.readArray(fpoRecords, count));
 
@@ -1725,15 +1726,15 @@ void PDBLinker::commit(codeview::GUID *guid) {
   }
 }
 
-static uint32_t getSecrelReloc(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
+static uint32_t getSecrelReloc(Triple::ArchType arch) {
+  switch (arch) {
+  case Triple::x86_64:
     return COFF::IMAGE_REL_AMD64_SECREL;
-  case I386:
+  case Triple::x86:
     return COFF::IMAGE_REL_I386_SECREL;
-  case ARMNT:
+  case Triple::thumb:
     return COFF::IMAGE_REL_ARM_SECREL;
-  case ARM64:
+  case Triple::aarch64:
     return COFF::IMAGE_REL_ARM64_SECREL;
   default:
     llvm_unreachable("unknown machine type");
@@ -1751,7 +1752,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
                           DebugLinesSubsectionRef &lines,
                           uint32_t &offsetInLinetable) {
   ExitOnError exitOnErr;
-  const uint32_t secrelReloc = getSecrelReloc(c->file->ctx.config.machine);
+  const uint32_t secrelReloc = getSecrelReloc(c->getArch());
 
   for (SectionChunk *dbgC : c->file->getDebugChunks()) {
     if (dbgC->getSectionName() != ".debug$S")
@@ -1772,7 +1773,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
     ArrayRef<uint8_t> contents =
         SectionChunk::consumeDebugMagic(dbgC->getContents(), ".debug$S");
     DebugSubsectionArray subsections;
-    BinaryStreamReader reader(contents, support::little);
+    BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
 
     for (const DebugSubsectionRecord &ss : subsections) {

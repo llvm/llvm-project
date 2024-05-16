@@ -93,6 +93,11 @@ CompilerType TypeSystem::AddConstModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+CompilerType TypeSystem::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                            uint32_t payload) {
+  return CompilerType();
+}
+
 CompilerType
 TypeSystem::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
@@ -171,6 +176,16 @@ CompilerType TypeSystem::DeclGetFunctionArgumentType(void *opaque_decl,
   return CompilerType();
 }
 
+std::vector<lldb_private::CompilerContext>
+TypeSystem::DeclGetCompilerContext(void *opaque_decl) {
+  return {};
+}
+
+std::vector<lldb_private::CompilerContext>
+TypeSystem::DeclContextGetCompilerContext(void *opaque_decl_ctx) {
+  return {};
+}
+
 std::vector<CompilerDecl>
 TypeSystem::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                                       bool ignore_imported_decls) {
@@ -184,6 +199,11 @@ TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
 
 std::optional<llvm::json::Value> TypeSystem::ReportStatistics() {
   return std::nullopt;
+}
+
+CompilerDeclContext
+TypeSystem::GetCompilerDeclContextForType(const CompilerType &type) {
+  return CompilerDeclContext();
 }
 
 #pragma mark TypeSystemMap

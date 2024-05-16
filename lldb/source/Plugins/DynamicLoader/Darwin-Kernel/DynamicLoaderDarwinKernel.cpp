@@ -15,7 +15,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
@@ -23,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -167,7 +167,8 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
-    // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+    case llvm::Triple::XROS:
+    case llvm::Triple::BridgeOS:
       if (triple_ref.getVendor() != llvm::Triple::Apple) {
         return nullptr;
       }
@@ -798,8 +799,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       Status kernel_search_error;
       if (IsKernel() &&
           (!m_module_sp || !m_module_sp->GetSymbolFileFileSpec())) {
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec,
-                                                 kernel_search_error, true)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(
+                module_spec, kernel_search_error, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
@@ -1109,7 +1110,7 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
           // T1Sz is 25, then 64-25 == 39, bits 0..38 are used for
           // addressing, bits 39..63 are used for PAC/TBI or whatever.
           uint32_t virt_addr_bits = 64 - sym_value;
-          addr_t mask = ~((1ULL << virt_addr_bits) - 1);
+          addr_t mask = AddressableBits::AddressableBitToMask(virt_addr_bits);
           m_process->SetCodeAddressMask(mask);
           m_process->SetDataAddressMask(mask);
         } else {

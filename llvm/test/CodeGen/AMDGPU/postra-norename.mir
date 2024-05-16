@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass postrapseudos %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass postrapseudos %s -o - | FileCheck -check-prefix=GCN %s
 
 # Check that post-RA expanded COPY doesn't have renamable operands
 # since V_MOV_B32_e32 has hasExtraSrcRegAllocReq set.

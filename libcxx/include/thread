@@ -86,14 +86,17 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
-#include <__availability>
 #include <__config>
+
+#ifdef _LIBCPP_HAS_NO_THREADS
+#  error "<thread> is not supported since libc++ has been configured without support for threads."
+#endif
+
 #include <__thread/formatter.h>
 #include <__thread/jthread.h>
+#include <__thread/support.h>
 #include <__thread/this_thread.h>
 #include <__thread/thread.h>
-#include <__threading_support>
 #include <version>
 
 // standard-mandated includes
@@ -103,10 +106,6 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#endif
-
-#ifdef _LIBCPP_HAS_NO_THREADS
-# error "<thread> is not supported since libc++ has been configured without support for threads."
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)

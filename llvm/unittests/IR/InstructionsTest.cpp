@@ -488,7 +488,7 @@ TEST(InstructionsTest, VectorGep) {
 
   BasicBlock* BB0 = BasicBlock::Create(C);
   // Test InsertAtEnd ICmpInst constructor.
-  ICmpInst *ICmp2 = new ICmpInst(*BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
+  ICmpInst *ICmp2 = new ICmpInst(BB0, ICmpInst::ICMP_SGE, PtrVecA, PtrVecB);
   EXPECT_NE(ICmp0, ICmp2); // suppress warning.
 
   GetElementPtrInst *Gep0 = GetElementPtrInst::Create(I32Ty, PtrVecA, C2xi32a);
@@ -714,7 +714,7 @@ TEST(InstructionsTest, CloneCall) {
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   FunctionType *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {
     ConstantInt::get(Int32Ty, 1),
     ConstantInt::get(Int32Ty, 2),
@@ -748,7 +748,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
   std::unique_ptr<CallInst> Call(
@@ -775,7 +775,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
   std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
@@ -855,7 +855,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 
   {
-    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    Value *GEPBase = Constant::getNullValue(B.getPtrTy());
     auto *GI = cast<GetElementPtrInst>(
         B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
@@ -1410,6 +1410,7 @@ TEST(InstructionsTest, GetSplat) {
   LLVMContext Ctx;
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
   Constant *C0 = ConstantInt::get(Int32Ty, 0);
   Constant *C1 = ConstantInt::get(Int32Ty, 1);
 
@@ -1419,30 +1420,42 @@ TEST(InstructionsTest, GetSplat) {
   Constant *Splat1Undef = ConstantVector::get({CU, CU, C1, CU});
   Constant *NotSplat = ConstantVector::get({C1, C1, C0, C1 ,C1});
   Constant *NotSplatUndef = ConstantVector::get({CU, C1, CU, CU ,C0});
+  Constant *Splat0Poison = ConstantVector::get({C0, CP, C0, CP});
+  Constant *Splat1Poison = ConstantVector::get({CP, CP, C1, CP});
+  Constant *NotSplatPoison = ConstantVector::get({CP, C1, CP, CP, C0});
 
-  // Default - undefs are not allowed.
+  // Default - undef/poison is not allowed.
   EXPECT_EQ(Splat0->getSplatValue(), C0);
   EXPECT_EQ(Splat1->getSplatValue(), C1);
   EXPECT_EQ(Splat0Undef->getSplatValue(), nullptr);
   EXPECT_EQ(Splat1Undef->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(), nullptr);
+  EXPECT_EQ(Splat1Poison->getSplatValue(), nullptr);
   EXPECT_EQ(NotSplat->getSplatValue(), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(), nullptr);
 
-  // Disallow undefs explicitly.
+  // Disallow poison explicitly.
   EXPECT_EQ(Splat0->getSplatValue(false), C0);
   EXPECT_EQ(Splat1->getSplatValue(false), C1);
   EXPECT_EQ(Splat0Undef->getSplatValue(false), nullptr);
   EXPECT_EQ(Splat1Undef->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(false), nullptr);
+  EXPECT_EQ(Splat1Poison->getSplatValue(false), nullptr);
   EXPECT_EQ(NotSplat->getSplatValue(false), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(false), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(false), nullptr);
 
-  // Allow undefs.
+  // Allow poison but not undef.
   EXPECT_EQ(Splat0->getSplatValue(true), C0);
   EXPECT_EQ(Splat1->getSplatValue(true), C1);
-  EXPECT_EQ(Splat0Undef->getSplatValue(true), C0);
-  EXPECT_EQ(Splat1Undef->getSplatValue(true), C1);
+  EXPECT_EQ(Splat0Undef->getSplatValue(true), nullptr);
+  EXPECT_EQ(Splat1Undef->getSplatValue(true), nullptr);
+  EXPECT_EQ(Splat0Poison->getSplatValue(true), C0);
+  EXPECT_EQ(Splat1Poison->getSplatValue(true), C1);
   EXPECT_EQ(NotSplat->getSplatValue(true), nullptr);
   EXPECT_EQ(NotSplatUndef->getSplatValue(true), nullptr);
+  EXPECT_EQ(NotSplatPoison->getSplatValue(true), nullptr);
 }
 
 TEST(InstructionsTest, SkipDebug) {
@@ -1501,50 +1514,51 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
 
   Type *ITy = Type::getInt32Ty(C);
   FunctionType *IFnTy = FunctionType::get(ITy, {});
-  Value *ICallee = Constant::getNullValue(IFnTy->getPointerTo());
+  PointerType *PtrTy = PointerType::getUnqual(C);
+  Value *ICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
   Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
-  Value *VICallee = Constant::getNullValue(VIFnTy->getPointerTo());
+  Value *VICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(VICall));
 
   Type *AITy = ArrayType::get(ITy, 2);
   FunctionType *AIFnTy = FunctionType::get(AITy, {});
-  Value *AICallee = Constant::getNullValue(AIFnTy->getPointerTo());
+  Value *AICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AICall(CallInst::Create(AIFnTy, AICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(AICall));
 
   Type *FTy = Type::getFloatTy(C);
   FunctionType *FFnTy = FunctionType::get(FTy, {});
-  Value *FCallee = Constant::getNullValue(FFnTy->getPointerTo());
+  Value *FCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
   Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
-  Value *VFCallee = Constant::getNullValue(VFFnTy->getPointerTo());
+  Value *VFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(VFCall));
 
   Type *AFTy = ArrayType::get(FTy, 2);
   FunctionType *AFFnTy = FunctionType::get(AFTy, {});
-  Value *AFCallee = Constant::getNullValue(AFFnTy->getPointerTo());
+  Value *AFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AFCall(CallInst::Create(AFFnTy, AFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AFCall));
 
   Type *AVFTy = ArrayType::get(VFTy, 2);
   FunctionType *AVFFnTy = FunctionType::get(AVFTy, {});
-  Value *AVFCallee = Constant::getNullValue(AVFFnTy->getPointerTo());
+  Value *AVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AVFCall(
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
   Type *AAVFTy = ArrayType::get(AVFTy, 2);
   FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(AAVFFnTy->getPointerTo());
+  Value *AAVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AAVFCall(
       CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));

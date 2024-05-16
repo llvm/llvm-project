@@ -21,21 +21,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
 clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __lo,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi,
       _Compare __comp) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(!__comp(__hi, __lo), "Bad bounds passed to std::clamp");
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__comp(__hi, __lo), "Bad bounds passed to std::clamp");
   return __comp(__v, __lo) ? __lo : __comp(__hi, __v) ? __hi : __v;
 }
 
 template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
 clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __lo,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi) {
-  return _VSTD::clamp(__v, __lo, __hi, __less<>());
+  return std::clamp(__v, __lo, __hi, __less<>());
 }
 #endif
 

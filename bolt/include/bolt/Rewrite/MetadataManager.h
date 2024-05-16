@@ -11,7 +11,6 @@
 
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace bolt {
@@ -35,6 +34,9 @@ public:
 
   /// Execute metadata initializers after CFG was constructed for functions.
   void runInitializersPostCFG();
+
+  /// Run finalization step of rewriters before the binary is emitted.
+  void runFinalizersPreEmit();
 
   /// Run finalization step of rewriters after code has been emitted.
   void runFinalizersAfterEmit();

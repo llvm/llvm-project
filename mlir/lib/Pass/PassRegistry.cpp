@@ -6,18 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <optional>
-#include <utility>
+#include "mlir/Pass/PassRegistry.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+
+#include <optional>
+#include <utility>
 
 using namespace mlir;
 using namespace detail;
@@ -39,7 +40,7 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
   return [=](OpPassManager &pm, StringRef options,
              function_ref<LogicalResult(const Twine &)> errorHandler) {
     std::unique_ptr<Pass> pass = allocator();
-    LogicalResult result = pass->initializeOptions(options);
+    LogicalResult result = pass->initializeOptions(options, errorHandler);
 
     std::optional<StringRef> pmOpName = pm.getOpName();
     std::optional<StringRef> passOpName = pass->getOpName();
@@ -99,7 +100,10 @@ void mlir::registerPassPipeline(
   PassPipelineInfo pipelineInfo(arg, description, function,
                                 std::move(optHandler));
   bool inserted = passPipelineRegistry->try_emplace(arg, pipelineInfo).second;
-  assert(inserted && "Pass pipeline registered multiple times");
+#ifndef NDEBUG
+  if (!inserted)
+    report_fatal_error("Pass pipeline " + arg + " registered multiple times");
+#endif
   (void)inserted;
 }
 
@@ -276,7 +280,8 @@ parseNextArg(StringRef options) {
   llvm_unreachable("unexpected control flow in pass option parsing");
 }
 
-LogicalResult detail::PassOptions::parseFromString(StringRef options) {
+LogicalResult detail::PassOptions::parseFromString(StringRef options,
+                                                   raw_ostream &errorStream) {
   // NOTE: `options` is modified in place to always refer to the unprocessed
   // part of the string.
   while (!options.empty()) {
@@ -287,7 +292,7 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options) {
 
     auto it = OptionsMap.find(key);
     if (it == OptionsMap.end()) {
-      llvm::errs() << "<Pass-Options-Parser>: no such option " << key << "\n";
+      errorStream << "<Pass-Options-Parser>: no such option " << key << "\n";
       return failure();
     }
     if (llvm::cl::ProvidePositionalOption(it->second, value, 0))

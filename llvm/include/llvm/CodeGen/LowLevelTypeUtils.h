@@ -16,8 +16,8 @@
 #ifndef LLVM_CODEGEN_LOWLEVELTYPEUTILS_H
 #define LLVM_CODEGEN_LOWLEVELTYPEUTILS_H
 
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 
 namespace llvm {
 

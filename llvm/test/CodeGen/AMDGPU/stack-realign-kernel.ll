@@ -8,11 +8,14 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_add_u32 s0, s0, s7
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 3
+; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:    .section .rodata,#alloc
+; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel max_alignment_128
 ; VI-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -56,11 +59,14 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s7
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 3
+; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:    .section .rodata,#alloc
+; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel max_alignment_128
 ; GFX9-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -101,6 +107,8 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:     .amdhsa_exception_int_div_zero 0
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
+  %clutter = alloca i8, addrspace(5) ; Force non-zero offset for next alloca
+  store volatile i8 3, ptr addrspace(5) %clutter
   %alloca.align = alloca i32, align 128, addrspace(5)
   store volatile i32 9, ptr addrspace(5) %alloca.align, align 128
   ret void
@@ -111,15 +119,18 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_add_u32 s0, s0, s7
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 3
+; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:    .section .rodata,#alloc
+; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel stackrealign_attr
 ; VI-NEXT:     .amdhsa_group_segment_fixed_size 0
-; VI-NEXT:     .amdhsa_private_segment_fixed_size 8
+; VI-NEXT:     .amdhsa_private_segment_fixed_size 12
 ; VI-NEXT:     .amdhsa_kernarg_size 0
 ; VI-NEXT:     .amdhsa_user_sgpr_count 6
 ; VI-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
@@ -159,15 +170,18 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s7
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 3
+; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:    .section .rodata,#alloc
+; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel stackrealign_attr
 ; GFX9-NEXT:     .amdhsa_group_segment_fixed_size 0
-; GFX9-NEXT:     .amdhsa_private_segment_fixed_size 8
+; GFX9-NEXT:     .amdhsa_private_segment_fixed_size 12
 ; GFX9-NEXT:     .amdhsa_kernarg_size 0
 ; GFX9-NEXT:     .amdhsa_user_sgpr_count 6
 ; GFX9-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
@@ -204,6 +218,8 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:     .amdhsa_exception_int_div_zero 0
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
+  %clutter = alloca i8, addrspace(5) ; Force non-zero offset for next alloca
+  store volatile i8 3, ptr addrspace(5) %clutter
   %alloca.align = alloca i32, align 4, addrspace(5)
   store volatile i32 9, ptr addrspace(5) %alloca.align, align 4
   ret void
@@ -214,11 +230,14 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_add_u32 s0, s0, s7
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 3
+; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:    .section .rodata,#alloc
+; VI-NEXT:    .section .rodata,"a"
 ; VI-NEXT:    .p2align 6
 ; VI-NEXT:    .amdhsa_kernel alignstack_attr
 ; VI-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -262,11 +281,14 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s7
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 3
+; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:    .section .rodata,#alloc
+; GFX9-NEXT:    .section .rodata,"a"
 ; GFX9-NEXT:    .p2align 6
 ; GFX9-NEXT:    .amdhsa_kernel alignstack_attr
 ; GFX9-NEXT:     .amdhsa_group_segment_fixed_size 0
@@ -307,6 +329,8 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:     .amdhsa_exception_int_div_zero 0
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
+  %clutter = alloca i8, addrspace(5) ; Force non-zero offset for next alloca
+  store volatile i8 3, ptr addrspace(5) %clutter
   %alloca.align = alloca i32, align 4, addrspace(5)
   store volatile i32 9, ptr addrspace(5) %alloca.align, align 4
   ret void
@@ -317,4 +341,4 @@ attributes #1 = { nounwind "stackrealign" }
 attributes #2 = { nounwind alignstack=128 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

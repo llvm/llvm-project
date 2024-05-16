@@ -196,6 +196,14 @@ def ExpandStridedMetadata : Pass<"expand-strided-metadata"> {
     In particular, this pass transforms operations into explicit sequence of
     operations that model the effect of this operation on the different metadata.
     This pass uses affine constructs to materialize these effects.
+
+    Supported ops include:
+
+    - `memref.collapse_shape`
+    - `memref.expand_shape`
+    - `memref.extract_aligned_pointer_as_index`
+    - `memref.extract_strided_metadata`
+    - `memref.subview`
   }];
   let constructor = "mlir::memref::createExpandStridedMetadataPass()";
   let dependentDialects = [

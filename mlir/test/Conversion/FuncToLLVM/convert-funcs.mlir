@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //CHECK: llvm.func @second_order_arg(!llvm.ptr)
 func.func private @second_order_arg(%arg0 : () -> ())
@@ -59,6 +59,16 @@ func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
 
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
   return
+}
+
+// CHECK-LABEL: llvm.func @target_cpu()
+// CHECK-SAME: target_cpu = "gfx90a"
+func.func private @target_cpu() attributes { "target_cpu" = "gfx90a" }
+
+// CHECK-LABEL: llvm.func @target_features()
+// CHECK-SAME: target_features = #llvm.target_features<["+sme", "+sve"]>
+func.func private @target_features() attributes {
+  "target_features" = #llvm.target_features<["+sme", "+sve"]>
 }
 
 // -----

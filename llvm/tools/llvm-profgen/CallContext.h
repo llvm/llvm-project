@@ -12,13 +12,12 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include <sstream>
 #include <string>
-#include <vector>
 
 namespace llvm {
 namespace sampleprof {
 
 inline std::string getCallSite(const SampleContextFrame &Callsite) {
-  std::string CallsiteStr = Callsite.FuncName.str();
+  std::string CallsiteStr = Callsite.Func.str();
   CallsiteStr += ":";
   CallsiteStr += Twine(Callsite.Location.LineOffset).str();
   if (Callsite.Location.Discriminator > 0) {

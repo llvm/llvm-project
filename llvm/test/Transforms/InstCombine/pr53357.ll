@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; (x & y) + ~(x | y)
-define i32 @src(i32 %0, i32 %1) {
+define i32 @src(i32 noundef %0, i32 noundef %1) {
 ; CHECK-LABEL: @src(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1:%.*]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
@@ -17,7 +17,7 @@ define i32 @src(i32 %0, i32 %1) {
 }
 
 ; vector version of src
-define <2 x i32> @src_vec(<2 x i32> %0, <2 x i32> %1) {
+define <2 x i32> @src_vec(<2 x i32> noundef %0, <2 x i32> noundef %1) {
 ; CHECK-LABEL: @src_vec(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], <i32 -1, i32 -1>
@@ -30,22 +30,22 @@ define <2 x i32> @src_vec(<2 x i32> %0, <2 x i32> %1) {
   ret <2 x i32> %6
 }
 
-; vector version of src with undef values
-define <2 x i32> @src_vec_undef(<2 x i32> %0, <2 x i32> %1) {
-; CHECK-LABEL: @src_vec_undef(
+; vector version of src with poison values
+define <2 x i32> @src_vec_poison(<2 x i32> noundef %0, <2 x i32> noundef %1) {
+; CHECK-LABEL: @src_vec_poison(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
   %3 = and <2 x i32> %1, %0
   %4 = or  <2 x i32> %1, %0
-  %5 = xor <2 x i32> %4, <i32 -1, i32 undef>
+  %5 = xor <2 x i32> %4, <i32 -1, i32 poison>
   %6 = add <2 x i32> %3, %5
   ret <2 x i32> %6
 }
 
 ; (x & y) + ~(y | x)
-define i32 @src2(i32 %0, i32 %1) {
+define i32 @src2(i32 noundef %0, i32 noundef %1) {
 ; CHECK-LABEL: @src2(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1:%.*]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
@@ -59,7 +59,7 @@ define i32 @src2(i32 %0, i32 %1) {
 }
 
 ; (x & y) + (~x & ~y)
-define i32 @src3(i32 %0, i32 %1) {
+define i32 @src3(i32 noundef %0, i32 noundef %1) {
 ; CHECK-LABEL: @src3(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1:%.*]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
@@ -74,7 +74,7 @@ define i32 @src3(i32 %0, i32 %1) {
 }
 
 ; ~(x | y) + (y & x)
-define i32 @src4(i32 %0, i32 %1) {
+define i32 @src4(i32 noundef %0, i32 noundef %1) {
 ; CHECK-LABEL: @src4(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP0:%.*]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
@@ -88,7 +88,7 @@ define i32 @src4(i32 %0, i32 %1) {
 }
 
 ; ~(x | y) + (x & y)
-define i32 @src5(i32 %0, i32 %1) {
+define i32 @src5(i32 noundef %0, i32 noundef %1) {
 ; CHECK-LABEL: @src5(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1:%.*]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1

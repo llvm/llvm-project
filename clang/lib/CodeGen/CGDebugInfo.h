@@ -626,7 +626,8 @@ private:
     llvm::DIType *WrappedType;
   };
 
-  std::string GetName(const Decl*, bool Qualified = false) const;
+  bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
+  std::string GetName(const Decl *, bool Qualified = false) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
@@ -799,6 +800,11 @@ private:
                            StringRef &LinkageName,
                            llvm::MDTuple *&TemplateParameters,
                            llvm::DIScope *&VDContext);
+
+  /// Create a DIExpression representing the constant corresponding
+  /// to the specified 'Val'. Returns nullptr on failure.
+  llvm::DIExpression *createConstantValueExpression(const clang::ValueDecl *VD,
+                                                    const APValue &Val);
 
   /// Allocate a copy of \p A using the DebugInfoNames allocator
   /// and return a reference to it. If multiple arguments are given the strings

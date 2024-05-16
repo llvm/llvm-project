@@ -116,6 +116,8 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
       DoSymbol(*symbol);
     }
   }
+  // Ensure that the size is a multiple of the alignment
+  offset_ = Align(offset_, alignment_);
   scope.set_size(offset_);
   scope.SetAlignment(alignment_);
   // Assign offsets in COMMON blocks, unless this scope is a BLOCK construct,
@@ -158,9 +160,11 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
     if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
-      context_.Say(errorSite,
-          "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
-          commonBlock.name(), padding, symbol.name());
+      if (context_.ShouldWarn(common::UsageWarning::CommonBlockPadding)) {
+        context_.Say(errorSite,
+            "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
+            commonBlock.name(), padding, symbol.name());
+      }
     }
     previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};
@@ -273,20 +277,22 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
     const EquivalenceObject &object) {
   std::size_t offset{0};
   if (!object.subscripts.empty()) {
-    const ArraySpec &shape{object.symbol.get<ObjectEntityDetails>().shape()};
-    auto lbound{[&](std::size_t i) {
-      return *ToInt64(shape[i].lbound().GetExplicit());
-    }};
-    auto ubound{[&](std::size_t i) {
-      return *ToInt64(shape[i].ubound().GetExplicit());
-    }};
-    for (std::size_t i{object.subscripts.size() - 1};;) {
-      offset += object.subscripts[i] - lbound(i);
-      if (i == 0) {
-        break;
+    if (const auto *details{object.symbol.detailsIf<ObjectEntityDetails>()}) {
+      const ArraySpec &shape{details->shape()};
+      auto lbound{[&](std::size_t i) {
+        return *ToInt64(shape[i].lbound().GetExplicit());
+      }};
+      auto ubound{[&](std::size_t i) {
+        return *ToInt64(shape[i].ubound().GetExplicit());
+      }};
+      for (std::size_t i{object.subscripts.size() - 1};;) {
+        offset += object.subscripts[i] - lbound(i);
+        if (i == 0) {
+          break;
+        }
+        --i;
+        offset *= ubound(i) - lbound(i) + 1;
       }
-      --i;
-      offset *= ubound(i) - lbound(i) + 1;
     }
   }
   auto result{offset * GetSizeAndAlignment(object.symbol, false).size};

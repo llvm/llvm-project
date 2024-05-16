@@ -1854,22 +1854,18 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
   // Check to see if this operation name has already been resolved. If we
   // haven't, load the dialect and build the operation name.
   if (!opName->opName) {
-    // Load the dialect and its version.
-    DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                dialectsMap, reader, version);
-    if (failed(opName->dialect->load(dialectReader, getContext())))
-      return failure();
     // If the opName is empty, this is because we use to accept names such as
     // `foo` without any `.` separator. We shouldn't tolerate this in textual
     // format anymore but for now we'll be backward compatible. This can only
     // happen with unregistered dialects.
     if (opName->name.empty()) {
-      if (opName->dialect->getLoadedDialect())
-        return emitError(fileLoc) << "has an empty opname for dialect '"
-                                  << opName->dialect->name << "'\n";
-
       opName->opName.emplace(opName->dialect->name, getContext());
     } else {
+      // Load the dialect and its version.
+      DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
+                                  dialectsMap, reader, version);
+      if (failed(opName->dialect->load(dialectReader, getContext())))
+        return failure();
       opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
                              getContext());
     }
@@ -2334,8 +2330,11 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
   Operation *op = Operation::create(opState);
   readState.curBlock->push_back(op);
 
-  // If the operation had results, update the value references.
-  if (op->getNumResults() && failed(defineValues(reader, op->getResults())))
+  // If the operation had results, update the value references. We don't need to
+  // do this if the current value scope is empty. That is, the op was not
+  // encoded within a parent region.
+  if (readState.numValues && op->getNumResults() &&
+      failed(defineValues(reader, op->getResults())))
     return failure();
 
   /// Store a map for every value that received a custom use-list order from the
@@ -2564,7 +2563,7 @@ BytecodeReader::finalize(function_ref<bool(Operation *)> shouldMaterialize) {
 }
 
 bool mlir::isBytecode(llvm::MemoryBufferRef buffer) {
-  return buffer.getBuffer().startswith("ML\xefR");
+  return buffer.getBuffer().starts_with("ML\xefR");
 }
 
 /// Read the bytecode from the provided memory buffer reference.

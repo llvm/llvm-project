@@ -182,7 +182,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   }
   uint8_t *Buffer = Allocator.Allocate<uint8_t>(Size);
   MutableArrayRef<uint8_t> Output(Buffer, Size);
-  BinaryStreamWriter Writer(Output, support::little);
+  BinaryStreamWriter Writer(Output, llvm::endianness::little);
 
   Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
   for (const auto &B : Builders) {
@@ -314,8 +314,8 @@ template <typename value_type>
 raw_ostream &operator<<(raw_ostream &OS,
                         const binary_le_impl<value_type> &BLE) {
   char Buffer[sizeof(BLE.Value)];
-  support::endian::write<value_type, support::little, support::unaligned>(
-      Buffer, BLE.Value);
+  support::endian::write<value_type, llvm::endianness::little>(Buffer,
+                                                               BLE.Value);
   OS.write(Buffer, sizeof(BLE.Value));
   return OS;
 }
@@ -359,9 +359,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
       SizeOfInitializedData += S.Header.SizeOfRawData;
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
       SizeOfUninitializedData += S.Header.SizeOfRawData;
-    if (S.Name.equals(".text"))
+    if (S.Name == ".text")
       Header->BaseOfCode = S.Header.VirtualAddress; // RVA
-    else if (S.Name.equals(".data"))
+    else if (S.Name == ".data")
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
       SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);

@@ -18,11 +18,11 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
@@ -370,10 +370,21 @@ namespace llvm {
     /// G8RC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
     /// Op that combines two register copies of TOC entries
     /// (region handle into R3 and variable offset into R4) followed by a
-    /// GET_TLS_ADDR node which will be expanded to a call to __get_tls_addr.
+    /// GET_TLS_ADDR node which will be expanded to a call to .__tls_get_addr.
     /// This node is used in 64-bit mode as well (in which case the result is
     /// G8RC and inputs are X3/X4).
     TLSGD_AIX,
+
+    /// %x3 = GET_TLS_MOD_AIX _$TLSML - For the AIX local-dynamic TLS model,
+    /// produces a call to .__tls_get_mod(_$TLSML\@ml).
+    GET_TLS_MOD_AIX,
+
+    /// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(module handle)
+    /// Op that requires a single input of the module handle TOC entry in R3,
+    /// and generates a GET_TLS_MOD_AIX node which will be expanded into a call
+    /// to .__tls_get_mod. This node is used in both 32-bit and 64-bit modes.
+    /// The only difference is the register class.
+    TLSLD_AIX,
 
     /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
     /// model, produces an ADDIS8 instruction that adds the GOT base

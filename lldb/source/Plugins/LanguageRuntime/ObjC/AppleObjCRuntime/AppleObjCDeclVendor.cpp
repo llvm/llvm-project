@@ -311,12 +311,12 @@ public:
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
     const bool for_expression = true;
 
-    std::vector<clang::IdentifierInfo *> selector_components;
+    std::vector<const clang::IdentifierInfo *> selector_components;
 
     const char *name_cursor = name;
     bool is_zero_argument = true;
@@ -335,7 +335,7 @@ public:
       }
     }
 
-    clang::IdentifierInfo **identifier_infos = selector_components.data();
+    const clang::IdentifierInfo **identifier_infos = selector_components.data();
     if (!identifier_infos) {
       return nullptr;
     }

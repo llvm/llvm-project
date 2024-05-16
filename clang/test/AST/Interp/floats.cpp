@@ -39,6 +39,10 @@ constexpr float m = 5.0f / 0.0f; // ref-error {{must be initialized by a constan
 static_assert(~2.0f == 3, ""); // ref-error {{invalid argument type 'float' to unary expression}} \
                                // expected-error {{invalid argument type 'float' to unary expression}}
 
+
+typedef int tdb[(long long)4e20]; //expected-error {{variable length}} \
+                                  //ref-error {{variable length}}
+
 /// Initialized by a double.
 constexpr float df = 0.0;
 /// The other way around.

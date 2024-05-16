@@ -118,7 +118,7 @@ define void @store_address(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL_INCR]] = getelementptr float, ptr [[VAL]], i64 1
+; CHECK-NEXT:    [[VAL_INCR]] = getelementptr i8, ptr [[VAL]], i64 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    store i32 0, ptr [[VAL]], align 4

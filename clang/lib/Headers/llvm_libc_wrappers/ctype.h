@@ -13,7 +13,18 @@
 #error "This file is for GPU offloading compilation only"
 #endif
 
+// The GNU headers like to define 'toupper' and 'tolower' redundantly. This is
+// necessary to prevent it from doing that and remapping our implementation.
+#if (defined(__NVPTX__) || defined(__AMDGPU__)) && defined(__GLIBC__)
+#pragma push_macro("__USE_EXTERN_INLINES")
+#undef __USE_EXTERN_INLINES
+#endif
+
 #include_next <ctype.h>
+
+#if (defined(__NVPTX__) || defined(__AMDGPU__)) && defined(__GLIBC__)
+#pragma pop_macro("__USE_EXTERN_INLINES")
+#endif
 
 #if __has_include(<llvm-libc-decls/ctype.h>)
 

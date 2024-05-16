@@ -60,6 +60,14 @@ TEST_F(RegexTest, Basics) {
   EXPECT_TRUE(r5.match(String));
 }
 
+TEST_F(RegexTest, EmptyPattern) {
+  // The empty pattern doesn't match anything -- not even the empty string.
+  // (This is different from some other regex implementations.)
+  Regex r("");
+  EXPECT_FALSE(r.match("123"));
+  EXPECT_FALSE(r.match(""));
+}
+
 TEST_F(RegexTest, Backreferences) {
   Regex r1("([a-z]+)_\\1");
   SmallVector<StringRef, 4> Matches;
@@ -127,6 +135,34 @@ TEST_F(RegexTest, Substitution) {
 
   EXPECT_EQ("aber", Regex("a[0-9]+b").sub("a\\100b", "a1234ber", &Error));
   EXPECT_EQ(Error, "invalid backreference string '100'");
+
+  EXPECT_EQ("012345", Regex("a([0-9]+).*").sub("0\\g<1>5", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0a1234ber5",
+            Regex("a([0-9]+).*").sub("0\\g<0>5", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0A5", Regex("a(.)(.)(.)(.)(.)(.)(.)(.)(.)(.).*")
+                       .sub("0\\g<10>5", "a123456789Aber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<-1>5",
+            Regex("a([0-9]+).*").sub("0\\g<-1>5", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<15", Regex("a([0-9]+).*").sub("0\\g<15", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<>15", Regex("a([0-9]+).*").sub("0\\g<>15", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<3e>1",
+            Regex("a([0-9]+).*").sub("0\\g<3e>1", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("aber", Regex("a([0-9]+)b").sub("a\\g<100>b", "a1234ber", &Error));
+  EXPECT_EQ(Error, "invalid backreference string 'g<100>'");
 }
 
 TEST_F(RegexTest, IsLiteralERE) {
@@ -196,4 +232,11 @@ TEST_F(RegexTest, OssFuzz3727Regression) {
   EXPECT_FALSE(r.isValid(Error));
 }
 
+}
+
+TEST_F(RegexTest, NullStringInput) {
+  Regex r("^$");
+  // String data points to nullptr in default constructor
+  StringRef String;
+  EXPECT_TRUE(r.match(String));
 }

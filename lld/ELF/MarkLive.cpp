@@ -89,9 +89,8 @@ template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
                                   bool fromFDE) {
-  Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
-
   // If a symbol is referenced in a live section, it is used.
+  Symbol &sym = sec.file->getRelocTargetSym(rel);
   sym.used = true;
 
   if (auto *d = dyn_cast<Defined>(&sym)) {
@@ -277,8 +276,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     //   collection.
     // - Groups members are retained or discarded as a unit.
     if (!(sec->flags & SHF_ALLOC)) {
-      bool isRel = sec->type == SHT_REL || sec->type == SHT_RELA;
-      if (!isRel && !sec->nextInSectionGroup) {
+      if (!isStaticRelSecType(sec->type) && !sec->nextInSectionGroup) {
         sec->markLive();
         for (InputSection *isec : sec->dependentSections)
           isec->markLive();

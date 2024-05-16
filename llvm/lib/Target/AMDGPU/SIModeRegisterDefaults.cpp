@@ -7,20 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIModeRegisterDefaults.h"
+#include "GCNSubtarget.h"
 
 using namespace llvm;
 
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
+SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
+                                               const GCNSubtarget &ST) {
   *this = getDefaultForCallingConv(F.getCallingConv());
 
-  StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-  if (!IEEEAttr.empty())
-    IEEE = IEEEAttr == "true";
+  if (ST.hasIEEEMode()) {
+    StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
+    if (!IEEEAttr.empty())
+      IEEE = IEEEAttr == "true";
+  }
 
-  StringRef DX10ClampAttr =
-      F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-  if (!DX10ClampAttr.empty())
-    DX10Clamp = DX10ClampAttr == "true";
+  if (ST.hasDX10ClampMode()) {
+    StringRef DX10ClampAttr =
+        F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
+    if (!DX10ClampAttr.empty())
+      DX10Clamp = DX10ClampAttr == "true";
+  }
 
   StringRef DenormF32Attr =
       F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
@@ -168,3 +174,122 @@ static_assert(decodeIndexFltRoundConversionTable(getModeRegisterRoundMode(
 static_assert(decodeIndexFltRoundConversionTable(getModeRegisterRoundMode(
                   HWTowardNegative, HWTowardPositive)) ==
               TowardNegativeF32_TowardPositiveF64);
+
+// Decode FLT_ROUNDS into the hardware value where the two rounding modes are
+// the same and use a standard value
+static constexpr uint64_t encodeFltRoundsToHWTableSame(uint32_t HWVal,
+                                                       uint32_t FltRoundsVal) {
+  if (FltRoundsVal > TowardNegative)
+    FltRoundsVal -= ExtendedFltRoundOffset;
+
+  return static_cast<uint64_t>(getModeRegisterRoundMode(HWVal, HWVal))
+         << (FltRoundsVal << 2);
+}
+
+/// Decode FLT_ROUNDS into the hardware value where the two rounding modes
+/// different and use an extended value.
+static constexpr uint64_t encodeFltRoundsToHWTable(uint32_t HWF32Val,
+                                                   uint32_t HWF64Val,
+                                                   uint32_t FltRoundsVal) {
+  if (FltRoundsVal > TowardNegative)
+    FltRoundsVal -= ExtendedFltRoundOffset;
+  return static_cast<uint64_t>(getModeRegisterRoundMode(HWF32Val, HWF64Val))
+         << (FltRoundsVal << 2);
+}
+
+const uint64_t AMDGPU::FltRoundToHWConversionTable =
+    encodeFltRoundsToHWTableSame(HWTowardZero, TowardZeroF32_TowardZeroF64) |
+    encodeFltRoundsToHWTableSame(HWNearestTiesToEven,
+                                 NearestTiesToEvenF32_NearestTiesToEvenF64) |
+    encodeFltRoundsToHWTableSame(HWTowardPositive,
+                                 TowardPositiveF32_TowardPositiveF64) |
+    encodeFltRoundsToHWTableSame(HWTowardNegative,
+                                 TowardNegativeF32_TowardNegativeF64) |
+
+    encodeFltRoundsToHWTable(HWTowardZero, HWNearestTiesToEven,
+                             TowardZeroF32_NearestTiesToEvenF64) |
+    encodeFltRoundsToHWTable(HWTowardZero, HWTowardPositive,
+                             TowardZeroF32_TowardPositiveF64) |
+    encodeFltRoundsToHWTable(HWTowardZero, HWTowardNegative,
+                             TowardZeroF32_TowardNegativeF64) |
+
+    encodeFltRoundsToHWTable(HWNearestTiesToEven, HWTowardZero,
+                             NearestTiesToEvenF32_TowardZeroF64) |
+    encodeFltRoundsToHWTable(HWNearestTiesToEven, HWTowardPositive,
+                             NearestTiesToEvenF32_TowardPositiveF64) |
+    encodeFltRoundsToHWTable(HWNearestTiesToEven, HWTowardNegative,
+                             NearestTiesToEvenF32_TowardNegativeF64) |
+
+    encodeFltRoundsToHWTable(HWTowardPositive, HWTowardZero,
+                             TowardPositiveF32_TowardZeroF64) |
+    encodeFltRoundsToHWTable(HWTowardPositive, HWNearestTiesToEven,
+                             TowardPositiveF32_NearestTiesToEvenF64) |
+    encodeFltRoundsToHWTable(HWTowardPositive, HWTowardNegative,
+                             TowardPositiveF32_TowardNegativeF64) |
+
+    encodeFltRoundsToHWTable(HWTowardNegative, HWTowardZero,
+                             TowardNegativeF32_TowardZeroF64) |
+    encodeFltRoundsToHWTable(HWTowardNegative, HWNearestTiesToEven,
+                             TowardNegativeF32_NearestTiesToEvenF64) |
+    encodeFltRoundsToHWTable(HWTowardNegative, HWTowardPositive,
+                             TowardNegativeF32_TowardPositiveF64);
+
+/// Read the hardware rounding mode equivalent of a AMDGPUFltRounds value.
+static constexpr uint32_t
+decodeFltRoundToHWConversionTable(uint64_t FltRoundToHWConversionTable,
+                                  uint32_t FltRounds) {
+  uint32_t IndexVal = FltRounds;
+  if (IndexVal > TowardNegative)
+    IndexVal -= ExtendedFltRoundOffset;
+  return (FltRoundToHWConversionTable >> (IndexVal << 2)) & 0xf;
+}
+
+uint32_t AMDGPU::decodeFltRoundToHWConversionTable(uint32_t FltRounds) {
+  return ::decodeFltRoundToHWConversionTable(FltRoundToHWConversionTable,
+                                             FltRounds);
+}
+
+static constexpr uint32_t decodeFltRoundToHW(uint32_t FltRounds) {
+  return ::decodeFltRoundToHWConversionTable(FltRoundToHWConversionTable,
+                                             FltRounds);
+}
+
+// Verify evaluation of FltRoundToHWConversionTable
+
+static_assert(decodeFltRoundToHW(AMDGPUFltRounds::TowardZero) ==
+              getModeRegisterRoundMode(HWTowardZero, HWTowardZero));
+static_assert(decodeFltRoundToHW(AMDGPUFltRounds::NearestTiesToEven) ==
+              getModeRegisterRoundMode(HWNearestTiesToEven,
+                                       HWNearestTiesToEven));
+static_assert(decodeFltRoundToHW(AMDGPUFltRounds::TowardPositive) ==
+              getModeRegisterRoundMode(HWTowardPositive, HWTowardPositive));
+static_assert(decodeFltRoundToHW(AMDGPUFltRounds::TowardNegative) ==
+              getModeRegisterRoundMode(HWTowardNegative, HWTowardNegative));
+
+static_assert(decodeFltRoundToHW(NearestTiesToEvenF32_TowardPositiveF64) ==
+              getModeRegisterRoundMode(HWNearestTiesToEven, HWTowardPositive));
+static_assert(decodeFltRoundToHW(NearestTiesToEvenF32_TowardNegativeF64) ==
+              getModeRegisterRoundMode(HWNearestTiesToEven, HWTowardNegative));
+static_assert(decodeFltRoundToHW(NearestTiesToEvenF32_TowardZeroF64) ==
+              getModeRegisterRoundMode(HWNearestTiesToEven, HWTowardZero));
+
+static_assert(decodeFltRoundToHW(TowardPositiveF32_NearestTiesToEvenF64) ==
+              getModeRegisterRoundMode(HWTowardPositive, HWNearestTiesToEven));
+static_assert(decodeFltRoundToHW(TowardPositiveF32_TowardNegativeF64) ==
+              getModeRegisterRoundMode(HWTowardPositive, HWTowardNegative));
+static_assert(decodeFltRoundToHW(TowardPositiveF32_TowardZeroF64) ==
+              getModeRegisterRoundMode(HWTowardPositive, HWTowardZero));
+
+static_assert(decodeFltRoundToHW(TowardNegativeF32_NearestTiesToEvenF64) ==
+              getModeRegisterRoundMode(HWTowardNegative, HWNearestTiesToEven));
+static_assert(decodeFltRoundToHW(TowardNegativeF32_TowardPositiveF64) ==
+              getModeRegisterRoundMode(HWTowardNegative, HWTowardPositive));
+static_assert(decodeFltRoundToHW(TowardNegativeF32_TowardZeroF64) ==
+              getModeRegisterRoundMode(HWTowardNegative, HWTowardZero));
+
+static_assert(decodeFltRoundToHW(TowardZeroF32_NearestTiesToEvenF64) ==
+              getModeRegisterRoundMode(HWTowardZero, HWNearestTiesToEven));
+static_assert(decodeFltRoundToHW(TowardZeroF32_TowardPositiveF64) ==
+              getModeRegisterRoundMode(HWTowardZero, HWTowardPositive));
+static_assert(decodeFltRoundToHW(TowardZeroF32_TowardNegativeF64) ==
+              getModeRegisterRoundMode(HWTowardZero, HWTowardNegative));

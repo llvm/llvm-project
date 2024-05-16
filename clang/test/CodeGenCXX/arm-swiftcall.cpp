@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple armv7-apple-darwin9 -emit-llvm -o - %s -Wno-return-type-c-linkage -std=c++03 | FileCheck %s -check-prefixes=CHECK
 
+// For now just check that the RISC-V triples are accepted, but don't check the IR, as swiftcall is not yet supported.
+// RUN: %clang_cc1 -triple riscv32-unknown-linux-gnu -emit-llvm -o - %s -Wno-return-type-c-linkage -std=c++03
+// RUN: %clang_cc1 -triple riscv64-unknown-linux-gnu -emit-llvm -o - %s -Wno-return-type-c-linkage -std=c++03
+
 // This isn't really testing anything ARM-specific; it's just a convenient
 // 32-bit platform.
 
@@ -105,7 +109,7 @@ struct struct_indirect_1 {
 };
 TEST(struct_indirect_1)
 
-// CHECK-LABEL: define {{.*}} void @return_struct_indirect_1({{.*}} noalias sret
+// CHECK-LABEL: define {{.*}} void @return_struct_indirect_1({{.*}} dead_on_unwind noalias writable sret
 
 // Should not be byval.
 // CHECK-LABEL: define {{.*}} void @take_struct_indirect_1(ptr noundef{{( %.*)?}})

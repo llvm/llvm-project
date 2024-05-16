@@ -31,7 +31,7 @@ class ModuleToObject {
 public:
   ModuleToObject(Operation &module, StringRef triple, StringRef chip,
                  StringRef features = {}, int optLevel = 3);
-  virtual ~ModuleToObject() = default;
+  virtual ~ModuleToObject();
 
   /// Returns the operation being serialized.
   Operation &getOperation();
@@ -42,44 +42,43 @@ public:
 protected:
   // Hooks to be implemented by derived classes.
 
+  /// Hook for computing the Datalayout
+  virtual void setDataLayoutAndTriple(llvm::Module &module);
+
   /// Hook for loading bitcode files, returns std::nullopt on failure.
   virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
-  loadBitcodeFiles(llvm::Module &module, llvm::TargetMachine &targetMachine) {
+  loadBitcodeFiles(llvm::Module &module) {
     return SmallVector<std::unique_ptr<llvm::Module>>();
   }
 
   /// Hook for performing additional actions on a loaded bitcode file.
-  virtual LogicalResult handleBitcodeFile(llvm::Module &module,
-                                          llvm::TargetMachine &targetMachine) {
+  virtual LogicalResult handleBitcodeFile(llvm::Module &module) {
     return success();
   }
 
   /// Hook for performing additional actions on the llvmModule pre linking.
-  virtual void handleModulePreLink(llvm::Module &module,
-                                   llvm::TargetMachine &targetMachine) {}
+  virtual void handleModulePreLink(llvm::Module &module) {}
 
   /// Hook for performing additional actions on the llvmModule post linking.
-  virtual void handleModulePostLink(llvm::Module &module,
-                                    llvm::TargetMachine &targetMachine) {}
+  virtual void handleModulePostLink(llvm::Module &module) {}
 
   /// Serializes the LLVM IR bitcode to an object file, by default it serializes
   /// to LLVM bitcode.
   virtual std::optional<SmallVector<char, 0>>
-  moduleToObject(llvm::Module &llvmModule, llvm::TargetMachine &targetMachine);
+  moduleToObject(llvm::Module &llvmModule);
 
 protected:
   /// Create the target machine based on the target triple and chip.
-  std::unique_ptr<llvm::TargetMachine> createTargetMachine();
+  /// This can fail if the target is not available.
+  std::optional<llvm::TargetMachine *> getOrCreateTargetMachine();
 
   /// Loads a bitcode file from path.
-  std::unique_ptr<llvm::Module>
-  loadBitcodeFile(llvm::LLVMContext &context,
-                  llvm::TargetMachine &targetMachine, StringRef path);
+  std::unique_ptr<llvm::Module> loadBitcodeFile(llvm::LLVMContext &context,
+                                                StringRef path);
 
   /// Loads multiple bitcode files.
   LogicalResult loadBitcodeFilesFromList(
-      llvm::LLVMContext &context, llvm::TargetMachine &targetMachine,
-      ArrayRef<std::string> fileList,
+      llvm::LLVMContext &context, ArrayRef<std::string> fileList,
       SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
       bool failureOnError = true);
 
@@ -92,8 +91,7 @@ protected:
                           SmallVector<std::unique_ptr<llvm::Module>> &&libs);
 
   /// Optimize the module.
-  LogicalResult optimizeModule(llvm::Module &module,
-                               llvm::TargetMachine &targetMachine, int optL);
+  virtual LogicalResult optimizeModule(llvm::Module &module, int optL);
 
   /// Utility function for translating to ISA, returns `std::nullopt` on
   /// failure.
@@ -115,6 +113,11 @@ protected:
 
   /// Optimization level.
   int optLevel;
+
+private:
+  /// The TargetMachine created for the given Triple, if available.
+  /// Accessible through `getOrCreateTargetMachine()`.
+  std::unique_ptr<llvm::TargetMachine> targetMachine;
 };
 } // namespace LLVM
 } // namespace mlir

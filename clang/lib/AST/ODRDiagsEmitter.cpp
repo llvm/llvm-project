@@ -461,8 +461,10 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
   }
   if (FirstMethod->getImplementationControl() !=
       SecondMethod->getImplementationControl()) {
-    DiagError(ControlLevel) << FirstMethod->getImplementationControl();
-    DiagNote(ControlLevel) << SecondMethod->getImplementationControl();
+    DiagError(ControlLevel)
+        << llvm::to_underlying(FirstMethod->getImplementationControl());
+    DiagNote(ControlLevel) << llvm::to_underlying(
+        SecondMethod->getImplementationControl());
     return true;
   }
   if (FirstMethod->isThisDeclarationADesignatedInitializer() !=
@@ -1100,8 +1102,8 @@ bool ODRDiagsEmitter::diagnoseMismatch(
 
     const bool FirstVirtual = FirstMethod->isVirtualAsWritten();
     const bool SecondVirtual = SecondMethod->isVirtualAsWritten();
-    const bool FirstPure = FirstMethod->isPure();
-    const bool SecondPure = SecondMethod->isPure();
+    const bool FirstPure = FirstMethod->isPureVirtual();
+    const bool SecondPure = SecondMethod->isPureVirtual();
     if ((FirstVirtual || SecondVirtual) &&
         (FirstVirtual != SecondVirtual || FirstPure != SecondPure)) {
       DiagMethodError(MethodVirtual) << FirstPure << FirstVirtual;

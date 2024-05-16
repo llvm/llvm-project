@@ -21,28 +21,25 @@
 #include "test_macros.h"
 #include "allocators.h"
 
-int main(int, char**)
-{
-
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>> A;
-        A a;
-        a.deallocate((int*)10, 20);
-        assert((A1<int>::deallocate_called == std::pair<int*, std::size_t>((int*)10, 20)));
-    }
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>, A2<int>> A;
-        A a;
-        a.deallocate((int*)10, 20);
-        assert((A1<int>::deallocate_called == std::pair<int*, std::size_t>((int*)10, 20)));
-    }
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>> A;
-        A a;
-        a.deallocate((int*)10, 20);
-        assert((A1<int>::deallocate_called == std::pair<int*, std::size_t>((int*)10, 20)));
-    }
-
+int main(int, char**) {
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>> A;
+    A a;
+    a.deallocate((int*)10, 20);
+    assert((A1<int>::deallocate_called == std::pair<int*, std::size_t>((int*)10, 20)));
+  }
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>, A2<int>> A;
+    A a;
+    a.deallocate((int*)10, 20);
+    assert((A1<int>::deallocate_called == std::pair<int*, std::size_t>((int*)10, 20)));
+  }
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>> A;
+    A a;
+    a.deallocate((int*)10, 20);
+    assert((A1<int>::deallocate_called == std::pair<int*, std::size_t>((int*)10, 20)));
+  }
 
   return 0;
 }

@@ -19,4 +19,16 @@ void f2(void) {
   struct U u;
 }
 
+void f3(void) {
+  struct G { // expected-note{{previous definition is here}}
+    struct G {}; // expected-error{{nested redefinition of 'G'}}
+  };
+}
 
+void f4(void) {
+  struct G { // expected-note 2{{previous definition is here}}
+    struct G {}; // expected-error{{nested redefinition of 'G'}}
+  };
+
+  struct G {}; // expected-error{{redefinition of 'G'}}
+}

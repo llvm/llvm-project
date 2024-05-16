@@ -172,6 +172,23 @@ constexpr bool test() {
     assert(e1.error().data_ == 10);
     assert(oldState.moveAssignCalled);
   }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true, true> e;
+      std::unexpected<int> un(std::in_place, 42);
+      e = std::move(un);
+      assert(e.check());
+    }
+    {
+      CheckForInvalidWrites<false, true> e;
+      std::unexpected<bool> un(std::in_place, true);
+      e = std::move(un);
+      assert(e.check());
+    }
+  }
+
   return true;
 }
 

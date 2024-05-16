@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -135,7 +138,8 @@ public:
 public:
   PathDiagnosticConstruct(const PathDiagnosticConsumer *PDC,
                           const ExplodedNode *ErrorNode,
-                          const PathSensitiveBugReport *R);
+                          const PathSensitiveBugReport *R,
+                          const Decl *AnalysisEntryPoint);
 
   /// \returns the location context associated with the current position in the
   /// bug path.
@@ -1320,24 +1324,26 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 }
 
 static std::unique_ptr<PathDiagnostic>
-generateDiagnosticForBasicReport(const BasicBugReport *R) {
+generateDiagnosticForBasicReport(const BasicBugReport *R,
+                                 const Decl *AnalysisEntryPoint) {
   const BugType &BT = R->getBugType();
   return std::make_unique<PathDiagnostic>(
       BT.getCheckerName(), R->getDeclWithIssue(), BT.getDescription(),
       R->getDescription(), R->getShortDescription(/*UseFallback=*/false),
       BT.getCategory(), R->getUniqueingLocation(), R->getUniqueingDecl(),
-      std::make_unique<FilesToLineNumsMap>());
+      AnalysisEntryPoint, std::make_unique<FilesToLineNumsMap>());
 }
 
 static std::unique_ptr<PathDiagnostic>
 generateEmptyDiagnosticForReport(const PathSensitiveBugReport *R,
-                                 const SourceManager &SM) {
+                                 const SourceManager &SM,
+                                 const Decl *AnalysisEntryPoint) {
   const BugType &BT = R->getBugType();
   return std::make_unique<PathDiagnostic>(
       BT.getCheckerName(), R->getDeclWithIssue(), BT.getDescription(),
       R->getDescription(), R->getShortDescription(/*UseFallback=*/false),
       BT.getCategory(), R->getUniqueingLocation(), R->getUniqueingDecl(),
-      findExecutedLines(SM, R->getErrorNode()));
+      AnalysisEntryPoint, findExecutedLines(SM, R->getErrorNode()));
 }
 
 static const Stmt *getStmtParent(const Stmt *S, const ParentMap &PM) {
@@ -1973,10 +1979,11 @@ static void updateExecutedLinesWithDiagnosticPieces(PathDiagnostic &PD) {
 
 PathDiagnosticConstruct::PathDiagnosticConstruct(
     const PathDiagnosticConsumer *PDC, const ExplodedNode *ErrorNode,
-    const PathSensitiveBugReport *R)
+    const PathSensitiveBugReport *R, const Decl *AnalysisEntryPoint)
     : Consumer(PDC), CurrentNode(ErrorNode),
       SM(CurrentNode->getCodeDecl().getASTContext().getSourceManager()),
-      PD(generateEmptyDiagnosticForReport(R, getSourceManager())) {
+      PD(generateEmptyDiagnosticForReport(R, getSourceManager(),
+                                          AnalysisEntryPoint)) {
   LCM[&PD->getActivePath()] = ErrorNode->getLocationContext();
 }
 
@@ -1990,13 +1997,14 @@ PathDiagnosticBuilder::PathDiagnosticBuilder(
 
 std::unique_ptr<PathDiagnostic>
 PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
-  PathDiagnosticConstruct Construct(PDC, ErrorNode, R);
+  const Decl *EntryPoint = getBugReporter().getAnalysisEntryPoint();
+  PathDiagnosticConstruct Construct(PDC, ErrorNode, R, EntryPoint);
 
   const SourceManager &SM = getSourceManager();
   const AnalyzerOptions &Opts = getAnalyzerOptions();
 
   if (!PDC->shouldGenerateDiagnostics())
-    return generateEmptyDiagnosticForReport(R, getSourceManager());
+    return generateEmptyDiagnosticForReport(R, getSourceManager(), EntryPoint);
 
   // Construct the final (warning) event for the bug report.
   auto EndNotes = VisitorsDiagnostics->find(ErrorNode);
@@ -2139,15 +2147,14 @@ PathSensitiveBugReport::PathSensitiveBugReport(
          "checkers to emit warnings, because checkers should depend on "
          "*modeling*, not *diagnostics*.");
 
-  assert(
-      (bt.getCheckerName().startswith("debug") ||
-       !isHidden(ErrorNode->getState()
-                     ->getAnalysisManager()
-                     .getCheckerManager()
-                     ->getCheckerRegistryData(),
-                 bt.getCheckerName())) &&
-          "Hidden checkers musn't emit diagnostics as they are by definition "
-          "non-user facing!");
+  assert((bt.getCheckerName().starts_with("debug") ||
+          !isHidden(ErrorNode->getState()
+                        ->getAnalysisManager()
+                        .getCheckerManager()
+                        ->getCheckerRegistryData(),
+                    bt.getCheckerName())) &&
+         "Hidden checkers musn't emit diagnostics as they are by definition "
+         "non-user facing!");
 }
 
 void PathSensitiveBugReport::addVisitor(
@@ -2425,6 +2432,12 @@ PathSensitiveBugReport::getLocation() const {
   }
 
   if (S) {
+    // Attributed statements usually have corrupted begin locations,
+    // it's OK to ignore attributes for our purposes and deal with
+    // the actual annotated statement.
+    if (const auto *AS = dyn_cast<AttributedStmt>(S))
+      S = AS->getSubStmt();
+
     // For member expressions, return the location of the '.' or '->'.
     if (const auto *ME = dyn_cast<MemberExpr>(S))
       return PathDiagnosticLocation::createMemberLoc(ME, SM);
@@ -2459,7 +2472,9 @@ ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
   return Eng.getStateManager();
 }
 
-BugReporter::BugReporter(BugReporterData &d) : D(d) {}
+BugReporter::BugReporter(BugReporterData &D)
+    : D(D), UserSuppressions(D.getASTContext()) {}
+
 BugReporter::~BugReporter() {
   // Make sure reports are flushed.
   assert(StrBugTypes.empty() &&
@@ -2897,6 +2912,10 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   if (!ValidSourceLoc)
     return;
 
+  // If the user asked to suppress this report, we should skip it.
+  if (UserSuppressions.isSuppressed(*R))
+    return;
+
   // Compute the bug report's hash to determine its equivalence class.
   llvm::FoldingSetNodeID ID;
   R->Profile(ID);
@@ -3064,8 +3083,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   // See whether we need to silence the checker/package.
   for (const std::string &CheckerOrPackage :
        getAnalyzerOptions().SilencedCheckersAndPackages) {
-    if (report->getBugType().getCheckerName().startswith(
-            CheckerOrPackage))
+    if (report->getBugType().getCheckerName().starts_with(CheckerOrPackage))
       return;
   }
 
@@ -3110,6 +3128,16 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
       Pieces.back()->addFixit(I);
 
     updateExecutedLinesWithDiagnosticPieces(*PD);
+
+    // If we are debugging, let's have the entry point as the first note.
+    if (getAnalyzerOptions().AnalyzerDisplayProgress ||
+        getAnalyzerOptions().AnalyzerNoteAnalysisEntryPoints) {
+      const Decl *EntryPoint = getAnalysisEntryPoint();
+      Pieces.push_front(std::make_shared<PathDiagnosticEventPiece>(
+          PathDiagnosticLocation{EntryPoint->getLocation(), getSourceManager()},
+          "[debug] analyzing from " +
+              AnalysisDeclContext::getFunctionName(EntryPoint)));
+    }
     Consumer->HandlePathDiagnostic(std::move(PD));
   }
 }
@@ -3198,7 +3226,8 @@ BugReporter::generateDiagnosticForConsumerMap(
   auto *basicReport = cast<BasicBugReport>(exampleReport);
   auto Out = std::make_unique<DiagnosticForConsumerMapTy>();
   for (auto *Consumer : consumers)
-    (*Out)[Consumer] = generateDiagnosticForBasicReport(basicReport);
+    (*Out)[Consumer] =
+        generateDiagnosticForBasicReport(basicReport, AnalysisEntryPoint);
   return Out;
 }
 

@@ -16,7 +16,6 @@
 #include "DwarfExpression.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -31,6 +30,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <utility>
 
@@ -81,15 +81,16 @@ bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
 }
 
 DwarfUnit::DwarfUnit(dwarf::Tag UnitTag, const DICompileUnit *Node,
-                     AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU)
-    : DIEUnit(UnitTag), CUNode(Node), Asm(A), DD(DW), DU(DWU) {}
+                     AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU,
+                     unsigned UniqueID)
+    : DIEUnit(UnitTag), UniqueID(UniqueID), CUNode(Node), Asm(A), DD(DW),
+      DU(DWU) {}
 
 DwarfTypeUnit::DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A,
-                             DwarfDebug *DW, DwarfFile *DWU,
+                             DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID,
                              MCDwarfDwoLineTable *SplitLineTable)
-    : DwarfUnit(dwarf::DW_TAG_type_unit, CU.getCUNode(), A, DW, DWU), CU(CU),
-      SplitLineTable(SplitLineTable) {
-}
+    : DwarfUnit(dwarf::DW_TAG_type_unit, CU.getCUNode(), A, DW, DWU, UniqueID),
+      CU(CU), SplitLineTable(SplitLineTable) {}
 
 DwarfUnit::~DwarfUnit() {
   for (DIEBlock *B : DIEBlocks)
@@ -640,7 +641,8 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
       IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
     }
     unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
-    DD->addAccelType(*CUNode, Ty->getName(), TyDIE, Flags);
+    DD->addAccelType(*this, CUNode->getNameTableKind(), Ty->getName(), TyDIE,
+                     Flags);
 
     if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
         isa<DINamespace>(Context) || isa<DICommonBlock>(Context))
@@ -802,6 +804,23 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (DTy->getDWARFAddressSpace())
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
             *DTy->getDWARFAddressSpace());
+
+  // Add template alias template parameters.
+  if (Tag == dwarf::DW_TAG_template_alias)
+    addTemplateParams(Buffer, DTy->getTemplateParams());
+
+  if (auto PtrAuthData = DTy->getPtrAuthData()) {
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1,
+            PtrAuthData->key());
+    if (PtrAuthData->isAddressDiscriminated())
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_address_discriminated);
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_extra_discriminator,
+            dwarf::DW_FORM_data2, PtrAuthData->extraDiscriminator());
+    if (PtrAuthData->isaPointer())
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_isa_pointer);
+    if (PtrAuthData->authenticatesNullValues())
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_authenticates_null_values);
+  }
 }
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
@@ -1112,7 +1131,7 @@ DIE *DwarfUnit::getOrCreateNameSpace(const DINamespace *NS) {
     addString(NDie, dwarf::DW_AT_name, NS->getName());
   else
     Name = "(anonymous namespace)";
-  DD->addAccelNamespace(*CUNode, Name, NDie);
+  DD->addAccelNamespace(*this, CUNode->getNameTableKind(), Name, NDie);
   addGlobalName(Name, NDie, NS->getScope());
   if (NS->getExportSymbols())
     addFlag(NDie, dwarf::DW_AT_export_symbols);
@@ -1439,7 +1458,8 @@ DIE *DwarfUnit::getIndexTyDie() {
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
           dwarf::getArrayIndexTypeEncoding(
               (dwarf::SourceLanguage)getLanguage()));
-  DD->addAccelType(*CUNode, Name, *IndexTyDie, /*Flags*/ 0);
+  DD->addAccelType(*this, CUNode->getNameTableKind(), Name, *IndexTyDie,
+                   /*Flags*/ 0);
   return IndexTyDie;
 }
 
@@ -1630,7 +1650,9 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
         addUInt(MemberDie, dwarf::DW_AT_byte_size, std::nullopt, FieldSize / 8);
       addUInt(MemberDie, dwarf::DW_AT_bit_size, std::nullopt, Size);
 
-      uint64_t Offset = DT->getOffsetInBits();
+      assert(DT->getOffsetInBits() <=
+             (uint64_t)std::numeric_limits<int64_t>::max());
+      int64_t Offset = DT->getOffsetInBits();
       // We can't use DT->getAlignInBits() here: AlignInBits for member type
       // is non-zero if and only if alignment was forced (e.g. _Alignas()),
       // which can't be done with bitfields. Thus we use FieldSize here.
@@ -1650,7 +1672,12 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
         if (Asm->getDataLayout().isLittleEndian())
           Offset = FieldSize - (Offset + Size);
 
-        addUInt(MemberDie, dwarf::DW_AT_bit_offset, std::nullopt, Offset);
+        if (Offset < 0)
+          addSInt(MemberDie, dwarf::DW_AT_bit_offset, dwarf::DW_FORM_sdata,
+                  Offset);
+        else
+          addUInt(MemberDie, dwarf::DW_AT_bit_offset, std::nullopt,
+                  (uint64_t)Offset);
         OffsetInBytes = FieldOffset >> 3;
       } else {
         addUInt(MemberDie, dwarf::DW_AT_data_bit_offset, std::nullopt, Offset);
@@ -1778,6 +1805,10 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 }
 
 void DwarfTypeUnit::emitHeader(bool UseOffsets) {
+  if (!DD->useSplitDwarf()) {
+    LabelBegin = Asm->createTempSymbol("tu_begin");
+    Asm->OutStreamer->emitLabel(LabelBegin);
+  }
   DwarfUnit::emitCommonHeader(UseOffsets,
                               DD->useSplitDwarf() ? dwarf::DW_UT_split_type
                                                   : dwarf::DW_UT_type);

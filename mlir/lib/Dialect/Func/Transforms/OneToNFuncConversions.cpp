@@ -40,9 +40,9 @@ public:
       return failure();
 
     // Create new CallOp.
-    auto newOp = rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
-                                         adaptor.getFlatOperands());
-    newOp->setAttrs(op->getAttrs());
+    auto newOp =
+        rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
+                                adaptor.getFlatOperands(), op->getAttrs());
 
     rewriter.replaceOp(op, newOp->getResults(), resultMapping);
     return success();
@@ -80,7 +80,7 @@ public:
     auto newType = FunctionType::get(rewriter.getContext(),
                                      argumentMapping.getConvertedTypes(),
                                      funcResultMapping.getConvertedTypes());
-    rewriter.updateRootInPlace(op, [&] { op.setType(newType); });
+    rewriter.modifyOpInPlace(op, [&] { op.setType(newType); });
 
     // Update block signatures.
     if (!op.isExternal()) {
@@ -105,7 +105,7 @@ public:
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();

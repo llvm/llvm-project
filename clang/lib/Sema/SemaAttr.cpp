@@ -215,6 +215,18 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
+  static llvm::StringSet<> Nullable{
+      "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",
+      "coroutine_handle", "function",   "move_only_function",
+  };
+
+  if (CRD->isInStdNamespace() && Nullable.count(CRD->getName()) &&
+      !CRD->hasAttr<TypeNullableAttr>())
+    for (Decl *Redecl : CRD->redecls())
+      Redecl->addAttr(TypeNullableAttr::CreateImplicit(Context));
+}
+
 void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
                                    SourceLocation PragmaLoc) {
   PragmaMsStackAction Action = Sema::PSK_Reset;
@@ -825,7 +837,7 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   IdentifierInfo *Name = IdTok.getIdentifierInfo();
   LookupResult Lookup(*this, Name, IdTok.getLocation(), LookupOrdinaryName);
-  LookupParsedName(Lookup, curScope, nullptr, true);
+  LookupName(Lookup, curScope, /*AllowBuiltinCreation=*/true);
 
   if (Lookup.empty()) {
     Diag(PragmaLoc, diag::warn_pragma_unused_undeclared_var)
@@ -846,22 +858,6 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation(),
                                          UnusedAttr::GNU_unused));
-}
-
-void Sema::AddCFAuditedAttribute(Decl *D) {
-  IdentifierInfo *Ident;
-  SourceLocation Loc;
-  std::tie(Ident, Loc) = PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid()) return;
-
-  // Don't add a redundant or conflicting attribute.
-  if (D->hasAttr<CFAuditedTransferAttr>() ||
-      D->hasAttr<CFUnknownTransferAttr>())
-    return;
-
-  AttributeCommonInfo Info(Ident, SourceRange(Loc),
-                           AttributeCommonInfo::Form::Pragma());
-  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
 
 namespace {
@@ -1285,7 +1281,8 @@ void Sema::ActOnPragmaFPContract(SourceLocation Loc,
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
-void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
+void Sema::ActOnPragmaFPValueChangingOption(SourceLocation Loc,
+                                            PragmaFPKind Kind, bool IsEnabled) {
   if (IsEnabled) {
     // For value unsafe context, combining this pragma with eval method
     // setting is not recommended. See comment in function FixupInvocation#506.
@@ -1301,10 +1298,21 @@ void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
       Reason = 0;
     if (Reason != -1)
       Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context)
-          << Reason << 4;
+          << Reason << (Kind == PFK_Reassociate ? 4 : 5);
   }
+
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
-  NewFPFeatures.setAllowFPReassociateOverride(IsEnabled);
+  switch (Kind) {
+  case PFK_Reassociate:
+    NewFPFeatures.setAllowFPReassociateOverride(IsEnabled);
+    break;
+  case PFK_Reciprocal:
+    NewFPFeatures.setAllowReciprocalOverride(IsEnabled);
+    break;
+  default:
+    llvm_unreachable("unhandled value changing pragma fp");
+  }
+
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
@@ -1336,6 +1344,14 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
   }
   NewFPFeatures.setAllowFEnvAccessOverride(IsEnabled);
   NewFPFeatures.setRoundingMathOverride(IsEnabled);
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
+}
+
+void Sema::ActOnPragmaCXLimitedRange(SourceLocation Loc,
+                                     LangOptions::ComplexRangeKind Range) {
+  FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
+  NewFPFeatures.setComplexRangeOverride(Range);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }

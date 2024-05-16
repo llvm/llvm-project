@@ -9,6 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 namespace LIBC_NAMESPACE::cpp {
 
@@ -31,7 +32,7 @@ template <>
 struct make_unsigned<unsigned long> : type_identity<unsigned long> {};
 template <>
 struct make_unsigned<unsigned long long> : type_identity<unsigned long long> {};
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template <> struct make_unsigned<__int128_t> : type_identity<__uint128_t> {};
 template <> struct make_unsigned<__uint128_t> : type_identity<__uint128_t> {};
 #endif

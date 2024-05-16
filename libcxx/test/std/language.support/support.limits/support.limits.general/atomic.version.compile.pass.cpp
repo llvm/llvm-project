@@ -20,6 +20,7 @@
     __cpp_lib_atomic_float                     201711L [C++20]
     __cpp_lib_atomic_is_always_lock_free       201603L [C++17]
     __cpp_lib_atomic_lock_free_type_aliases    201907L [C++20]
+    __cpp_lib_atomic_min_max                   202403L [C++26]
     __cpp_lib_atomic_ref                       201806L [C++20]
     __cpp_lib_atomic_shared_ptr                201711L [C++20]
     __cpp_lib_atomic_value_initialization      201911L [C++20]
@@ -46,6 +47,10 @@
 
 # ifdef __cpp_lib_atomic_lock_free_type_aliases
 #   error "__cpp_lib_atomic_lock_free_type_aliases should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_atomic_min_max
+#   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_atomic_ref
@@ -84,6 +89,10 @@
 
 # ifdef __cpp_lib_atomic_lock_free_type_aliases
 #   error "__cpp_lib_atomic_lock_free_type_aliases should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_atomic_min_max
+#   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_atomic_ref
@@ -125,6 +134,10 @@
 
 # ifdef __cpp_lib_atomic_lock_free_type_aliases
 #   error "__cpp_lib_atomic_lock_free_type_aliases should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_atomic_min_max
+#   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_atomic_ref
@@ -183,6 +196,10 @@
 #   error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++20"
 # endif
 
+# ifdef __cpp_lib_atomic_min_max
+#   error "__cpp_lib_atomic_min_max should not be defined before c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_atomic_ref
 #     error "__cpp_lib_atomic_ref should be defined in c++20"
@@ -216,7 +233,7 @@
 #   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++20"
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC
 #   ifndef __cpp_lib_atomic_wait
 #     error "__cpp_lib_atomic_wait should be defined in c++20"
 #   endif
@@ -225,7 +242,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_atomic_wait
-#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
+#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC' is not met!"
 #   endif
 # endif
 
@@ -278,6 +295,10 @@
 #   error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++23"
 # endif
 
+# ifdef __cpp_lib_atomic_min_max
+#   error "__cpp_lib_atomic_min_max should not be defined before c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_atomic_ref
 #     error "__cpp_lib_atomic_ref should be defined in c++23"
@@ -311,7 +332,7 @@
 #   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++23"
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC
 #   ifndef __cpp_lib_atomic_wait
 #     error "__cpp_lib_atomic_wait should be defined in c++23"
 #   endif
@@ -320,7 +341,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_atomic_wait
-#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
+#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC' is not met!"
 #   endif
 # endif
 
@@ -374,6 +395,19 @@
 # endif
 
 # if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_min_max
+#     error "__cpp_lib_atomic_min_max should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_min_max != 202403L
+#     error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_min_max
+#     error "__cpp_lib_atomic_min_max should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_atomic_ref
 #     error "__cpp_lib_atomic_ref should be defined in c++26"
 #   endif
@@ -406,7 +440,7 @@
 #   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++26"
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC
 #   ifndef __cpp_lib_atomic_wait
 #     error "__cpp_lib_atomic_wait should be defined in c++26"
 #   endif
@@ -415,7 +449,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_atomic_wait
-#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
+#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC' is not met!"
 #   endif
 # endif
 

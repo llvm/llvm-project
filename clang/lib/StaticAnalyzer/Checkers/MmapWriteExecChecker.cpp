@@ -15,6 +15,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -26,14 +27,15 @@ using namespace ento;
 
 namespace {
 class MmapWriteExecChecker : public Checker<check::PreCall> {
-  CallDescription MmapFn;
-  CallDescription MprotectFn;
+  CallDescription MmapFn{CDM::CLibrary, {"mmap"}, 6};
+  CallDescription MprotectFn{CDM::CLibrary, {"mprotect"}, 3};
   static int ProtWrite;
   static int ProtExec;
   static int ProtRead;
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "W^X check fails, Write Exec prot flags set",
+                   "Security"};
+
 public:
-  MmapWriteExecChecker() : MmapFn({"mmap"}, 6), MprotectFn({"mprotect"}, 3) {}
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   int ProtExecOv;
   int ProtReadOv;
@@ -62,17 +64,16 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
       return;
 
     if ((Prot & (ProtWrite | ProtExec)) == (ProtWrite | ProtExec)) {
-      if (!BT)
-        BT.reset(new BugType(this, "W^X check fails, Write Exec prot flags set", "Security"));
-
       ExplodedNode *N = C.generateNonFatalErrorNode();
       if (!N)
         return;
 
       auto Report = std::make_unique<PathSensitiveBugReport>(
-          *BT, "Both PROT_WRITE and PROT_EXEC flags are set. This can "
-               "lead to exploitable memory regions, which could be overwritten "
-               "with malicious code", N);
+          BT,
+          "Both PROT_WRITE and PROT_EXEC flags are set. This can "
+          "lead to exploitable memory regions, which could be overwritten "
+          "with malicious code",
+          N);
       Report->addRange(Call.getArgSourceRange(2));
       C.emitReport(std::move(Report));
     }

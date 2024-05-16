@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -33,37 +34,37 @@ STATISTIC(NumVFDeclAdded,
 STATISTIC(NumCompUsedAdded,
           "Number of `@llvm.compiler.used` operands that have been added.");
 
-/// A helper function that adds the vector function declaration that
-/// vectorizes the CallInst CI with a vectorization factor of VF
-/// lanes. The TLI assumes that all parameters and the return type of
-/// CI (other than void) need to be widened to a VectorType of VF
-/// lanes.
+/// A helper function that adds the vector variant declaration for vectorizing
+/// the CallInst \p CI with a vectorization factor of \p VF lanes. For each
+/// mapping, TLI provides a VABI prefix, which contains all information required
+/// to create vector function declaration.
 static void addVariantDeclaration(CallInst &CI, const ElementCount &VF,
-                                  bool Predicate, const StringRef VFName) {
+                                  const VecDesc *VD) {
   Module *M = CI.getModule();
+  FunctionType *ScalarFTy = CI.getFunctionType();
 
-  // Add function declaration.
-  Type *RetTy = ToVectorTy(CI.getType(), VF);
-  SmallVector<Type *, 4> Tys;
-  for (Value *ArgOperand : CI.args())
-    Tys.push_back(ToVectorTy(ArgOperand->getType(), VF));
-  assert(!CI.getFunctionType()->isVarArg() &&
-         "VarArg functions are not supported.");
-  if (Predicate)
-    Tys.push_back(ToVectorTy(Type::getInt1Ty(RetTy->getContext()), VF));
-  FunctionType *FTy = FunctionType::get(RetTy, Tys, /*isVarArg=*/false);
-  Function *VectorF =
-      Function::Create(FTy, Function::ExternalLinkage, VFName, M);
-  VectorF->copyAttributesFrom(CI.getCalledFunction());
+  assert(!ScalarFTy->isVarArg() && "VarArg functions are not supported.");
+
+  const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(
+      VD->getVectorFunctionABIVariantString(), ScalarFTy);
+
+  assert(Info && "Failed to demangle vector variant");
+  assert(Info->Shape.VF == VF && "Mangled name does not match VF");
+
+  const StringRef VFName = VD->getVectorFnName();
+  FunctionType *VectorFTy = VFABI::createFunctionType(*Info, ScalarFTy);
+  Function *VecFunc =
+      Function::Create(VectorFTy, Function::ExternalLinkage, VFName, M);
+  VecFunc->copyAttributesFrom(CI.getCalledFunction());
   ++NumVFDeclAdded;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Added to the module: `" << VFName
-                    << "` of type " << *(VectorF->getType()) << "\n");
+                    << "` of type " << *VectorFTy << "\n");
 
   // Make function declaration (without a body) "sticky" in the IR by
   // listing it in the @llvm.compiler.used intrinsic.
-  assert(!VectorF->size() && "VFABI attribute requires `@llvm.compiler.used` "
+  assert(!VecFunc->size() && "VFABI attribute requires `@llvm.compiler.used` "
                              "only on declarations.");
-  appendToCompilerUsed(*M, {VectorF});
+  appendToCompilerUsed(*M, {VecFunc});
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Adding `" << VFName
                     << "` to `@llvm.compiler.used`.\n");
   ++NumCompUsedAdded;
@@ -100,7 +101,7 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
       }
       Function *VariantF = M->getFunction(VD->getVectorFnName());
       if (!VariantF)
-        addVariantDeclaration(CI, VF, Predicate, VD->getVectorFnName());
+        addVariantDeclaration(CI, VF, VD);
     }
   };
 

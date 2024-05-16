@@ -465,13 +465,10 @@ LVScope *LVNamespaceDeduction::get(LVStringRefs Components) {
 LVScope *LVNamespaceDeduction::get(StringRef ScopedName, bool CheckScope) {
   LVStringRefs Components = getAllLexicalComponents(ScopedName);
   if (CheckScope)
-    Components.erase(std::remove_if(Components.begin(), Components.end(),
-                                    [&](StringRef Component) {
-                                      LookupSet::iterator Iter =
-                                          IdentifiedNamespaces.find(Component);
-                                      return Iter == IdentifiedNamespaces.end();
-                                    }),
-                     Components.end());
+    llvm::erase_if(Components, [&](StringRef Component) {
+      LookupSet::iterator Iter = IdentifiedNamespaces.find(Component);
+      return Iter == IdentifiedNamespaces.end();
+    });
 
   LLVM_DEBUG(
       { dbgs() << formatv("ScopedName: '{0}'\n", ScopedName.str().c_str()); });
@@ -837,7 +834,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     // Symbol was created as 'variable'; determine its real kind.
     Symbol->resetIsVariable();
 
-    if (Local.Name.equals("this")) {
+    if (Local.Name == "this") {
       Symbol->setIsParameter();
       Symbol->setIsArtificial();
     } else {
@@ -888,7 +885,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Symbol->resetIsVariable();
 
     // Check for the 'this' symbol.
-    if (Local.Name.equals("this")) {
+    if (Local.Name == "this") {
       Symbol->setIsArtificial();
       Symbol->setIsParameter();
     } else {
@@ -1432,7 +1429,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, LocalSym &Local) {
 
     // Be sure the 'this' symbol is marked as 'compiler generated'.
     if (bool(Local.Flags & LocalSymFlags::IsCompilerGenerated) ||
-        Local.Name.equals("this")) {
+        Local.Name == "this") {
       Symbol->setIsArtificial();
       Symbol->setIsParameter();
     } else {
@@ -1672,7 +1669,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, UDTSym &UDT) {
       Type->resetIncludeInPrint();
     else {
       StringRef RecordName = getRecordName(Types, UDT.Type);
-      if (UDT.Name.equals(RecordName))
+      if (UDT.Name == RecordName)
         Type->resetIncludeInPrint();
       Type->setType(LogicalVisitor->getElement(StreamTPI, UDT.Type));
     }
@@ -2743,7 +2740,7 @@ Error LVLogicalVisitor::visitKnownMember(CVMemberRecord &Record,
             getInnerComponent(NestedTypeName);
         // We have an already created nested type. Add it to the current scope
         // and update all its children if any.
-        if (OuterComponent.size() && OuterComponent.equals(RecordName)) {
+        if (OuterComponent.size() && OuterComponent == RecordName) {
           if (!NestedType->getIsScopedAlready()) {
             Scope->addElement(NestedType);
             NestedType->setIsScopedAlready();
@@ -2939,7 +2936,7 @@ Error LVLogicalVisitor::finishVisitation(CVType &Record, TypeIndex TI,
 // Customized version of 'FieldListVisitHelper'.
 Error LVLogicalVisitor::visitFieldListMemberStream(
     TypeIndex TI, LVElement *Element, ArrayRef<uint8_t> FieldList) {
-  BinaryByteStream Stream(FieldList, llvm::support::little);
+  BinaryByteStream Stream(FieldList, llvm::endianness::little);
   BinaryStreamReader Reader(Stream);
   FieldListDeserializer Deserializer(Reader);
   TypeVisitorCallbackPipeline Pipeline;

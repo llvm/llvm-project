@@ -133,7 +133,7 @@ private:
 /// causing the underlying data to grow.  This class owns the underlying data.
 class AppendingBinaryByteStream : public WritableBinaryStream {
   std::vector<uint8_t> Data;
-  llvm::endianness Endian = llvm::support::little;
+  llvm::endianness Endian = llvm::endianness::little;
 
 public:
   AppendingBinaryByteStream() = default;

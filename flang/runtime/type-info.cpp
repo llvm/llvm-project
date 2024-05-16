@@ -15,7 +15,7 @@ namespace Fortran::runtime::typeInfo {
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
-RT_API_ATTRS std::optional<TypeParameterValue> Value::GetValue(
+RT_API_ATTRS Fortran::common::optional<TypeParameterValue> Value::GetValue(
     const Descriptor *descriptor) const {
   switch (genre_) {
   case Genre::Explicit:
@@ -26,9 +26,9 @@ RT_API_ATTRS std::optional<TypeParameterValue> Value::GetValue(
         return addendum->LenParameterValue(value_);
       }
     }
-    return std::nullopt;
+    return Fortran::common::nullopt;
   default:
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
 
@@ -251,10 +251,12 @@ FILE *DerivedType::Dump(FILE *f) const {
   std::fprintf(
       f, "\n  special descriptor (byteSize 0x%zx): ", special_.byteSize);
   specialDesc.Dump(f);
-  std::size_t specials{specialDesc.Elements()};
-  for (std::size_t j{0}; j < specials; ++j) {
-    std::fprintf(f, "  [%3zd] ", j);
-    specialDesc.ZeroBasedIndexedElement<SpecialBinding>(j)->Dump(f);
+  if (specialDesc.IsAllocated()) {
+    std::size_t specials{specialDesc.Elements()};
+    for (std::size_t j{0}; j < specials; ++j) {
+      std::fprintf(f, "  [%3zd] ", j);
+      specialDesc.ZeroBasedIndexedElement<SpecialBinding>(j)->Dump(f);
+    }
   }
   return f;
 }

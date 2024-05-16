@@ -20,10 +20,10 @@ class Cluster;
 class ReorderFunctions : public BinaryFunctionPass {
   BinaryFunctionCallGraph Cg;
 
-  void reorder(std::vector<Cluster> &&Clusters,
+  void reorder(BinaryContext &BC, std::vector<Cluster> &&Clusters,
                std::map<uint64_t, BinaryFunction> &BFs);
 
-  void printStats(const std::vector<Cluster> &Clusters,
+  void printStats(BinaryContext &BC, const std::vector<Cluster> &Clusters,
                   const std::vector<uint64_t> &FuncAddr);
 
 public:
@@ -32,7 +32,7 @@ public:
     RT_EXEC_COUNT,
     RT_HFSORT,
     RT_HFSORT_PLUS,
-    RT_CDS,
+    RT_CDSORT,
     RT_PETTIS_HANSEN,
     RT_RANDOM,
     RT_USER
@@ -42,9 +42,9 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "reorder-functions"; }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
-  static std::vector<std::string> readFunctionOrderFile();
+  static Error readFunctionOrderFile(std::vector<std::string> &FunctionNames);
 };
 
 } // namespace bolt

@@ -219,7 +219,7 @@ template <endianness E> static uint32_t readShuffle(const uint8_t *loc) {
   // words in a big-endian order. That is why we have to swap these
   // words to get a correct value.
   uint32_t v = read32(loc);
-  if (E == support::little)
+  if (E == llvm::endianness::little)
     return (v << 16) | (v >> 16);
   return v;
 }
@@ -237,12 +237,12 @@ static void writeShuffleValue(uint8_t *loc, uint64_t v, uint8_t bitsSize,
                               uint8_t shift) {
   // See comments in readShuffle for purpose of this code.
   uint16_t *words = (uint16_t *)loc;
-  if (E == support::little)
+  if (E == llvm::endianness::little)
     std::swap(words[0], words[1]);
 
   writeValue(loc, v, bitsSize, shift);
 
-  if (E == support::little)
+  if (E == llvm::endianness::little)
     std::swap(words[0], words[1]);
 }
 
@@ -380,7 +380,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr expr, RelType type, const InputFile *file,
 
 template <class ELFT>
 int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
-  const endianness e = ELFT::TargetEndianness;
+  const endianness e = ELFT::Endianness;
   switch (type) {
   case R_MIPS_32:
   case R_MIPS_REL32:
@@ -521,7 +521,7 @@ static uint64_t fixupCrossModeJump(uint8_t *loc, RelType type, uint64_t val) {
   // to a microMIPS target and vice versa. In that cases jump
   // instructions need to be replaced by their "cross-mode"
   // equivalents.
-  const endianness e = ELFT::TargetEndianness;
+  const endianness e = ELFT::Endianness;
   bool isMicroTgt = val & 0x1;
   bool isCrossJump = (isMicroTgt && isBranchReloc(type)) ||
                      (!isMicroTgt && isMicroBranchReloc(type));
@@ -567,7 +567,7 @@ static uint64_t fixupCrossModeJump(uint8_t *loc, RelType type, uint64_t val) {
 template <class ELFT>
 void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
                           uint64_t val) const {
-  const endianness e = ELFT::TargetEndianness;
+  const endianness e = ELFT::Endianness;
   RelType type = rel.type;
 
   if (ELFT::Is64Bits || config->mipsN32Abi)
@@ -771,12 +771,11 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   if (!sym->section)
     return false;
 
-  ObjFile<ELFT> *file =
-      cast<InputSectionBase>(sym->section)->template getFile<ELFT>();
-  if (!file)
+  InputFile *file = cast<InputSectionBase>(sym->section)->file;
+  if (!file || file->isInternal())
     return false;
 
-  return file->getObj().getHeader().e_flags & EF_MIPS_PIC;
+  return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
 template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {

@@ -28,6 +28,16 @@ constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
 constexpr const ::llvm::StringLiteral
     BufferizationDialect::kBufferLayoutAttrName;
 
+/// An attribute that can be attached to ops with an allocation and/or
+/// deallocation side effect. It indicates that the op is under a "manual
+/// deallocation" scheme. In the case of an allocation op, the returned
+/// value is *not* an automatically managed allocation and assigned an
+/// ownership of "false". Furthermore, only deallocation ops that are
+/// guaranteed to deallocate a buffer under "manual deallocation" are
+/// allowed to have this attribute. (Deallocation ops without this
+/// attribute are rejected by the ownership-based buffer deallocation pass.)
+constexpr const ::llvm::StringLiteral BufferizationDialect::kManualDeallocation;
+
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
 //===----------------------------------------------------------------------===//
@@ -104,6 +114,16 @@ LogicalResult
 BufferizationDialect::verifyOperationAttribute(Operation *op,
                                                NamedAttribute attr) {
   using bufferization::BufferizableOpInterface;
+
+  if (attr.getName() == kManualDeallocation) {
+    if (!mlir::hasEffect<MemoryEffects::Allocate>(op) &&
+        !mlir::hasEffect<MemoryEffects::Free>(op))
+      return op->emitOpError("attribute '")
+             << kManualDeallocation
+             << "' can be used only on ops that have an allocation and/or free "
+                "side effect";
+    return success();
+  }
 
   return op->emitError()
          << "attribute '" << attr.getName()

@@ -77,7 +77,7 @@ body:             |
   ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
   ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
   ; MIPS32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def dead $at
   ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.1.if.then:

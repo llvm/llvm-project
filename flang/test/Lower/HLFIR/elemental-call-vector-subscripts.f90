@@ -87,7 +87,7 @@ end subroutine
 ! CHECK:           %[[VAL_20:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_21:.*]] = {{.*}}
 ! CHECK:             %[[VAL_22:.*]] = hlfir.apply %[[VAL_16]], %[[VAL_21]] : (!hlfir.expr<?xi64>, index) -> i64
-! CHECK:             %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_22]] {uniq_name = "adapt.valuebyref"} : (i64) -> (!fir.ref<i64>, !fir.ref<i64>, i1)
+! CHECK:             %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_22]] {adapt.valuebyref} : (i64) -> (!fir.ref<i64>, !fir.ref<i64>, i1)
 ! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#1){{.*}}: (!fir.ref<i64>) -> ()
 ! CHECK:             hlfir.end_associate %[[VAL_23]]#1, %[[VAL_23]]#2 : !fir.ref<i64>, i1
 ! CHECK:           }

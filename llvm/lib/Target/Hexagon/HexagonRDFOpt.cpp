@@ -50,6 +50,9 @@ static unsigned RDFCount = 0;
 static cl::opt<unsigned>
     RDFLimit("hexagon-rdf-limit",
              cl::init(std::numeric_limits<unsigned>::max()));
+
+extern cl::opt<unsigned> RDFFuncBlockLimit;
+
 static cl::opt<bool> RDFDump("hexagon-rdf-dump", cl::Hidden);
 static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
 
@@ -284,6 +287,14 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
 bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+
+  // Perform RDF optimizations only if number of basic blocks in the
+  // function is less than the limit
+  if (MF.size() > RDFFuncBlockLimit) {
+    if (RDFDump)
+      dbgs() << "Skipping " << getPassName() << ": too many basic blocks\n";
+    return false;
+  }
 
   if (RDFLimit.getPosition()) {
     if (RDFCount >= RDFLimit)

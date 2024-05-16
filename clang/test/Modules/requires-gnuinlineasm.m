@@ -9,7 +9,7 @@
 // RUN:     -DASM_INLINE -verify
 
 #ifdef NO_ASM_INLINE
-// expected-error@NeedsGNUInlineAsm.framework/module.map:4 {{module 'NeedsGNUInlineAsm.Asm' requires feature 'gnuinlineasm'}}
+// expected-error@NeedsGNUInlineAsm.framework/Modules/module.modulemap:4 {{module 'NeedsGNUInlineAsm.Asm' requires feature 'gnuinlineasm'}}
 @import NeedsGNUInlineAsm.Asm; // expected-note {{module imported here}}
 #endif
 

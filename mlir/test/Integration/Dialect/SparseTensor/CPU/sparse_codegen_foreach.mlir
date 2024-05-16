@@ -5,12 +5,12 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -144,7 +144,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     //
     // Initialize a 3-dim dense tensor.
     //
@@ -166,6 +166,7 @@ module {
     %s4 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOO>
     %s5 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOOPerm>
     %s6 = sparse_tensor.convert %src3d : tensor<7x8x9xf64>  to tensor<7x8x9xf64, #CCCPerm>
+
     // CHECK: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -173,6 +174,7 @@ module {
     // CHECK-NEXT: 6
     // CHECK-NEXT: 5
     call @foreach_print_const() : () -> ()
+
     // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -186,6 +188,7 @@ module {
     // CHECK-NEXT: 1
     // CHECK-NEXT: 6
     call @foreach_print_dense(%src) : (tensor<2x2xf64>) -> ()
+
     // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -199,6 +202,7 @@ module {
     // CHECK-NEXT: 1
     // CHECK-NEXT: 6
     call @foreach_print_1(%s1) : (tensor<2x2xf64, #Row>) -> ()
+
     // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -212,6 +216,7 @@ module {
     // CHECK-NEXT: 1
     // CHECK-NEXT: 6
     call @foreach_print_2(%s2) : (tensor<2x2xf64, #CSR>) -> ()
+
     // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -225,6 +230,7 @@ module {
     // CHECK-NEXT: 1
     // CHECK-NEXT: 6
     call @foreach_print_3(%s3) : (tensor<2x2xf64, #DCSC>) -> ()
+
     // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -238,6 +244,7 @@ module {
     // CHECK-NEXT: 1
     // CHECK-NEXT: 6
     call @foreach_print_4(%s4) : (tensor<2x2xf64, #SortedCOO>) -> ()
+
     // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1

@@ -21,6 +21,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/Builders.h"
@@ -62,7 +63,7 @@ static std::optional<int64_t> unpackedDim(OpTy xferOp) {
   // TODO: support 0-d corner case.
   assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.getPermutationMap();
-  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+  if (auto expr = dyn_cast<AffineDimExpr>(map.getResult(0))) {
     return expr.getPosition();
   }
   assert(xferOp.isBroadcastDim(0) &&
@@ -260,7 +261,7 @@ static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
 template <typename OpTy>
 static bool isTensorOp(OpTy xferOp) {
   if (isa<RankedTensorType>(xferOp.getShapedType())) {
-    if (xferOp.getOperationName().equals(TransferWriteOp::getOperationName())) {
+    if (xferOp.getOperationName() == TransferWriteOp::getOperationName()) {
       // TransferWriteOps on tensors have a result.
       assert(xferOp->getNumResults() > 0);
     }
@@ -644,13 +645,13 @@ struct PrepareTransferWriteConversion
     rewriter.create<memref::StoreOp>(loc, xferOp.getVector(),
                                      buffers.dataBuffer);
     auto loadedVec = rewriter.create<memref::LoadOp>(loc, buffers.dataBuffer);
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getVectorMutable().assign(loadedVec);
       xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
     });
 
     if (xferOp.getMask()) {
-      rewriter.updateRootInPlace(xferOp, [&]() {
+      rewriter.modifyOpInPlace(xferOp, [&]() {
         xferOp.getMaskMutable().assign(buffers.maskBuffer);
       });
     }
@@ -725,12 +726,14 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       auto targetVectorType = vectorType.cloneWith({}, legalIntTy);
       value = rewriter.create<vector::BitCastOp>(loc, signlessSourceVectorType,
                                                  value);
-      if (width == 1 || intTy.isUnsigned())
-        value = rewriter.create<arith::ExtUIOp>(loc, signlessTargetVectorType,
-                                                value);
-      else
-        value = rewriter.create<arith::ExtSIOp>(loc, signlessTargetVectorType,
-                                                value);
+      if (value.getType() != signlessTargetVectorType) {
+        if (width == 1 || intTy.isUnsigned())
+          value = rewriter.create<arith::ExtUIOp>(loc, signlessTargetVectorType,
+                                                  value);
+        else
+          value = rewriter.create<arith::ExtSIOp>(loc, signlessTargetVectorType,
+                                                  value);
+      }
       value = rewriter.create<vector::BitCastOp>(loc, targetVectorType, value);
       vectorType = targetVectorType;
     }
@@ -863,6 +866,31 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     this->setHasBoundedRewriteRecursion();
   }
 
+  static void getMaskBufferLoadIndices(OpTy xferOp, Value castedMaskBuffer,
+                                       SmallVectorImpl<Value> &loadIndices,
+                                       Value iv) {
+    assert(xferOp.getMask() && "Expected transfer op to have mask");
+
+    // Add load indices from the previous iteration.
+    // The mask buffer depends on the permutation map, which makes determining
+    // the indices quite complex, so this is why we need to "look back" to the
+    // previous iteration to find the right indices.
+    Value maskBuffer = getMaskBuffer(xferOp);
+    for (Operation *user : maskBuffer.getUsers()) {
+      // If there is no previous load op, then the indices are empty.
+      if (auto loadOp = dyn_cast<memref::LoadOp>(user)) {
+        Operation::operand_range prevIndices = loadOp.getIndices();
+        loadIndices.append(prevIndices.begin(), prevIndices.end());
+        break;
+      }
+    }
+
+    // In case of broadcast: Use same indices to load from memref
+    // as before.
+    if (!xferOp.isBroadcastDim(0))
+      loadIndices.push_back(iv);
+  }
+
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
     if (!xferOp->hasAttr(kPassLabel))
@@ -870,9 +898,9 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
 
     // Find and cast data buffer. How the buffer can be found depends on OpTy.
     ImplicitLocOpBuilder locB(xferOp.getLoc(), rewriter);
-    auto dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
+    Value dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
     auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
-    auto castedDataType = unpackOneDim(dataBufferType);
+    FailureOr<MemRefType> castedDataType = unpackOneDim(dataBufferType);
     if (failed(castedDataType))
       return failure();
 
@@ -882,8 +910,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // If the xferOp has a mask: Find and cast mask buffer.
     Value castedMaskBuffer;
     if (xferOp.getMask()) {
-      auto maskBuffer = getMaskBuffer(xferOp);
-      auto maskBufferType = dyn_cast<MemRefType>(maskBuffer.getType());
+      Value maskBuffer = getMaskBuffer(xferOp);
       if (xferOp.isBroadcastDim(0) || xferOp.getMaskType().getRank() == 1) {
         // Do not unpack a dimension of the mask, if:
         // * To-be-unpacked transfer op dimension is a broadcast.
@@ -894,7 +921,8 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
       } else {
         // It's safe to assume the mask buffer can be unpacked if the data
         // buffer was unpacked.
-        auto castedMaskType = *unpackOneDim(maskBufferType);
+        auto maskBufferType = cast<MemRefType>(maskBuffer.getType());
+        MemRefType castedMaskType = *unpackOneDim(maskBufferType);
         castedMaskBuffer =
             locB.create<vector::TypeCastOp>(castedMaskType, maskBuffer);
       }
@@ -926,24 +954,19 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
 
                 // If old transfer op has a mask: Set mask on new transfer op.
                 // Special case: If the mask of the old transfer op is 1D and
-                // the
-                //               unpacked dim is not a broadcast, no mask is
-                //               needed on the new transfer op.
+                // the unpacked dim is not a broadcast, no mask is needed on
+                // the new transfer op.
                 if (xferOp.getMask() && (xferOp.isBroadcastDim(0) ||
                                          xferOp.getMaskType().getRank() > 1)) {
                   OpBuilder::InsertionGuard guard(b);
                   b.setInsertionPoint(newXfer); // Insert load before newXfer.
 
                   SmallVector<Value, 8> loadIndices;
-                  Strategy<OpTy>::getBufferIndices(xferOp, loadIndices);
-                  // In case of broadcast: Use same indices to load from memref
-                  // as before.
-                  if (!xferOp.isBroadcastDim(0))
-                    loadIndices.push_back(iv);
-
+                  getMaskBufferLoadIndices(xferOp, castedMaskBuffer,
+                                           loadIndices, iv);
                   auto mask = b.create<memref::LoadOp>(loc, castedMaskBuffer,
                                                        loadIndices);
-                  rewriter.updateRootInPlace(newXfer, [&]() {
+                  rewriter.modifyOpInPlace(newXfer, [&]() {
                     newXfer.getMaskMutable().assign(mask);
                   });
                 }
@@ -1037,10 +1060,10 @@ struct UnrollTransferReadConversion
     setHasBoundedRewriteRecursion();
   }
 
-  /// Return the vector into which the newly created TransferReadOp results
-  /// are inserted.
-  Value getResultVector(TransferReadOp xferOp,
-                        PatternRewriter &rewriter) const {
+  /// Get or build the vector into which the newly created TransferReadOp
+  /// results are inserted.
+  Value buildResultVector(PatternRewriter &rewriter,
+                          TransferReadOp xferOp) const {
     if (auto insertOp = getInsertOp(xferOp))
       return insertOp.getDest();
     Location loc = xferOp.getLoc();
@@ -1075,23 +1098,26 @@ struct UnrollTransferReadConversion
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "vector rank is less or equal to target rank");
     if (isTensorOp(xferOp) && !options.lowerTensors)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "transfers operating on tensors are excluded");
     // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
-      return failure();
-
-    auto insertOp = getInsertOp(xferOp);
-    auto vec = getResultVector(xferOp, rewriter);
-    auto vecType = dyn_cast<VectorType>(vec.getType());
+      return rewriter.notifyMatchFailure(
+          xferOp, "not yet supported: element type mismatch");
     auto xferVecType = xferOp.getVectorType();
-
     if (xferVecType.getScalableDims()[0]) {
       // Cannot unroll a scalable dimension at compile time.
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "scalable dimensions cannot be unrolled");
     }
+
+    auto insertOp = getInsertOp(xferOp);
+    auto vec = buildResultVector(rewriter, xferOp);
+    auto vecType = dyn_cast<VectorType>(vec.getType());
 
     VectorType newXferVecType = VectorType::Builder(xferVecType).dropDim(0);
 
@@ -1207,18 +1233,25 @@ struct UnrollTransferWriteConversion
   /// accesses, and broadcasts and transposes in permutation maps.
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (xferOp.getVectorType().getRank() <= options.targetRank)
+    VectorType inputVectorTy = xferOp.getVectorType();
+
+    if (inputVectorTy.getRank() <= options.targetRank)
       return failure();
+
     if (isTensorOp(xferOp) && !options.lowerTensors)
       return failure();
     // Transfer ops that modify the element type are not supported atm.
-    if (xferOp.getVectorType().getElementType() !=
+    if (inputVectorTy.getElementType() !=
         xferOp.getShapedType().getElementType())
       return failure();
 
     auto vec = getDataVector(xferOp);
-    auto xferVecType = xferOp.getVectorType();
-    int64_t dimSize = xferVecType.getShape()[0];
+    if (inputVectorTy.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
+      return failure();
+    }
+
+    int64_t dimSize = inputVectorTy.getShape()[0];
     Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
@@ -1244,8 +1277,18 @@ struct UnrollTransferWriteConversion
             auto extracted =
                 b.create<vector::ExtractOp>(loc, vec, extractionIndices);
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
+            Value xferVec;
+            if (inputVectorTy.getRank() == 1) {
+              // When target-rank=0, unrolling would causes the vector input
+              // argument into `transfer_write` to become a scalar. We solve
+              // this by broadcasting the scalar to a 0D vector.
+              xferVec = b.create<vector::BroadcastOp>(
+                  loc, VectorType::get({}, extracted.getType()), extracted);
+            } else {
+              xferVec = extracted;
+            }
             auto newXferOp = b.create<vector::TransferWriteOp>(
-                loc, sourceType, extracted, source, xferIndices,
+                loc, sourceType, xferVec, source, xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
                 inBoundsAttr);
 
@@ -1290,7 +1333,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
   memrefIndices.append(indices.begin(), indices.end());
   assert(map.getNumResults() == 1 &&
          "Expected 1 permutation map result for 1D transfer");
-  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+  if (auto expr = dyn_cast<AffineDimExpr>(map.getResult(0))) {
     Location loc = xferOp.getLoc();
     auto dim = expr.getPosition();
     AffineExpr d0, d1;

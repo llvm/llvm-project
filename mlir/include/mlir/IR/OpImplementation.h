@@ -180,6 +180,14 @@ public:
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
 
+  /// Print the alias for the given attribute, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printAlias(Attribute attr);
+
+  /// Print the alias for the given type, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printAlias(Type type);
+
   /// Print the given string as a keyword, or a quoted and escaped string if it
   /// has any special or non-printable characters in it.
   virtual void printKeywordOrString(StringRef keyword);
@@ -225,6 +233,8 @@ public:
     os << ')';
     printArrowTypeList(results);
   }
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
   /// Class used to automatically end a cyclic region on destruction.
   class CyclicPrintReset {
@@ -293,14 +303,6 @@ private:
   AsmPrinter(const AsmPrinter &) = delete;
   void operator=(const AsmPrinter &) = delete;
 
-  /// Print the alias for the given attribute, return failure if no alias could
-  /// be printed.
-  virtual LogicalResult printAlias(Attribute attr);
-
-  /// Print the alias for the given type, return failure if no alias could
-  /// be printed.
-  virtual LogicalResult printAlias(Type type);
-
   /// The internal implementation of the printer.
   Impl *impl{nullptr};
 };
@@ -350,8 +352,7 @@ template <typename AsmPrinterT, typename T,
                                !std::is_convertible<T &, Attribute &>::value &&
                                !std::is_convertible<T &, ValueRange>::value &&
                                !std::is_convertible<T &, APFloat &>::value &&
-                               !llvm::is_one_of<T, bool, int8_t, uint8_t, float,
-                                                double>::value,
+                               !llvm::is_one_of<T, bool, float, double>::value,
                            T> * = nullptr>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
@@ -365,17 +366,6 @@ inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
 operator<<(AsmPrinterT &p, bool value) {
   return p << (value ? StringRef("true") : "false");
-}
-
-/// Specialization for 8-bit integers to ensure values are printed as integers
-// and not characters.
-template <
-    typename AsmPrinterT, typename T,
-    std::enable_if_t<llvm::is_one_of<T, int8_t, uint8_t>::value, T> * = nullptr>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, T value) {
-  return p << static_cast<int16_t>(value);
 }
 
 template <typename AsmPrinterT, typename ValueRangeT>
@@ -709,6 +699,10 @@ public:
 
   /// Parse a floating point value from the stream.
   virtual ParseResult parseFloat(double &result) = 0;
+
+  /// Parse a floating point value into APFloat from the stream.
+  virtual ParseResult parseFloat(const llvm::fltSemantics &semantics,
+                                 APFloat &result) = 0;
 
   /// Parse an integer value from the stream.
   template <typename IntT>
@@ -1607,9 +1601,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   struct Argument {
-    UnresolvedOperand ssaName;    // SourceLoc, SSA name, result #.
-    Type type;                    // Type.
-    DictionaryAttr attrs;         // Attributes if present.
+    UnresolvedOperand ssaName;         // SourceLoc, SSA name, result #.
+    Type type;                         // Type.
+    DictionaryAttr attrs;              // Attributes if present.
     std::optional<Location> sourceLoc; // Source location specifier if present.
   };
 
@@ -1774,6 +1768,17 @@ public:
                  const SetVector<AsmDialectResourceHandle> &referencedResources,
                  AsmResourceBuilder &builder) const {}
 };
+
+//===--------------------------------------------------------------------===//
+// Custom printers and parsers.
+//===--------------------------------------------------------------------===//
+
+// Handles custom<DimensionList>(...) in TableGen.
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions);
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions);
+
 } // namespace mlir
 
 //===--------------------------------------------------------------------===//

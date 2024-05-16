@@ -56,8 +56,8 @@ define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 1, i8 undef, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
-; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
+; CHECK-NEXT:    [[T1:%.*]] = add <3 x i8> [[T0]], <i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp uge <3 x i8> [[T1]], [[VAL:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 1, i8 undef, i8 1>, %bits
@@ -184,7 +184,7 @@ define i1 @oneuse(i8 %val, i8 %bits) {
 
 define i1 @n0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[BITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0]], -1
 ; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]

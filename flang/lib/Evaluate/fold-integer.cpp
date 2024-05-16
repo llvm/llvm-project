@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-matmul.h"
 #include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
 
@@ -269,7 +270,8 @@ template <typename T, int MASK_KIND> class CountAccumulator {
 
 public:
   CountAccumulator(const Constant<MaskT> &mask) : mask_{mask} {}
-  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+  void operator()(
+      Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
     if (mask_.At(at).IsTrue()) {
       auto incremented{element.AddSigned(Scalar<T>{1})};
       overflow_ |= incremented.overflow;
@@ -286,22 +288,22 @@ private:
 
 template <typename T, int maskKind>
 static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
-  using LogicalResult = Type<TypeCategory::Logical, maskKind>;
+  using KindLogical = Type<TypeCategory::Logical, maskKind>;
   static_assert(T::category == TypeCategory::Integer);
-  ActualArguments &arg{ref.arguments()};
-  if (const Constant<LogicalResult> *mask{arg.empty()
-              ? nullptr
-              : Folder<LogicalResult>{context}.Folding(arg[0])}) {
-    std::optional<int> dim;
-    if (CheckReductionDIM(dim, context, arg, 1, mask->Rank())) {
-      CountAccumulator<T, maskKind> accumulator{*mask};
-      Constant<T> result{DoReduction<T>(*mask, dim, Scalar<T>{}, accumulator)};
-      if (accumulator.overflow()) {
-        context.messages().Say(
-            "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
-      }
-      return Expr<T>{std::move(result)};
+  std::optional<int> dim;
+  if (std::optional<ArrayAndMask<KindLogical>> arrayAndMask{
+          ProcessReductionArgs<KindLogical>(
+              context, ref.arguments(), dim, /*ARRAY=*/0, /*DIM=*/1)}) {
+    CountAccumulator<T, maskKind> accumulator{arrayAndMask->array};
+    Constant<T> result{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
+        dim, Scalar<T>{}, accumulator)};
+    if (accumulator.overflow() &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
+      context.messages().Say(
+          "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
     }
+    return Expr<T>{std::move(result)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -394,7 +396,7 @@ public:
         for (ConstantSubscript k{0}; k < dimLength;
              ++k, ++at[zbDim], mask && ++maskAt[zbDim]) {
           if ((!mask || mask->At(maskAt).IsTrue()) &&
-              IsHit(array->At(at), value, relation)) {
+              IsHit(array->At(at), value, relation, back)) {
             hit = at[zbDim];
             if constexpr (WHICH == WhichLocation::Findloc) {
               if (!back) {
@@ -421,7 +423,7 @@ public:
       for (ConstantSubscript j{0}; j < n; ++j, array->IncrementSubscripts(at),
            mask && mask->IncrementSubscripts(maskAt)) {
         if ((!mask || mask->At(maskAt).IsTrue()) &&
-            IsHit(array->At(at), value, relation)) {
+            IsHit(array->At(at), value, relation, back)) {
           resultIndices = at;
           if constexpr (WHICH == WhichLocation::Findloc) {
             if (!back) {
@@ -443,7 +445,8 @@ private:
   template <typename T>
   bool IsHit(typename Constant<T>::Element element,
       std::optional<Constant<T>> &value,
-      [[maybe_unused]] RelationalOperator relation) const {
+      [[maybe_unused]] RelationalOperator relation,
+      [[maybe_unused]] bool back) const {
     std::optional<Expr<LogicalResult>> cmp;
     bool result{true};
     if (value) {
@@ -454,8 +457,19 @@ private:
             Expr<T>{LogicalOperation<T::kind>{LogicalOperator::Eqv,
                 Expr<T>{Constant<T>{element}}, Expr<T>{Constant<T>{*value}}}}));
       } else { // compare array(at) to value
-        cmp.emplace(PackageRelation(relation, Expr<T>{Constant<T>{element}},
-            Expr<T>{Constant<T>{*value}}));
+        if constexpr (T::category == TypeCategory::Real &&
+            (WHICH == WhichLocation::Maxloc ||
+                WHICH == WhichLocation::Minloc)) {
+          if (value && value->GetScalarValue().value().IsNotANumber() &&
+              (back || !element.IsNotANumber())) {
+            // Replace NaN
+            cmp.emplace(Constant<LogicalResult>{Scalar<LogicalResult>{true}});
+          }
+        }
+        if (!cmp) {
+          cmp.emplace(PackageRelation(relation, Expr<T>{Constant<T>{element}},
+              Expr<T>{Constant<T>{*value}}));
+        }
       }
       Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
       result = GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
@@ -522,11 +536,12 @@ static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer);
   std::optional<int> dim;
-  if (std::optional<Constant<T>> array{
-          ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
+  if (std::optional<ArrayAndMask<T>> arrayAndMask{
+          ProcessReductionArgs<T>(context, ref.arguments(), dim,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    OperationAccumulator<T> accumulator{*array, operation};
-    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
+    OperationAccumulator<T> accumulator{arrayAndMask->array, operation};
+    return Expr<T>{DoReduction<T>(
+        arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -543,7 +558,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   std::string name{intrinsic->name};
   auto FromInt64{[&name, &context](std::int64_t n) {
     Scalar<T> result{n};
-    if (result.ToInt64() != n) {
+    if (result.ToInt64() != n &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
       context.messages().Say(
           "Result of intrinsic function '%s' (%jd) overflows its result type"_warn_en_US,
           name, std::intmax_t{n});
@@ -554,7 +571,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&context](const Scalar<T> &i) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
-          if (j.overflow) {
+          if (j.overflow &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::FoldingException)) {
             context.messages().Say(
                 "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
@@ -574,7 +593,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             return FoldElementalIntrinsic<T, TR>(context, std::move(funcRef),
                 ScalarFunc<T, TR>([&](const Scalar<TR> &x) {
                   auto y{x.template ToInteger<Scalar<T>>(mode)};
-                  if (y.flags.test(RealFlag::Overflow)) {
+                  if (y.flags.test(RealFlag::Overflow) &&
+                      context.languageFeatures().ShouldWarn(
+                          common::UsageWarning::FoldingException)) {
                     context.messages().Say(
                         "%s intrinsic folding overflow"_warn_en_US, name);
                   }
@@ -621,7 +642,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>([&context](const Scalar<T> &x,
                                 const Scalar<T> &y) -> Scalar<T> {
           auto result{x.DIM(y)};
-          if (result.overflow) {
+          if (result.overflow &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::FoldingException)) {
             context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
           }
           return result.value;
@@ -676,21 +699,29 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     auto *someChar{UnwrapExpr<Expr<SomeCharacter>>(args[0])};
     CHECK(someChar);
     if (auto len{ToInt64(someChar->LEN())}) {
-      if (len.value() != 1) {
+      if (len.value() < 1) {
+        context.messages().Say(
+            "Character in intrinsic function %s must have length one"_err_en_US,
+            name);
+      } else if (len.value() > 1 &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::Portability)) {
         // Do not die, this was not checked before
         context.messages().Say(
-            "Character in intrinsic function %s must have length one"_warn_en_US,
+            "Character in intrinsic function %s should have length one"_port_en_US,
             name);
       } else {
         return common::visit(
             [&funcRef, &context, &FromInt64](const auto &str) -> Expr<T> {
               using Char = typename std::decay_t<decltype(str)>::Result;
+              (void)FromInt64;
               return FoldElementalIntrinsic<T, Char>(context,
                   std::move(funcRef),
                   ScalarFunc<T, Char>(
 #ifndef _MSC_VER
                       [&FromInt64](const Scalar<Char> &c) {
-                        return FromInt64(CharacterUtils<Char::kind>::ICHAR(c));
+                        return FromInt64(CharacterUtils<Char::kind>::ICHAR(
+                            CharacterUtils<Char::kind>::Resize(c, 1)));
                       }));
 #else // _MSC_VER
       // MSVC 14 get confused by the original code above and
@@ -700,7 +731,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       // so remove the FromInt64 error checking lambda that
       // seems to have caused the proble.
                       [](const Scalar<Char> &c) {
-                        return CharacterUtils<Char::kind>::ICHAR(c);
+                        return CharacterUtils<Char::kind>::ICHAR(
+                            CharacterUtils<Char::kind>::Resize(c, 1));
                       }));
 #endif // _MSC_VER
             },
@@ -1042,6 +1074,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, Int4>([&fptr](const Scalar<Int4> &places) -> Scalar<T> {
           return fptr(static_cast<int>(places.ToInt64()));
         }));
+  } else if (name == "matmul") {
+    return FoldMatmul(context, std::move(funcRef));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "max0" || name == "max1") {
@@ -1087,10 +1121,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             [](FoldingContext &context, const Scalar<T> &x,
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
-              if (quotRem.divisionByZero) {
-                context.messages().Say("mod() by zero"_warn_en_US);
-              } else if (quotRem.overflow) {
-                context.messages().Say("mod() folding overflowed"_warn_en_US);
+              if (context.languageFeatures().ShouldWarn(
+                      common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+                if (quotRem.divisionByZero) {
+                  context.messages().Say("mod() by zero"_warn_en_US);
+                } else if (quotRem.overflow) {
+                  context.messages().Say("mod() folding overflowed"_warn_en_US);
+                }
               }
               return quotRem.remainder;
             }));
@@ -1100,7 +1137,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                                            const Scalar<T> &x,
                                            const Scalar<T> &y) -> Scalar<T> {
           auto result{x.MODULO(y)};
-          if (result.overflow) {
+          if (result.overflow &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::FoldingException)) {
             context.messages().Say("modulo() folding overflowed"_warn_en_US);
           }
           return result.value;
@@ -1232,7 +1271,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>([&context](const Scalar<T> &j,
                                 const Scalar<T> &k) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow result{j.SIGN(k)};
-          if (result.overflow) {
+          if (result.overflow &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::FoldingException)) {
             context.messages().Say(
                 "sign(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
@@ -1278,8 +1319,27 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
+  } else if (name == "__builtin_numeric_storage_size") {
+    if (!context.moduleFileName()) {
+      // Don't fold this reference until it appears in the module file
+      // for ISO_FORTRAN_ENV -- the value depends on the compiler options
+      // that might be in force.
+    } else {
+      auto intBytes{
+          context.targetCharacteristics().GetByteSize(TypeCategory::Integer,
+              context.defaults().GetDefaultKind(TypeCategory::Integer))};
+      auto realBytes{
+          context.targetCharacteristics().GetByteSize(TypeCategory::Real,
+              context.defaults().GetDefaultKind(TypeCategory::Real))};
+      if (intBytes != realBytes &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingValueChecks)) {
+        context.messages().Say(*context.moduleFileName(),
+            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
+      }
+      return Expr<T>{8 * std::min(intBytes, realBytes)};
+    }
   }
-  // TODO: dot_product, matmul, sign
   return Expr<T>{std::move(funcRef)};
 }
 

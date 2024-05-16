@@ -36,5 +36,4 @@ jobs:
     name: Build lldb
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
-      build_target: ''
       projects: clang;lldb

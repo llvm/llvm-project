@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SimplifyBooleanExprCheck.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -277,7 +278,12 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    if (S && !shouldIgnore(S))
+    if (!S) {
+      return true;
+    }
+    if (Check->canBeBypassed(S))
+      return false;
+    if (!shouldIgnore(S))
       StmtStack.push_back(S);
     return true;
   }
@@ -507,9 +513,15 @@ public:
     return true;
   }
 
-  static bool isUnaryLNot(const Expr *E) {
-    return isa<UnaryOperator>(E) &&
+  bool isExpectedUnaryLNot(const Expr *E) {
+    return !Check->canBeBypassed(E) && isa<UnaryOperator>(E) &&
            cast<UnaryOperator>(E)->getOpcode() == UO_LNot;
+  }
+
+  bool isExpectedBinaryOp(const Expr *E) {
+    const auto *BinaryOp = dyn_cast<BinaryOperator>(E);
+    return !Check->canBeBypassed(E) && BinaryOp && BinaryOp->isLogicalOp() &&
+           BinaryOp->getType()->isBooleanType();
   }
 
   template <typename Functor>
@@ -517,7 +529,7 @@ public:
     return Func(BO->getLHS()) || Func(BO->getRHS());
   }
 
-  static bool nestedDemorgan(const Expr *E, unsigned NestingLevel) {
+  bool nestedDemorgan(const Expr *E, unsigned NestingLevel) {
     const auto *BO = dyn_cast<BinaryOperator>(E->IgnoreUnlessSpelledInSource());
     if (!BO)
       return false;
@@ -533,15 +545,13 @@ public:
       return true;
     case BO_LAnd:
     case BO_LOr:
-      if (checkEitherSide(BO, isUnaryLNot))
-        return true;
-      if (NestingLevel) {
-        if (checkEitherSide(BO, [NestingLevel](const Expr *E) {
-              return nestedDemorgan(E, NestingLevel - 1);
-            }))
-          return true;
-      }
-      return false;
+      return checkEitherSide(
+                 BO,
+                 [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
+             (NestingLevel &&
+              checkEitherSide(BO, [this, NestingLevel](const Expr *E) {
+                return nestedDemorgan(E, NestingLevel - 1);
+              }));
     default:
       return false;
     }
@@ -550,19 +560,19 @@ public:
   bool TraverseUnaryOperator(UnaryOperator *Op) {
     if (!Check->SimplifyDeMorgan || Op->getOpcode() != UO_LNot)
       return Base::TraverseUnaryOperator(Op);
-    Expr *SubImp = Op->getSubExpr()->IgnoreImplicit();
-    auto *Parens = dyn_cast<ParenExpr>(SubImp);
-    auto *BinaryOp =
-        Parens
-            ? dyn_cast<BinaryOperator>(Parens->getSubExpr()->IgnoreImplicit())
-            : dyn_cast<BinaryOperator>(SubImp);
-    if (!BinaryOp || !BinaryOp->isLogicalOp() ||
-        !BinaryOp->getType()->isBooleanType())
+    const Expr *SubImp = Op->getSubExpr()->IgnoreImplicit();
+    const auto *Parens = dyn_cast<ParenExpr>(SubImp);
+    const Expr *SubExpr =
+        Parens ? Parens->getSubExpr()->IgnoreImplicit() : SubImp;
+    if (!isExpectedBinaryOp(SubExpr))
       return Base::TraverseUnaryOperator(Op);
+    const auto *BinaryOp = cast<BinaryOperator>(SubExpr);
     if (Check->SimplifyDeMorganRelaxed ||
-        checkEitherSide(BinaryOp, isUnaryLNot) ||
-        checkEitherSide(BinaryOp,
-                        [](const Expr *E) { return nestedDemorgan(E, 1); })) {
+        checkEitherSide(
+            BinaryOp,
+            [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
+        checkEitherSide(
+            BinaryOp, [this](const Expr *E) { return nestedDemorgan(E, 1); })) {
       if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
                                 Parens) &&
           !Check->areDiagsSelfContained()) {
@@ -583,6 +593,7 @@ private:
 SimplifyBooleanExprCheck::SimplifyBooleanExprCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", false)),
       ChainedConditionalReturn(Options.get("ChainedConditionalReturn", false)),
       ChainedConditionalAssignment(
           Options.get("ChainedConditionalAssignment", false)),
@@ -671,6 +682,7 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 }
 
 void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "ChainedConditionalReturn", ChainedConditionalReturn);
   Options.store(Opts, "ChainedConditionalAssignment",
                 ChainedConditionalAssignment);
@@ -684,6 +696,10 @@ void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
 
 void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
   Visitor(this, *Result.Context).traverse();
+}
+
+bool SimplifyBooleanExprCheck::canBeBypassed(const Stmt *S) const {
+  return IgnoreMacros && S->getBeginLoc().isMacroID();
 }
 
 void SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,

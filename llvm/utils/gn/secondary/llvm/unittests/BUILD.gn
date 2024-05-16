@@ -46,6 +46,7 @@ group("unittests") {
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
     "TableGen:TableGenTests",
+    "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
@@ -76,7 +77,7 @@ group("unittests") {
   }
   if (llvm_build_AMDGPU) {
     deps += [
-      "MC/AMDGPU:AMDGPUDwarfTests",
+      "MC/AMDGPU:AMDGPUMCTests",
       "Target/AMDGPU:AMDGPUTests",
     ]
   }

@@ -249,6 +249,11 @@ namespace std {
     pair(const pair<U1, U2> &other) : first(other.first),
                                       second(other.second) {}
   };
+
+  template<class T2, class T1>
+  T2& get(pair<T1, T2>& p) ;
+  template<class T1, class T2>
+  T1& get(const pair<T1, T2>& p) ;
   
   typedef __typeof__(sizeof(int)) size_t;
 
@@ -263,6 +268,9 @@ namespace std {
     typedef typename remove_reference<T>::type&& RvalRef;
     return static_cast<RvalRef>(a);
   }
+
+  template< class T >
+  using remove_reference_t = typename remove_reference<T>::type;
 
   template <class T>
   void swap(T &a, T &b) {
@@ -718,6 +726,11 @@ namespace std {
   template <class _Tp, class _Up> struct  is_same           : public false_type {};
   template <class _Tp>            struct  is_same<_Tp, _Tp> : public true_type {};
 
+  #if __cplusplus >= 201703L
+  template< class T, class U >
+  inline constexpr bool is_same_v = is_same<T, U>::value;
+  #endif
+
   template <class _Tp, bool = is_const<_Tp>::value || is_reference<_Tp>::value    >
   struct __add_const             {typedef _Tp type;};
 
@@ -728,6 +741,9 @@ namespace std {
 
   template <class _Tp> struct  remove_const            {typedef _Tp type;};
   template <class _Tp> struct  remove_const<const _Tp> {typedef _Tp type;};
+
+  template< class T >
+  using remove_const_t = typename remove_const<T>::type;
 
   template <class _Tp> struct  add_lvalue_reference    {typedef _Tp& type;};
 
@@ -792,6 +808,9 @@ namespace std {
     }
     return __result;
   }
+
+  template< bool B, class T = void >
+  using enable_if_t = typename enable_if<B,T>::type;
 
   template<class InputIter, class OutputIter>
   OutputIter copy_backward(InputIter II, InputIter IE, OutputIter OI) {
@@ -1092,13 +1111,24 @@ ostream &operator<<(ostream &, const string &);
 template <class T>
 ostream &operator<<(ostream &, const std::unique_ptr<T> &);
 #endif
+
+template <class CharT>
+class basic_istream;
+
+using istream = basic_istream<char>;
+
+extern std::istream cin;
+
+istream &getline(istream &, string &, char);
+istream &getline(istream &, string &);
 } // namespace std
 
-#ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {
   void *malloc(size_t);
   void free(void *);
-}
+} // namespace std
+
+#ifdef TEST_INLINABLE_ALLOCATORS
 void* operator new(std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
 void* operator new[](std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
 void operator delete(void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }
@@ -1230,6 +1260,13 @@ template<
     iterator end() const { return iterator(val + 1); }
 };
 
+template <typename T>
+class atomic {
+public:
+  T operator++();
+  T operator--();
+};
+
 namespace execution {
 class sequenced_policy {};
 }
@@ -1251,5 +1288,108 @@ template <typename> class packaged_task;
 template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
   // TODO: Add some actual implementation.
 };
+
+  #if __cplusplus >= 201703L
+
+  namespace detail
+  {
+    template<class T>
+    struct type_identity { using type = T; }; // or use std::type_identity (since C++20)
+ 
+    template<class T>
+    auto try_add_pointer(int) -> type_identity<typename std::remove_reference<T>::type*>;
+    template<class T>
+    auto try_add_pointer(...) -> type_identity<T>;
+  } // namespace detail
+ 
+  template<class T>
+  struct add_pointer : decltype(detail::try_add_pointer<T>(0)) {};
+
+  template< class T >
+  using add_pointer_t = typename add_pointer<T>::type;
+
+  template<class T> struct remove_cv { typedef T type; };
+  template<class T> struct remove_cv<const T> { typedef T type; };
+  template<class T> struct remove_cv<volatile T> { typedef T type; };
+  template<class T> struct remove_cv<const volatile T> { typedef T type; };
+
+  template< class T >
+  using remove_cv_t = typename remove_cv<T>::type;
+
+  // This decay does not behave exactly like std::decay, but this is enough
+  // for testing the std::variant checker
+  template<class T>
+  struct decay{typedef remove_cv_t<remove_reference_t<T>> type;};
+  template<class T>
+  using decay_t = typename decay<T>::type;
+  
+  // variant
+  template <class... Types> class variant;
+  // variant helper classes
+  template <class T> struct variant_size;
+  template <class T> struct variant_size<const T>;
+  template <class T> struct variant_size<volatile T>;
+  template <class T> struct variant_size<const volatile T>;
+  template <class T> inline constexpr size_t variant_size_v = variant_size<T>::value;
+  template <class... Types>
+  struct variant_size<variant<Types...>>;
+  template <size_t I, class T> struct variant_alternative;
+  template <size_t I, class T> struct variant_alternative<I, const T>;
+  template <size_t I, class T> struct variant_alternative<I, volatile T>;
+  template <size_t I, class T> struct variant_alternative<I, const volatile T>;
+  template <size_t I, class T>
+  using variant_alternative_t = typename variant_alternative<I, T>::type;
+  template <size_t I, class... Types>
+  struct variant_alternative<I, variant<Types...>>;
+  inline constexpr size_t variant_npos = -1;
+  template <size_t I, class... Types>
+  constexpr variant_alternative_t<I, variant<Types...>>&
+    get(variant<Types...>&);
+  template <size_t I, class... Types>
+  constexpr variant_alternative_t<I, variant<Types...>>&&
+    get(variant<Types...>&&);
+  template <size_t I, class... Types>
+  constexpr const variant_alternative_t<I, variant<Types...>>&
+    get(const variant<Types...>&);
+  template <size_t I, class... Types>
+  constexpr const variant_alternative_t<I, variant<Types...>>&&
+    get(const variant<Types...>&&);
+  template <class T, class... Types>
+  constexpr T& get(variant<Types...>&);
+  template <class T, class... Types>
+  constexpr T&& get(variant<Types...>&&);
+  template <class T, class... Types>
+  constexpr const T& get(const variant<Types...>&);
+  template <class T, class... Types>
+  constexpr const T&& get(const variant<Types...>&&);
+  template <size_t I, class... Types>
+  constexpr add_pointer_t<variant_alternative_t<I, variant<Types...>>>
+    get_if(variant<Types...>*) noexcept;
+  template <size_t I, class... Types>
+  constexpr add_pointer_t<const variant_alternative_t<I, variant<Types...>>>
+    get_if(const variant<Types...>*) noexcept;
+  template <class T, class... Types>
+  constexpr add_pointer_t<T> get_if(variant<Types...>*) noexcept;
+  template <class T, class... Types>
+  constexpr add_pointer_t<const T> get_if(const variant<Types...>*) noexcept;
+
+  template <class... Types>
+  class variant {
+  public:
+    // constructors
+    constexpr variant()= default ;
+    constexpr variant(const variant&);
+    constexpr variant(variant&&);
+    template<typename T,
+            typename = std::enable_if_t<!is_same_v<std::variant<Types...>, decay_t<T>>>>
+	  constexpr variant(T&&);
+    // assignment
+    variant& operator=(const variant&);
+    variant& operator=(variant&&) ;
+    template<typename T,
+            typename = std::enable_if_t<!is_same_v<std::variant<Types...>, decay_t<T>>>>
+    variant& operator=(T&&);
+  };
+  #endif
 
 } // namespace std

@@ -15,27 +15,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTBAA.h"
+#include "CGRecordLayout.h"
+#include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Debug.h"
 using namespace clang;
 using namespace CodeGen;
 
-CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, llvm::Module &M,
-                         const CodeGenOptions &CGO,
+CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes,
+                         llvm::Module &M, const CodeGenOptions &CGO,
                          const LangOptions &Features, MangleContext &MContext)
-  : Context(Ctx), Module(M), CodeGenOpts(CGO),
-    Features(Features), MContext(MContext), MDHelper(M.getContext()),
-    Root(nullptr), Char(nullptr)
-{}
+    : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
+      Features(Features), MContext(MContext), MDHelper(M.getContext()),
+      Root(nullptr), Char(nullptr) {}
 
 CodeGenTBAA::~CodeGenTBAA() {
 }
@@ -95,8 +98,6 @@ static bool TypeHasMayAlias(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (QTy->isReferenceType())
-    return false;
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     // Incomplete types are not valid base access types.
@@ -196,11 +197,14 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {
+    if (!Features.CPlusPlus)
+      return getTypeInfo(ETy->getDecl()->getIntegerType());
+
     // In C++ mode, types have linkage, so we can rely on the ODR and
     // on their mangled names, if they're external.
     // TODO: Is there a way to get a program-wide unique name for a
     // decl with local linkage or no linkage?
-    if (!Features.CPlusPlus || !ETy->getDecl()->isExternallyVisible())
+    if (!ETy->getDecl()->isExternallyVisible())
       return getChar();
 
     SmallString<256> OutName;
@@ -237,9 +241,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // aggregate will result into the may-alias access descriptor, meaning all
   // subsequent accesses to direct and indirect members of that aggregate will
   // be considered may-alias too.
-  // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
+  // TODO: Combine getTypeInfo() and getValidBaseTypeInfo() into a single
+  // function.
   if (isValidBaseType(QTy))
-    return getBaseTypeInfo(QTy);
+    return getValidBaseTypeInfo(QTy);
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
   if (llvm::MDNode *N = MetadataCache[Ty])
@@ -281,6 +286,14 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
   /* Things not handled yet include: C++ base classes, bitfields, */
 
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
+    if (TTy->isUnionType()) {
+      uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();
+      llvm::MDNode *TBAAType = getChar();
+      llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+      Fields.push_back(
+          llvm::MDBuilder::TBAAStructField(BaseOffset, Size, TBAATag));
+      return true;
+    }
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     if (RD->hasFlexibleArrayMember())
       return false;
@@ -291,14 +304,40 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
         return false;
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+    const CGRecordLayout &CGRL = CGTypes.getCGRecordLayout(RD);
 
     unsigned idx = 0;
-    for (RecordDecl::field_iterator i = RD->field_begin(),
-         e = RD->field_end(); i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context) || (*i)->isUnnamedBitfield())
+    for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
+         i != e; ++i, ++idx) {
+      if ((*i)->isZeroSize(Context))
         continue;
-      uint64_t Offset = BaseOffset +
-                        Layout.getFieldOffset(idx) / Context.getCharWidth();
+
+      uint64_t Offset =
+          BaseOffset + Layout.getFieldOffset(idx) / Context.getCharWidth();
+
+      // Create a single field for consecutive named bitfields using char as
+      // base type.
+      if ((*i)->isBitField()) {
+        const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
+        // For big endian targets the first bitfield in the consecutive run is
+        // at the most-significant end; see CGRecordLowering::setBitFieldInfo
+        // for more information.
+        bool IsBE = Context.getTargetInfo().isBigEndian();
+        bool IsFirst = IsBE ? Info.StorageSize - (Info.Offset + Info.Size) == 0
+                            : Info.Offset == 0;
+        if (!IsFirst)
+          continue;
+        unsigned CurrentBitFieldSize = Info.StorageSize;
+        uint64_t Size =
+            llvm::divideCeil(CurrentBitFieldSize, Context.getCharWidth());
+        llvm::MDNode *TBAAType = getChar();
+        llvm::MDNode *TBAATag =
+            getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+        Fields.push_back(
+            llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
+        continue;
+      }
+
       QualType FieldQTy = i->getType();
       if (!CollectFields(Offset, FieldQTy, Fields,
                          MayAlias || TypeHasMayAlias(FieldQTy)))
@@ -318,6 +357,9 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
 llvm::MDNode *
 CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
+  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
+    return nullptr;
+
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
 
   if (llvm::MDNode *N = StructMetadataCache[Ty])
@@ -342,7 +384,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       // field. Virtual bases are more complex and omitted, but avoid an
       // incomplete view for NewStructPathTBAA.
       if (CodeGenOpts.NewStructPathTBAA && CXXRD->getNumVBases() != 0)
-        return BaseTypeMetadataCache[Ty] = nullptr;
+        return nullptr;
       for (const CXXBaseSpecifier &B : CXXRD->bases()) {
         if (B.isVirtual())
           continue;
@@ -351,10 +393,10 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
         if (BaseRD->isEmpty())
           continue;
         llvm::MDNode *TypeNode = isValidBaseType(BaseQTy)
-                                     ? getBaseTypeInfo(BaseQTy)
+                                     ? getValidBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
-          return BaseTypeMetadataCache[Ty] = nullptr;
+          return nullptr;
         uint64_t Offset = Layout.getBaseClassOffset(BaseRD).getQuantity();
         uint64_t Size =
             Context.getASTRecordLayout(BaseRD).getDataSize().getQuantity();
@@ -372,13 +414,14 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
                  });
     }
     for (FieldDecl *Field : RD->fields()) {
-      if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
+      if (Field->isZeroSize(Context) || Field->isUnnamedBitField())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
-          getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
+                                   ? getValidBaseTypeInfo(FieldQTy)
+                                   : getTypeInfo(FieldQTy);
       if (!TypeNode)
-        return BaseTypeMetadataCache[Ty] = nullptr;
+        return nullptr;
 
       uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
       uint64_t Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
@@ -413,19 +456,28 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
   return nullptr;
 }
 
-llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  if (!isValidBaseType(QTy))
-    return nullptr;
+llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
+  assert(isValidBaseType(QTy) && "Must be a valid base type");
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
-  if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
-    return N;
 
-  // Note that the following helper call is allowed to add new nodes to the
-  // cache, which invalidates all its previously obtained iterators. So we
-  // first generate the node for the type and then add that node to the cache.
+  // nullptr is a valid value in the cache, so use find rather than []
+  auto I = BaseTypeMetadataCache.find(Ty);
+  if (I != BaseTypeMetadataCache.end())
+    return I->second;
+
+  // First calculate the metadata, before recomputing the insertion point, as
+  // the helper can recursively call us.
   llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
-  return BaseTypeMetadataCache[Ty] = TypeNode;
+  LLVM_ATTRIBUTE_UNUSED auto inserted =
+      BaseTypeMetadataCache.insert({Ty, TypeNode});
+  assert(inserted.second && "BaseType metadata was already inserted");
+
+  return TypeNode;
+}
+
+llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+  return isValidBaseType(QTy) ? getValidBaseTypeInfo(QTy) : nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

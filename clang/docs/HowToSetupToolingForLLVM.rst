@@ -172,7 +172,7 @@ Examples:
   clang::ASTConsumer *newASTConsumer() (CompoundStmt 0x44da290 </home/alexfh/local/llvm/tools/clang/tools/clang-check/ClangCheck.cpp:64:40, line:72:3>
     (IfStmt 0x44d97c8 <line:65:5, line:66:45>
       <<<NULL>>>
-        (ImplicitCastExpr 0x44d96d0 <line:65:9> '_Bool':'_Bool' <UserDefinedConversion>
+        (ImplicitCastExpr 0x44d96d0 <line:65:9> '_Bool' <UserDefinedConversion>
   ...
   $ clang-check tools/clang/tools/clang-check/ClangCheck.cpp -ast-print -ast-dump-filter ActionFactory::newASTConsumer
   Processing: tools/clang/tools/clang-check/ClangCheck.cpp.

@@ -14,6 +14,38 @@
 
 int globalBuff[8];
 
+template <class T>
+struct drop_sentinel {
+  T* ptr_;
+  int* num_of_sentinel_cmp_calls;
+
+public:
+  friend constexpr bool operator==(drop_sentinel const s, T* const ptr) noexcept {
+    ++(*s.num_of_sentinel_cmp_calls);
+    return {s.ptr_ == ptr};
+  }
+  friend constexpr bool operator==(T* const ptr, drop_sentinel const s) noexcept {
+    ++(*s.num_of_sentinel_cmp_calls);
+    return {s.ptr_ == ptr};
+  }
+  friend constexpr bool operator!=(drop_sentinel const s, T* const ptr) noexcept { return !(s == ptr); }
+  friend constexpr bool operator!=(T* const ptr, drop_sentinel const s) noexcept { return !(s == ptr); }
+};
+
+template <bool IsSimple>
+struct MaybeSimpleNonCommonView : std::ranges::view_base {
+  int start_;
+  int* num_of_sentinel_cmp_calls;
+  constexpr std::size_t size() const { return 8; }
+  constexpr int* begin() { return globalBuff + start_; }
+  constexpr std::conditional_t<IsSimple, int*, const int*> begin() const { return globalBuff + start_; }
+  constexpr drop_sentinel<int> end() { return drop_sentinel<int>{globalBuff + size(), num_of_sentinel_cmp_calls}; }
+  constexpr auto end() const {
+    return std::conditional_t<IsSimple, drop_sentinel<int>, drop_sentinel<const int>>{
+        globalBuff + size(), num_of_sentinel_cmp_calls};
+  }
+};
+
 struct MoveOnlyView : std::ranges::view_base {
   int start_;
   constexpr explicit MoveOnlyView(int start = 0) : start_(start) {}

@@ -816,7 +816,7 @@ def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
 }
 def : InstRW<[JWriteVBROADCASTYLd], (instrs VBROADCASTSDYrm,
                                             VBROADCASTSSYrm,
-                                            VBROADCASTF128)>;
+                                            VBROADCASTF128rm)>;
 
 def JWriteJVZEROALL: SchedWriteRes<[]> {
   let Latency = 90;

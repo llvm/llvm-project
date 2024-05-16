@@ -261,10 +261,8 @@ void Thumb2InstrInfo::expandLoadStackGuard(
     return;
   }
 
-  const GlobalValue *GV =
-      cast<GlobalValue>((*MI->memoperands_begin())->getValue());
-
-  if (MF.getSubtarget<ARMSubtarget>().isGVInGOT(GV))
+  const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
+  if (MF.getSubtarget<ARMSubtarget>().isTargetELF() && !GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
   else if (MF.getTarget().isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
@@ -286,6 +284,25 @@ MachineInstr *Thumb2InstrInfo::commuteInstructionImpl(MachineInstr &MI,
       return nullptr;
   }
   return ARMBaseInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+}
+
+bool Thumb2InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                           const MachineBasicBlock *MBB,
+                                           const MachineFunction &MF) const {
+  // BTI clearing instructions shall not take part in scheduling regions as
+  // they must stay in their intended place. Although PAC isn't BTI clearing,
+  // it can be transformed into PACBTI after the pre-RA Machine Scheduling
+  // has taken place, so its movement must also be restricted.
+  switch (MI.getOpcode()) {
+  case ARM::t2BTI:
+  case ARM::t2PAC:
+  case ARM::t2PACBTI:
+  case ARM::t2SG:
+    return true;
+  default:
+    break;
+  }
+  return ARMBaseInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
@@ -554,7 +571,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
-        !MI.definesRegister(ARM::CPSR)) {
+        !MI.definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // Turn it into a move.
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);

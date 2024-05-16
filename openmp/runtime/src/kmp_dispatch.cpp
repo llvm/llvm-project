@@ -90,6 +90,70 @@ static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
   return monotonicity;
 }
 
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+// Return floating point number rounded to two decimal points
+static inline float __kmp_round_2decimal_val(float num) {
+  return (float)(static_cast<int>(num * 100 + 0.5)) / 100;
+}
+static inline int __kmp_get_round_val(float num) {
+  return static_cast<int>(num < 0 ? num - 0.5 : num + 0.5);
+}
+#endif
+
+template <typename T>
+inline void
+__kmp_initialize_self_buffer(kmp_team_t *team, T id,
+                             dispatch_private_info_template<T> *pr,
+                             typename traits_t<T>::unsigned_t nchunks, T nproc,
+                             typename traits_t<T>::unsigned_t &init,
+                             T &small_chunk, T &extras, T &p_extra) {
+
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+  if (pr->flags.use_hybrid) {
+    kmp_info_t *th = __kmp_threads[__kmp_gtid_from_tid((int)id, team)];
+    kmp_hw_core_type_t type =
+        (kmp_hw_core_type_t)th->th.th_topology_attrs.core_type;
+    T pchunks = pr->u.p.pchunks;
+    T echunks = nchunks - pchunks;
+    T num_procs_with_pcore = pr->u.p.num_procs_with_pcore;
+    T num_procs_with_ecore = nproc - num_procs_with_pcore;
+    T first_thread_with_ecore = pr->u.p.first_thread_with_ecore;
+    T big_chunk =
+        pchunks / num_procs_with_pcore; // chunks per thread with p-core
+    small_chunk =
+        echunks / num_procs_with_ecore; // chunks per thread with e-core
+
+    extras =
+        (pchunks % num_procs_with_pcore) + (echunks % num_procs_with_ecore);
+
+    p_extra = (big_chunk - small_chunk);
+
+    if (type == KMP_HW_CORE_TYPE_CORE) {
+      if (id < first_thread_with_ecore) {
+        init = id * small_chunk + id * p_extra + (id < extras ? id : extras);
+      } else {
+        init = id * small_chunk + (id - num_procs_with_ecore) * p_extra +
+               (id < extras ? id : extras);
+      }
+    } else {
+      if (id == first_thread_with_ecore) {
+        init = id * small_chunk + id * p_extra + (id < extras ? id : extras);
+      } else {
+        init = id * small_chunk + first_thread_with_ecore * p_extra +
+               (id < extras ? id : extras);
+      }
+    }
+    p_extra = (type == KMP_HW_CORE_TYPE_CORE) ? p_extra : 0;
+    return;
+  }
+#endif
+
+  small_chunk = nchunks / nproc; // chunks per thread
+  extras = nchunks % nproc;
+  p_extra = 0;
+  init = id * small_chunk + (id < extras ? id : extras);
+}
+
 #if KMP_STATIC_STEAL_ENABLED
 enum { // values for steal_flag (possible states of private per-loop buffer)
   UNUSED = 0,
@@ -366,7 +430,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   switch (schedule) {
 #if KMP_STATIC_STEAL_ENABLED
   case kmp_sch_static_steal: {
-    T ntc, init;
+    T ntc, init = 0;
 
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_static_steal case\n",
@@ -376,7 +440,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     if (nproc > 1 && ntc >= nproc) {
       KMP_COUNT_BLOCK(OMP_LOOP_STATIC_STEAL);
       T id = tid;
-      T small_chunk, extras;
+      T small_chunk, extras, p_extra = 0;
       kmp_uint32 old = UNUSED;
       int claimed = pr->steal_flag.compare_exchange_strong(old, CLAIMED);
       if (traits_t<T>::type_size > 4) {
@@ -388,13 +452,110 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         pr->u.p.steal_lock = (kmp_lock_t *)__kmp_allocate(sizeof(kmp_lock_t));
         __kmp_init_lock(pr->u.p.steal_lock);
       }
-      small_chunk = ntc / nproc;
-      extras = ntc % nproc;
 
-      init = id * small_chunk + (id < extras ? id : extras);
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+      // Iterations are divided in a 60/40 skewed distribution among CORE and
+      // ATOM processors for hybrid systems
+      bool use_hybrid = false;
+      kmp_hw_core_type_t core_type = KMP_HW_CORE_TYPE_UNKNOWN;
+      T first_thread_with_ecore = 0;
+      T num_procs_with_pcore = 0;
+      T num_procs_with_ecore = 0;
+      T p_ntc = 0, e_ntc = 0;
+      if (__kmp_is_hybrid_cpu() && __kmp_affinity.type != affinity_none &&
+          __kmp_affinity.type != affinity_explicit) {
+        use_hybrid = true;
+        core_type = (kmp_hw_core_type_t)th->th.th_topology_attrs.core_type;
+        if (core_type != KMP_HW_CORE_TYPE_UNKNOWN &&
+            __kmp_first_osid_with_ecore > -1) {
+          for (int i = 0; i < team->t.t_nproc; ++i) {
+            kmp_hw_core_type_t type = (kmp_hw_core_type_t)team->t.t_threads[i]
+                                          ->th.th_topology_attrs.core_type;
+            int id = team->t.t_threads[i]->th.th_topology_ids.os_id;
+            if (id == __kmp_first_osid_with_ecore) {
+              first_thread_with_ecore =
+                  team->t.t_threads[i]->th.th_info.ds.ds_tid;
+            }
+            if (type == KMP_HW_CORE_TYPE_CORE) {
+              num_procs_with_pcore++;
+            } else if (type == KMP_HW_CORE_TYPE_ATOM) {
+              num_procs_with_ecore++;
+            } else {
+              use_hybrid = false;
+              break;
+            }
+          }
+        }
+        if (num_procs_with_pcore > 0 && num_procs_with_ecore > 0) {
+          float multiplier = 60.0 / 40.0;
+          float p_ratio = (float)num_procs_with_pcore / nproc;
+          float e_ratio = (float)num_procs_with_ecore / nproc;
+          float e_multiplier =
+              (float)1 /
+              (((multiplier * num_procs_with_pcore) / nproc) + e_ratio);
+          float p_multiplier = multiplier * e_multiplier;
+          p_ntc = __kmp_get_round_val(ntc * p_ratio * p_multiplier);
+          if ((int)p_ntc > (int)(ntc * p_ratio * p_multiplier))
+            e_ntc =
+                (int)(__kmp_round_2decimal_val(ntc * e_ratio * e_multiplier));
+          else
+            e_ntc = __kmp_get_round_val(ntc * e_ratio * e_multiplier);
+          KMP_DEBUG_ASSERT(ntc == p_ntc + e_ntc);
+
+          // Use regular static steal if not enough chunks for skewed
+          // distribution
+          use_hybrid = (use_hybrid && (p_ntc >= num_procs_with_pcore &&
+                                       e_ntc >= num_procs_with_ecore)
+                            ? true
+                            : false);
+        } else {
+          use_hybrid = false;
+        }
+      }
+      pr->flags.use_hybrid = use_hybrid;
+      pr->u.p.pchunks = p_ntc;
+      pr->u.p.num_procs_with_pcore = num_procs_with_pcore;
+      pr->u.p.first_thread_with_ecore = first_thread_with_ecore;
+
+      if (use_hybrid) {
+        KMP_DEBUG_ASSERT(nproc == num_procs_with_pcore + num_procs_with_ecore);
+        T big_chunk = p_ntc / num_procs_with_pcore;
+        small_chunk = e_ntc / num_procs_with_ecore;
+
+        extras =
+            (p_ntc % num_procs_with_pcore) + (e_ntc % num_procs_with_ecore);
+
+        p_extra = (big_chunk - small_chunk);
+
+        if (core_type == KMP_HW_CORE_TYPE_CORE) {
+          if (id < first_thread_with_ecore) {
+            init =
+                id * small_chunk + id * p_extra + (id < extras ? id : extras);
+          } else {
+            init = id * small_chunk + (id - num_procs_with_ecore) * p_extra +
+                   (id < extras ? id : extras);
+          }
+        } else {
+          if (id == first_thread_with_ecore) {
+            init =
+                id * small_chunk + id * p_extra + (id < extras ? id : extras);
+          } else {
+            init = id * small_chunk + first_thread_with_ecore * p_extra +
+                   (id < extras ? id : extras);
+          }
+        }
+        p_extra = (core_type == KMP_HW_CORE_TYPE_CORE) ? p_extra : 0;
+      } else
+#endif
+      {
+        small_chunk = ntc / nproc;
+        extras = ntc % nproc;
+        init = id * small_chunk + (id < extras ? id : extras);
+        p_extra = 0;
+      }
       pr->u.p.count = init;
       if (claimed) { // are we succeeded in claiming own buffer?
-        pr->u.p.ub = init + small_chunk + (id < extras ? 1 : 0);
+        pr->u.p.ub = init + small_chunk + p_extra + (id < extras ? 1 : 0);
         // Other threads will inspect steal_flag when searching for a victim.
         // READY means other threads may steal from this thread from now on.
         KMP_ATOMIC_ST_REL(&pr->steal_flag, READY);
@@ -1261,13 +1422,13 @@ int __kmp_dispatch_next_algorithm(int gtid,
             if (status) {
               // initialize self buffer with victim's whole range of chunks
               T id = victimId;
-              T small_chunk, extras;
-              small_chunk = nchunks / nproc; // chunks per thread
-              extras = nchunks % nproc;
-              init = id * small_chunk + (id < extras ? id : extras);
+              T small_chunk = 0, extras = 0, p_extra = 0;
+              __kmp_initialize_self_buffer<T>(team, id, pr, nchunks, nproc,
+                                              init, small_chunk, extras,
+                                              p_extra);
               __kmp_acquire_lock(lck, gtid);
               pr->u.p.count = init + 1; // exclude one we execute immediately
-              pr->u.p.ub = init + small_chunk + (id < extras ? 1 : 0);
+              pr->u.p.ub = init + small_chunk + p_extra + (id < extras ? 1 : 0);
               __kmp_release_lock(lck, gtid);
               pr->u.p.parm4 = (id + 1) % nproc; // remember neighbour tid
               // no need to reinitialize other thread invariants: lb, st, etc.
@@ -1275,10 +1436,10 @@ int __kmp_dispatch_next_algorithm(int gtid,
               {
                 char *buff;
                 // create format specifiers before the debug output
-                buff = __kmp_str_format(
-                    "__kmp_dispatch_next: T#%%d stolen chunks from T#%%d, "
-                    "count:%%%s ub:%%%s\n",
-                    traits_t<UT>::spec, traits_t<T>::spec);
+                buff = __kmp_str_format("__kmp_dispatch_next_algorithm: T#%%d "
+                                        "stolen chunks from T#%%d, "
+                                        "count:%%%s ub:%%%s\n",
+                                        traits_t<UT>::spec, traits_t<T>::spec);
                 KD_TRACE(10, (buff, gtid, id, pr->u.p.count, pr->u.p.ub));
                 __kmp_str_free(&buff);
               }
@@ -1404,12 +1565,12 @@ int __kmp_dispatch_next_algorithm(int gtid,
             if (status) {
               // initialize self buffer with victim's whole range of chunks
               T id = victimId;
-              T small_chunk, extras;
-              small_chunk = nchunks / nproc; // chunks per thread
-              extras = nchunks % nproc;
-              init = id * small_chunk + (id < extras ? id : extras);
+              T small_chunk = 0, extras = 0, p_extra = 0;
+              __kmp_initialize_self_buffer<T>(team, id, pr, nchunks, nproc,
+                                              init, small_chunk, extras,
+                                              p_extra);
               vnew.p.count = init + 1;
-              vnew.p.ub = init + small_chunk + (id < extras ? 1 : 0);
+              vnew.p.ub = init + small_chunk + p_extra + (id < extras ? 1 : 0);
               // write pair (count, ub) at once atomically
 #if KMP_ARCH_X86
               KMP_XCHG_FIXED64((volatile kmp_int64 *)(&pr->u.p.count), vnew.b);
@@ -1422,10 +1583,10 @@ int __kmp_dispatch_next_algorithm(int gtid,
               {
                 char *buff;
                 // create format specifiers before the debug output
-                buff = __kmp_str_format(
-                    "__kmp_dispatch_next: T#%%d stolen chunks from T#%%d, "
-                    "count:%%%s ub:%%%s\n",
-                    traits_t<UT>::spec, traits_t<T>::spec);
+                buff = __kmp_str_format("__kmp_dispatch_next_algorithm: T#%%d "
+                                        "stolen chunks from T#%%d, "
+                                        "count:%%%s ub:%%%s\n",
+                                        traits_t<UT>::spec, traits_t<T>::spec);
                 KD_TRACE(10, (buff, gtid, id, pr->u.p.count, pr->u.p.ub));
                 __kmp_str_free(&buff);
               }
@@ -2235,6 +2396,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
         if (pr->flags.ordered) {
           sh->u.s.ordered_iteration = 0;
         }
+
+        KMP_MB(); /* Flush all pending memory write invalidates.  */
 
         sh->buffer_index += __kmp_dispatch_num_buffers;
         KD_TRACE(100, ("__kmp_dispatch_next: T#%d change buffer_index:%d\n",

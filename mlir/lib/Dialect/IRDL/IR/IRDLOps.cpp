@@ -37,6 +37,60 @@ std::unique_ptr<Constraint> IsOp::getVerifier(
   return std::make_unique<IsConstraint>(getExpectedAttr());
 }
 
+std::unique_ptr<Constraint> BaseOp::getVerifier(
+    ArrayRef<Value> valueToConstr,
+    DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
+    DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
+        &attrs) {
+  MLIRContext *ctx = getContext();
+
+  // Case where the input is a symbol reference.
+  // This corresponds to the case where the base is an IRDL type or attribute.
+  if (auto baseRef = getBaseRef()) {
+    Operation *defOp =
+        SymbolTable::lookupNearestSymbolFrom(getOperation(), baseRef.value());
+
+    // Type case.
+    if (auto typeOp = dyn_cast<TypeOp>(defOp)) {
+      DynamicTypeDefinition *typeDef = types.at(typeOp).get();
+      auto name = StringAttr::get(ctx, typeDef->getDialect()->getNamespace() +
+                                           "." + typeDef->getName().str());
+      return std::make_unique<BaseTypeConstraint>(typeDef->getTypeID(), name);
+    }
+
+    // Attribute case.
+    auto attrOp = cast<AttributeOp>(defOp);
+    DynamicAttrDefinition *attrDef = attrs.at(attrOp).get();
+    auto name = StringAttr::get(ctx, attrDef->getDialect()->getNamespace() +
+                                         "." + attrDef->getName().str());
+    return std::make_unique<BaseAttrConstraint>(attrDef->getTypeID(), name);
+  }
+
+  // Case where the input is string literal.
+  // This corresponds to the case where the base is a registered type or
+  // attribute.
+  StringRef baseName = getBaseName().value();
+
+  // Type case.
+  if (baseName[0] == '!') {
+    auto abstractType = AbstractType::lookup(baseName.drop_front(1), ctx);
+    if (!abstractType) {
+      emitError() << "no registered type with name " << baseName;
+      return nullptr;
+    }
+    return std::make_unique<BaseTypeConstraint>(abstractType->get().getTypeID(),
+                                                abstractType->get().getName());
+  }
+
+  auto abstractAttr = AbstractAttribute::lookup(baseName.drop_front(1), ctx);
+  if (!abstractAttr) {
+    emitError() << "no registered attribute with name " << baseName;
+    return nullptr;
+  }
+  return std::make_unique<BaseAttrConstraint>(abstractAttr->get().getTypeID(),
+                                              abstractAttr->get().getName());
+}
+
 std::unique_ptr<Constraint> ParametricOp::getVerifier(
     ArrayRef<Value> valueToConstr,
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,

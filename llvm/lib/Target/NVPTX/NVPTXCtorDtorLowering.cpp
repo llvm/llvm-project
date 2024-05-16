@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXCtorDtorLowering.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -32,6 +34,11 @@ static cl::opt<std::string>
               cl::desc("Override unique ID of ctor/dtor globals."),
               cl::init(""), cl::Hidden);
 
+static cl::opt<bool>
+    CreateKernels("nvptx-emit-init-fini-kernel",
+                  cl::desc("Emit kernels to call ctor/dtor globals."),
+                  cl::init(true), cl::Hidden);
+
 namespace {
 
 static std::string getHash(StringRef Str) {
@@ -42,11 +49,163 @@ static std::string getHash(StringRef Str) {
   return llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
 }
 
-static bool createInitOrFiniGlobls(Module &M, StringRef GlobalName,
-                                   bool IsCtor) {
-  GlobalVariable *GV = M.getGlobalVariable(GlobalName);
-  if (!GV || !GV->hasInitializer())
-    return false;
+static void addKernelMetadata(Module &M, GlobalValue *GV) {
+  llvm::LLVMContext &Ctx = M.getContext();
+
+  // Get "nvvm.annotations" metadata node.
+  llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+
+  llvm::Metadata *KernelMDVals[] = {
+      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "kernel"),
+      llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
+
+  // This kernel is only to be called single-threaded.
+  llvm::Metadata *ThreadXMDVals[] = {
+      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidx"),
+      llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
+  llvm::Metadata *ThreadYMDVals[] = {
+      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidy"),
+      llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
+  llvm::Metadata *ThreadZMDVals[] = {
+      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidz"),
+      llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
+
+  llvm::Metadata *BlockMDVals[] = {
+      llvm::ConstantAsMetadata::get(GV),
+      llvm::MDString::get(Ctx, "maxclusterrank"),
+      llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
+
+  // Append metadata to nvvm.annotations.
+  MD->addOperand(llvm::MDNode::get(Ctx, KernelMDVals));
+  MD->addOperand(llvm::MDNode::get(Ctx, ThreadXMDVals));
+  MD->addOperand(llvm::MDNode::get(Ctx, ThreadYMDVals));
+  MD->addOperand(llvm::MDNode::get(Ctx, ThreadZMDVals));
+  MD->addOperand(llvm::MDNode::get(Ctx, BlockMDVals));
+}
+
+static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
+  StringRef InitOrFiniKernelName =
+      IsCtor ? "nvptx$device$init" : "nvptx$device$fini";
+  if (M.getFunction(InitOrFiniKernelName))
+    return nullptr;
+
+  Function *InitOrFiniKernel = Function::createWithDefaultAttr(
+      FunctionType::get(Type::getVoidTy(M.getContext()), false),
+      GlobalValue::WeakODRLinkage, 0, InitOrFiniKernelName, &M);
+  addKernelMetadata(M, InitOrFiniKernel);
+
+  return InitOrFiniKernel;
+}
+
+// We create the IR required to call each callback in this section. This is
+// equivalent to the following code. Normally, the linker would provide us with
+// the definitions of the init and fini array sections. The 'nvlink' linker does
+// not do this so initializing these values is done by the runtime.
+//
+// extern "C" void **__init_array_start = nullptr;
+// extern "C" void **__init_array_end = nullptr;
+// extern "C" void **__fini_array_start = nullptr;
+// extern "C" void **__fini_array_end = nullptr;
+//
+// using InitCallback = void();
+// using FiniCallback = void();
+//
+// void call_init_array_callbacks() {
+//   for (auto start = __init_array_start; start != __init_array_end; ++start)
+//     reinterpret_cast<InitCallback *>(*start)();
+// }
+//
+// void call_init_array_callbacks() {
+//   size_t fini_array_size = __fini_array_end - __fini_array_start;
+//   for (size_t i = fini_array_size; i > 0; --i)
+//     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
+// }
+static void createInitOrFiniCalls(Function &F, bool IsCtor) {
+  Module &M = *F.getParent();
+  LLVMContext &C = M.getContext();
+
+  IRBuilder<> IRB(BasicBlock::Create(C, "entry", &F));
+  auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
+  auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
+  Type *PtrTy = IRB.getPtrTy(llvm::ADDRESS_SPACE_GLOBAL);
+
+  auto *Begin = M.getOrInsertGlobal(
+      IsCtor ? "__init_array_start" : "__fini_array_start",
+      PointerType::get(C, 0), [&]() {
+        auto *GV = new GlobalVariable(
+            M, PointerType::get(C, 0),
+            /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
+            Constant::getNullValue(PointerType::get(C, 0)),
+            IsCtor ? "__init_array_start" : "__fini_array_start",
+            /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
+            /*AddressSpace=*/llvm::ADDRESS_SPACE_GLOBAL);
+        GV->setVisibility(GlobalVariable::ProtectedVisibility);
+        return GV;
+      });
+  auto *End = M.getOrInsertGlobal(
+      IsCtor ? "__init_array_end" : "__fini_array_end", PointerType::get(C, 0),
+      [&]() {
+        auto *GV = new GlobalVariable(
+            M, PointerType::get(C, 0),
+            /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
+            Constant::getNullValue(PointerType::get(C, 0)),
+            IsCtor ? "__init_array_end" : "__fini_array_end",
+            /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
+            /*AddressSpace=*/llvm::ADDRESS_SPACE_GLOBAL);
+        GV->setVisibility(GlobalVariable::ProtectedVisibility);
+        return GV;
+      });
+
+  // The constructor type is suppoed to allow using the argument vectors, but
+  // for now we just call them with no arguments.
+  auto *CallBackTy = FunctionType::get(IRB.getVoidTy(), {});
+
+  // The destructor array must be called in reverse order. Get an expression to
+  // the end of the array and iterate backwards in that case.
+  Value *BeginVal = IRB.CreateLoad(Begin->getType(), Begin, "begin");
+  Value *EndVal = IRB.CreateLoad(Begin->getType(), End, "stop");
+  if (!IsCtor) {
+    auto *BeginInt = IRB.CreatePtrToInt(BeginVal, IntegerType::getInt64Ty(C));
+    auto *EndInt = IRB.CreatePtrToInt(EndVal, IntegerType::getInt64Ty(C));
+    auto *SubInst = IRB.CreateSub(EndInt, BeginInt);
+    auto *Offset = IRB.CreateAShr(
+        SubInst, ConstantInt::get(IntegerType::getInt64Ty(C), 3), "offset",
+        /*IsExact=*/true);
+    auto *ValuePtr = IRB.CreateGEP(PointerType::get(C, 0), BeginVal,
+                                   ArrayRef<Value *>({Offset}));
+    EndVal = BeginVal;
+    BeginVal = IRB.CreateInBoundsGEP(
+        PointerType::get(C, 0), ValuePtr,
+        ArrayRef<Value *>(ConstantInt::get(IntegerType::getInt64Ty(C), -1)),
+        "start");
+  }
+  IRB.CreateCondBr(
+      IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGT, BeginVal,
+                    EndVal),
+      LoopBB, ExitBB);
+  IRB.SetInsertPoint(LoopBB);
+  auto *CallBackPHI = IRB.CreatePHI(PtrTy, 2, "ptr");
+  auto *CallBack = IRB.CreateLoad(IRB.getPtrTy(F.getAddressSpace()),
+                                  CallBackPHI, "callback");
+  IRB.CreateCall(CallBackTy, CallBack);
+  auto *NewCallBack =
+      IRB.CreateConstGEP1_64(PtrTy, CallBackPHI, IsCtor ? 1 : -1, "next");
+  auto *EndCmp = IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_ULT,
+                               NewCallBack, EndVal, "end");
+  CallBackPHI->addIncoming(BeginVal, &F.getEntryBlock());
+  CallBackPHI->addIncoming(NewCallBack, LoopBB);
+  IRB.CreateCondBr(EndCmp, ExitBB, LoopBB);
+  IRB.SetInsertPoint(ExitBB);
+  IRB.CreateRetVoid();
+}
+
+static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
+                                    bool IsCtor) {
   ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
   if (!GA || GA->getNumOperands() == 0)
     return false;
@@ -81,14 +240,35 @@ static bool createInitOrFiniGlobls(Module &M, StringRef GlobalName,
     appendToUsed(M, {GV});
   }
 
+  return true;
+}
+
+static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
+                                   bool IsCtor) {
+  GlobalVariable *GV = M.getGlobalVariable(GlobalName);
+  if (!GV || !GV->hasInitializer())
+    return false;
+
+  if (!createInitOrFiniGlobals(M, GV, IsCtor))
+    return false;
+
+  if (!CreateKernels)
+    return true;
+
+  Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
+  if (!InitOrFiniKernel)
+    return false;
+
+  createInitOrFiniCalls(*InitOrFiniKernel, IsCtor);
+
   GV->eraseFromParent();
   return true;
 }
 
 static bool lowerCtorsAndDtors(Module &M) {
   bool Modified = false;
-  Modified |= createInitOrFiniGlobls(M, "llvm.global_ctors", /*IsCtor =*/true);
-  Modified |= createInitOrFiniGlobls(M, "llvm.global_dtors", /*IsCtor =*/false);
+  Modified |= createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true);
+  Modified |= createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false);
   return Modified;
 }
 

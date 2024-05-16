@@ -683,3 +683,16 @@ func.func @testConstantStrAttr() -> () {
   test.no_str_value {value = "bar"}
   return
 }
+
+//===----------------------------------------------------------------------===//
+// Test that patterns with variadics propagate sizes
+//===----------------------------------------------------------------------===//
+
+func.func @testVariadic(%arg_0: i32, %arg_1: i32, %brg: i64,
+    %crg_0: f32, %crg_1: f32, %crg_2: f32, %crg_3: f32) -> () {
+  // CHECK: "test.variadic_rewrite_dst_op"(%arg2, %arg3, %arg4, %arg5, %arg6, %arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 4, 2>}> : (i64, f32, f32, f32, f32, i32, i32) -> ()
+  "test.variadic_rewrite_src_op"(%arg_0, %arg_1, %brg,
+    %crg_0, %crg_1, %crg_2, %crg_3) {operandSegmentSizes = array<i32: 2, 1, 4>} :
+    (i32, i32, i64, f32, f32, f32, f32) -> ()
+  return
+}

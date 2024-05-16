@@ -12,6 +12,7 @@ define float @float_in_fpr(float %a, float %b) {
   ; FP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f14
   ; FP32-NEXT:   $f0 = COPY [[COPY1]](s32)
   ; FP32-NEXT:   RetRA implicit $f0
+  ;
   ; FP64-LABEL: name: float_in_fpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $f12, $f14
@@ -33,6 +34,7 @@ define double @double_in_fpr(double %a, double %b) {
   ; FP32-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d7
   ; FP32-NEXT:   $d0 = COPY [[COPY1]](s64)
   ; FP32-NEXT:   RetRA implicit $d0
+  ;
   ; FP64-LABEL: name: double_in_fpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $d12_64, $d14_64
@@ -54,6 +56,7 @@ define float @float_in_gpr(i32 %a, float %b) {
   ; FP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; FP32-NEXT:   $f0 = COPY [[COPY1]](s32)
   ; FP32-NEXT:   RetRA implicit $f0
+  ;
   ; FP64-LABEL: name: float_in_gpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $a0, $a1
@@ -77,6 +80,7 @@ define double @double_in_gpr(i32 %a, double %b) {
   ; FP32-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; FP32-NEXT:   $d0 = COPY [[MV]](s64)
   ; FP32-NEXT:   RetRA implicit $d0
+  ;
   ; FP64-LABEL: name: double_in_gpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $a0, $a2, $a3
@@ -89,6 +93,36 @@ define double @double_in_gpr(i32 %a, double %b) {
   ; FP64-NEXT:   RetRA implicit $d0_64
 entry:
   ret double %b
+}
+
+define double @two_double_in_gpr(i32 %a, double %b, double %c) {
+  ; FP32-LABEL: name: two_double_in_gpr
+  ; FP32: bb.1.entry:
+  ; FP32-NEXT:   liveins: $a0, $a2, $a3
+  ; FP32-NEXT: {{  $}}
+  ; FP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; FP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; FP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; FP32-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; FP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; FP32-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.0)
+  ; FP32-NEXT:   $d0 = COPY [[LOAD]](s64)
+  ; FP32-NEXT:   RetRA implicit $d0
+  ;
+  ; FP64-LABEL: name: two_double_in_gpr
+  ; FP64: bb.1.entry:
+  ; FP64-NEXT:   liveins: $a0, $a2, $a3
+  ; FP64-NEXT: {{  $}}
+  ; FP64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; FP64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; FP64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; FP64-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; FP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; FP64-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.0)
+  ; FP64-NEXT:   $d0_64 = COPY [[LOAD]](s64)
+  ; FP64-NEXT:   RetRA implicit $d0_64
+entry:
+  ret double %c
 }
 
 define float @call_float_in_fpr(float %a, float %b) {
@@ -106,6 +140,7 @@ define float @call_float_in_fpr(float %a, float %b) {
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $f0 = COPY [[COPY2]](s32)
   ; FP32-NEXT:   RetRA implicit $f0
+  ;
   ; FP64-LABEL: name: call_float_in_fpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $f12, $f14
@@ -140,6 +175,7 @@ define double @call_double_in_fpr(double %a, double %b) {
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $d0 = COPY [[COPY2]](s64)
   ; FP32-NEXT:   RetRA implicit $d0
+  ;
   ; FP64-LABEL: name: call_double_in_fpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $d12_64, $d14_64
@@ -174,6 +210,7 @@ define float @call_float_in_gpr(i32 %a, float %b) {
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $f0 = COPY [[COPY2]](s32)
   ; FP32-NEXT:   RetRA implicit $f0
+  ;
   ; FP64-LABEL: name: call_float_in_gpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $a0, $a1
@@ -213,6 +250,7 @@ define double @call_double_in_gpr(i32 %a, double %b) {
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $d0 = COPY [[COPY3]](s64)
   ; FP32-NEXT:   RetRA implicit $d0
+  ;
   ; FP64-LABEL: name: call_double_in_gpr
   ; FP64: bb.1.entry:
   ; FP64-NEXT:   liveins: $a0, $a2, $a3

@@ -150,6 +150,8 @@ if ( 0 ) {
         $values{ hardware_platform } = "ppc64le";
     } elsif ( $values{ machine } =~ m{\Appc64\z} ) {
         $values{ hardware_platform } = "ppc64";
+    } elsif ( $values{ machine } =~ m{\Aaarch64_32\z} ) {
+        $values{ hardware_platform } = "aarch64_32";
     } elsif ( $values{ machine } =~ m{\Aaarch64\z} ) {
         $values{ hardware_platform } = "aarch64";
     } elsif ( $values{ machine } =~ m{\Amips64\z} ) {
@@ -160,6 +162,8 @@ if ( 0 ) {
         $values{ hardware_platform } = "riscv64";
     } elsif ( $values{ machine } =~ m{\Aloongarch64\z} ) {
         $values{ hardware_platform } = "loongarch64";
+    } elsif ( $values{ machine } =~ m{\As390x\z} ) {
+        $values{ hardware_platform } = "s390x";
     } else {
         die "Unsupported machine (\"$values{ machine }\") returned by POSIX::uname(); stopped";
     }; # if

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "rewrite-parse-tree.h"
+#include "rewrite-directives.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
@@ -175,7 +176,7 @@ void RewriteMutator::Post(parser::WriteStmt &x) {
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {
   RewriteMutator mutator{context};
   parser::Walk(program, mutator);
-  return !context.AnyFatalError();
+  return !context.AnyFatalError() && RewriteOmpParts(context, program);
 }
 
 } // namespace Fortran::semantics

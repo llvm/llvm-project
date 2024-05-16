@@ -27,6 +27,7 @@
 #include <charconv>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -43,8 +44,9 @@ void test(StringT expected, StringViewT fmt, PointerT arg, std::size_t offset) {
   std::formatter<PointerT, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
-  auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
+  // std::to_address works around LWG3989 and MSVC STL's iterator debugging mechanism.
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
   StringT result;
   auto out = std::back_inserter(result);
@@ -58,8 +60,8 @@ void test(StringT expected, StringViewT fmt, PointerT arg, std::size_t offset) {
     std::array<char, 128> buffer;
     buffer[0] = CharT('0');
     buffer[1] = CharT('x');
-    expected.append(buffer.begin(),
-                    std::to_chars(buffer.begin() + 2, buffer.end(), reinterpret_cast<std::uintptr_t>(arg), 16).ptr);
+    expected.append(buffer.data(),
+                    std::to_chars(buffer.data() + 2, buffer.data() + buffer.size(), reinterpret_cast<std::uintptr_t>(arg), 16).ptr);
   }
   assert(result == expected);
 }

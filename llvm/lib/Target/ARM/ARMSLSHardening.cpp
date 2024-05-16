@@ -210,7 +210,7 @@ ArmInsertedThunks SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   // FIXME: How to better communicate Register number, rather than through
   // name and lookup table?
-  assert(MF.getName().startswith(getThunkPrefix()));
+  assert(MF.getName().starts_with(getThunkPrefix()));
   auto ThunkIt = llvm::find_if(
       SLSBLRThunks, [&MF](auto T) { return T.Name == MF.getName(); });
   assert(ThunkIt != std::end(SLSBLRThunks));
@@ -404,20 +404,15 @@ public:
 private:
   std::tuple<SLSBLRThunkInserter> TIs;
 
-  // FIXME: When LLVM moves to C++17, these can become folds
   template <typename... ThunkInserterT>
   static void initTIs(Module &M,
                       std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (void)std::initializer_list<int>{
-        (std::get<ThunkInserterT>(ThunkInserters).init(M), 0)...};
+    (..., std::get<ThunkInserterT>(ThunkInserters).init(M));
   }
   template <typename... ThunkInserterT>
   static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    bool Modified = false;
-    (void)std::initializer_list<int>{
-        Modified |= std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF)...};
-    return Modified;
+    return (0 | ... | std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF));
   }
 };
 

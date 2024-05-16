@@ -540,7 +540,17 @@ public:
     if (InitializedLanguage)
       return false;
 
+    // FIXME: We did similar things in ReadHeaderSearchOptions too. But such
+    // style is not scaling. Probably we need to invite some mechanism to
+    // handle such patterns generally.
+    auto PICLevel = LangOpt.PICLevel;
+    auto PIE = LangOpt.PIE;
+
     LangOpt = LangOpts;
+
+    LangOpt.PICLevel = PICLevel;
+    LangOpt.PIE = PIE;
+
     InitializedLanguage = true;
 
     updated();
@@ -790,10 +800,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts,
-    std::shared_ptr<HeaderSearchOptions> HSOpts, bool UseDebugInfo,
-    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
-    bool AllowASTWithCompilerErrors, bool UserFilesAreVolatile,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    std::shared_ptr<HeaderSearchOptions> HSOpts,
+    std::shared_ptr<LangOptions> LangOpts, bool OnlyLocalDecls,
+    CaptureDiagsKind CaptureDiagnostics, bool AllowASTWithCompilerErrors,
+    bool UserFilesAreVolatile, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
 
   // Recover resources if we crash before exiting this method.
@@ -805,7 +815,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
 
-  AST->LangOpts = std::make_shared<LangOptions>();
+  AST->LangOpts = LangOpts ? LangOpts : std::make_shared<LangOptions>();
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->Diagnostics = Diags;
@@ -883,7 +893,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   PP.setCounterValue(Counter);
 
   Module *M = HeaderInfo.lookupModule(AST->getLangOpts().CurrentModule);
-  if (M && AST->getLangOpts().isCompilingModule() && M->isModulePurview())
+  if (M && AST->getLangOpts().isCompilingModule() && M->isNamedModule())
     AST->Ctx->setCurrentNamedModule(M);
 
   // Create an AST consumer, even though it isn't used.
@@ -1057,7 +1067,7 @@ public:
 
   std::vector<Decl *> takeTopLevelDecls() { return std::move(TopLevelDecls); }
 
-  std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
+  std::vector<LocalDeclID> takeTopLevelDeclIDs() {
     return std::move(TopLevelDeclIDs);
   }
 
@@ -1091,7 +1101,7 @@ public:
 private:
   unsigned Hash = 0;
   std::vector<Decl *> TopLevelDecls;
-  std::vector<serialization::DeclID> TopLevelDeclIDs;
+  std::vector<LocalDeclID> TopLevelDeclIDs;
   llvm::SmallVector<ASTUnit::StandaloneDiagnostic, 4> PreambleDiags;
 };
 
@@ -1457,11 +1467,12 @@ void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
 
   std::vector<Decl *> Resolved;
   Resolved.reserve(TopLevelDeclsInPreamble.size());
-  ExternalASTSource &Source = *getASTContext().getExternalSource();
+  // The module file of the preamble.
+  serialization::ModuleFile &MF = Reader->getModuleManager().getPrimaryModule();
   for (const auto TopLevelDecl : TopLevelDeclsInPreamble) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
-    if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
+    if (Decl *D = Reader->GetDecl(Reader->getGlobalDeclID(MF, TopLevelDecl)))
       Resolved.push_back(D);
   }
   TopLevelDeclsInPreamble.clear();
@@ -2362,8 +2373,6 @@ bool ASTUnit::serialize(raw_ostream &OS) {
   ASTWriter Writer(Stream, Buffer, ModuleCache, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }
-
-using SLocRemap = ContinuousRangeMap<unsigned, int, 2>;
 
 void ASTUnit::TranslateStoredDiagnostics(
                           FileManager &FileMgr,

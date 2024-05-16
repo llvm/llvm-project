@@ -52,11 +52,11 @@ using namespace llvm::object;
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 static bool isDebugSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).startswith(".debug") || Sec.Name == ".gdb_index";
+  return StringRef(Sec.Name).starts_with(".debug") || Sec.Name == ".gdb_index";
 }
 
 static bool isDWOSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).endswith(".dwo");
+  return StringRef(Sec.Name).ends_with(".dwo");
 }
 
 static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
@@ -180,9 +180,11 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return std::make_unique<BinaryWriter>(Obj, Out);
+    return std::make_unique<BinaryWriter>(Obj, Out, Config);
   case FileFormat::IHex:
-    return std::make_unique<IHexWriter>(Obj, Out);
+    return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
+  case FileFormat::SREC:
+    return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
@@ -212,33 +214,50 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                            SecName.str().c_str());
 }
 
-static bool isCompressable(const SectionBase &Sec) {
-  return !(Sec.Flags & ELF::SHF_COMPRESSED) &&
-         StringRef(Sec.Name).startswith(".debug");
-}
-
-static Error replaceDebugSections(
-    Object &Obj, function_ref<bool(const SectionBase &)> ShouldReplace,
-    function_ref<Expected<SectionBase *>(const SectionBase *)> AddSection) {
-  // Build a list of the debug sections we are going to replace.
-  // We can't call `AddSection` while iterating over sections,
+Error Object::compressOrDecompressSections(const CommonConfig &Config) {
+  // Build a list of sections we are going to replace.
+  // We can't call `addSection` while iterating over sections,
   // because it would mutate the sections array.
-  SmallVector<SectionBase *, 13> ToReplace;
-  for (auto &Sec : Obj.sections())
-    if (ShouldReplace(Sec))
-      ToReplace.push_back(&Sec);
+  SmallVector<std::pair<SectionBase *, std::function<SectionBase *()>>, 0>
+      ToReplace;
+  for (SectionBase &Sec : sections()) {
+    std::optional<DebugCompressionType> CType;
+    for (auto &[Matcher, T] : Config.compressSections)
+      if (Matcher.matches(Sec.Name))
+        CType = T;
+    // Handle --compress-debug-sections and --decompress-debug-sections, which
+    // apply to non-ALLOC debug sections.
+    if (!(Sec.Flags & SHF_ALLOC) && StringRef(Sec.Name).starts_with(".debug")) {
+      if (Config.CompressionType != DebugCompressionType::None)
+        CType = Config.CompressionType;
+      else if (Config.DecompressDebugSections)
+        CType = DebugCompressionType::None;
+    }
+    if (!CType)
+      continue;
 
-  // Build a mapping from original section to a new one.
-  DenseMap<SectionBase *, SectionBase *> FromTo;
-  for (SectionBase *S : ToReplace) {
-    Expected<SectionBase *> NewSection = AddSection(S);
-    if (!NewSection)
-      return NewSection.takeError();
+    if (Sec.ParentSegment)
+      return createStringError(
+          errc::invalid_argument,
+          "section '" + Sec.Name +
+              "' within a segment cannot be (de)compressed");
 
-    FromTo[S] = *NewSection;
+    if (auto *CS = dyn_cast<CompressedSection>(&Sec)) {
+      if (*CType == DebugCompressionType::None)
+        ToReplace.emplace_back(
+            &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
+    } else if (*CType != DebugCompressionType::None) {
+      ToReplace.emplace_back(&Sec, [=, S = &Sec] {
+        return &addSection<CompressedSection>(
+            CompressedSection(*S, *CType, Is64Bits));
+      });
+    }
   }
 
-  return Obj.replaceSections(FromTo);
+  DenseMap<SectionBase *, SectionBase *> FromTo;
+  for (auto [S, Func] : ToReplace)
+    FromTo[S] = Func();
+  return replaceSections(FromTo);
 }
 
 static bool isAArch64MappingSymbol(const Symbol &Sym) {
@@ -248,7 +267,7 @@ static bool isAArch64MappingSymbol(const Symbol &Sym) {
   StringRef Name = Sym.Name;
   if (!Name.consume_front("$x") && !Name.consume_front("$d"))
     return false;
-  return Name.empty() || Name.startswith(".");
+  return Name.empty() || Name.starts_with(".");
 }
 
 static bool isArmMappingSymbol(const Symbol &Sym) {
@@ -259,7 +278,7 @@ static bool isArmMappingSymbol(const Symbol &Sym) {
   if (!Name.consume_front("$a") && !Name.consume_front("$d") &&
       !Name.consume_front("$t"))
     return false;
-  return Name.empty() || Name.startswith(".");
+  return Name.empty() || Name.starts_with(".");
 }
 
 // Check if the symbol should be preserved because it is required by ABI.
@@ -290,6 +309,9 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     return Error::success();
 
   Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+    if (Config.SymbolsToSkip.matches(Sym.Name))
+      return;
+
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
@@ -297,6 +319,10 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
+
+    for (auto &[Matcher, Visibility] : ELFConfig.SymbolsToSetVisibility)
+      if (Matcher.matches(Sym.Name))
+        Sym.Visibility = Visibility;
 
     // Note: these two globalize flags have very similar names but different
     // meanings:
@@ -328,6 +354,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     const auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
+
+    if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
+      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
+                           Config.SymbolsPrefixRemove) == 0)
+        Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
@@ -361,7 +392,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
 
     if ((Config.DiscardMode == DiscardType::All ||
          (Config.DiscardMode == DiscardType::Locals &&
-          StringRef(Sym.Name).startswith(".L"))) &&
+          StringRef(Sym.Name).starts_with(".L"))) &&
         Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
         Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
       return true;
@@ -448,7 +479,9 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
         return true;
       if (&Sec == Obj.SectionNames)
         return false;
-      if (StringRef(Sec.Name).startswith(".gnu.warning"))
+      if (StringRef(Sec.Name).starts_with(".gnu.warning"))
+        return false;
+      if (StringRef(Sec.Name).starts_with(".gnu_debuglink"))
         return false;
       // We keep the .ARM.attribute section to maintain compatibility
       // with Debian derived distributions. This is a bug in their
@@ -521,24 +554,8 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
   if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
     return E;
 
-  if (Config.CompressionType != DebugCompressionType::None) {
-    if (Error Err = replaceDebugSections(
-            Obj, isCompressable,
-            [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
-              return &Obj.addSection<CompressedSection>(
-                  CompressedSection(*S, Config.CompressionType, Obj.Is64Bits));
-            }))
-      return Err;
-  } else if (Config.DecompressDebugSections) {
-    if (Error Err = replaceDebugSections(
-            Obj,
-            [](const SectionBase &S) { return isa<CompressedSection>(&S); },
-            [&Obj](const SectionBase *S) {
-              const CompressedSection *CS = cast<CompressedSection>(S);
-              return &Obj.addSection<DecompressedSection>(*CS);
-            }))
-      return Err;
-  }
+  if (Error E = Obj.compressOrDecompressSections(Config))
+    return E;
 
   return Error::success();
 }
@@ -662,7 +679,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
       OwnedDataSection &NewSection =
           Obj.addSection<OwnedDataSection>(Name, Data);
-      if (Name.startswith(".note") && Name != ".note.GNU-stack")
+      if (Name.starts_with(".note") && Name != ".note.GNU-stack")
         NewSection.Type = SHT_NOTE;
       return Error::success();
     };

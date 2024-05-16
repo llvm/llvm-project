@@ -8,6 +8,7 @@
 #include "clang-c/Documentation.h"
 #include "clang-c/Index.h"
 #include "clang/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -45,7 +46,14 @@ char *basename(const char* path)
     else if (base2)
         return(base2 + 1);
 
-    return((char*)path);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+    return ((char *)path);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 char *dirname(char* path)
 {
@@ -234,11 +242,16 @@ void free_remapped_files(struct CXUnsavedFile *unsaved_files,
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
     free((char *)unsaved_files[i].Filename);
     free((char *)unsaved_files[i].Contents);
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif
   }
   free(unsaved_files);
@@ -451,10 +464,10 @@ static void PrintRange(CXSourceRange R, const char *str) {
   CXFile begin_file, end_file;
   unsigned begin_line, begin_column, end_line, end_column;
 
-  clang_getSpellingLocation(clang_getRangeStart(R),
-                            &begin_file, &begin_line, &begin_column, 0);
-  clang_getSpellingLocation(clang_getRangeEnd(R),
-                            &end_file, &end_line, &end_column, 0);
+  clang_getFileLocation(clang_getRangeStart(R), &begin_file, &begin_line,
+                        &begin_column, 0);
+  clang_getFileLocation(clang_getRangeEnd(R), &end_file, &end_line, &end_column,
+                        0);
   if (!begin_file || !end_file)
     return;
 
@@ -694,7 +707,7 @@ static void ValidateCommentXML(const char *Str, const char *CommentSchemaFile) {
   Doc = xmlParseDoc((const xmlChar *) Str);
 
   if (!Doc) {
-    xmlErrorPtr Error = xmlGetLastError();
+    const xmlError *Error = xmlGetLastError();
     printf(" CommentXMLInvalid [not well-formed XML: %s]", Error->message);
     return;
   }
@@ -704,7 +717,7 @@ static void ValidateCommentXML(const char *Str, const char *CommentSchemaFile) {
   if (!status)
     printf(" CommentXMLValid");
   else if (status > 0) {
-    xmlErrorPtr Error = xmlGetLastError();
+    const xmlError *Error = xmlGetLastError();
     printf(" CommentXMLInvalid [not valid XML: %s]", Error->message);
   } else
     printf(" libXMLError");
@@ -836,13 +849,13 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
             printf(", ");
           
           Loc = clang_getCursorLocation(Ovl);
-          clang_getSpellingLocation(Loc, 0, &line, &column, 0);
+          clang_getFileLocation(Loc, 0, &line, &column, 0);
           printf("%d:%d", line, column);          
         }
         printf("]");
       } else {
         CXSourceLocation Loc = clang_getCursorLocation(Referenced);
-        clang_getSpellingLocation(Loc, 0, &line, &column, 0);
+        clang_getFileLocation(Loc, 0, &line, &column, 0);
         printf(":%d:%d", line, column);
       }
 
@@ -1034,7 +1047,7 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
     if (!clang_equalCursors(SpecializationOf, clang_getNullCursor())) {
       CXSourceLocation Loc = clang_getCursorLocation(SpecializationOf);
       CXString Name = clang_getCursorSpelling(SpecializationOf);
-      clang_getSpellingLocation(Loc, 0, &line, &column, 0);
+      clang_getFileLocation(Loc, 0, &line, &column, 0);
       printf(" [Specialization of %s:%d:%d]",
              clang_getCString(Name), line, column);
       clang_disposeString(Name);
@@ -1081,7 +1094,7 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" [Overrides ");
       for (I = 0; I != num_overridden; ++I) {
         CXSourceLocation Loc = clang_getCursorLocation(overridden[I]);
-        clang_getSpellingLocation(Loc, 0, &line, &column, 0);
+        clang_getFileLocation(Loc, 0, &line, &column, 0);
         lineCols[I].line = line;
         lineCols[I].col = column;
       }
@@ -1244,8 +1257,8 @@ void PrintDiagnostic(CXDiagnostic Diagnostic) {
   fprintf(stderr, "%s\n", clang_getCString(Msg));
   clang_disposeString(Msg);
 
-  clang_getSpellingLocation(clang_getDiagnosticLocation(Diagnostic),
-                            &file, 0, 0, 0);
+  clang_getFileLocation(clang_getDiagnosticLocation(Diagnostic), &file, 0, 0,
+                        0);
   if (!file)
     return;
 
@@ -1258,9 +1271,8 @@ void PrintDiagnostic(CXDiagnostic Diagnostic) {
     CXSourceLocation end = clang_getRangeEnd(range);
     unsigned start_line, start_column, end_line, end_column;
     CXFile start_file, end_file;
-    clang_getSpellingLocation(start, &start_file, &start_line,
-                              &start_column, 0);
-    clang_getSpellingLocation(end, &end_file, &end_line, &end_column, 0);
+    clang_getFileLocation(start, &start_file, &start_line, &start_column, 0);
+    clang_getFileLocation(end, &end_file, &end_line, &end_column, 0);
     if (clang_equalLocations(start, end)) {
       /* Insertion. */
       if (start_file == file)
@@ -1343,7 +1355,7 @@ enum CXChildVisitResult FilteredPrintingVisitor(CXCursor Cursor,
   if (!Data->Filter || (Cursor.kind == *(enum CXCursorKind *)Data->Filter)) {
     CXSourceLocation Loc = clang_getCursorLocation(Cursor);
     unsigned line, column;
-    clang_getSpellingLocation(Loc, 0, &line, &column, 0);
+    clang_getFileLocation(Loc, 0, &line, &column, 0);
     printf("// %s: %s:%d:%d: ", FileCheckPrefix,
            GetCursorSource(Cursor), line, column);
     PrintCursor(Cursor, Data->CommentSchemaFile);
@@ -1404,7 +1416,7 @@ static enum CXChildVisitResult FunctionScanVisitor(CXCursor Cursor,
       curColumn++;
 
     Loc = clang_getCursorLocation(Cursor);
-    clang_getSpellingLocation(Loc, &file, 0, 0, 0);
+    clang_getFileLocation(Loc, &file, 0, 0, 0);
 
     source = clang_getFileName(file);
     if (clang_getCString(source)) {
@@ -1470,8 +1482,7 @@ void InclusionVisitor(CXFile includedFile, CXSourceLocation *includeStack,
   for (i = 0; i < includeStackLen; ++i) {
     CXFile includingFile;
     unsigned line, column;
-    clang_getSpellingLocation(includeStack[i], &includingFile, &line,
-                              &column, 0);
+    clang_getFileLocation(includeStack[i], &includingFile, &line, &column, 0);
     fname = clang_getFileName(includingFile);
     printf("  %s:%d:%d\n", clang_getCString(fname), line, column);
     clang_disposeString(fname);
@@ -1838,6 +1849,8 @@ static enum CXChildVisitResult PrintMangledName(CXCursor cursor, CXCursor p,
   CXString MangledName;
   if (clang_isUnexposed(clang_getCursorKind(cursor)))
     return CXChildVisit_Recurse;
+  if (clang_getCursorKind(cursor) == CXCursor_LinkageSpec)
+    return CXChildVisit_Recurse;
   PrintCursor(cursor, NULL);
   MangledName = clang_Cursor_getMangling(cursor);
   printf(" [mangled=%s]\n", clang_getCString(MangledName));
@@ -1852,6 +1865,8 @@ static enum CXChildVisitResult PrintManglings(CXCursor cursor, CXCursor p,
   if (clang_isUnexposed(clang_getCursorKind(cursor)))
     return CXChildVisit_Recurse;
   if (!clang_isDeclaration(clang_getCursorKind(cursor)))
+    return CXChildVisit_Recurse;
+  if (clang_getCursorKind(cursor) == CXCursor_LinkageSpec)
     return CXChildVisit_Recurse;
   if (clang_getCursorKind(cursor) == CXCursor_ParmDecl)
     return CXChildVisit_Continue;
@@ -2967,7 +2982,7 @@ static void inspect_print_cursor(CXCursor Cursor) {
   CXString Spelling;
   const char *cspell;
   unsigned line, column;
-  clang_getSpellingLocation(CursorLoc, 0, &line, &column, 0);
+  clang_getFileLocation(CursorLoc, 0, &line, &column, 0);
   printf("%d:%d ", line, column);
   PrintCursor(Cursor, NULL);
   PrintCursorExtent(Cursor);
@@ -3083,7 +3098,7 @@ static void inspect_evaluate_cursor(CXCursor Cursor) {
   unsigned line, column;
   CXEvalResult ER;
 
-  clang_getSpellingLocation(CursorLoc, 0, &line, &column, 0);
+  clang_getFileLocation(CursorLoc, 0, &line, &column, 0);
   printf("%d:%d ", line, column);
   PrintCursor(Cursor, NULL);
   PrintCursorExtent(Cursor);
@@ -3118,7 +3133,7 @@ static void inspect_macroinfo_cursor(CXCursor Cursor) {
   CXString Spelling;
   const char *cspell;
   unsigned line, column;
-  clang_getSpellingLocation(CursorLoc, 0, &line, &column, 0);
+  clang_getFileLocation(CursorLoc, 0, &line, &column, 0);
   printf("%d:%d ", line, column);
   PrintCursor(Cursor, NULL);
   PrintCursorExtent(Cursor);
@@ -4311,10 +4326,10 @@ int perform_token_annotation(int argc, const char **argv) {
   skipped_ranges = clang_getSkippedRanges(TU, file);
   for (i = 0; i != skipped_ranges->count; ++i) {
     unsigned start_line, start_column, end_line, end_column;
-    clang_getSpellingLocation(clang_getRangeStart(skipped_ranges->ranges[i]),
-                              0, &start_line, &start_column, 0);
-    clang_getSpellingLocation(clang_getRangeEnd(skipped_ranges->ranges[i]),
-                              0, &end_line, &end_column, 0);
+    clang_getFileLocation(clang_getRangeStart(skipped_ranges->ranges[i]), 0,
+                          &start_line, &start_column, 0);
+    clang_getFileLocation(clang_getRangeEnd(skipped_ranges->ranges[i]), 0,
+                          &end_line, &end_column, 0);
     printf("Skipping: ");
     PrintExtent(stdout, start_line, start_column, end_line, end_column);
     printf("\n");
@@ -4334,10 +4349,10 @@ int perform_token_annotation(int argc, const char **argv) {
     case CXToken_Literal: kind = "Literal"; break;
     case CXToken_Comment: kind = "Comment"; break;
     }
-    clang_getSpellingLocation(clang_getRangeStart(extent),
-                              0, &start_line, &start_column, 0);
-    clang_getSpellingLocation(clang_getRangeEnd(extent),
-                              0, &end_line, &end_column, 0);
+    clang_getFileLocation(clang_getRangeStart(extent), 0, &start_line,
+                          &start_column, 0);
+    clang_getFileLocation(clang_getRangeEnd(extent), 0, &end_line, &end_column,
+                          0);
     printf("%s: \"%s\" ", kind, clang_getCString(spelling));
     clang_disposeString(spelling);
     PrintExtent(stdout, start_line, start_column, end_line, end_column);
@@ -5145,6 +5160,14 @@ static void flush_atexit(void) {
 
 int main(int argc, const char **argv) {
   thread_info client_data;
+
+#ifdef __MVS__
+  if (enableAutoConversion(fileno(stdout)) == -1)
+    fprintf(stderr, "Setting conversion on stdout failed\n");
+
+  if (enableAutoConversion(fileno(stderr)) == -1)
+    fprintf(stderr, "Setting conversion on stderr failed\n");
+#endif
 
   atexit(flush_atexit);
 
