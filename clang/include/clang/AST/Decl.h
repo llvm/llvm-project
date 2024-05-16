@@ -4680,8 +4680,8 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
 
   FunctionEffectsRef getFunctionEffects() const {
-    if (TypeSourceInfo *TSI = getSignatureAsWritten())
-      if (auto *FPT = TSI->getType()->getAs<FunctionProtoType>())
+    if (const TypeSourceInfo *TSI = getSignatureAsWritten())
+      if (const auto *FPT = TSI->getType()->getAs<FunctionProtoType>())
         return FPT->getFunctionEffects();
     return {};
   }

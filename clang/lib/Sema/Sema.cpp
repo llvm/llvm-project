@@ -2821,7 +2821,7 @@ bool FunctionEffectDiff::shouldDiagnoseConversion(
   switch (EffectKind) {
   case FunctionEffect::Kind::NonAllocating:
     // nonallocating can't be added (spoofed) during a conversion, unless we
-    // have nonblocking
+    // have nonblocking.
     if (DiffKind == Kind::Added) {
       for (const auto &CFE : SrcFX) {
         if (CFE.Effect.kind() == FunctionEffect::Kind::NonBlocking)
@@ -2837,7 +2837,7 @@ bool FunctionEffectDiff::shouldDiagnoseConversion(
     case Kind::Removed:
       return false;
     case Kind::ConditionMismatch:
-      // TODO: Condition mismatches are too coarse right now -- expressions
+      // FIXME: Condition mismatches are too coarse right now -- expressions
       // which are equivalent but don't have the same identity are detected as
       // mismatches. We're going to diagnose those anyhow until expression
       // matching is better.
@@ -2858,12 +2858,12 @@ bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
   switch (EffectKind) {
   case FunctionEffect::Kind::NonAllocating:
   case FunctionEffect::Kind::NonBlocking:
-    // nonblocking/nonallocating can't be removed in a redeclaration
+    // nonblocking/nonallocating can't be removed in a redeclaration.
     switch (DiffKind) {
     case Kind::Added:
       return false; // No diagnostic.
     case Kind::Removed:
-      return true; // Issue diagnostic
+      return true; // Issue diagnostic.
     case Kind::ConditionMismatch:
       // All these forms of mismatches are diagnosed.
       return true;

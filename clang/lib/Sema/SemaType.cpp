@@ -8001,7 +8001,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
 
   Sema &S = TPState.getSema();
 
-  // Require FunctionProtoType
+  // Require FunctionProtoType.
   auto *FPT = Unwrapped.get()->getAs<FunctionProtoType>();
   if (FPT == nullptr) {
     S.Diag(PAttr.getLoc(), diag::err_func_with_effects_no_prototype)
@@ -8068,7 +8068,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     return true;
   };
 
-  // Find previous attributes
+  // Find previous attributes.
   std::optional<FunctionEffectWithCondition> PrevNonBlocking;
   std::optional<FunctionEffectWithCondition> PrevNonAllocating;
 

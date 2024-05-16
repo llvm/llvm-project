@@ -5113,8 +5113,8 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
           CalleeEC.Effect.kind() == Kind::Blocking)
         return false;
     }
-  }
     return true;
+  }
 
   case Kind::Allocating:
   case Kind::Blocking:
@@ -5216,7 +5216,7 @@ void FunctionEffectSet::replaceItem(unsigned Idx,
   Conditions[Idx] = Item.Cond;
 
   // Maintain invariant: If all conditions are null, the vector should be empty.
-  if (std::all_of(Conditions.begin(), Conditions.end(),
+  if (llvm::all_of(Conditions,
                   [](const FunctionEffectCondition &C) {
                     return C.expr() == nullptr;
                   })) {

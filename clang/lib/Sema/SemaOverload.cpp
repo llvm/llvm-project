@@ -1872,7 +1872,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     }
 
     // For C, when called from checkPointerTypesForAssignment,
-    // we need not to alter FromFn, or else even an innocuous cast
+    // we need to not alter FromFn, or else even an innocuous cast
     // like dropping effects will fail. In C++ however we do want to
     // alter FromFn. TODO: Is this correct?
     if (getLangOpts().CPlusPlus) {

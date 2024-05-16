@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -x c -std=c11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c89 %s
 
 // Tests for a few cases involving C functions without prototypes.
 

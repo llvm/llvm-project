@@ -4782,11 +4782,7 @@ struct FunctionEffectWithCondition {
 
   friend bool operator<(const FunctionEffectWithCondition &LHS,
                         const FunctionEffectWithCondition &RHS) {
-    if (LHS.Effect < RHS.Effect)
-      return true;
-    if (RHS.Effect < LHS.Effect)
-      return false;
-    return LHS.Cond.expr() < RHS.Cond.expr();
+    return std::tie(LHS.Effect, LHS.Cond.expr()) < std::tie(RHS.Effect, RHS.Cond.expr());
   }
 };
 
