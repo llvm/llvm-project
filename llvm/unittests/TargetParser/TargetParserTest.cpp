@@ -1815,7 +1815,7 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestParams<AArch64::ExtensionBitset>::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 76;
+static constexpr unsigned NumAArch64CPUArchs = 77;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
