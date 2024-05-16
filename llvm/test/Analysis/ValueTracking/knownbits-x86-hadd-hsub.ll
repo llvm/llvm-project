@@ -5,12 +5,7 @@ define <4 x i1> @hadd_and_eq_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hadd_and_eq_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[X]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 -8, i32 -8, i32 -8, i32 -8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <4 x i32> [[TMP3]], <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    ret <4 x i1> [[RET]]
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
 ;
 entry:
   %and1 = and <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
@@ -25,12 +20,7 @@ define <8 x i1> @hadd_and_eq_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: define <8 x i1> @hadd_and_eq_v8i16(
 ; CHECK-SAME: <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <8 x i16> [[X]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i16> [[Y]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i16> [[TMP2]], <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <8 x i16> [[TMP3]], <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 0>
-; CHECK-NEXT:    ret <8 x i1> [[RET]]
+; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>
 ;
 entry:
   %and1 = and <8 x i16> %x, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -45,12 +35,7 @@ define <8 x i1> @hadd_and_eq_v8i16_sat(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: define <8 x i1> @hadd_and_eq_v8i16_sat(
 ; CHECK-SAME: <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <8 x i16> [[X]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i16> [[Y]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.x86.ssse3.phadd.sw.128(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i16> [[TMP2]], <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <8 x i16> [[TMP3]], <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 0>
-; CHECK-NEXT:    ret <8 x i1> [[RET]]
+; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>
 ;
 entry:
   %and1 = and <8 x i16> %x, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -65,12 +50,7 @@ define <8 x i1> @hadd_and_eq_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: define <8 x i1> @hadd_and_eq_v8i32(
 ; CHECK-SAME: <8 x i32> [[X:%.*]], <8 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <8 x i32> [[X]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i32> [[Y]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> [[TMP0]], <8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i32> [[TMP2]], <i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8, i32 -8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <8 x i32> [[TMP3]], <i32 3, i32 4, i32 5, i32 6, i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    ret <8 x i1> [[RET]]
+; CHECK-NEXT:    ret <8 x i1> zeroinitializer
 ;
 entry:
   %and1 = and <8 x i32> %x, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
@@ -85,12 +65,7 @@ define <16 x i1> @hadd_and_eq_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; CHECK-LABEL: define <16 x i1> @hadd_and_eq_v16i16(
 ; CHECK-SAME: <16 x i16> [[X:%.*]], <16 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <16 x i16> [[X]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i16> [[Y]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> [[TMP0]], <16 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = and <16 x i16> [[TMP2]], <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <16 x i16> [[TMP3]], <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 0, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 0>
-; CHECK-NEXT:    ret <16 x i1> [[RET]]
+; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>
 ;
 entry:
   %and1 = and <16 x i16> %x, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -105,12 +80,7 @@ define <16 x i1> @hadd_and_eq_v16i16_sat(<16 x i16> %x, <16 x i16> %y) {
 ; CHECK-LABEL: define <16 x i1> @hadd_and_eq_v16i16_sat(
 ; CHECK-SAME: <16 x i16> [[X:%.*]], <16 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <16 x i16> [[X]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i16> [[Y]], <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i16> @llvm.x86.avx2.phadd.sw(<16 x i16> [[TMP0]], <16 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = and <16 x i16> [[TMP2]], <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <16 x i16> [[TMP3]], <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 0, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 0>
-; CHECK-NEXT:    ret <16 x i1> [[RET]]
+; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>
 ;
 entry:
   %and1 = and <16 x i16> %x, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -125,12 +95,7 @@ define <4 x i1> @hsub_trunc_eq_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hsub_trunc_eq_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or <4 x i32> [[X]], <i32 65535, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[Y]], <i32 65535, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <4 x i16> [[CONV]], <i16 3, i16 4, i16 5, i16 6>
-; CHECK-NEXT:    ret <4 x i1> [[RET]]
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
 ;
 entry:
   %or1 = or <4 x i32> %x, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -145,12 +110,7 @@ define <8 x i1> @hsub_trunc_eq_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: define <8 x i1> @hsub_trunc_eq_v8i16(
 ; CHECK-SAME: <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or <8 x i16> [[X]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <8 x i16> [[Y]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <8 x i16> [[TMP2]] to <8 x i8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <8 x i8> [[CONV]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 0>
-; CHECK-NEXT:    ret <8 x i1> [[RET]]
+; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>
 ;
 entry:
   %or1 = or <8 x i16> %x, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -165,13 +125,7 @@ define <8 x i1> @hsub_and_eq_v8i16_sat(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: define <8 x i1> @hsub_and_eq_v8i16_sat(
 ; CHECK-SAME: <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR1:%.*]] = or <8 x i16> [[X]], <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
-; CHECK-NEXT:    [[OR2:%.*]] = or <8 x i16> [[Y]], <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
-; CHECK-NEXT:    [[AND1:%.*]] = and <8 x i16> [[OR1]], <i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3>
-; CHECK-NEXT:    [[AND2:%.*]] = and <8 x i16> [[OR2]], <i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3>
-; CHECK-NEXT:    [[HSUB:%.*]] = tail call <8 x i16> @llvm.x86.ssse3.phsub.sw.128(<8 x i16> [[AND1]], <8 x i16> [[AND2]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp slt <8 x i16> [[HSUB]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    ret <8 x i1> [[RET]]
+; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ;
 entry:
   %or1 = or <8 x i16> %x, <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
@@ -187,12 +141,7 @@ define <8 x i1> @hsub_trunc_eq_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: define <8 x i1> @hsub_trunc_eq_v8i32(
 ; CHECK-SAME: <8 x i32> [[X:%.*]], <8 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or <8 x i32> [[X]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <8 x i32> [[Y]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> [[TMP0]], <8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <8 x i32> [[TMP2]] to <8 x i16>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <8 x i16> [[CONV]], <i16 3, i16 4, i16 5, i16 6, i16 3, i16 4, i16 5, i16 6>
-; CHECK-NEXT:    ret <8 x i1> [[RET]]
+; CHECK-NEXT:    ret <8 x i1> zeroinitializer
 ;
 entry:
   %or1 = or <8 x i32> %x, <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
@@ -207,12 +156,7 @@ define <16 x i1> @hsub_trunc_eq_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; CHECK-LABEL: define <16 x i1> @hsub_trunc_eq_v16i16(
 ; CHECK-SAME: <16 x i16> [[X:%.*]], <16 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or <16 x i16> [[X]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <16 x i16> [[Y]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> [[TMP0]], <16 x i16> [[TMP1]])
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <16 x i8> [[CONV]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 0>
-; CHECK-NEXT:    ret <16 x i1> [[RET]]
+; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>
 ;
 entry:
   %or1 = or <16 x i16> %x, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -227,13 +171,7 @@ define <16 x i1> @hsub_and_eq_v16i16_sat(<16 x i16> %x, <16 x i16> %y) {
 ; CHECK-LABEL: define <16 x i1> @hsub_and_eq_v16i16_sat(
 ; CHECK-SAME: <16 x i16> [[X:%.*]], <16 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR1:%.*]] = or <16 x i16> [[X]], <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
-; CHECK-NEXT:    [[OR2:%.*]] = or <16 x i16> [[Y]], <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
-; CHECK-NEXT:    [[AND1:%.*]] = and <16 x i16> [[OR1]], <i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3>
-; CHECK-NEXT:    [[AND2:%.*]] = and <16 x i16> [[OR2]], <i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3, i16 7, i16 3>
-; CHECK-NEXT:    [[HSUB:%.*]] = tail call <16 x i16> @llvm.x86.avx2.phsub.sw(<16 x i16> [[AND1]], <16 x i16> [[AND2]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp slt <16 x i16> [[HSUB]], <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-; CHECK-NEXT:    ret <16 x i1> [[RET]]
+; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ;
 entry:
   %or1 = or <16 x i16> %x, <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
@@ -249,11 +187,7 @@ define <4 x i1> @hadd_shuffle_2st_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hadd_shuffle_2st_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[X]], <i32 -1, i32 -1, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> [[TMP0]], <4 x i32> [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> <i32 4, i32 1, i32 5, i32 6>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP2]], <i32 8, i32 8, i32 8, i32 8>
-; CHECK-NEXT:    ret <4 x i1> [[RET]]
+; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
 ;
 entry:
   %and1 = and <4 x i32> %x, <i32 -1, i32 -1, i32 3, i32 3>
@@ -268,11 +202,7 @@ define <4 x i1> @hadd_shuffle_4th_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hadd_shuffle_4th_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[Y]], <i32 -1, i32 -1, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> [[X]], <4 x i32> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP2]], <i32 8, i32 8, i32 8, i32 8>
-; CHECK-NEXT:    ret <4 x i1> [[RET]]
+; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
 ;
 entry:
   %and1 = and <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
