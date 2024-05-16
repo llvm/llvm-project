@@ -35,6 +35,11 @@ llvm.func @func_no_debug() {
   // Specify the name parameter.
   tag = DW_TAG_pointer_type, name = "named", baseType = #si32
 >
+#ptrWithAddressSpace = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, baseType = #si32,
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 8,
+  dwarfAddressSpace = 3
+>
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
   producer = "MLIR", isOptimized = true, emissionKind = Full,
@@ -51,7 +56,7 @@ llvm.func @func_no_debug() {
   elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
 >
 #null = #llvm.di_null_type
-#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #composite, #vector>
+#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #ptrWithAddressSpace, #composite, #vector>
 #toplevel_namespace = #llvm.di_namespace<
   name = "toplevel", exportSymbols = true
 >
@@ -138,11 +143,12 @@ llvm.func @empty_types() {
 // CHECK: ![[NESTED_NAMESPACE]] = !DINamespace(name: "nested", scope: ![[TOPLEVEL_NAMESPACE:.*]])
 // CHECK: ![[TOPLEVEL_NAMESPACE]] = !DINamespace(name: "toplevel", scope: null, exportSymbols: true)
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[FUNC_ARGS:.*]])
-// CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
+// CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[PTR_WITH_ADDR_SPACE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
 // CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64")
 // CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, extraData: ![[BASE_TYPE]])
 // CHECK: ![[BASE_TYPE]] = !DIBasicType(name: "si32", size: 32, encoding: DW_ATE_signed)
 // CHECK: ![[NAMED_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "named", baseType: ![[BASE_TYPE:.*]])
+// CHECK: ![[PTR_WITH_ADDR_SPACE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, dwarfAddressSpace: 3)
 // CHECK: ![[COMPOSITE_TYPE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "composite", file: ![[CU_FILE_LOC]], line: 42, size: 64, align: 32, elements: ![[COMPOSITE_ELEMENTS:.*]])
 // CHECK: ![[COMPOSITE_ELEMENTS]] = !{![[COMPOSITE_ELEMENT:.*]]}
 // CHECK: ![[COMPOSITE_ELEMENT]] = !DISubrange(count: 4)

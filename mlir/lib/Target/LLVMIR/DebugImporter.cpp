@@ -106,7 +106,7 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
