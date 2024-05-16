@@ -1658,5 +1658,45 @@ define i32 @test_qnan_only(float nofpclass(snan sub norm zero inf) %x) {
   ret i32 %and
 }
 
+; Make sure that we don't crash when the use of x is unreachable.
+define i64 @pr92084(double %x) {
+; CHECK-LABEL: @pr92084(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE]], label [[IF_THEN2:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[CAST]], 1
+; CHECK-NEXT:    ret i64 [[AND]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %cmp = fcmp uno double %x, 0.000000e+00
+  br i1 %cmp, label %if.then1, label %if.else
+
+if.then1:
+  br i1 %cmp, label %if.else, label %if.then2
+
+if.then2:
+  %cast = bitcast double %x to i64
+  %and = and i64 %cast, 1
+  ret i64 %and
+
+if.else:
+  ret i64 0
+}
+
+define i32 @test_none(float nofpclass(all) %x) {
+; CHECK-LABEL: @test_none(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 4194304
+  ret i32 %and
+}
+
 declare void @use(i1)
 declare void @sink(i8)
