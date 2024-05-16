@@ -1827,7 +1827,7 @@ bool CombineRuleBuilder::emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
     for (auto *M : Matchers) {
       OS << "if(![&](){";
       CodeExpander Expander(M->getRawCode(), CE, RuleDef.getLoc(),
-                            /*ShowExpansions=*/ false);
+                            /*ShowExpansions=*/false);
       Expander.emit(OS);
       OS << "}()) {\n"
          << "  return false;\n}\n";
