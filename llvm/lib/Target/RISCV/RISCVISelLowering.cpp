@@ -1883,7 +1883,8 @@ bool RISCVTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   // replace. If we don't support unaligned scalar mem, prefer the constant
   // pool.
   // TODO: Can the caller pass down the alignment?
-  if (!Subtarget.hasFastUnalignedAccess())
+  if (!Subtarget.hasFastUnalignedAccess() &&
+      !Subtarget.enableUnalignedScalarMem())
     return true;
 
   // Prefer to keep the load if it would require many instructions.
@@ -19772,8 +19773,10 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     unsigned *Fast) const {
   if (!VT.isVector()) {
     if (Fast)
-      *Fast = Subtarget.hasFastUnalignedAccess();
-    return Subtarget.hasFastUnalignedAccess();
+      *Fast = Subtarget.hasFastUnalignedAccess() ||
+              Subtarget.enableUnalignedScalarMem();
+    return Subtarget.hasFastUnalignedAccess() ||
+           Subtarget.enableUnalignedScalarMem();
   }
 
   // All vector implementations must support element alignment
