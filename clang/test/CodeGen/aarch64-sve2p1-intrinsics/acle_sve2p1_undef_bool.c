@@ -12,7 +12,7 @@
 #if defined __ARM_FEATURE_SME
 #define MODE_ATTR __arm_streaming
 #else
-#define MODE_ATTR __arm_streaming_compatible
+#define MODE_ATTR
 #endif
 
 // CHECK-LABEL: define dso_local <vscale x 32 x i1> @test_svundef2_b(

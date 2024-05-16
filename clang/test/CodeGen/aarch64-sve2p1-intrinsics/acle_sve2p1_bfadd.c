@@ -11,7 +11,7 @@
 #if defined __ARM_FEATURE_SME
 #define MODE_ATTR __arm_streaming
 #else
-#define MODE_ATTR __arm_streaming_compatible
+#define MODE_ATTR
 #endif
 
 #ifdef SVE_OVERLOADED_FORMS

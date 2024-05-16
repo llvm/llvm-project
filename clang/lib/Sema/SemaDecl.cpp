@@ -8987,12 +8987,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap)) {
         Diag(NewVD->getLocation(), diag::err_sve_vector_in_non_sve_target) << T;
         NewVD->setInvalidDecl();
+        return;
       } else if (!IsArmStreamingFunction(FD,
                                          /*IncludeLocallyStreaming=*/true)) {
         Diag(NewVD->getLocation(),
              diag::err_sve_vector_in_non_streaming_function)
             << T;
         NewVD->setInvalidDecl();
+        return;
       }
     }
   }
