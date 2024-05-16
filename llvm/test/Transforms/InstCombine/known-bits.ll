@@ -1666,7 +1666,9 @@ define i64 @pr92084(double %x) {
 ; CHECK:       if.then1:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[CAST]], 1
+; CHECK-NEXT:    ret i64 [[AND]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0
 ;
@@ -1687,7 +1689,9 @@ if.else:
 
 define i32 @test_none(float nofpclass(all) %x) {
 ; CHECK-LABEL: @test_none(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 4194304
