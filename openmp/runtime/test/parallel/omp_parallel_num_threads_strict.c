@@ -1,4 +1,4 @@
-// RUN: %libomp-compile && env OMP_NUM_THREADS=2,2,2,2,2 OMP_THREAD_LIMIT=16
+// RUN: %libomp-compile && env OMP_NUM_THREADS=2,2,2,2,2 OMP_THREAD_LIMIT=16 \
 // %libomp-run
 #include <stdio.h>
 #include "omp_testsuite.h"
