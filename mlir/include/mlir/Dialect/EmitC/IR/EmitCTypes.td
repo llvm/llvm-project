@@ -76,6 +76,7 @@ def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
 
     static bool isValidElementType(Type type) {
       return type.isIntOrIndexOrFloat() ||
+         emitc::isAnySizeTType(type) ||
          llvm::isa<PointerType, OpaqueType>(type);
     }
   }];
@@ -128,6 +129,14 @@ def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {
     }]>
   ];
   let assemblyFormat = "`<` qualified($pointee) `>`";
+}
+
+def EmitC_SignedSizeT : EmitC_Type<"SignedSizeT", "ssize_t"> {
+  let summary = "EmitC signed size type";
+}
+
+def EmitC_SizeT : EmitC_Type<"SizeT", "size_t"> {
+  let summary = "EmitC unsigned size type";
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCTYPES

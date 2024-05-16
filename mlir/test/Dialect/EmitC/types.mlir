@@ -53,3 +53,13 @@ func.func @pointer_types() {
 
   return
 }
+
+// CHECK-LABEL: func @index_types() 
+func.func @index_types() {
+  // CHECK-NEXT: !emitc.ssize_t
+  emitc.call_opaque "f"() {template_args = [!emitc.ssize_t]} : () -> ()
+  // CHECK-NEXT: !emitc.size_t
+  emitc.call_opaque "f"() {template_args = [!emitc.size_t]} : () -> ()
+
+  return
+}
