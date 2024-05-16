@@ -1992,11 +1992,12 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
     Value *Op = cast<Instruction>(I2F)->getOperand(0);
     // Make sure that the exponent fits inside an "int" of size DstWidth,
     // thus avoiding any range issues that FP has not.
-    unsigned BitWidth = Op->getType()->getPrimitiveSizeInBits();
-    if (BitWidth < DstWidth ||
-        (BitWidth == DstWidth && isa<SIToFPInst>(I2F)))
-      return isa<SIToFPInst>(I2F) ? B.CreateSExt(Op, B.getIntNTy(DstWidth))
-                                  : B.CreateZExt(Op, B.getIntNTy(DstWidth));
+    unsigned BitWidth = Op->getType()->getScalarSizeInBits();
+    if (BitWidth < DstWidth || (BitWidth == DstWidth && isa<SIToFPInst>(I2F))) {
+      Type *IntTy = Op->getType()->getWithNewBitWidth(DstWidth);
+      return isa<SIToFPInst>(I2F) ? B.CreateSExt(Op, IntTy)
+                                  : B.CreateZExt(Op, IntTy);
+    }
   }
 
   return nullptr;
@@ -2366,10 +2367,10 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
       hasFloatVersion(M, Name))
     Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
+  const bool UseIntrinsic = CI->doesNotAccessMemory();
   // Bail out for vectors because the code below only expects scalars.
-  // TODO: This could be allowed if we had a ldexp intrinsic (D14327).
   Type *Ty = CI->getType();
-  if (Ty->isVectorTy())
+  if (!UseIntrinsic && Ty->isVectorTy())
     return Ret;
 
   // exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= IntSize
@@ -2382,7 +2383,7 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
 
       // TODO: Emitting the intrinsic should not depend on whether the libcall
       // is available.
-      if (CI->doesNotAccessMemory()) {
+      if (UseIntrinsic) {
         return copyFlags(*CI, B.CreateIntrinsic(Intrinsic::ldexp,
                                                 {Ty, Exp->getType()},
                                                 {One, Exp}, CI));
