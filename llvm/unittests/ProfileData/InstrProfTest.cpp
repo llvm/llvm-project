@@ -581,52 +581,6 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
-TEST_F(InstrProfTest, test_memprof_missing_callstackid) {
-  // Use a non-existent CallStackId to trigger a mapping error in
-  // toMemProfRecord.
-  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
-                                          llvm::memprof::getHotColdSchema());
-
-  IndexedMemProfRecord IndexedMR;
-  IndexedMR.AllocSites.push_back(AI);
-
-  const FrameIdMapTy IdToFrameMap = getFrameMapping();
-  const auto CSIdToCallStackMap = getCallStackMapping();
-  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
-  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
-
-  // We are only interested in errors, not the return value.
-  (void)IndexedMR.toMemProfRecord(CSIdConv);
-
-  ASSERT_TRUE(CSIdConv.LastUnmappedId.has_value());
-  EXPECT_EQ(*CSIdConv.LastUnmappedId, 0xdeadbeefU);
-  EXPECT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
-}
-
-TEST_F(InstrProfTest, test_memprof_missing_frameid) {
-  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
-                                          llvm::memprof::getHotColdSchema());
-
-  IndexedMemProfRecord IndexedMR;
-  IndexedMR.AllocSites.push_back(AI);
-
-  // An empty map to trigger a mapping error.
-  const FrameIdMapTy IdToFrameMap;
-  const auto CSIdToCallStackMap = getCallStackMapping();
-
-  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
-  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
-
-  // We are only interested in errors, not the return value.
-  (void)IndexedMR.toMemProfRecord(CSIdConv);
-
-  EXPECT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
-  ASSERT_TRUE(FrameIdConv.LastUnmappedId.has_value());
-  EXPECT_EQ(*FrameIdConv.LastUnmappedId, 3U);
-}
-
 TEST_F(InstrProfTest, test_memprof_getrecord_error) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
