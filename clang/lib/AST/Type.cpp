@@ -3669,7 +3669,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       std::uninitialized_copy(SrcConds.begin(), SrcConds.end(), DestConds);
       assert(std::any_of(SrcConds.begin(), SrcConds.end(),
                          [](const FunctionEffectCondition &EC) {
-                           if (const Expr *E = EC.expr())
+                           if (const Expr *E = EC.getCondition())
                              return E->isTypeDependent() ||
                                     E->isValueDependent();
                            return false;
@@ -5160,13 +5160,13 @@ void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
   for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
     ID.AddInteger(Effects[Idx].toOpaqueInt32());
     if (HasConds)
-      ID.AddPointer(Conditions[Idx].expr());
+      ID.AddPointer(Conditions[Idx].getCondition());
   }
 }
 
-void FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
+bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
                                Conflicts &Errs) {
-  const FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
+  FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
 
   // The index at which insertion will take place; default is at end
   // but we might find an earlier insertion point.
@@ -5174,14 +5174,14 @@ void FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
   unsigned Idx = 0;
   for (const FunctionEffectWithCondition &EC : *this) {
     if (EC.Effect.kind() == NewEC.Effect.kind()) {
-      if (Conditions[Idx].expr() != NewEC.Cond.expr())
+      if (Conditions[Idx].getCondition() != NewEC.Cond.getCondition())
         Errs.push_back({EC, NewEC});
-      return;
+      return false;
     }
 
     if (EC.Effect.kind() == NewOppositeKind) {
       Errs.push_back({EC, NewEC});
-      return;
+      return false;
     }
 
     if (NewEC.Effect.kind() < EC.Effect.kind() && InsertIdx > Idx)
@@ -5190,23 +5190,19 @@ void FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
     ++Idx;
   }
 
-  if (NewEC.Cond.expr()) {
+  if (NewEC.Cond.getCondition()) {
     if (Conditions.empty() && !Effects.empty())
       Conditions.resize(Effects.size());
-    Conditions.insert(Conditions.begin() + InsertIdx, NewEC.Cond.expr());
+    Conditions.insert(Conditions.begin() + InsertIdx, NewEC.Cond.getCondition());
   }
   Effects.insert(Effects.begin() + InsertIdx, NewEC.Effect);
+  return true;
 }
 
-void FunctionEffectSet::insert(const FunctionEffectsRef &Set, Conflicts &Errs) {
+bool FunctionEffectSet::insert(const FunctionEffectsRef &Set, Conflicts &Errs) {
   for (const auto &Item : Set)
     insert(Item, Errs);
-}
-
-void FunctionEffectSet::insertIgnoringConditions(const FunctionEffectsRef &Set,
-                                                 Conflicts &Errs) {
-  for (const auto &Item : Set)
-    insert(FunctionEffectWithCondition(Item.Effect, {}), Errs);
+  return Errs.empty();
 }
 
 void FunctionEffectSet::replaceItem(unsigned Idx,
@@ -5218,18 +5214,9 @@ void FunctionEffectSet::replaceItem(unsigned Idx,
   // Maintain invariant: If all conditions are null, the vector should be empty.
   if (llvm::all_of(Conditions,
                   [](const FunctionEffectCondition &C) {
-                    return C.expr() == nullptr;
+                    return C.getCondition() == nullptr;
                   })) {
     Conditions.clear();
-  }
-}
-
-void FunctionEffectSet::erase(unsigned Idx) {
-  assert(Idx < Effects.size());
-  Effects.erase(Effects.begin() + Idx);
-  if (!Conditions.empty()) {
-    assert(Idx < Conditions.size());
-    Conditions.erase(Conditions.begin() + Idx);
   }
 }
 
@@ -5284,7 +5271,7 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
     else
       First = false;
     OS << CFE.Effect.name();
-    if (Expr *E = CFE.Cond.expr()) {
+    if (Expr *E = CFE.Cond.getCondition()) {
       OS << '(';
       E->dump();
       OS << ')';
@@ -5316,7 +5303,7 @@ FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
 
 std::string FunctionEffectWithCondition::description() const {
   std::string Result(Effect.name().str());
-  if (Cond.expr() != nullptr)
+  if (Cond.getCondition() != nullptr)
     Result += "(expr)";
   return Result;
 }

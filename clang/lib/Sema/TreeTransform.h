@@ -6273,7 +6273,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
         getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
     for (unsigned Idx = 0, Count = FXConds.size(); Idx != Count;) {
-      if (Expr *CondExpr = FXConds[Idx].expr()) {
+      if (Expr *CondExpr = FXConds[Idx].getCondition()) {
         ExprResult NewExpr = getDerived().TransformExpr(CondExpr);
         if (NewExpr.isInvalid())
           return QualType();

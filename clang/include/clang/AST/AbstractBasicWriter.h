@@ -227,7 +227,7 @@ public:
   }
 
   void writeFunctionEffectCondition(FunctionEffectCondition CE) {
-    asImpl().writeExprRef(CE.expr());
+    asImpl().writeExprRef(CE.getCondition());
   }
 
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {

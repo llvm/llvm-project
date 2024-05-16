@@ -2785,7 +2785,7 @@ FunctionEffectDifferences::FunctionEffectDifferences(
         cmp = 1;
       else {
         cmp = 0;
-        if (Old.Cond.expr() != New.Cond.expr()) {
+        if (Old.Cond.getCondition() != New.Cond.getCondition()) {
           // TODO: Cases where the expressions are equivalent but
           // don't have the same identity.
           push_back(FunctionEffectDiff{

@@ -4758,7 +4758,7 @@ public:
   FunctionEffectCondition() = default;
   FunctionEffectCondition(Expr *E) : Cond(E) {} // implicit OK
 
-  Expr *expr() const { return Cond; }
+  Expr *getCondition() const { return Cond; }
 
   bool operator==(const FunctionEffectCondition &RHS) const {
     return Cond == RHS.Cond;
@@ -4782,18 +4782,21 @@ struct FunctionEffectWithCondition {
 
   friend bool operator<(const FunctionEffectWithCondition &LHS,
                         const FunctionEffectWithCondition &RHS) {
-    return std::tie(LHS.Effect, LHS.Cond.expr()) < std::tie(RHS.Effect, RHS.Cond.expr());
+    return std::tuple(LHS.Effect, uintptr_t(LHS.Cond.getCondition())) < std::tuple(RHS.Effect, uintptr_t(RHS.Cond.getCondition()));
   }
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
 /// FunctionEffectCondition containers.
 template <typename Container> class FunctionEffectIterator {
-  const Container &Outer;
-  size_t Idx;
+  friend Container;
+
+  const Container *Outer = nullptr;
+  size_t Idx = 0;
 
 public:
-  FunctionEffectIterator(const Container &O, size_t I) : Outer(O), Idx(I) {}
+  FunctionEffectIterator();
+  FunctionEffectIterator(const Container &O, size_t I) : Outer(&O), Idx(I) {}
   bool operator==(const FunctionEffectIterator &Other) const {
     return Idx == Other.Idx;
   }
@@ -4807,10 +4810,12 @@ public:
     return *this;
   }
 
-  FunctionEffectWithCondition operator*() const {
-    const bool HasConds = !Outer.Conditions.empty();
-    return FunctionEffectWithCondition{Outer.Effects[Idx],
-                                       HasConds ? Outer.Conditions[Idx]
+  const FunctionEffectWithCondition operator*() const {
+    // Returns a const struct because storing into it would not accomplish anything.
+    assert(Outer != nullptr && "invalid FunctionEffectIterator");
+    bool HasConds = !Outer->Conditions.empty();
+    return FunctionEffectWithCondition{Outer->Effects[Idx],
+                                       HasConds ? Outer->Conditions[Idx]
                                                 : FunctionEffectCondition()};
   }
 };
@@ -4908,6 +4913,13 @@ public:
   iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, size()); }
 
+  const FunctionEffectWithCondition operator[](size_t Idx) {
+    // Returns a const struct because storing into it would not accomplish anything;
+    // see replaceItem().
+    assert(Idx < size() && "FunctionEffectSet index out of bounds");
+    return *iterator(*this, Idx);
+  }
+
   operator FunctionEffectsRef() const { return {Effects, Conditions}; }
 
   void dump(llvm::raw_ostream &OS) const;
@@ -4924,12 +4936,13 @@ public:
   };
   using Conflicts = SmallVector<Conflict>;
 
-  void insert(const FunctionEffectWithCondition &NewEC, Conflicts &Errs);
-  void insert(const FunctionEffectsRef &Set, Conflicts &Errs);
-  void insertIgnoringConditions(const FunctionEffectsRef &Set, Conflicts &Errs);
+  // Returns true for success (obviating a check of Errs.empty()).
+  bool insert(const FunctionEffectWithCondition &NewEC, Conflicts &Errs);
+
+  // Returns true for success (obviating a check of Errs.empty()).
+  bool insert(const FunctionEffectsRef &Set, Conflicts &Errs);
 
   void replaceItem(unsigned Idx, const FunctionEffectWithCondition &Item);
-  void erase(unsigned Idx);
 
   // Set operations
   static FunctionEffectSet getUnion(FunctionEffectsRef LHS,
