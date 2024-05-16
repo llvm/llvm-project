@@ -36,15 +36,34 @@ Context &GetContextForThisThreadImpl() {
   };
 
   pthread_once(&detail::KeyOnce, MakeTlsKey);
-  Context *CurrentThreadContext = static_cast<Context *>(pthread_getspecific(detail::Key));
+  Context *CurrentThreadContext =
+      static_cast<Context *>(pthread_getspecific(detail::Key));
   if (CurrentThreadContext == nullptr) {
-    CurrentThreadContext = static_cast<Context *>(InternalAlloc(sizeof(Context)));
-    new(CurrentThreadContext) Context();
+    CurrentThreadContext =
+        static_cast<Context *>(InternalAlloc(sizeof(Context)));
+    new (CurrentThreadContext) Context();
     pthread_setspecific(detail::Key, CurrentThreadContext);
   }
 
   return *CurrentThreadContext;
 }
+
+/*
+    This is a placeholder stub for a future feature that will allow
+    a user to configure RADSan's behaviour when a real-time safety
+    violation is detected. The RADSan developers intend for the
+    following choices to be made available, via a RADSAN_OPTIONS
+    environment variable, in a future PR:
+
+        i) exit,
+       ii) continue, or
+      iii) wait for user input from stdin.
+
+    Until then, and to keep the first PRs small, only the exit mode
+    is available.
+*/
+void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
+
 } // namespace detail
 
 namespace radsan {
@@ -63,7 +82,7 @@ void Context::ExpectNotRealtime(const char *InterceptedFunctionName) {
   if (InRealtimeContext() && !IsBypassed()) {
     BypassPush();
     PrintDiagnostics(InterceptedFunctionName);
-    exit(EXIT_FAILURE);
+    detail::InvokeViolationDetectedAction();
     BypassPop();
   }
 }
