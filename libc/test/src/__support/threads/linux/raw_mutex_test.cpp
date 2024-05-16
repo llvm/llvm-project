@@ -66,4 +66,5 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, PSharedLock) {
   while (shared->finished.load() != 2)
     LIBC_NAMESPACE::sleep_briefly();
   ASSERT_EQ(shared->data, 20000);
+  LIBC_NAMESPACE::munmap(addr, sizeof(SharedData));
 }
