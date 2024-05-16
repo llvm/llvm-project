@@ -225,7 +225,7 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
 
 bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     MachineInstr &MI, BuildFnTy &MatchInfo) {
-  // Ported from InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating
+  // Ported from InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating.
   Register DstOp = MI.getOperand(0).getReg();
   Register OrigOp = MI.getOperand(1).getReg();
 
@@ -233,7 +233,14 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     return false;
 
   MachineInstr *OrigDef = MRI.getUniqueVRegDef(OrigOp);
-  // Avoid trying to fold G_PHI and G_UNMERGE_VALUES.
+  // Even if only a single operand of the PHI is not guaranteed non-poison,
+  // moving freeze() backwards across a PHI can cause optimization issues for
+  // other users of that operand.
+  //
+  // Moving freeze() from one of the output registers of a G_UNMERGE_VALUES to
+  // the source register is unprofitable because it makes the freeze() more
+  // strict than is necessary (it would affect the whole register instead of
+  // just the subreg being frozen).
   if (OrigDef->isPHI() || isa<GUnmerge>(OrigDef))
     return false;
 
@@ -243,7 +250,6 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
 
   std::optional<MachineOperand> MaybePoisonOperand;
   for (MachineOperand &Operand : OrigDef->uses()) {
-    // Avoid working on non-register operands.
     if (!Operand.isReg())
       return false;
 
