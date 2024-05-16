@@ -27,6 +27,17 @@ def FoldTensorSubsetOps : Pass<"fold-tensor-subset-ops"> {
   ];
 }
 
+def DecomposeTensorReshapeOp : Pass<"decompose-tensor-reshape-op"> {
+  let summary = "Decompose tensor reshape op into expand_shape/collapse_shape ops";
+  let description = [{
+    The pass decomposes tensor reshape op into expand_shape/collapse_shape ops.
+  }];
+  let constructor = "mlir::tensor::createDecomposeTensorReshapeOpPass()";
+  let dependentDialects = [
+      "affine::AffineDialect", "tensor::TensorDialect"
+  ];
+}
+
 def TensorBufferize : Pass<"tensor-bufferize", "func::FuncOp"> {
   let summary = "Bufferize the `tensor` dialect";
   let constructor = "mlir::tensor::createTensorBufferizePass()";
