@@ -282,12 +282,16 @@ using AFoo = Foo<G<U>>;
 // CHECK-LABEL: Dumping <deduction guide for AFoo>
 // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for AFoo>
 // CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 U
-// CHECK-NEXT: |-ParenExpr {{.*}} 'bool'
-// CHECK-NEXT: | `-BinaryOperator {{.*}} 'bool' '=='
-// CHECK-NEXT: |   |-UnaryExprOrTypeTraitExpr {{.*}} 'G<type-parameter-0-0>'
-// CHECK-NEXT: |   `-ImplicitCastExpr {{.*}}
-// CHECK-NEXT: |     `-IntegerLiteral {{.*}}
-// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (G<type-parameter-0-0>) -> Foo<G<type-parameter-0-0>>'
+// CHECK-NEXT: |-BinaryOperator {{.*}} '&&'
+// CHECK-NEXT: | |-ParenExpr {{.*}} 'bool'
+// CHECK-NEXT: | | `-BinaryOperator {{.*}} 'bool' '=='
+// CHECK-NEXT: | |   |-UnaryExprOrTypeTraitExpr {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: | |   `-ImplicitCastExpr {{.*}}
+// CHECK-NEXT: | |     `-IntegerLiteral {{.*}}
+// CHECK-NEXT: | `-TypeTraitExpr {{.*}} 'bool' __is_deducible
+// CHECK-NEXT: |   |-DeducedTemplateSpecializationType {{.*}} 'AFoo' dependent
+// CHECK-NEXT: |   `-TemplateSpecializationType {{.*}} 'Foo<G<type-parameter-0-0>>' dependent Foo
+// CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (G<type-parameter-0-0>) -> Foo<G<type-parameter-0-0>>'
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} 'G<type-parameter-0-0>'
 // CHECK-NEXT: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (G<int>) -> Foo<G<int>>' implicit_instantiation
 // CHECK-NEXT:   |-TemplateArgument type 'int'
