@@ -22,17 +22,13 @@ public:
     std::string Storage;
     llvm::raw_string_ostream Stream(Storage);
     D->print(Stream);
-    Match(Stream.str(),D->getLocation());
+    Match(Stream.str(), D->getLocation());
     return true;
   }
 
-  bool shouldVisitTemplateInstantiations() const {
-    return false;
-  }
+  bool shouldVisitTemplateInstantiations() const { return false; }
 
-  bool shouldVisitImplicitCode() const {
-    return ShouldVisitImplicitCode;
-  }
+  bool shouldVisitImplicitCode() const { return ShouldVisitImplicitCode; }
   bool ShouldVisitImplicitCode;
 };
 
@@ -43,7 +39,7 @@ TEST(RecursiveASTVisitor, DeductionGuideNonImplicitMode) {
   Visitor.ExpectMatch("Foo(T) -> Foo<int>", 11, 1);
   Visitor.DisallowMatch("Bar(type-parameter-0-0) -> Foo<int>", 14, 1);
   EXPECT_TRUE(Visitor.runOver(
-    R"cpp(
+      R"cpp(
 template <typename T>
 concept False = true;
 
@@ -58,8 +54,8 @@ Foo(T) -> Foo<int>;
 template <typename U>
 using Bar = Foo<U>;
 Bar s(1); 
-   )cpp"
-  , DeductionGuideVisitor::Lang_CXX2a));
+   )cpp",
+      DeductionGuideVisitor::Lang_CXX2a));
 }
 
 TEST(RecursiveASTVisitor, DeductionGuideImplicitMode) {
@@ -67,7 +63,7 @@ TEST(RecursiveASTVisitor, DeductionGuideImplicitMode) {
   Visitor.ExpectMatch("Foo(T) -> Foo<int>", 11, 1);
   Visitor.ExpectMatch("Bar(type-parameter-0-0) -> Foo<int>", 14, 1);
   EXPECT_TRUE(Visitor.runOver(
-    R"cpp(
+      R"cpp(
 template <typename T>
 concept False = true;
 
@@ -82,8 +78,8 @@ Foo(T) -> Foo<int>;
 template <typename U>
 using Bar = Foo<U>;
 Bar s(1); 
-   )cpp"
-  , DeductionGuideVisitor::Lang_CXX2a));
+   )cpp",
+      DeductionGuideVisitor::Lang_CXX2a));
 }
 
 } // end anonymous namespace
