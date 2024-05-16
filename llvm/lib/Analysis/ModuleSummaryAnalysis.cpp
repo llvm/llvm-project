@@ -88,18 +88,15 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
-//
-// Return true if any user references a block address, and sets
-// `RefLocalLinkageIFunc` to true if the analyzed value references local ifunc.
-// - If a local-linkage ifunc is referenced, the analyzed value is not eligible
-// for import.
-// - Additionally, global vars will be marked as not eligible to import if they
-// references references basic block address, because we can't import it
-// separately from function containing that basic block. For simplicity we
-// currently don't import such global vars at all. When importing functions we
-// aren't interested if any instruction in it takes an address of any basic
-// block, because instruction can only take an address of basic block located in
-// the same function.
+// Return true if any of the operands contains blockaddress. This is important
+// to know when computing summary for global var, because if global variable
+// references basic block address we can't import it separately from function
+// containing that basic block. For simplicity we currently don't import such
+// global vars at all. When importing function we aren't interested if any
+// instruction in it takes an address of any basic block, because instruction
+// can only take an address of basic block located in the same function.
+// Set `RefLocalLinkageIFunc` to true if the analyzed value references a
+// local-linkage ifunc;
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                          SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited,
@@ -126,10 +123,10 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
         if (!(CB && CB->isCallee(&OI))) {
-          // If an ifunc has local linkage, do not add it into ref edges and
-          // mark its referencer not eligible for import. An ifunc doesn't have
-          // summary and ThinLTO cannot promote it; importing the referencer may
-          // cause linkage errors.
+          // If an ifunc has local linkage, do not add it into ref edges, and
+          // sets `RefLocalLinkageIFunc` to true. The referencer is not eligible
+          // for import. An ifunc doesn't have summary and ThinLTO cannot
+          // promote it; importing the referencer may cause linkage errors.
           if (auto *GI = dyn_cast_if_present<GlobalIFunc>(GV);
               GI && GI->hasLocalLinkage()) {
             RefLocalLinkageIFunc = true;
@@ -329,8 +326,8 @@ static void computeFunctionSummary(
 
   // Add personality function, prefix data and prologue data to function's ref
   // list.
-  bool HasIFunc = false;
-  findRefEdges(Index, &F, RefEdges, Visited, HasIFunc);
+  bool HasLocalIFuncCallOrRef = false;
+  findRefEdges(Index, &F, RefEdges, Visited, HasLocalIFuncCallOrRef);
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -343,7 +340,6 @@ static void computeFunctionSummary(
 
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
-
   bool HasUnknownCall = false;
   bool MayThrow = false;
   for (const BasicBlock &BB : F) {
@@ -389,11 +385,11 @@ static void computeFunctionSummary(
             // of calling it we should add GV to RefEdges directly.
             RefEdges.insert(Index.getOrInsertValueInfo(GV));
           else if (auto *U = dyn_cast<User>(Stored))
-            findRefEdges(Index, U, RefEdges, Visited, HasIFunc);
+            findRefEdges(Index, U, RefEdges, Visited, HasLocalIFuncCallOrRef);
           continue;
         }
       }
-      findRefEdges(Index, &I, RefEdges, Visited, HasIFunc);
+      findRefEdges(Index, &I, RefEdges, Visited, HasLocalIFuncCallOrRef);
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB) {
         if (I.mayThrow())
@@ -467,7 +463,7 @@ static void computeFunctionSummary(
         // Non-local ifunc is not cloned and does not have the issue.
         if (auto *GI = dyn_cast_if_present<GlobalIFunc>(CalledValue))
           if (GI->hasLocalLinkage())
-            HasIFunc = true;
+            HasLocalIFuncCallOrRef = true;
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
@@ -572,7 +568,7 @@ static void computeFunctionSummary(
                            SmallPtrSet<const User *, 8> &Cache) {
       for (const auto *I : Instrs) {
         Cache.erase(I);
-        findRefEdges(Index, I, Edges, Cache, HasIFunc);
+        findRefEdges(Index, I, Edges, Cache, HasLocalIFuncCallOrRef);
       }
     };
 
@@ -648,9 +644,9 @@ static void computeFunctionSummary(
 #endif
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
-  bool NotEligibleForImport = NonRenamableLocal ||
-                              HasInlineAsmMaybeReferencingInternal ||
-                              HasIndirBranchToBlockAddress || HasIFunc;
+  bool NotEligibleForImport =
+      NonRenamableLocal || HasInlineAsmMaybeReferencingInternal ||
+      HasIndirBranchToBlockAddress || HasLocalIFuncCallOrRef;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
@@ -804,9 +800,10 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    SmallVectorImpl<MDNode *> &Types) {
   SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  bool RefIFunc = false;
-  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited, RefIFunc);
-  const bool NotEligibleForImport = (HasBlockAddress || RefIFunc);
+  bool RefLocalIFunc = false;
+  bool HasBlockAddress =
+      findRefEdges(Index, &V, RefEdges, Visited, RefLocalIFunc);
+  const bool NotEligibleForImport = (HasBlockAddress || RefLocalIFunc);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,

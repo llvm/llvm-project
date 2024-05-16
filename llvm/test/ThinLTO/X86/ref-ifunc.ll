@@ -2,7 +2,11 @@
 
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s
 
-; Tests that caller is not eligible to import and it doesn't have refs to ifunc 'callee'
+; Tests that var and caller are not eligible to import and they don't have refs to ifunc 'callee'
+
+; CHECK: gv: (name: "var", summaries: (variable: ({{.*}}, flags: ({{.*}}notEligibleToImport: 1
+; CHECK-NOT: refs
+; CHECK-SAME: guid = 7919382516565939378
 
 ; CHECK: gv: (name: "caller", summaries: (function: ({{.*}}, flags: ({{.*}}notEligibleToImport: 1
 ; CHECK-NOT: refs
@@ -14,6 +18,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @__cpu_model = external global { i32, i32, i32, [1 x i32] }
 
 @callee = internal ifunc void(), ptr @callee.resolver
+
+@var = constant { [1 x ptr] } { [1 x ptr] [ptr @callee]}
 
 define void @dispatch(ptr %func) {
     tail call void %func()
