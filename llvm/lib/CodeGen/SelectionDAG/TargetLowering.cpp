@@ -1380,7 +1380,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // using the bits from the RHS.  Below, we use knowledge about the RHS to
     // simplify the LHS, here we're using information from the LHS to simplify
     // the RHS.
-    if (ConstantSDNode *RHSC = isConstOrConstSplat(Op1)) {
+    if (ConstantSDNode *RHSC = isConstOrConstSplat(Op1, DemandedElts)) {
       // Do not increment Depth here; that can cause an infinite loop.
       KnownBits LHSKnown = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth);
       // If the LHS already has zeros where RHSC does, this 'and' is dead.
