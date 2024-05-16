@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
 
 ; LoopLoadElimination's propagateStoredValueToLoadUsers() replaces the
-; `load` (`%a`) with an hoisted initial `load` and a `phi` that forwards
+; `load` (`%a`) with a hoisted initial `load` and a `phi` that forwards
 ; the stored value.
 ; This test checks that the debug location is propagated to the new `phi`
 ; from the original `load` it replaces in block `%for.body` and the debug
