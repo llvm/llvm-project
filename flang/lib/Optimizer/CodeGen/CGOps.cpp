@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
