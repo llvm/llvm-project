@@ -24979,7 +24979,7 @@ Masked Vector Compress Intrinsic
 --------------------------------
 
 LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
-Semantically, this is similar to :ref:``@llvm.masked.compressstore <_int_compressstore>`` but with weaker assumptions
+Semantically, this is similar to :ref:`llvm.masked.compressstore <int_compressstore>` but with weaker assumptions
 and without storing the results to memory, i.e., the data remains in the vector.
 
 .. _int_masked_compress:
@@ -25004,10 +25004,10 @@ Selects elements from input vector '``value``' according to the '``mask``'.
 All selected elements are written into adjacent lanes in the result vector, from lower to higher.
 The mask holds a bit for each vector lane, and is used to select elements to be kept.
 The number of valid lanes is equal to the number of active bits in the mask.
-The main difference to :ref:`llvm.masked.compressstore <_int_compressstore>` is that the remainder of the vector may
+The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the remainder of the vector may
 contain undefined values.
 This allows for branchless code and better optimization for all targets that do not support the explicit semantics of
-:ref:`llvm.masked.compressstore <_int_compressstore>`.
+:ref:`llvm.masked.compressstore <int_compressstore>`.
 The result vector can be written with a similar effect, as all the selected values are at the lower positions of the
 vector, but without requiring branches to avoid writes where the mask is 0.
 
