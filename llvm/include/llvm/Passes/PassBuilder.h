@@ -723,6 +723,7 @@ private:
                          bool AtomicCounterUpdate, std::string ProfileFile,
                          std::string ProfileRemappingFile,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  void addPostPGOLoopRotation(ModulePassManager &MPM, OptimizationLevel Level);
 
   // Extension Point callbacks
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
