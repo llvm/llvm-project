@@ -124,6 +124,7 @@ public:
   bool VisitRecoveryExpr(const RecoveryExpr *E);
   bool VisitAddrLabelExpr(const AddrLabelExpr *E);
   bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+  bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
