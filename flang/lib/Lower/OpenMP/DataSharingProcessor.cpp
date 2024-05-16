@@ -295,9 +295,7 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
                   std::get<parser::OmpBeginBlockDirective>(
                       ompBlockConstruct->t);
               const auto origDirective =
-                  std::get<parser::OmpBlockDirective>(
-                      beginBlockDirective.t)
-                      .v;
+                  std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
 
               return origDirective == llvm::omp::Directive::OMPD_ordered;
             }
@@ -351,8 +349,7 @@ void DataSharingProcessor::collectSymbols(
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
   // Filter-out symbols that must not be privatized.
   bool collectImplicit = flag == semantics::Symbol::Flag::OmpImplicit;
-  bool collectPreDetermined =
-      flag == semantics::Symbol::Flag::OmpPreDetermined;
+  bool collectPreDetermined = flag == semantics::Symbol::Flag::OmpPreDetermined;
 
   auto isPrivatizable = [](const semantics::Symbol &sym) -> bool {
     return !semantics::IsProcedure(sym) &&
