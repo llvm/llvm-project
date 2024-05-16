@@ -3652,7 +3652,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
   if (!epi.FunctionEffects.empty()) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
-    const size_t EffectsCount = epi.FunctionEffects.size();
+    size_t EffectsCount = epi.FunctionEffects.size();
     ExtraBits.NumFunctionEffects = EffectsCount;
     assert(ExtraBits.NumFunctionEffects == EffectsCount &&
            "effect bitfield overflow");
@@ -5088,7 +5088,7 @@ StringRef FunctionEffect::name() const {
   case Kind::Allocating:
     return "allocating";
   case Kind::None:
-    break;
+    return "(none)";
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -5121,6 +5121,7 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
     return false;
 
   case Kind::None:
+    assert(0 && "canInferOnFunction with None");
     break;
   }
   llvm_unreachable("unknown effect kind");
@@ -5146,6 +5147,7 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
   case Kind::Blocking:
     return false;
   case Kind::None:
+    assert(0 && "shouldDiagnoseFunctionCall with None");
     break;
   }
   llvm_unreachable("unknown effect kind");
@@ -5154,7 +5156,7 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 // =====
 
 void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
-  const bool HasConds = !Conditions.empty();
+  bool HasConds = !Conditions.empty();
 
   ID.AddInteger(size() | (HasConds << 31u));
   for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
@@ -5193,7 +5195,8 @@ bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
   if (NewEC.Cond.getCondition()) {
     if (Conditions.empty() && !Effects.empty())
       Conditions.resize(Effects.size());
-    Conditions.insert(Conditions.begin() + InsertIdx, NewEC.Cond.getCondition());
+    Conditions.insert(Conditions.begin() + InsertIdx,
+                      NewEC.Cond.getCondition());
   }
   Effects.insert(Effects.begin() + InsertIdx, NewEC.Effect);
   return true;
@@ -5212,10 +5215,9 @@ void FunctionEffectSet::replaceItem(unsigned Idx,
   Conditions[Idx] = Item.Cond;
 
   // Maintain invariant: If all conditions are null, the vector should be empty.
-  if (llvm::all_of(Conditions,
-                  [](const FunctionEffectCondition &C) {
-                    return C.getCondition() == nullptr;
-                  })) {
+  if (llvm::all_of(Conditions, [](const FunctionEffectCondition &C) {
+        return C.getCondition() == nullptr;
+      })) {
     Conditions.clear();
   }
 }
@@ -5231,13 +5233,21 @@ FunctionEffectSet FunctionEffectSet::getIntersection(FunctionEffectsRef LHS,
   auto IterA = LHS.begin(), EndA = LHS.end();
   auto IterB = RHS.begin(), EndB = RHS.end();
 
+  auto FEWCLess = [](const FunctionEffectWithCondition &LHS,
+                     const FunctionEffectWithCondition &RHS) {
+    return std::tuple(LHS.Effect, uintptr_t(LHS.Cond.getCondition())) <
+           std::tuple(RHS.Effect, uintptr_t(RHS.Cond.getCondition()));
+  };
+
   while (IterA != EndA && IterB != EndB) {
-    if (*IterA < *IterB)
+    FunctionEffectWithCondition A = *IterA;
+    FunctionEffectWithCondition B = *IterB;
+    if (FEWCLess(A, B))
       ++IterA;
-    else if (*IterB < *IterA)
+    else if (FEWCLess(B, A))
       ++IterB;
     else {
-      Result.insert(*IterA, Errs);
+      Result.insert(A, Errs);
       ++IterA;
       ++IterB;
     }

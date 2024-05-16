@@ -4779,11 +4779,6 @@ struct FunctionEffectWithCondition {
 
   /// Return a textual description of the effect, and its condition, if any.
   std::string description() const;
-
-  friend bool operator<(const FunctionEffectWithCondition &LHS,
-                        const FunctionEffectWithCondition &RHS) {
-    return std::tuple(LHS.Effect, uintptr_t(LHS.Cond.getCondition())) < std::tuple(RHS.Effect, uintptr_t(RHS.Cond.getCondition()));
-  }
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
@@ -4811,7 +4806,8 @@ public:
   }
 
   const FunctionEffectWithCondition operator*() const {
-    // Returns a const struct because storing into it would not accomplish anything.
+    // Returns a const struct because storing into it would not accomplish
+    // anything.
     assert(Outer != nullptr && "invalid FunctionEffectIterator");
     bool HasConds = !Outer->Conditions.empty();
     return FunctionEffectWithCondition{Outer->Effects[Idx],
@@ -4914,8 +4910,8 @@ public:
   iterator end() const { return iterator(*this, size()); }
 
   const FunctionEffectWithCondition operator[](size_t Idx) {
-    // Returns a const struct because storing into it would not accomplish anything;
-    // see replaceItem().
+    // Returns a const struct because storing into it would not accomplish
+    // anything; see replaceItem().
     assert(Idx < size() && "FunctionEffectSet index out of bounds");
     return *iterator(*this, Idx);
   }

@@ -8011,8 +8011,8 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
 
   // Parse the new  attribute.
   // non/blocking or non/allocating? Or conditional (computed)?
-  const bool IsNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
-                             PAttr.getKind() == ParsedAttr::AT_Blocking;
+  bool IsNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
+                       PAttr.getKind() == ParsedAttr::AT_Blocking;
 
   FunctionEffectMode NewMode = FunctionEffectMode::None;
   Expr *CondExpr = nullptr; // only valid if dependent
