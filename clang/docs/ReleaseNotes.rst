@@ -723,6 +723,7 @@ Bug Fixes to C++ Support
 - Clang now ignores template parameters only used within the exception specification of candidate function
   templates during partial ordering when deducing template arguments from a function declaration or when
   taking the address of a function template.
+- Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
