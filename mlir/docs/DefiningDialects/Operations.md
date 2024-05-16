@@ -291,8 +291,27 @@ Right now, the following primitive constraints are supported:
     equal to `N`
 *   `IntMaxValue<N>`: Specifying an integer attribute to be less than or equal
     to `N`
+*   `IntNEQValue<N>`: Specifying an integer attribute to be not equal
+    to `N`
+*   `IntPositive`: Specifying an integer attribute whose value is positive
+*   `IntNonNegative`: Specifying an integer attribute whose value is
+    non-negative
 *   `ArrayMinCount<N>`: Specifying an array attribute to have at least `N`
     elements
+*   `ArrayMaxCount<N>`: Specifying an array attribute to have at most `N`
+    elements
+*   `ArrayCount<N>`: Specifying an array attribute to have exactly `N`
+    elements
+*   `DenseArrayCount<N>`: Specifying a dense array attribute to have
+    exactly `N` elements
+*   `DenseArrayStrictlyPositive<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have all positive elements
+*   `DenseArrayStrictlyNonNegative<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have all non-negative elements
+*   `DenseArraySorted<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have elements in non-decreasing order
+*   `DenseArrayStrictlySorted<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have elements in increasing order
 *   `IntArrayNthElemEq<I, N>`: Specifying an integer array attribute's `I`-th
     element to be equal to `N`
 *   `IntArrayNthElemMinValue<I, N>`: Specifying an integer array attribute's
@@ -301,6 +320,7 @@ Right now, the following primitive constraints are supported:
     `I`-th element to be less than or equal to `N`
 *   `IntArrayNthElemInRange<I, M, N>`: Specifying an integer array attribute's
     `I`-th element to be greater than or equal to `M` and less than or equal to `N`
+*   `IsNullAttr`: Specifying an optional attribute which must be empty
 
 TODO: Design and implement more primitive constraints
 
