@@ -2022,7 +2022,7 @@ public:
   void CheckTCBEnforcement(const SourceLocation CallExprLoc,
                            const NamedDecl *Callee);
 
-  void CheckConstrainedAuto(TypeSourceInfo *TS);
+  void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
