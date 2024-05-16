@@ -2433,7 +2433,9 @@ def err_auto_not_allowed : Error<
   "|in template parameter|in friend declaration|in function prototype that is "
   "not a function declaration|in requires expression parameter"
   "|in array declaration"
-  "|in declaration of conversion function template}1">;
+  "|in declaration of conversion function template"
+  "|in lambda parameter before C++14}1">;
+
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
