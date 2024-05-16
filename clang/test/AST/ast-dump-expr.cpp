@@ -282,7 +282,7 @@ void PrimaryExpressions(Ts... a) {
       // CHECK-NEXT: CompoundStmt
       // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V'
       // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:8> 'NULL TYPE'
-      // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:8> '<dependent type>' prefix '*' cannot overflow
+      // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:8> 'V' lvalue prefix '*' cannot overflow
       // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' this
     }
   };

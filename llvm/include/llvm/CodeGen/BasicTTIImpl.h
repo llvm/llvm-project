@@ -612,7 +612,13 @@ public:
     if (PartialUnrollingThreshold.getNumOccurrences() > 0)
       MaxOps = PartialUnrollingThreshold;
     else if (ST->getSchedModel().LoopMicroOpBufferSize > 0)
-      MaxOps = ST->getSchedModel().LoopMicroOpBufferSize;
+      // Upper bound by the default PartialThreshold, which is the same as
+      // the default full-unroll Threshold. Even if the loop micro-op buffer
+      // is very large, this does not mean that we want to unroll all loops
+      // to that length, as it would increase code size beyond the limits of
+      // what unrolling normally allows.
+      MaxOps = std::min(ST->getSchedModel().LoopMicroOpBufferSize,
+                        UP.PartialThreshold);
     else
       return;
 

@@ -114,9 +114,12 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Bound is an approximation that accounts for the maximum used register
   // number and number of generated OpLabels
   unsigned Bound = 2 * (ST->getBound() + 1) + NLabels;
+  bool FlagToRestore = OutStreamer->getUseAssemblerInfoForParsing();
+  OutStreamer->setUseAssemblerInfoForParsing(true);
   if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
     Asm->setBuildVersion(static_cast<MachO::PlatformType>(0), Major, Minor,
                          Bound, VersionTuple(Major, Minor, 0, Bound));
+  OutStreamer->setUseAssemblerInfoForParsing(FlagToRestore);
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
