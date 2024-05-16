@@ -13,6 +13,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -1172,6 +1173,7 @@ TEST(Error, ForwardToExpected) {
   };
   std::optional<int> MaybeV;
   EXPECT_THAT_ERROR(ExpectedReturningFct(true).moveInto(MaybeV), Failed());
-  EXPECT_EQ(*ExpectedReturningFct(false), 42);
+  EXPECT_THAT_ERROR(ExpectedReturningFct(false).moveInto(MaybeV), Succeeded());
+  EXPECT_EQ(*MaybeV, 42);
 }
 } // namespace
