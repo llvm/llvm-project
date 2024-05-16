@@ -116,7 +116,8 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifdef EMIT_ARCHITECTURES\n";
 
   // Return the C++ name of the of an ArchInfo object
-  auto ArchInfoName = [](int Major, int Minor, StringRef Profile) {
+  auto ArchInfoName = [](int Major, int Minor,
+                         StringRef Profile) -> std::string {
     return Minor == 0 ? "ARMV" + std::to_string(Major) + Profile.upper()
                       : "ARMV" + std::to_string(Major) + "_" +
                             std::to_string(Minor) + Profile.upper();
