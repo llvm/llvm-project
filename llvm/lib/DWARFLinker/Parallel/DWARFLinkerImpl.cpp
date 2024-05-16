@@ -20,11 +20,9 @@ using namespace dwarf_linker;
 using namespace dwarf_linker::parallel;
 
 DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
-                                 MessageHandlerTy WarningHandler,
-                                 TranslatorFuncTy StringsTranslator)
+                                 MessageHandlerTy WarningHandler)
     : UniqueUnitID(0), DebugStrStrings(GlobalData),
       DebugLineStrStrings(GlobalData), CommonSections(GlobalData) {
-  GlobalData.setTranslator(StringsTranslator);
   GlobalData.setErrorHandler(ErrorHandler);
   GlobalData.setWarningHandler(WarningHandler);
 }

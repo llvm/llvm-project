@@ -1,5 +1,5 @@
 ! Test lowering of NOPASS procedure pointers components.
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module proc_comp_defs
   interface

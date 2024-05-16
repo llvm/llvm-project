@@ -458,6 +458,40 @@ let TargetGuard = "sme2,sme-f64f64" in {
   def SVMLS_LANE_VG1x4_F64 : Inst<"svmls_lane_za64[_{d}]_vg1x4", "vm4di", "d", MergeNone, "aarch64_sme_fmls_lane_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_1>]>;
 }
 
+let TargetGuard = "sme-f16f16" in {
+  def SVMLA_MULTI_VG1x2_F16 : Inst<"svmla_za16[_f16]_vg1x2", "vm22", "h", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLA_MULTI_VG1x4_F16 : Inst<"svmla_za16[_f16]_vg1x4", "vm44", "h", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_MULTI_VG1x2_F16 : Inst<"svmls_za16[_f16]_vg1x2", "vm22", "h", MergeNone, "aarch64_sme_fmls_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_MULTI_VG1x4_F16 : Inst<"svmls_za16[_f16]_vg1x4", "vm44", "h", MergeNone, "aarch64_sme_fmls_vg1x4", [IsStreaming, IsInOutZA], []>;
+
+  def SVMLA_SINGLE_VG1x2_F16 : Inst<"svmla[_single]_za16[_f16]_vg1x2", "vm2d", "h", MergeNone, "aarch64_sme_fmla_single_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLA_SINGLE_VG1x4_F16 : Inst<"svmla[_single]_za16[_f16]_vg1x4", "vm4d", "h", MergeNone, "aarch64_sme_fmla_single_vg1x4", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_SINGLE_VG1x2_F16 : Inst<"svmls[_single]_za16[_f16]_vg1x2", "vm2d", "h", MergeNone, "aarch64_sme_fmls_single_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_SINGLE_VG1x4_F16 : Inst<"svmls[_single]_za16[_f16]_vg1x4", "vm4d", "h", MergeNone, "aarch64_sme_fmls_single_vg1x4", [IsStreaming, IsInOutZA], []>;
+
+  def SVMLA_LANE_VG1x2_F16 : Inst<"svmla_lane_za16[_f16]_vg1x2", "vm2di", "h", MergeNone, "aarch64_sme_fmla_lane_vg1x2", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLA_LANE_VG1x4_F16 : Inst<"svmla_lane_za16[_f16]_vg1x4", "vm4di", "h", MergeNone, "aarch64_sme_fmla_lane_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLS_LANE_VG1x2_F16 : Inst<"svmls_lane_za16[_f16]_vg1x2", "vm2di", "h", MergeNone, "aarch64_sme_fmls_lane_vg1x2", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLS_LANE_VG1x4_F16 : Inst<"svmls_lane_za16[_f16]_vg1x4", "vm4di", "h", MergeNone, "aarch64_sme_fmls_lane_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+}
+
+let TargetGuard = "sme2,b16b16" in {
+  def SVMLA_MULTI_VG1x2_BF16 : Inst<"svmla_za16[_bf16]_vg1x2", "vm22", "b", MergeNone, "aarch64_sme_fmla_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLA_MULTI_VG1x4_BF16 : Inst<"svmla_za16[_bf16]_vg1x4", "vm44", "b", MergeNone, "aarch64_sme_fmla_vg1x4", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_MULTI_VG1x2_BF16 : Inst<"svmls_za16[_bf16]_vg1x2", "vm22", "b", MergeNone, "aarch64_sme_fmls_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_MULTI_VG1x4_BF16 : Inst<"svmls_za16[_bf16]_vg1x4", "vm44", "b", MergeNone, "aarch64_sme_fmls_vg1x4", [IsStreaming, IsInOutZA], []>;
+
+  def SVMLA_SINGLE_VG1x2_BF16 : Inst<"svmla[_single]_za16[_bf16]_vg1x2", "vm2d", "b", MergeNone, "aarch64_sme_fmla_single_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLA_SINGLE_VG1x4_BF16 : Inst<"svmla[_single]_za16[_bf16]_vg1x4", "vm4d", "b", MergeNone, "aarch64_sme_fmla_single_vg1x4", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_SINGLE_VG1x2_BF16 : Inst<"svmls[_single]_za16[_bf16]_vg1x2", "vm2d", "b", MergeNone, "aarch64_sme_fmls_single_vg1x2", [IsStreaming, IsInOutZA], []>;
+  def SVMLS_SINGLE_VG1x4_BF16 : Inst<"svmls[_single]_za16[_bf16]_vg1x4", "vm4d", "b", MergeNone, "aarch64_sme_fmls_single_vg1x4", [IsStreaming, IsInOutZA], []>;
+
+  def SVMLA_LANE_VG1x2_BF16 : Inst<"svmla_lane_za16[_bf16]_vg1x2", "vm2di", "b", MergeNone, "aarch64_sme_fmla_lane_vg1x2", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLA_LANE_VG1x4_BF16 : Inst<"svmla_lane_za16[_bf16]_vg1x4", "vm4di", "b", MergeNone, "aarch64_sme_fmla_lane_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLS_LANE_VG1x2_BF16 : Inst<"svmls_lane_za16[_bf16]_vg1x2", "vm2di", "b", MergeNone, "aarch64_sme_fmls_lane_vg1x2", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVMLS_LANE_VG1x4_BF16 : Inst<"svmls_lane_za16[_bf16]_vg1x4", "vm4di", "b", MergeNone, "aarch64_sme_fmls_lane_vg1x4", [IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+}
+
 // FMLAL/FMLSL/UMLAL/SMLAL
 // SMLALL/UMLALL/USMLALL/SUMLALL
 let TargetGuard = "sme2" in {
@@ -673,4 +707,28 @@ let TargetGuard = "sme2" in {
 let TargetGuard = "sme2" in {
   def SVLUTI2_LANE_ZT_X2 : Inst<"svluti2_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
   def SVLUTI4_LANE_ZT_X2 : Inst<"svluti4_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2p1 - FMOPA, FMOPS (non-widening)
+let TargetGuard = "sme2,b16b16" in {
+  def SVMOPA_BF16_NW : SInst<"svmopa_za16[_bf16]_m", "viPPdd", "b",
+                             MergeNone, "aarch64_sme_mopa",
+                             [IsStreaming, IsInOutZA],
+                             [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPS_BF16_NW : SInst<"svmops_za16[_bf16]_m", "viPPdd", "b",
+                             MergeNone, "aarch64_sme_mops",
+                             [IsStreaming, IsInOutZA],
+                             [ImmCheck<0, ImmCheck0_1>]>;
+}
+
+let TargetGuard = "sme-f16f16" in {
+  def SVMOPA_F16_NW : SInst<"svmopa_za16[_f16]_m", "viPPdd", "h",
+                            MergeNone, "aarch64_sme_mopa",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPS_F16_NW : SInst<"svmops_za16[_f16]_m", "viPPdd", "h",
+                            MergeNone, "aarch64_sme_mops",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
 }

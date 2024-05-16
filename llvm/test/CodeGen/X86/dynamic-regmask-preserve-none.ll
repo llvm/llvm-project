@@ -12,7 +12,7 @@ define preserve_nonecc i64 @callee1(i64 %a0, i64 %b0, i64 %c0, i64 %d0, i64 %e0)
 ; CHECK-NOT: calleeSavedRegisters:
 ; CHECK:     RET 0, $rax
 
-; Check that RegMask is csr_noregs.
+; Check that RegMask is csr_64_noneregs.
 define i64 @caller1(i64 %a0) nounwind {
   %b1 = call preserve_nonecc i64 @callee1(i64 %a0, i64 %a0, i64 %a0, i64 %a0, i64 %a0)
   %b2 = add i64 %b1, %a0
@@ -38,13 +38,13 @@ define preserve_nonecc {i64, i64} @callee2(i64 %a0, i64 %b0, i64 %c0, i64 %d0, i
 ; CHECK:     RET 0, $rax, $rdx
 
 
-; Check that RegMask is csr_noregs.
+; Check that RegMask is csr_64_noneregs.
 define {i64, i64} @caller2(i64 %a0) nounwind {
   %b1 = call preserve_nonecc {i64, i64} @callee2(i64 %a0, i64 %a0, i64 %a0, i64 %a0, i64 %a0)
   ret {i64, i64} %b1
 }
 ; CHECK:    name: caller2
-; CHECL:    CALL64pcrel32 @callee2, csr_noregs
+; CHECK:    CALL64pcrel32 @callee2, csr_64_noneregs
 ; CHECK:    RET 0, $rax, $rdx
 
 
@@ -53,7 +53,7 @@ define {i64, i64} @caller2(i64 %a0) nounwind {
 ; Declare the callee with a sret parameter.
 declare preserve_nonecc void @callee3(ptr noalias nocapture writeonly sret(%struct.Large) align 4 %a0, i64 %b0) nounwind;
 
-; Check that RegMask is csr_noregs.
+; Check that RegMask is csr_64_noneregs.
 define void @caller3(i64 %a0) nounwind {
   %a1 = alloca %struct.Large, align 8
   call preserve_nonecc void @callee3(ptr nonnull sret(%struct.Large) align 8 %a1, i64 %a0)
@@ -78,7 +78,7 @@ define preserve_nonecc {i64, double} @callee4(i64 %a0, i64 %b0, i64 %c0, i64 %d0
 ; CHECK-NOT: calleeSavedRegisters:
 ; CHECK:     RET 0, $rax, $xmm0
 
-; Check that RegMask is csr_noregs.
+; Check that RegMask is csr_64_noneregs.
 define {i64, double} @caller4(i64 %a0) nounwind {
   %b1 = call preserve_nonecc {i64, double} @callee4(i64 %a0, i64 %a0, i64 %a0, i64 %a0, i64 %a0)
   ret {i64, double} %b1

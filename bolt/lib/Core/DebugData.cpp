@@ -13,7 +13,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/DIEBuilder.h"
-#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DIE.h"
@@ -23,7 +22,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
@@ -32,8 +30,8 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <limits>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -870,10 +868,17 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
                                             DIEBuilder &DIEBldr) {
   std::optional<AttrInfo> AttrVal =
       findAttributeInfo(Unit.getUnitDIE(), dwarf::DW_AT_str_offsets_base);
-  if (!AttrVal)
+  if (!AttrVal && !Unit.isDWOUnit())
     return;
-  std::optional<uint64_t> Val = AttrVal->V.getAsSectionOffset();
-  assert(Val && "DW_AT_str_offsets_base Value not present.");
+  std::optional<uint64_t> Val = std::nullopt;
+  if (AttrVal) {
+    Val = AttrVal->V.getAsSectionOffset();
+  } else {
+    if (!Unit.isDWOUnit())
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+                   "DW_AT_str_offsets_base Value not present\n";
+    Val = 0;
+  }
   DIE &Die = *DIEBldr.getUnitDIEbyUnit(Unit);
   DIEValue StrListBaseAttrInfo =
       Die.findAttribute(dwarf::DW_AT_str_offsets_base);
@@ -918,7 +923,11 @@ void DebugStrWriter::create() {
 }
 
 void DebugStrWriter::initialize() {
-  auto StrSection = BC.DwCtx->getDWARFObj().getStrSection();
+  StringRef StrSection;
+  if (IsDWO)
+    StrSection = DwCtx.getDWARFObj().getStrDWOSection();
+  else
+    StrSection = DwCtx.getDWARFObj().getStrSection();
   (*StrStream) << StrSection;
 }
 

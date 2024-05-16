@@ -548,9 +548,7 @@ TEST(WalkAST, Concepts) {
   testWalk(Concept, "template<typename T> requires ^Foo<T> void func() {}");
   testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
   testWalk(Concept, "void func(^Foo auto x) {}");
-  // FIXME: Foo should be explicitly referenced.
-  testWalk("template<typename T> concept Foo = true;",
-           "void func() { ^Foo auto x = 1; }");
+  testWalk(Concept, "void func() { ^Foo auto x = 1; }");
 }
 
 TEST(WalkAST, FriendDecl) {

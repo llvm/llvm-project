@@ -389,8 +389,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                         Twine((unsigned)LangOpts.getHLSLVersion()));
 
     if (LangOpts.NativeHalfType)
-      Builder.defineMacro("__HLSL_ENABLE_16_BIT",
-                          Twine((unsigned)LangOpts.getHLSLVersion()));
+      Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
     // "enums" for shader stages
@@ -704,7 +703,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nested_namespace_definitions", "201411L");
     Builder.defineMacro("__cpp_variadic_using", "201611L");
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
-    Builder.defineMacro("__cpp_structured_bindings", "201606L");
+    Builder.defineMacro("__cpp_structured_bindings", "202403L");
     Builder.defineMacro("__cpp_nontype_template_args",
                         "201411L"); // (not latest)
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
@@ -720,10 +719,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus20) {
     Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
 
-    // P0848 is implemented, but we're still waiting for other concepts
-    // issues to be addressed before bumping __cpp_concepts up to 202002L.
-    // Refer to the discussion of this at https://reviews.llvm.org/D128619.
-    Builder.defineMacro("__cpp_concepts", "201907L");
+    Builder.defineMacro("__cpp_concepts", "202002");
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
     Builder.defineMacro("__cpp_consteval", "202211L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
@@ -749,6 +745,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
   Builder.defineMacro("__cpp_named_character_escapes", "202207L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
+
+  // C++26 features supported in earlier language modes.
+  Builder.defineMacro("__cpp_deleted_function", "202403L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -1308,6 +1307,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     // FIXME: This is target-dependent.
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
   }
+
+  // GCC defines these macros in both C and C++ modes despite them being needed
+  // mostly for STL implementations in C++.
+  auto [Destructive, Constructive] = TI.hardwareInterferenceSizes();
+  Builder.defineMacro("__GCC_DESTRUCTIVE_SIZE", Twine(Destructive));
+  Builder.defineMacro("__GCC_CONSTRUCTIVE_SIZE", Twine(Constructive));
+  // We need to use push_macro to allow users to redefine these macros from the
+  // command line with -D and not issue a -Wmacro-redefined warning.
+  Builder.append("#pragma push_macro(\"__GCC_DESTRUCTIVE_SIZE\")");
+  Builder.append("#pragma push_macro(\"__GCC_CONSTRUCTIVE_SIZE\")");
 
   auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.

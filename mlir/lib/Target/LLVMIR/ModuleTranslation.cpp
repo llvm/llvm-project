@@ -274,16 +274,15 @@ translateDataLayout(DataLayoutSpecInterface attribute,
                 layoutStream << ":" << preferred;
               return success();
             })
-            .Case([&](LLVMPointerType ptrType) {
-              layoutStream << "p" << ptrType.getAddressSpace() << ":";
+            .Case([&](LLVMPointerType type) {
+              layoutStream << "p" << type.getAddressSpace() << ":";
               uint64_t size = dataLayout.getTypeSizeInBits(type);
               uint64_t abi = dataLayout.getTypeABIAlignment(type) * 8u;
               uint64_t preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
-              layoutStream << size << ":" << abi << ":" << preferred;
-              if (std::optional<uint64_t> index = extractPointerSpecValue(
-                      entry.getValue(), PtrDLEntryPos::Index))
-                layoutStream << ":" << *index;
+              uint64_t index = *dataLayout.getTypeIndexBitwidth(type);
+              layoutStream << size << ":" << abi << ":" << preferred << ":"
+                           << index;
               return success();
             })
             .Default([loc](Type type) {
@@ -716,6 +715,8 @@ void ModuleTranslation::forgetMapping(Region &region) {
           branchMapping.erase(&op);
         if (isa<LLVM::GlobalOp>(op))
           globalsMapping.erase(&op);
+        if (isa<LLVM::CallOp>(op))
+          callMapping.erase(&op);
         llvm::append_range(
             toProcess,
             llvm::map_range(op.getRegions(), [](Region &r) { return &r; }));
@@ -1029,10 +1030,21 @@ LogicalResult ModuleTranslation::convertGlobals() {
       llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
       var->addDebugInfo(diGlobalExpr);
 
+      // There is no `globals` field in DICompileUnitAttr which can be directly
+      // assigned to DICompileUnit. We have to build the list by looking at the
+      // dbgExpr of all the GlobalOps. The scope of the variable is used to get
+      // the DICompileUnit in which to add it. But for the languages that
+      // support modules, the scope hierarchy can be
+      // variable -> module -> compile unit
+      // If a variable scope points to the module then we use the scope of the
+      // module to get the compile unit.
+      llvm::DIScope *scope = diGlobalVar->getScope();
+      if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+        scope = mod->getScope();
+
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
-              dyn_cast_if_present<llvm::DICompileUnit>(
-                  diGlobalVar->getScope())) {
+              dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
         // Update the compile unit with this incoming global variable expression
         // during the finalizing step later.
         allGVars[compileUnit].push_back(diGlobalExpr);
@@ -1718,6 +1730,16 @@ ModuleTranslation::translateGlobalVariableExpression(
 
 llvm::Metadata *ModuleTranslation::translateDebugInfo(LLVM::DINodeAttr attr) {
   return debugTranslation->translate(attr);
+}
+
+llvm::RoundingMode
+ModuleTranslation::translateRoundingMode(LLVM::RoundingMode rounding) {
+  return convertRoundingModeToLLVM(rounding);
+}
+
+llvm::fp::ExceptionBehavior ModuleTranslation::translateFPExceptionBehavior(
+    LLVM::FPExceptionBehavior exceptionBehavior) {
+  return convertFPExceptionBehaviorToLLVM(exceptionBehavior);
 }
 
 llvm::NamedMDNode *

@@ -832,13 +832,14 @@ private:
 typedef KMPAffinity::Mask kmp_affin_mask_t;
 extern KMPAffinity *__kmp_affinity_dispatch;
 
+#ifndef KMP_OS_AIX
 class kmp_affinity_raii_t {
   kmp_affin_mask_t *mask;
   bool restored;
 
 public:
   kmp_affinity_raii_t(const kmp_affin_mask_t *new_mask = nullptr)
-      : restored(false) {
+      : mask(nullptr), restored(false) {
     if (KMP_AFFINITY_CAPABLE()) {
       KMP_CPU_ALLOC(mask);
       KMP_ASSERT(mask != NULL);
@@ -848,7 +849,7 @@ public:
     }
   }
   void restore() {
-    if (!restored && KMP_AFFINITY_CAPABLE()) {
+    if (mask && KMP_AFFINITY_CAPABLE() && !restored) {
       __kmp_set_system_affinity(mask, /*abort_on_error=*/true);
       KMP_CPU_FREE(mask);
     }
@@ -856,6 +857,7 @@ public:
   }
   ~kmp_affinity_raii_t() { restore(); }
 };
+#endif // !KMP_OS_AIX
 
 // Declare local char buffers with this size for printing debug and info
 // messages, using __kmp_affinity_print_mask().
@@ -1405,8 +1407,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   kmp_cpuinfo_flags_t flags;
   int apic_id;
-  int physical_id;
-  int logical_id;
   kmp_uint64 frequency; // Nominal CPU frequency in Hz.
   char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
 } kmp_cpuinfo_t;
@@ -2520,7 +2520,7 @@ typedef struct kmp_depend_info {
   union {
     kmp_uint8 flag; // flag as an unsigned char
     struct { // flag as a set of 8 bits
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
       /* Same fields as in the #else branch, but in reverse order */
       unsigned all : 1;
       unsigned unused : 3;
@@ -2685,7 +2685,7 @@ typedef struct kmp_task_stack {
 #endif // BUILD_TIED_TASK_STACK
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
   unsigned reserved31 : 6;
@@ -2884,6 +2884,11 @@ union KMP_ALIGN_CACHE kmp_task_team {
   char tt_pad[KMP_PAD(kmp_base_task_team_t, CACHE_LINE)];
 };
 
+typedef struct kmp_task_team_list_t {
+  kmp_task_team_t *task_team;
+  kmp_task_team_list_t *next;
+} kmp_task_team_list_t;
+
 #if (USE_FAST_MEMORY == 3) || (USE_FAST_MEMORY == 5)
 // Free lists keep same-size free memory slots for fast memory allocation
 // routines
@@ -3027,10 +3032,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   kmp_task_team_t *th_task_team; // Task team struct
   kmp_taskdata_t *th_current_task; // Innermost Task being executed
   kmp_uint8 th_task_state; // alternating 0/1 for task team identification
-  kmp_uint8 *th_task_state_memo_stack; // Stack holding memos of th_task_state
-  // at nested levels
-  kmp_uint32 th_task_state_top; // Top element of th_task_state_memo_stack
-  kmp_uint32 th_task_state_stack_sz; // Size of th_task_state_memo_stack
   kmp_uint32 th_reap_state; // Non-zero indicates thread is not
   // tasking, thus safe to reap
 
@@ -3152,6 +3153,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   kmp_disp_t *t_dispatch; // thread's dispatch data
   kmp_task_team_t *t_task_team[2]; // Task team struct; switch between 2
   kmp_proc_bind_t t_proc_bind; // bind type for par region
+  int t_primary_task_state; // primary thread's task state saved
 #if USE_ITT_BUILD
   kmp_uint64 t_region_time; // region begin timestamp
 #endif /* USE_ITT_BUILD */
@@ -3223,6 +3225,12 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   distributedBarrier *b; // Distributed barrier data associated with team
   kmp_nested_nthreads_t *t_nested_nth;
 } kmp_base_team_t;
+
+// Assert that the list structure fits and aligns within
+// the double task team pointer
+KMP_BUILD_ASSERT(sizeof(kmp_task_team_t *[2]) == sizeof(kmp_task_team_list_t));
+KMP_BUILD_ASSERT(alignof(kmp_task_team_t *[2]) ==
+                 alignof(kmp_task_team_list_t));
 
 union KMP_ALIGN_CACHE kmp_team {
   kmp_base_team_t t;
@@ -3928,7 +3936,8 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {
@@ -4129,9 +4138,10 @@ extern void __kmp_fulfill_event(kmp_event_t *event);
 extern void __kmp_free_task_team(kmp_info_t *thread,
                                  kmp_task_team_t *task_team);
 extern void __kmp_reap_task_teams(void);
+extern void __kmp_push_task_team_node(kmp_info_t *thread, kmp_team_t *team);
+extern void __kmp_pop_task_team_node(kmp_info_t *thread, kmp_team_t *team);
 extern void __kmp_wait_to_unref_task_teams(void);
-extern void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team,
-                                  int always);
+extern void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team);
 extern void __kmp_task_team_sync(kmp_info_t *this_thr, kmp_team_t *team);
 extern void __kmp_task_team_wait(kmp_info_t *this_thr, kmp_team_t *team
 #if USE_ITT_BUILD
@@ -4142,6 +4152,14 @@ extern void __kmp_task_team_wait(kmp_info_t *this_thr, kmp_team_t *team
                                  int wait = 1);
 extern void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread,
                                   int gtid);
+#if KMP_DEBUG
+#define KMP_DEBUG_ASSERT_TASKTEAM_INVARIANT(team, thr)                         \
+  KMP_DEBUG_ASSERT(                                                            \
+      __kmp_tasking_mode != tskm_task_teams || team->t.t_nproc == 1 ||         \
+      thr->th.th_task_team == team->t.t_task_team[thr->th.th_task_state])
+#else
+#define KMP_DEBUG_ASSERT_TASKTEAM_INVARIANT(team, thr) /* Nothing */
+#endif
 
 extern int __kmp_is_address_mapped(void *addr);
 extern kmp_uint64 __kmp_hardware_timestamp(void);

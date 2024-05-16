@@ -224,7 +224,7 @@ public:
 
   /// Return the attribute's value as a ConstantRange. This requires the
   /// attribute to be a ConstantRange attribute.
-  ConstantRange getValueAsConstantRange() const;
+  const ConstantRange &getValueAsConstantRange() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
@@ -265,7 +265,7 @@ public:
   FPClassTest getNoFPClass() const;
 
   /// Returns the value of the range attribute.
-  ConstantRange getRange() const;
+  const ConstantRange &getRange() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -747,6 +747,11 @@ public:
   addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned ArgNo,
                                     uint64_t Bytes) const;
 
+  /// Add the range attribute to the attribute set at the return value index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] AttributeList addRangeRetAttr(LLVMContext &C,
+                                              const ConstantRange &CR) const;
+
   /// Add the allocsize attribute to the attribute set at the given arg index.
   /// Returns a new list because attribute lists are immutable.
   [[nodiscard]] AttributeList
@@ -846,6 +851,11 @@ public:
   /// Return the attribute object that exists for the function.
   Attribute getFnAttr(StringRef Kind) const {
     return getAttributeAtIndex(FunctionIndex, Kind);
+  }
+
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttr(Attribute::AttrKind Kind) const {
+    return getAttributeAtIndex(ReturnIndex, Kind);
   }
 
   /// Return the alignment of the return value.

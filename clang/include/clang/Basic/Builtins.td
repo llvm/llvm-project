@@ -676,7 +676,11 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int clzimax(uintmax_t)
+def Clzg : Builtin {
+  let Spellings = ["__builtin_clzg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Spellings = ["__builtin_ctz"];
@@ -684,7 +688,11 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int ctzimax(uintmax_t)
+def Ctzg : Builtin {
+  let Spellings = ["__builtin_ctzg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def FFS : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_ffs"];
@@ -1156,6 +1164,12 @@ def Unreachable : Builtin {
   let Prototype = "void()";
 }
 
+def AllowRuntimeCheck : Builtin {
+  let Spellings = ["__builtin_allow_runtime_check"];
+  let Attributes = [NoThrow, Pure, Const];
+  let Prototype = "bool(char const*)";
+}
+
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1308,6 +1322,12 @@ def ElementwiseSin : Builtin {
 
 def ElementwiseSqrt : Builtin {
   let Spellings = ["__builtin_elementwise_sqrt"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseTan : Builtin {
+  let Spellings = ["__builtin_elementwise_tan"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4354,6 +4374,43 @@ def CoroSuspend : CoroLangBuiltin {
   let Prototype = "char(_Constant bool)";
 }
 
+// Pointer authentication builtins.
+def PtrauthStrip : Builtin {
+  let Spellings = ["__builtin_ptrauth_strip"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int)";
+}
+
+def PtrauthBlendDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_blend_discriminator"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,int)";
+}
+
+def PtrauthSignUnauthenticated : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_unauthenticated"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthSignGenericData : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_generic_data"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "size_t(void*,void*)";
+}
+
+def PtrauthAuthAndResign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_and_resign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,int,void*)";
+}
+
+def PtrauthAuth : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {
@@ -4542,6 +4599,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_any"];
   let Attributes = [NoThrow, Const];
@@ -4552,6 +4615,18 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int()";
+}
+
+def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_clamp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
@@ -4572,6 +4647,12 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isinf"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
   let Attributes = [NoThrow, Const];
@@ -4586,6 +4667,12 @@ def HLSLMad : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rcp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

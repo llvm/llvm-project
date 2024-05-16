@@ -757,7 +757,7 @@ private:
 /// rewrite type and operation among the given rewrites.
 template <typename RewriteTy, typename R>
 static bool hasRewrite(R &&rewrites, Operation *op) {
-  return any_of(std::move(rewrites), [&](auto &rewrite) {
+  return any_of(std::forward<R>(rewrites), [&](auto &rewrite) {
     auto *rewriteTy = dyn_cast<RewriteTy>(rewrite.get());
     return rewriteTy && rewriteTy->getOperation() == op;
   });
@@ -1020,8 +1020,8 @@ void BlockTypeConversionRewrite::commit(RewriterBase &rewriter) {
   // Inform the listener about all IR modifications that have already taken
   // place: References to the original block have been replaced with the new
   // block.
-  if (auto *listener = dyn_cast_or_null<RewriterBase::ForwardingListener>(
-          rewriter.getListener()))
+  if (auto *listener =
+          dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener()))
     for (Operation *op : block->getUsers())
       listener->notifyOperationModified(op);
 
@@ -1123,8 +1123,8 @@ void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
 void ReplaceBlockArgRewrite::rollback() { rewriterImpl.mapping.erase(arg); }
 
 void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
-  auto *listener = dyn_cast_or_null<RewriterBase::ForwardingListener>(
-      rewriter.getListener());
+  auto *listener =
+      dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener());
 
   // Compute replacement values.
   SmallVector<Value> replacements =
@@ -1856,7 +1856,8 @@ public:
   using LegalizationAction = ConversionTarget::LegalizationAction;
 
   OperationLegalizer(const ConversionTarget &targetInfo,
-                     const FrozenRewritePatternSet &patterns);
+                     const FrozenRewritePatternSet &patterns,
+                     const ConversionConfig &config);
 
   /// Returns true if the given operation is known to be illegal on the target.
   bool isIllegal(Operation *op) const;
@@ -1948,12 +1949,16 @@ private:
 
   /// The pattern applicator to use for conversions.
   PatternApplicator applicator;
+
+  /// Dialect conversion configuration.
+  const ConversionConfig &config;
 };
 } // namespace
 
 OperationLegalizer::OperationLegalizer(const ConversionTarget &targetInfo,
-                                       const FrozenRewritePatternSet &patterns)
-    : target(targetInfo), applicator(patterns) {
+                                       const FrozenRewritePatternSet &patterns,
+                                       const ConversionConfig &config)
+    : target(targetInfo), applicator(patterns), config(config) {
   // The set of patterns that can be applied to illegal operations to transform
   // them into legal ones.
   DenseMap<OperationName, LegalizationPatterns> legalizerPatterns;
@@ -2067,6 +2072,10 @@ OperationLegalizer::legalizeWithFold(Operation *op,
     LLVM_DEBUG(logFailure(rewriterImpl.logger, "unable to fold"));
     return failure();
   }
+  // An empty list of replacement values indicates that the fold was in-place.
+  // As the operation changed, a new legalization needs to be attempted.
+  if (replacementValues.empty())
+    return legalize(op, rewriter);
 
   // Insert a replacement for 'op' with the folded replacement values.
   rewriter.replaceOp(op, replacementValues);
@@ -2098,7 +2107,10 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
 
   // Functor that returns if the given pattern may be applied.
   auto canApply = [&](const Pattern &pattern) {
-    return canApplyPattern(op, pattern, rewriter);
+    bool canApply = canApplyPattern(op, pattern, rewriter);
+    if (canApply && config.listener)
+      config.listener->notifyPatternBegin(pattern, op);
+    return canApply;
   };
 
   // Functor that cleans up the rewriter state after a pattern failed to match.
@@ -2115,6 +2127,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
         rewriterImpl.config.notifyCallback(diag);
       }
     });
+    if (config.listener)
+      config.listener->notifyPatternEnd(pattern, failure());
     rewriterImpl.resetState(curState);
     appliedPatterns.erase(&pattern);
   };
@@ -2127,6 +2141,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     appliedPatterns.erase(&pattern);
     if (failed(result))
       rewriterImpl.resetState(curState);
+    if (config.listener)
+      config.listener->notifyPatternEnd(pattern, result);
     return result;
   };
 
@@ -2502,7 +2518,8 @@ struct OperationConverter {
                               const FrozenRewritePatternSet &patterns,
                               const ConversionConfig &config,
                               OpConversionMode mode)
-      : opLegalizer(target, patterns), config(config), mode(mode) {}
+      : config(config), opLegalizer(target, patterns, this->config),
+        mode(mode) {}
 
   /// Converts the given operations to the conversion target.
   LogicalResult convertOperations(ArrayRef<Operation *> ops);
@@ -2539,11 +2556,11 @@ private:
       ConversionPatternRewriterImpl &rewriterImpl,
       const DenseMap<Value, SmallVector<Value>> &inverseMapping);
 
-  /// The legalizer to use when converting operations.
-  OperationLegalizer opLegalizer;
-
   /// Dialect conversion configuration.
   ConversionConfig config;
+
+  /// The legalizer to use when converting operations.
+  OperationLegalizer opLegalizer;
 
   /// The conversion mode to use when legalizing operations.
   OpConversionMode mode;
@@ -2812,9 +2829,9 @@ static void computeNecessaryMaterializations(
     }
 
     // Check to see if this is an argument materialization.
-    auto isBlockArg = [](Value v) { return isa<BlockArgument>(v); };
-    if (llvm::any_of(op->getOperands(), isBlockArg) ||
-        llvm::any_of(inverseMapping[op->getResult(0)], isBlockArg)) {
+    if (llvm::any_of(op->getOperands(), llvm::IsaPred<BlockArgument>) ||
+        llvm::any_of(inverseMapping[op->getResult(0)],
+                     llvm::IsaPred<BlockArgument>)) {
       mat->setMaterializationKind(MaterializationKind::Argument);
     }
 

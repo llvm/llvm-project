@@ -24,17 +24,22 @@ body:             |
     %4:_(<2 x s32>) = G_IMPLICIT_DEF
     %5:_(s1) = G_FCMP floatpred(oeq), %3, %4
 
-    ; mismatched element count
+    ; mismatched fixed element count
     ; CHECK: Bad machine code: Generic vector icmp/fcmp must preserve number of
     %6:_(<2 x s32>) = G_IMPLICIT_DEF
     %7:_(<2 x s32>) = G_IMPLICIT_DEF
     %8:_(<4 x s1>) = G_FCMP floatpred(oeq), %6, %7
 
+    ; mismatched scalable element count
+    ; CHECK: Bad machine code: Generic vector icmp/fcmp must preserve number of
+    %9:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+    %10:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+    %11:_(<vscale x 4 x s1>) = G_FCMP floatpred(oeq), %9, %10
 
     ; mismatched scalar element type
     ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
-    %9:_(s32) = G_FCONSTANT float 0.0
-    %10:_(s64) = G_FCONSTANT float 1.0
-    %11:_(s1) = G_FCMP floatpred(oeq), %9, %10
+    %12:_(s32) = G_FCONSTANT float 0.0
+    %13:_(s64) = G_FCONSTANT float 1.0
+    %14:_(s1) = G_FCMP floatpred(oeq), %12, %13
 
 ...

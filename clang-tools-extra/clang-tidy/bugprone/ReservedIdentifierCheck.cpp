@@ -178,8 +178,11 @@ std::optional<RenamerClangTidyCheck::FailureInfo>
 ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                             const SourceManager &) const {
   assert(Decl && Decl->getIdentifier() && !Decl->getName().empty() &&
-         !Decl->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
+  // Implicit identifiers cannot fail.
+  if (Decl->isImplicit())
+    return std::nullopt;
+
   return getFailureInfoImpl(
       Decl->getName(), isa<TranslationUnitDecl>(Decl->getDeclContext()),
       /*IsMacro = */ false, getLangOpts(), Invert, AllowedIdentifiers);

@@ -18,7 +18,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <version>
 

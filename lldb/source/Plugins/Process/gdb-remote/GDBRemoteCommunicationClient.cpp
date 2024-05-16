@@ -3418,8 +3418,8 @@ bool GDBRemoteCommunicationClient::GetFileExists(
   return true;
 }
 
-bool GDBRemoteCommunicationClient::CalculateMD5(
-    const lldb_private::FileSpec &file_spec, uint64_t &high, uint64_t &low) {
+llvm::ErrorOr<llvm::MD5::MD5Result> GDBRemoteCommunicationClient::CalculateMD5(
+    const lldb_private::FileSpec &file_spec) {
   std::string path(file_spec.GetPath(false));
   lldb_private::StreamString stream;
   stream.PutCString("vFile:MD5:");
@@ -3428,16 +3428,60 @@ bool GDBRemoteCommunicationClient::CalculateMD5(
   if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
       PacketResult::Success) {
     if (response.GetChar() != 'F')
-      return false;
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     if (response.GetChar() != ',')
-      return false;
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     if (response.Peek() && *response.Peek() == 'x')
-      return false;
-    low = response.GetHexMaxU64(false, UINT64_MAX);
-    high = response.GetHexMaxU64(false, UINT64_MAX);
-    return true;
+      return std::make_error_code(std::errc::no_such_file_or_directory);
+
+    // GDBRemoteCommunicationServerCommon::Handle_vFile_MD5 concatenates low and
+    // high hex strings. We can't use response.GetHexMaxU64 because that can't
+    // handle the concatenated hex string. What would happen is parsing the low
+    // would consume the whole response packet which would give incorrect
+    // results. Instead, we get the byte string for each low and high hex
+    // separately, and parse them.
+    //
+    // An alternate way to handle this is to change the server to put a
+    // delimiter between the low/high parts, and change the client to parse the
+    // delimiter. However, we choose not to do this so existing lldb-servers
+    // don't have to be patched
+
+    // The checksum is 128 bits encoded as hex
+    // This means low/high are halves of 64 bits each, in otherwords, 8 bytes.
+    // Each byte takes 2 hex characters in the response.
+    const size_t MD5_HALF_LENGTH = sizeof(uint64_t) * 2;
+
+    // Get low part
+    auto part =
+        response.GetStringRef().substr(response.GetFilePos(), MD5_HALF_LENGTH);
+    if (part.size() != MD5_HALF_LENGTH)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+    response.SetFilePos(response.GetFilePos() + part.size());
+
+    uint64_t low;
+    if (part.getAsInteger(/*radix=*/16, low))
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+
+    // Get high part
+    part =
+        response.GetStringRef().substr(response.GetFilePos(), MD5_HALF_LENGTH);
+    if (part.size() != MD5_HALF_LENGTH)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+    response.SetFilePos(response.GetFilePos() + part.size());
+
+    uint64_t high;
+    if (part.getAsInteger(/*radix=*/16, high))
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+
+    llvm::MD5::MD5Result result;
+    llvm::support::endian::write<uint64_t, llvm::endianness::little>(
+        result.data(), low);
+    llvm::support::endian::write<uint64_t, llvm::endianness::little>(
+        result.data() + 8, high);
+
+    return result;
   }
-  return false;
+  return std::make_error_code(std::errc::operation_canceled);
 }
 
 bool GDBRemoteCommunicationClient::AvoidGPackets(ProcessGDBRemote *process) {

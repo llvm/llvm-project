@@ -9,6 +9,7 @@
 #include "RISCVMatInt.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
@@ -113,29 +114,30 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     ShiftAmount = llvm::countr_zero((uint64_t)Val);
     Val >>= ShiftAmount;
 
-    // If the remaining bits don't fit in 12 bits, we might be able to reduce the
-    // shift amount in order to use LUI which will zero the lower 12 bits.
+    // If the remaining bits don't fit in 12 bits, we might be able to reduce
+    // the shift amount in order to use LUI which will zero the lower 12 bits.
     if (ShiftAmount > 12 && !isInt<12>(Val)) {
-      if (isInt<32>((uint64_t)Val << 12)) {
-        // Reduce the shift amount and add zeros to the LSBs so it will match LUI.
+      if (isInt<32>(Val << 12)) {
+        // Reduce the shift amount and add zeros to the LSBs so it will match
+        // LUI.
         ShiftAmount -= 12;
-        Val = (uint64_t)Val << 12;
-      } else if (isUInt<32>((uint64_t)Val << 12) &&
+        Val = Val << 12;
+      } else if (isUInt<32>(Val << 12) &&
                  STI.hasFeature(RISCV::FeatureStdExtZba)) {
         // Reduce the shift amount and add zeros to the LSBs so it will match
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
-        Val = ((uint64_t)Val << 12) | (0xffffffffull << 32);
+        Val = SignExtend64<32>(Val << 12);
         Unsigned = true;
       }
     }
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
+    if (isUInt<32>(Val) && !isInt<32>(Val) &&
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
-      // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
+      // Use LUI+ADDI(W) or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
-      Val = ((uint64_t)Val) | (0xffffffffull << 32);
+      Val = SignExtend64<32>(Val);
       Unsigned = true;
     }
   }
@@ -309,56 +311,45 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
     }
   }
 
-  // Perform optimization with BCLRI/BSETI in the Zbs extension.
+  // Perform optimization with BSETI in the Zbs extension.
   if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
-    // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
-    //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
-    //    an int32), then emit (BCLRI r, 31).
-    // 2. For values in range 0x80000000 ~ 0xffffffff, call generateInstSeqImpl
-    //    with Val&~0x80000000 (which is expected to be an int32), then
-    //    emit (BSETI r, 31).
-    int64_t NewVal;
-    unsigned Opc;
-    if (Val < 0) {
-      Opc = RISCV::BCLRI;
-      NewVal = Val | 0x80000000ll;
-    } else {
-      Opc = RISCV::BSETI;
-      NewVal = Val & ~0x80000000ll;
-    }
-    if (isInt<32>(NewVal)) {
-      RISCVMatInt::InstSeq TmpSeq;
-      generateInstSeqImpl(NewVal, STI, TmpSeq);
-      if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(Opc, 31);
-        Res = TmpSeq;
-      }
-    }
+    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to zero.
+    // Xor that with original value to get which bits should be set by BSETI.
+    uint64_t Lo = Val & 0x7fffffff;
+    uint64_t Hi = Val ^ Lo;
+    assert(Hi != 0);
+    RISCVMatInt::InstSeq TmpSeq;
 
-    // Try to use BCLRI for upper 32 bits if the original lower 32 bits are
-    // negative int32, or use BSETI for upper 32 bits if the original lower
-    // 32 bits are positive int32.
-    int32_t Lo = Lo_32(Val);
-    uint32_t Hi = Hi_32(Val);
-    Opc = 0;
+    if (Lo != 0)
+      generateInstSeqImpl(Lo, STI, TmpSeq);
+
+    if (TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
+      do {
+        TmpSeq.emplace_back(RISCV::BSETI, llvm::countr_zero(Hi));
+        Hi &= (Hi - 1); // Clear lowest set bit.
+      } while (Hi != 0);
+      Res = TmpSeq;
+    }
+  }
+
+  // Perform optimization with BCLRI in the Zbs extension.
+  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
+    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to one.
+    // Xor that with original value to get which bits should be cleared by
+    // BCLRI.
+    uint64_t Lo = Val | 0xffffffff80000000;
+    uint64_t Hi = Val ^ Lo;
+    assert(Hi != 0);
+
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(Lo, STI, TmpSeq);
-    // Check if it is profitable to use BCLRI/BSETI.
-    if (Lo > 0 && TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
-      Opc = RISCV::BSETI;
-    } else if (Lo < 0 && TmpSeq.size() + llvm::popcount(~Hi) < Res.size()) {
-      Opc = RISCV::BCLRI;
-      Hi = ~Hi;
-    }
-    // Search for each bit and build corresponding BCLRI/BSETI.
-    if (Opc > 0) {
-      while (Hi != 0) {
-        unsigned Bit = llvm::countr_zero(Hi);
-        TmpSeq.emplace_back(Opc, Bit + 32);
+
+    if (TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
+      do {
+        TmpSeq.emplace_back(RISCV::BCLRI, llvm::countr_zero(Hi));
         Hi &= (Hi - 1); // Clear lowest set bit.
-      }
-      if (TmpSeq.size() < Res.size())
-        Res = TmpSeq;
+      } while (Hi != 0);
+      Res = TmpSeq;
     }
   }
 
@@ -434,6 +425,43 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
     }
   }
   return Res;
+}
+
+void generateMCInstSeq(int64_t Val, const MCSubtargetInfo &STI,
+                       MCRegister DestReg, SmallVectorImpl<MCInst> &Insts) {
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Val, STI);
+
+  MCRegister SrcReg = RISCV::X0;
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    switch (Inst.getOpndKind()) {
+    case RISCVMatInt::Imm:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addImm(Inst.getImm()));
+      break;
+    case RISCVMatInt::RegX0:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addReg(RISCV::X0));
+      break;
+    case RISCVMatInt::RegReg:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addReg(SrcReg));
+      break;
+    case RISCVMatInt::RegImm:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addImm(Inst.getImm()));
+      break;
+    }
+
+    // Only the first instruction has X0 as its source.
+    SrcReg = DestReg;
+  }
 }
 
 InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,

@@ -129,6 +129,12 @@ def strict_auto_link : Flag<["--"], "strict-auto-link">,
 def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
     HelpText<"Check for conflicts between category & class methods">,
     Group<grp_lld>;
+def objc_category_merging : Flag<["-"], "objc_category_merging">,
+    HelpText<"Merge Objective-C categories that share the same base class">,
+    Group<grp_lld>;
+def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
+    HelpText<"Do not merge Objective-C categories">,
+    Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
@@ -966,10 +972,6 @@ def interposable_list : Separate<["-"], "interposable_list">,
 def no_function_starts : Flag<["-"], "no_function_starts">,
     HelpText<"Do not create table of function start addresses">,
     Group<grp_rare>;
-def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
-    HelpText<"Do not merge Objective-C categories into their classes">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
 def object_path_lto : Separate<["-"], "object_path_lto">,
     MetaVarName<"<path>">,
     HelpText<"Retain any temporary mach-o file in <path> that would otherwise be deleted during LTO">,
@@ -1282,6 +1284,12 @@ def fixup_chains_section : Flag<["-"], "fixup_chains_section">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
+def objc_relative_method_lists : Flag<["-"], "objc_relative_method_lists">,
+    HelpText<"Emit relative method lists (more compact representation)">,
+    Group<grp_undocumented>;
+def no_objc_relative_method_lists : Flag<["-"], "no_objc_relative_method_lists">,
+    HelpText<"Don't emit relative method lists (use traditional representation)">,
+    Group<grp_undocumented>;
 def flto_codegen_only : Flag<["-"], "flto-codegen-only">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
@@ -1403,5 +1411,11 @@ def objc_abi_version : Separate<["-"], "objc_abi_version">,
     Group<grp_ignored_silently>;
 def debug_variant : Flag<["-"], "debug_variant">,
     HelpText<"Do not warn about issues that are only problems for binaries shipping to customers.">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;
+
+// NOTE: This flag should be respected if -warn_duplicate_libraries is ever implemented.
+def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
+    HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;

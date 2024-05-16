@@ -107,12 +107,6 @@ end
   These definitions yield fairly poor results due to floating-point
   cancellation, and every Fortran compiler (including this one)
   uses better algorithms.
-* When an index variable of a `FORALL` or `DO CONCURRENT` is present
-  in the enclosing scope, and the construct does not have an explicit
-  type specification for its index variables, some weird restrictions
-  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
-  compiler properly scopes these names, violations of these restrictions
-  elicit only portability warnings by default.
 * The rules for pairwise distinguishing the specific procedures of a
   generic interface are inadequate, as admitted in note C.11.6 of F'2023.
   Generic interfaces whose specific procedures can be easily proven by
@@ -120,6 +114,10 @@ end
   appear in real applications, but are still non-conforming under the
   incomplete tests in F'2023 15.4.3.4.5.
   These cases are compiled with optional portability warnings.
+* `PROCEDURE(), BIND(C) :: PROC` is not conforming, as there is no
+  procedure interface.  This compiler accepts it, since there is otherwise
+  no way to declare an interoperable dummy procedure with an arbitrary
+  interface like `void (*)()`.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -193,7 +191,9 @@ end
   converted.  BOZ literals are interpreted as default INTEGER only
   when they appear as the first items of array constructors with no
   explicit type.  Otherwise, they generally cannot be used if the type would
-  not be known (e.g., `IAND(X'1',X'2')`).
+  not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
+  `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
+  the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
@@ -306,9 +306,10 @@ end
   enforce it and the constraint is not necessary for a correct
   implementation.
 * A label may follow a semicolon in fixed form source.
-* A scalar logical dummy argument to a `BIND(C)` procedure does
-  not have to have `KIND=C_BOOL` since it can be converted to/from
-  `_Bool` without loss of information.
+* A logical dummy argument to a `BIND(C)` procedure, or a logical
+  component to a `BIND(C)` derived type does not have to have
+  `KIND=C_BOOL` since it can be converted to/from `_Bool` without
+  loss of information.
 * The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
   may be distinct from the constant character length, if any,
   of an allocated object.
@@ -344,6 +345,13 @@ end
 * A `NAMELIST` input group may begin with either `&` or `$`.
 * A comma in a fixed-width numeric input field terminates the
   field rather than signaling an invalid character error.
+* Arguments to the intrinsic functions `MAX` and `MIN` are converted
+  when necessary to the type of the result.
+  An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
+  the first two cannot be converted, as it may not be present.
+* A derived type that meets (most of) the requirements of an interoperable
+  derived type can be used as such where an interoperable type is
+  required, with warnings, even if it lacks the BIND(C) attribute.
 
 ### Extensions supported when enabled by options
 
@@ -720,6 +728,23 @@ end
   is desirable in such context (Fortran interop 1.6.2 in F2018 standards require
   array and structure constructors not to be finalized, so it also makes sense
   not to finalize their allocatable components when releasing their storage).
+
+* F'2023 19.4 paragraph 5: "If integer-type-spec appears in data-implied-do or
+  ac-implied-do-control it has the specified type and type parameters; otherwise
+  it has the type and type parameters that it would have if it were the name of
+  a variable in the innermost executable construct or scoping unit that includes
+  the DATA statement or array constructor, and this type shall be integer type."
+  Reading "would have if it were" as being the subjunctive, this would mean that
+  an untyped implied DO index variable should be implicitly typed according to
+  the rules active in the enclosing scope.  But all other Fortran compilers interpret
+  the "would have if it were" as meaning "has if it is" -- i.e., if the name
+  is visible in the enclosing scope, the type of that name is used as the
+  type of the implied DO index.  So this is an error, not a simple application
+  of the default implicit typing rule:
+```
+character j
+print *, [(j,j=1,10)]
+```
 
 ## De Facto Standard Features
 

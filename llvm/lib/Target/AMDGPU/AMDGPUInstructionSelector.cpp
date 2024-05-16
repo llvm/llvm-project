@@ -63,6 +63,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  Subtarget->checkSubtargetFeatures(MF.getFunction());
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 
@@ -2044,38 +2045,6 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     MIB.addImm(DimInfo->DA ? -1 : 0);
   if (BaseOpcode->HasD16)
     MIB.addImm(IsD16 ? -1 : 0);
-
-  if (IsTexFail) {
-    // An image load instruction with TFE/LWE only conditionally writes to its
-    // result registers. Initialize them to zero so that we always get well
-    // defined result values.
-    assert(VDataOut && !VDataIn);
-    Register Tied = MRI->cloneVirtualRegister(VDataOut);
-    Register Zero = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::V_MOV_B32_e32), Zero)
-      .addImm(0);
-    auto Parts = TRI.getRegSplitParts(MRI->getRegClass(Tied), 4);
-    if (STI.usePRTStrictNull()) {
-      // With enable-prt-strict-null enabled, initialize all result registers to
-      // zero.
-      auto RegSeq =
-          BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
-      for (auto Sub : Parts)
-        RegSeq.addReg(Zero).addImm(Sub);
-    } else {
-      // With enable-prt-strict-null disabled, only initialize the extra TFE/LWE
-      // result register.
-      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
-      auto RegSeq =
-          BuildMI(*MBB, *MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), Tied);
-      for (auto Sub : Parts.drop_back(1))
-        RegSeq.addReg(Undef).addImm(Sub);
-      RegSeq.addReg(Zero).addImm(Parts.back());
-    }
-    MIB.addReg(Tied, RegState::Implicit);
-    MIB->tieOperands(0, MIB->getNumOperands() - 1);
-  }
 
   MI.eraseFromParent();
   constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);

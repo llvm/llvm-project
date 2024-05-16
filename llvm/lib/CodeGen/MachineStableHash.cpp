@@ -200,7 +200,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
   for (const auto *Op : MI.memoperands()) {
     if (!HashMemOperands)
       break;
-    HashComponents.push_back(static_cast<unsigned>(Op->getSize()));
+    HashComponents.push_back(static_cast<unsigned>(Op->getSize().getValue()));
     HashComponents.push_back(static_cast<unsigned>(Op->getFlags()));
     HashComponents.push_back(static_cast<unsigned>(Op->getOffset()));
     HashComponents.push_back(static_cast<unsigned>(Op->getSuccessOrdering()));

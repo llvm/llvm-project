@@ -2,6 +2,8 @@
 // RUN: %clang_cl_asan %Od %s -EHsc %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 char buff1[6] = "hello";
 char buff2[6] = "hello";
 
@@ -14,5 +16,5 @@ int main(int argc, char **argv) {
   }
   return 0;
 }
-
-// CHECK: SUMMARY: AddressSanitizer: global-buffer-overflow {{.*}} in __asan_memcpy
+// CHECK: #0 {{.*}} in __asan_memcpy
+// CHECK: SUMMARY: AddressSanitizer: global-buffer-overflow {{.*}} in main

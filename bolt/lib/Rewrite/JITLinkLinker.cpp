@@ -5,9 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "bolt/Rewrite/JITLinkLinker.h"
+#include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryData.h"
-#include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Core/BinarySection.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"

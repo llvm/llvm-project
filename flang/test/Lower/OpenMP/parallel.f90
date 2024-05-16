@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPparallel_simple
@@ -152,7 +154,7 @@ subroutine parallel_allocate()
    use omp_lib
    integer :: x
    !CHECK: omp.parallel allocate(
-   !CHECK: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
+   !CHECK: %{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>
    !CHECK: ) {
    !$omp parallel allocate(omp_high_bw_mem_alloc: x) private(x)
    !CHECK: arith.addi
@@ -193,7 +195,7 @@ subroutine parallel_multiple_clauses(alpha, num_threads)
    !$omp end parallel
 
    !CHECK: omp.parallel if({{.*}} : i1) num_threads({{.*}} : i32) allocate(
-   !CHECK: %{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>
+   !CHECK: %{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>
    !CHECK: ) {
    !$omp parallel num_threads(num_threads) if(alpha .le. 0) allocate(omp_high_bw_mem_alloc: alpha) private(alpha)
    !CHECK: fir.call

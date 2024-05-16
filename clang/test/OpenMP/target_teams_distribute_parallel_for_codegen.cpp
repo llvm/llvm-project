@@ -333,12 +333,12 @@ int target_teams_fun(int *g){
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP24]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP24]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       cancel.exit:
 // CHECK1-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP26]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP26]])
 // CHECK1-NEXT:    br label [[CANCEL_CONT:%.*]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    br label [[CANCEL_CONT]]
@@ -559,7 +559,7 @@ int target_teams_fun(int *g){
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    ret void
@@ -653,7 +653,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP29:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP23]], 0
 // CHECK2-NEXT:    [[TMP30:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP24]], 0
 // CHECK2-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK2-NEXT:    store i32 2, ptr [[TMP31]], align 4
+// CHECK2-NEXT:    store i32 3, ptr [[TMP31]], align 4
 // CHECK2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK2-NEXT:    store i32 4, ptr [[TMP32]], align 4
 // CHECK2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -720,7 +720,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP62]], 1
 // CHECK2-NEXT:    [[TMP63:%.*]] = zext i32 [[ADD17]] to i64
 // CHECK2-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 0
-// CHECK2-NEXT:    store i32 2, ptr [[TMP64]], align 4
+// CHECK2-NEXT:    store i32 3, ptr [[TMP64]], align 4
 // CHECK2-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 1
 // CHECK2-NEXT:    store i32 3, ptr [[TMP65]], align 4
 // CHECK2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 2
@@ -975,12 +975,12 @@ int target_teams_fun(int *g){
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP24]])
+// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP24]])
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       cancel.exit:
 // CHECK2-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP26]])
+// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP26]])
 // CHECK2-NEXT:    br label [[CANCEL_CONT:%.*]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    br label [[CANCEL_CONT]]
@@ -1201,7 +1201,7 @@ int target_teams_fun(int *g){
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    ret void
@@ -1295,7 +1295,7 @@ int target_teams_fun(int *g){
 // CHECK4-NEXT:    [[TMP29:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP23]], 0
 // CHECK4-NEXT:    [[TMP30:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP24]], 0
 // CHECK4-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK4-NEXT:    store i32 2, ptr [[TMP31]], align 4
+// CHECK4-NEXT:    store i32 3, ptr [[TMP31]], align 4
 // CHECK4-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK4-NEXT:    store i32 4, ptr [[TMP32]], align 4
 // CHECK4-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1362,7 +1362,7 @@ int target_teams_fun(int *g){
 // CHECK4-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP62]], 1
 // CHECK4-NEXT:    [[TMP63:%.*]] = zext i32 [[ADD17]] to i64
 // CHECK4-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 0
-// CHECK4-NEXT:    store i32 2, ptr [[TMP64]], align 4
+// CHECK4-NEXT:    store i32 3, ptr [[TMP64]], align 4
 // CHECK4-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 1
 // CHECK4-NEXT:    store i32 3, ptr [[TMP65]], align 4
 // CHECK4-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 2
@@ -1612,12 +1612,12 @@ int target_teams_fun(int *g){
 // CHECK4:       omp.loop.exit:
 // CHECK4-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
-// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP24]])
+// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP24]])
 // CHECK4-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK4:       cancel.exit:
 // CHECK4-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
-// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP26]])
+// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP26]])
 // CHECK4-NEXT:    br label [[CANCEL_CONT:%.*]]
 // CHECK4:       omp.precond.end:
 // CHECK4-NEXT:    br label [[CANCEL_CONT]]
@@ -1833,7 +1833,7 @@ int target_teams_fun(int *g){
 // CHECK4:       omp.loop.exit:
 // CHECK4-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK4-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK4-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK4:       omp.precond.end:
 // CHECK4-NEXT:    ret void
@@ -2059,12 +2059,12 @@ int target_teams_fun(int *g){
 // CHECK10:       omp.loop.exit:
 // CHECK10-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK10-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
-// CHECK10-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP24]])
+// CHECK10-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP24]])
 // CHECK10-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK10:       cancel.exit:
 // CHECK10-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK10-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
-// CHECK10-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP26]])
+// CHECK10-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP26]])
 // CHECK10-NEXT:    br label [[CANCEL_CONT:%.*]]
 // CHECK10:       omp.precond.end:
 // CHECK10-NEXT:    br label [[CANCEL_CONT]]
@@ -2287,7 +2287,7 @@ int target_teams_fun(int *g){
 // CHECK10:       omp.loop.exit:
 // CHECK10-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK10-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK10-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK10-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK10-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK10:       omp.precond.end:
 // CHECK10-NEXT:    ret void
@@ -2508,12 +2508,12 @@ int target_teams_fun(int *g){
 // CHECK12:       omp.loop.exit:
 // CHECK12-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK12-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
-// CHECK12-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP24]])
+// CHECK12-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP24]])
 // CHECK12-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK12:       cancel.exit:
 // CHECK12-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK12-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
-// CHECK12-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP26]])
+// CHECK12-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP26]])
 // CHECK12-NEXT:    br label [[CANCEL_CONT:%.*]]
 // CHECK12:       omp.precond.end:
 // CHECK12-NEXT:    br label [[CANCEL_CONT]]
@@ -2731,7 +2731,7 @@ int target_teams_fun(int *g){
 // CHECK12:       omp.loop.exit:
 // CHECK12-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK12-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK12-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK12-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK12-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK12:       omp.precond.end:
 // CHECK12-NEXT:    ret void

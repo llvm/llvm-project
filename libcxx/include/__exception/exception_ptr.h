@@ -26,6 +26,8 @@
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
+#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+
 namespace __cxxabiv1 {
 
 extern "C" {
@@ -37,13 +39,15 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
     void*,
     std::type_info*,
     void(
-#  if defined(_WIN32)
+#    if defined(_WIN32)
         __thiscall
-#  endif
+#    endif
             *)(void*)) throw();
 }
 
 } // namespace __cxxabiv1
+
+#  endif
 
 #endif
 

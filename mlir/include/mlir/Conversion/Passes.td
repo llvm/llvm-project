@@ -172,10 +172,6 @@ def ConvertArithToSPIRV : Pass<"convert-arith-to-spirv"> {
            "bool", /*default=*/"true",
            "Emulate narrower scalar types with 32-bit ones if not supported by "
            "the target">,
-    Option<"enableFastMath", "enable-fast-math",
-           "bool", /*default=*/"false",
-           "Enable fast math mode (assuming no NaN and infinity for floating "
-           "point values) when performing conversion">
   ];
 }
 
@@ -754,6 +750,15 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MemRefToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc"> {
+  let summary = "Convert MemRef dialect to EmitC dialect";
+  let dependentDialects = ["emitc::EmitCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -1280,13 +1285,18 @@ def ConvertArmSMEToSCF : Pass<"convert-arm-sme-to-scf"> {
 // ArmSMEToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertArmSMEToLLVM : Pass<"convert-arm-sme-to-llvm"> {
+def ConvertArmSMEToLLVM : InterfacePass<"convert-arm-sme-to-llvm", "FunctionOpInterface"> {
   let summary = "Lower the operations from the ArmSME dialect into the LLVM "
                 "dialect";
   let constructor = "mlir::createConvertArmSMEToLLVMPass()";
   let dependentDialects = [
     "arm_sme::ArmSMEDialect",
     "LLVM::LLVMDialect"
+  ];
+  let options = [
+    Option<"dumpTileLiveRanges", "dump-tile-live-ranges",
+           "bool", /*default=*/"false",
+           "Dump the live ranges of SME tiles (for debugging)">
   ];
 }
 

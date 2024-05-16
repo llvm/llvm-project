@@ -2,7 +2,7 @@
 ! dummy has IGNORE_TKR(t). The descriptor should be prepared
 ! according to the actual argument type, but its bounds and
 ! attributes should still be set as expected for the dummy.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module tkr_ifaces
   interface

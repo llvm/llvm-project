@@ -28,9 +28,16 @@ class Value;
 namespace scf {
 
 class IfOp;
+class ForallOp;
 class ForOp;
 class ParallelOp;
 class WhileOp;
+
+/// Try converting scf.forall into a set of nested scf.for loops.
+/// The newly created scf.for ops will be returned through the `results`
+/// vector if provided.
+LogicalResult forallToForLoop(RewriterBase &rewriter, ForallOp forallOp,
+                              SmallVectorImpl<Operation *> *results = nullptr);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
@@ -221,6 +228,12 @@ FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
 FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
                                                 RewriterBase &rewriter,
                                                 bool forceCreateCheck = false);
+
+/// Try to uplift `scf.while` op to `scf.for`.
+/// Uplifitng expects a specific ops pattern:
+///  * `before` block consisting of single arith.cmp op
+///  * `after` block containing arith.addi
+FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
 
 } // namespace scf
 } // namespace mlir

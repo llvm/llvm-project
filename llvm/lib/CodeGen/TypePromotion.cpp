@@ -367,13 +367,13 @@ bool TypePromotionImpl::isSafeWrap(Instruction *I) {
 
   SafeWrap.insert(I);
 
-  if (OverflowConst.ugt(ICmpConst)) {
-    LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
+  if (OverflowConst == 0 || OverflowConst.ugt(ICmpConst)) {
+    LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for "
                       << "const of " << *I << "\n");
     return true;
   }
 
-  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for "
                     << "const of " << *I << " and " << *CI << "\n");
   SafeWrap.insert(CI);
   return true;
@@ -643,7 +643,7 @@ void IRPromoter::ConvertTruncs() {
     ConstantInt *Mask =
         ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
-    if (SrcTy != ExtTy)
+    if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
       Masked = Builder.CreateTrunc(Masked, ExtTy);
 
     if (auto *I = dyn_cast<Instruction>(Masked))

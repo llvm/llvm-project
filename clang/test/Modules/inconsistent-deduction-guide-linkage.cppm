@@ -26,6 +26,10 @@ module;
 #include "C.h"
 export module B;
 
+namespace foo {
+    export using foo::bar;
+}
+
 //--- C.h
 namespace foo {
   template<class T, class U> struct bar { // expected-error {{declaration of 'bar' in module baz:A follows declaration in the global module}} // expected-note {{previous declaration is here}}
@@ -39,6 +43,10 @@ namespace foo {
 module;
 #include "E.h"
 export module D;
+
+namespace foo {
+    export using foo::bar;
+}
 
 //--- D-part.cppm
 export module D:part;

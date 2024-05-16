@@ -1,13 +1,14 @@
 // RUN: mlir-opt %s -split-input-file -test-affine-access-analysis -verify-diagnostics | FileCheck %s
 
-// CHECK-LABEL: func @loop_1d
-func.func @loop_1d(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
+// CHECK-LABEL: func @loop_simple
+func.func @loop_simple(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    %c0 = arith.constant 0 : index
    %M = memref.dim %A, %c0 : memref<?x?xf32>
    affine.for %i = 0 to %M {
      affine.for %j = 0 to %M {
        affine.load %A[%c0, %i] : memref<?x?xf32>
        // expected-remark@above {{contiguous along loop 0}}
+       // expected-remark@above {{invariant along loop 1}}
        affine.load %A[%c0, 8 * %i + %j] : memref<?x?xf32>
        // expected-remark@above {{contiguous along loop 1}}
        // Note/FIXME: access stride isn't being checked.
@@ -15,12 +16,29 @@ func.func @loop_1d(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
        // These are all non-contiguous along both loops. Nothing is emitted.
        affine.load %A[%i, %c0] : memref<?x?xf32>
+       // expected-remark@above {{invariant along loop 1}}
        // Note/FIXME: access stride isn't being checked.
        affine.load %A[%i, 8 * %j] : memref<?x?xf32>
        // expected-remark@above {{contiguous along loop 1}}
        affine.load %A[%j, 4 * %i] : memref<?x?xf32>
        // expected-remark@above {{contiguous along loop 0}}
      }
+   }
+   return
+}
+
+// -----
+
+// CHECK-LABEL: func @loop_unsimplified
+func.func @loop_unsimplified(%A : memref<100xf32>) {
+   affine.for %i = 0 to 100 {
+     affine.load %A[2 * %i - %i - %i] : memref<100xf32>
+     // expected-remark@above {{invariant along loop 0}}
+
+     %m = affine.apply affine_map<(d0) -> (-2 * d0)>(%i)
+     %n = affine.apply affine_map<(d0) -> (2 * d0)>(%i)
+     affine.load %A[(%m + %n) floordiv 2] : memref<100xf32>
+     // expected-remark@above {{invariant along loop 0}}
    }
    return
 }
@@ -41,11 +59,19 @@ func.func @tiled(%arg0: memref<*xf32>) {
         %alloc_0 = memref.alloc() : memref<1x16x1x16xf32>
         affine.for %arg4 = #map(%arg1) to #map1(%arg1) {
           affine.for %arg5 = #map(%arg3) to #map1(%arg3) {
+            // TODO: here and below, the access isn't really invariant
+            // along tile-space IVs where the intra-tile IVs' bounds
+            // depend on them.
             %0 = affine.load %cast[%arg4] : memref<64xf32>
             // expected-remark@above {{contiguous along loop 3}}
+            // expected-remark@above {{invariant along loop 0}}
+            // expected-remark@above {{invariant along loop 1}}
+            // expected-remark@above {{invariant along loop 2}}
+            // expected-remark@above {{invariant along loop 4}}
             affine.store %0, %alloc_0[0, %arg1 * -16 + %arg4, 0, %arg3 * -16 + %arg5] : memref<1x16x1x16xf32>
             // expected-remark@above {{contiguous along loop 4}}
             // expected-remark@above {{contiguous along loop 2}}
+            // expected-remark@above {{invariant along loop 1}}
           }
         }
         affine.for %arg4 = #map(%arg1) to #map1(%arg1) {
@@ -56,6 +82,9 @@ func.func @tiled(%arg0: memref<*xf32>) {
               // expected-remark@above {{contiguous along loop 2}}
               affine.store %0, %alloc[0, %arg5, %arg6, %arg4] : memref<1x224x224x64xf32>
               // expected-remark@above {{contiguous along loop 3}}
+              // expected-remark@above {{invariant along loop 0}}
+              // expected-remark@above {{invariant along loop 1}}
+              // expected-remark@above {{invariant along loop 2}}
             }
           }
         }

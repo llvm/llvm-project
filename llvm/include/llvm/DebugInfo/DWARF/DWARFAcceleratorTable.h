@@ -605,6 +605,12 @@ public:
     NameIndex(const DWARFDebugNames &Section, uint64_t Base)
         : Section(Section), Base(Base) {}
 
+    /// Returns Hdr field
+    Header getHeader() const { return Hdr; }
+
+    /// Returns Offsets field
+    DWARFDebugNamesOffsets getOffsets() const { return Offsets; }
+
     /// Reads offset of compilation unit CU. CU is 0-based.
     uint64_t getCUOffset(uint32_t CU) const;
     uint32_t getCUCount() const { return Hdr.CompUnitCount; }
@@ -801,9 +807,11 @@ public:
 
 /// Calculates the starting offsets for various sections within the
 /// .debug_names section.
-void findDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
-                           uint64_t HdrSize, const dwarf::DwarfFormat Format,
-                           const DWARFDebugNames::Header &Hdr);
+namespace dwarf {
+DWARFDebugNames::DWARFDebugNamesOffsets
+findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
+                      const DWARFDebugNames::Header &Hdr);
+}
 
 /// If `Name` is the name of a templated function that includes template
 /// parameters, returns a substring of `Name` containing no template

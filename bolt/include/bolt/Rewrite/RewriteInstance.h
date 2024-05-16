@@ -17,7 +17,6 @@
 #include "bolt/Core/Linker.h"
 #include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -97,6 +96,10 @@ private:
   /// Populate array of binary functions and other objects of interest
   /// from meta data in the file.
   void discoverFileObjects();
+
+  /// Check if the input binary has a space reserved for BOLT and use it for new
+  /// section allocations if found.
+  void discoverBOLTReserved();
 
   /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
   /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
@@ -369,13 +372,6 @@ private:
   /// rewritten binary.
   void patchBuildID();
 
-  /// Return file offset corresponding to a given virtual address.
-  uint64_t getFileOffsetFor(uint64_t Address) {
-    assert(Address >= NewTextSegmentAddress &&
-           "address in not in the new text segment");
-    return Address - NewTextSegmentAddress + NewTextSegmentOffset;
-  }
-
   /// Return file offset corresponding to a virtual \p Address.
   /// Return 0 if the address has no mapping in the file, including being
   /// part of .bss section.
@@ -398,9 +394,6 @@ public:
 
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
-
-  /// Return true if the section holds linux kernel symbol information.
-  static bool isKSymtabSection(StringRef SectionName);
 
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {
@@ -433,9 +426,17 @@ private:
   /// Section name used for extra BOLT code in addition to .text.
   static StringRef getBOLTTextSectionName() { return ".bolt.text"; }
 
+  /// Symbol markers for BOLT reserved area.
+  static StringRef getBOLTReservedStart() { return "__bolt_reserved_start"; }
+  static StringRef getBOLTReservedEnd() { return "__bolt_reserved_end"; }
+
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getEHFrameHdrSectionName() { return ".eh_frame_hdr"; }
   static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
+
+  /// FILE symbol name used for local fragments of global functions.
+  static StringRef getBOLTFileSymbolName() { return "bolt-pseudo.o"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
@@ -500,6 +501,9 @@ private:
 
   /// Store all non-zero symbols in this map for a quick address lookup.
   std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
+
+  /// FILE symbols used for disambiguating split function parents.
+  std::vector<ELFSymbolRef> FileSymbols;
 
   std::unique_ptr<DWARFRewriter> DebugInfoRewriter;
 
