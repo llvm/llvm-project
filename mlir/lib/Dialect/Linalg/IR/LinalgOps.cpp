@@ -1179,8 +1179,10 @@ static LogicalResult commonOpVerifier(LinalgOp linalgOp) {
             // If shape for a affineDimExpr is already known from the input
             // operand's map ensure that the shapes match across the output
             // operands.
-            return linalgOp->emitError("Mis-match in dimension shape ")
-                   << affineDimExpr.getPosition() << " inferred from the maps.";
+            return linalgOp->emitOpError("inferred operand #")
+                   << opOperand.getOperandNumber() << " has shape's dimension #"
+                   << i << " to be " << affineExprToSize[affineDimExpr]
+                   << ", but found " << dimShape;
         }
       }
     }
