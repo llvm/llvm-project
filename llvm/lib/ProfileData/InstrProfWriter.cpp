@@ -552,10 +552,61 @@ static Error writeMemProf(
               memprof::MaximumSupportedVersion));
 }
 
-uint64_t InstrProfWriter::writeHeader(ProfOStream &OS,
-                                      HeaderFieldOffsets &Offsets) {
+size_t InstrProfWriter::writeHeader(IndexedInstrProf::Header &Header,
+                                    const bool WritePrevVersion,
+                                    ProfOStream &OS,
+                                    size_t &BackPatchStartOffset) {
   // Records the offset before writing any fields.
   const uint64_t StartOffset = OS.tell();
+  // Only write out the first four fields. We need to remember the offset of the
+  // remaining fields to allow back patching later.
+  for (int I = 0; I < 4; I++)
+    OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
+
+  BackPatchStartOffset = OS.tell();
+
+  // Reserve the space for HashOffset field.
+  OS.write(0);
+
+  // Reserve space for the MemProf table field to be patched later if this
+  // profile contains memory profile information.
+  OS.write(0);
+
+  // Reserve space for the BinaryIdOffset field to be patched later if this
+  // profile contains binary ids.
+  OS.write(0);
+
+  // Reserve space for temporal profile traces for back patching later.
+  OS.write(0);
+
+  // Reserve space for vtable names for back patching later.
+  if (!WritePrevVersion)
+    OS.write(0);
+
+  // Returns the number of bytes written in the header section.
+  return OS.tell() - StartOffset;
+}
+
+Error InstrProfWriter::writeImpl(ProfOStream &OS) {
+  using namespace IndexedInstrProf;
+  using namespace support;
+
+  OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
+
+  InstrProfSummaryBuilder ISB(ProfileSummaryBuilder::DefaultCutoffs);
+  InfoObj->SummaryBuilder = &ISB;
+  InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
+  InfoObj->CSSummaryBuilder = &CSISB;
+
+  // Populate the hash table generator.
+  SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
+  for (const auto &I : FunctionData)
+    if (shouldEncodeData(I.getValue()))
+      OrderedData.emplace_back((I.getKey()), &I.getValue());
+  llvm::sort(OrderedData, less_first());
+  for (const auto &I : OrderedData)
+    Generator.insert(I.first, I.second);
+
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
@@ -590,63 +641,8 @@ uint64_t InstrProfWriter::writeHeader(ProfOStream &OS,
   Header.TemporalProfTracesOffset = 0;
   Header.VTableNamesOffset = 0;
 
-  // Only write out the first four fields. We need to remember the offset of the
-  // remaining fields to allow back patching later.
-  for (int I = 0; I < 4; I++)
-    OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
-
-  // Save the location of Header.HashOffset field in \c OS.
-  Offsets.HashTableStartFieldOffset = OS.tell();
-  // Reserve the space for HashOffset field.
-  OS.write(0);
-
-  // Save the location of MemProf profile data. This is stored in two parts as
-  // the schema and as a separate on-disk chained hashtable.
-  Offsets.MemProfSectionOffset = OS.tell();
-  // Reserve space for the MemProf table field to be patched later if this
-  // profile contains memory profile information.
-  OS.write(0);
-
-  // Save the location of binary ids section.
-  Offsets.BinaryIdSectionOffset = OS.tell();
-  // Reserve space for the BinaryIdOffset field to be patched later if this
-  // profile contains binary ids.
-  OS.write(0);
-
-  Offsets.TemporalProfTracesOffset = OS.tell();
-  OS.write(0);
-
-  Offsets.VTableNamesOffset = OS.tell();
-  if (!WritePrevVersion)
-    OS.write(0);
-
-  return OS.tell() - StartOffset;
-}
-
-Error InstrProfWriter::writeImpl(ProfOStream &OS) {
-  HeaderFieldOffsets Offsets;
-
-  // FIXME: The return value will be used in a future patch.
-  (void)this->writeHeader(OS, Offsets);
-
-  using namespace IndexedInstrProf;
-  using namespace support;
-
-  OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
-
-  InstrProfSummaryBuilder ISB(ProfileSummaryBuilder::DefaultCutoffs);
-  InfoObj->SummaryBuilder = &ISB;
-  InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
-  InfoObj->CSSummaryBuilder = &CSISB;
-
-  // Populate the hash table generator.
-  SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
-  for (const auto &I : FunctionData)
-    if (shouldEncodeData(I.getValue()))
-      OrderedData.emplace_back((I.getKey()), &I.getValue());
-  llvm::sort(OrderedData, less_first());
-  for (const auto &I : OrderedData)
-    Generator.insert(I.first, I.second);
+  size_t BackPatchStartOffset = 0;
+  this->writeHeader(Header, WritePrevVersion, OS, BackPatchStartOffset);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -775,20 +771,29 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
+  const size_t MemProfOffset =
+      BackPatchStartOffset + sizeof(IndexedInstrProf::Header::HashOffset);
+  const size_t BinaryIdOffset =
+      MemProfOffset + sizeof(IndexedInstrProf::Header::MemProfOffset);
+  const size_t TemporalProfTracesOffset =
+      BinaryIdOffset + sizeof(IndexedInstrProf::Header::BinaryIdOffset);
+  const size_t VTableNamesOffset =
+      TemporalProfTracesOffset +
+      sizeof(IndexedInstrProf::Header::TemporalProfTracesOffset);
   if (!WritePrevVersion) {
     // Now do the final patch:
     PatchItem PatchItems[] = {
         // Patch the Header.HashOffset field.
-        {Offsets.HashTableStartFieldOffset, &HashTableStart, 1},
+        {BackPatchStartOffset, &HashTableStart, 1},
         // Patch the Header.MemProfOffset (=0 for profiles without MemProf
         // data).
-        {Offsets.MemProfSectionOffset, &MemProfSectionStart, 1},
+        {MemProfOffset, &MemProfSectionStart, 1},
         // Patch the Header.BinaryIdSectionOffset.
-        {Offsets.BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
+        {BinaryIdOffset, &BinaryIdSectionStart, 1},
         // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
         // traces).
-        {Offsets.TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
-        {Offsets.VTableNamesOffset, &VTableNamesSectionStart, 1},
+        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+        {VTableNamesOffset, &VTableNamesSectionStart, 1},
         // Patch the summary data.
         {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
          (int)(SummarySize / sizeof(uint64_t))},
@@ -800,15 +805,15 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     // Now do the final patch:
     PatchItem PatchItems[] = {
         // Patch the Header.HashOffset field.
-        {Offsets.HashTableStartFieldOffset, &HashTableStart, 1},
+        {BackPatchStartOffset, &HashTableStart, 1},
         // Patch the Header.MemProfOffset (=0 for profiles without MemProf
         // data).
-        {Offsets.MemProfSectionOffset, &MemProfSectionStart, 1},
+        {MemProfOffset, &MemProfSectionStart, 1},
         // Patch the Header.BinaryIdSectionOffset.
-        {Offsets.BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
+        {BinaryIdOffset, &BinaryIdSectionStart, 1},
         // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
         // traces).
-        {Offsets.TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
         // Patch the summary data.
         {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
          (int)(SummarySize / sizeof(uint64_t))},
