@@ -2088,6 +2088,21 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
 
+    // If we're discarding a construct expression, we still need
+    // to allocate a variable and call the constructor and destructor.
+    if (DiscardResult) {
+      if (Ctor->isTrivial())
+        return true;
+      assert(!Initializing);
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
+
+      if (!LocalIndex)
+        return false;
+
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+    }
+
     // Zero initialization.
     if (E->requiresZeroInitialization()) {
       const Record *R = getRecord(E->getType());
@@ -2107,19 +2122,6 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
 
     assert(Func->hasThisPointer());
     assert(!Func->hasRVO());
-
-    // If we're discarding a construct expression, we still need
-    // to allocate a variable and call the constructor and destructor.
-    if (DiscardResult) {
-      assert(!Initializing);
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
-
-      if (!LocalIndex)
-        return false;
-
-      if (!this->emitGetPtrLocal(*LocalIndex, E))
-        return false;
-    }
 
     //  The This pointer is already on the stack because this is an initializer,
     //  but we need to dup() so the call() below has its own copy.

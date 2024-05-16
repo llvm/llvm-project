@@ -1459,3 +1459,13 @@ namespace TemporaryWithInvalidDestructor {
                         // both-note {{in call to}}
 #endif
 }
+
+namespace IgnoredCtorWithZeroInit {
+  struct S {
+    int a;
+  };
+
+  bool get_status() {
+    return (S(), true);
+  }
+}
