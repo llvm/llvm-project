@@ -8092,6 +8092,18 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
 }
 
+void Sema::CheckConstrainedAuto(TypeSourceInfo *TS) {
+  if (getLangOpts().CPlusPlus20) {
+    if (const AutoType *AutoT = TS->getType()->getAs<AutoType>()) {
+      if (ConceptDecl *Decl = AutoT->getTypeConstraintConcept()) {
+        DiagnoseUseOfDecl(
+            Decl,
+            TS->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+      }
+    }
+  }
+}
+
 /// CheckConstructorCall - Check a constructor call for correctness and safety
 /// properties not enforced by the C type system.
 void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
