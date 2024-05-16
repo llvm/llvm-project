@@ -535,6 +535,71 @@ private:
 
   void serialiseCallInst(CallInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
+    // Tail calls:
+    //
+    // - The `tail` keyword is documented as ignorable, so we do.
+    //
+    // - The `notail` keyword just means don't add `tail` or `musttail`. I
+    //   think this has no consequences for us.
+    //
+    // - `musttail` is tricky. It means "it is semantically incorrect to NOT
+    //   tail call codegen this". I don't even know what this means for an
+    //   inlining tracer, so let's just reject it for now.
+    if (I->isMustTailCall()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+    }
+    // We don't support some parameter attributes yet.
+    AttributeList Attrs = I->getAttributes();
+    for (unsigned AI = 0; AI < I->arg_size(); AI++) {
+      for (auto &Attr : Attrs.getParamAttrs(AI)) {
+        // `nonull` and `noundef` are used a lot. I think for our purposes they
+        // can be safely ignored.
+        if (Attr.isEnumAttribute() &&
+            ((Attr.getKindAsEnum() == Attribute::NonNull) ||
+             (Attr.getKindAsEnum() == Attribute::NoUndef))) {
+          continue;
+        }
+        serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+        return;
+      }
+    }
+    // We don't support ANY return value attributes yet.
+    if (Attrs.getRetAttrs().getNumAttributes() > 0) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+    // We don't support some function attributes.
+    //
+    // Note that although we haven't thought about unwinding, if we reject any
+    // call to a function that isn't `nounwind` we are unable to lower much at
+    // all (including the call to the control point). So for now we have to
+    // accept calls to functions that might unwind.
+    AttributeSet FnAttrs = Attrs.getFnAttrs();
+    for (auto &Attr : FnAttrs) {
+      // - `cold` can be ignored.
+      // - `nounwind` has no consequences for us at the moment.
+      if (Attr.isEnumAttribute() &&
+          ((Attr.getKindAsEnum() == Attribute::Cold) ||
+           (Attr.getKindAsEnum() == Attribute::NoUnwind))) {
+        continue;
+      }
+      // Anything else, we've not thought about.
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+    // In addition, we don't support:
+    //
+    //  - fast math flags
+    //  - Non-C calling conventions.
+    //  - operand bundles
+    //  - non-zero address spaces
+    //
+    // Note: address spaces are blanket handled elsewhere in serialiseInst().
+    if ((isa<FPMathOperator>(I) && I->getFastMathFlags().any()) ||
+        (I->getCallingConv() != CallingConv::C) || I->hasOperandBundles()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
     if (I->isInlineAsm()) {
       // For now we omit calls to empty inline asm blocks.
       //
@@ -938,6 +1003,16 @@ private:
 
   void serialiseInst(Instruction *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                      unsigned &InstIdx) {
+    // Catch unsupported pointer operands in non-zero address spaces.
+    for (auto &O : I->operands()) {
+      if (PointerType *P = dyn_cast<PointerType>(O->getType())) {
+        if (P->getAddressSpace() != 0) {
+          serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+          return;
+        }
+      }
+    }
+
     // Macro to make the dispatch below easier to read/sort.
 #define INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, SERIALISER)                  \
   if (LLVM_INST_TYPE *II = dyn_cast<LLVM_INST_TYPE>(LLVM_INST)) {              \
