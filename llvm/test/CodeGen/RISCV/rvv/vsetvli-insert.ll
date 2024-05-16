@@ -699,3 +699,27 @@ declare <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32>, 
 declare <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1>, <vscale x 2 x i1>, i64)
 declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, <vscale x 2 x i1>, i64)
 declare void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)
+
+define <vscale x 2 x i32> @avl_undef1(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>) {
+; CHECK-LABEL: avl_undef1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> %0,
+    <vscale x 2 x i32> %1,
+    <vscale x 2 x i32> %2,
+    i64 undef
+  )
+  ret <vscale x 2 x i32> %a
+}
+
+define i64 @avl_undef2() {
+; CHECK-LABEL: avl_undef2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.riscv.vsetvli(i64 poison, i64 2, i64 7)
+  ret i64 %1
+}

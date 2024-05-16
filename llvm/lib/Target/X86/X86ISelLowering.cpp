@@ -22692,11 +22692,14 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
           CmpVT == MVT::i32 || CmpVT == MVT::i64) && "Unexpected VT!");
 
   // Only promote the compare up to I32 if it is a 16 bit operation
-  // with an immediate.  16 bit immediates are to be avoided.
+  // with an immediate. 16 bit immediates are to be avoided unless the target
+  // isn't slowed down by length changing prefixes, we're optimizing for
+  // codesize or the comparison is with a folded load.
   if (CmpVT == MVT::i16 && !Subtarget.hasFastImm16() &&
+      !X86::mayFoldLoad(Op0, Subtarget) && !X86::mayFoldLoad(Op1, Subtarget) &&
       !DAG.getMachineFunction().getFunction().hasMinSize()) {
-    ConstantSDNode *COp0 = dyn_cast<ConstantSDNode>(Op0);
-    ConstantSDNode *COp1 = dyn_cast<ConstantSDNode>(Op1);
+    auto *COp0 = dyn_cast<ConstantSDNode>(Op0);
+    auto *COp1 = dyn_cast<ConstantSDNode>(Op1);
     // Don't do this if the immediate can fit in 8-bits.
     if ((COp0 && !COp0->getAPIntValue().isSignedIntN(8)) ||
         (COp1 && !COp1->getAPIntValue().isSignedIntN(8))) {
