@@ -14,10 +14,10 @@ entry:
 define void @small_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: small_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq $32
+; CHECK-NEXT:    pushq $16
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
+; CHECK-NEXT:    rep;stosq %rax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 128, i1 false)
