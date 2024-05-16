@@ -1356,4 +1356,17 @@ def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let dependentDialects = ["spirv::SPIRVDialect"];
 }
 
+
+//===----------------------------------------------------------------------===//
+// LibCToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertLibCToLLVMPass: Pass<"convert-libc-to-llvm"> {
+  let summary = "Convert libc to LLVM dialect";
+  let description = [{
+    This pass converts supported libc ops to LLVM dialect ops.
+  }];
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 #endif // MLIR_CONVERSION_PASSES
