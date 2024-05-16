@@ -657,25 +657,17 @@ mlir::omp::DeclareReductionOp ReductionProcessor::createDeclareReduction(
   return decl;
 }
 
-// TODO: By-ref vs by-val reductions are currently toggled for the whole
-//       operation (possibly effecting multiple reduction variables).
-//       This could cause a problem with openmp target reductions because
-//       by-ref trivial types may not be supported.
-bool ReductionProcessor::doReductionByRef(
-    const llvm::SmallVectorImpl<mlir::Value> &reductionVars) {
-  if (reductionVars.empty())
-    return false;
+static bool doReductionByRef(mlir::Value reductionVar) {
   if (forceByrefReduction)
     return true;
 
-  for (mlir::Value reductionVar : reductionVars) {
-    if (auto declare =
-            mlir::dyn_cast<hlfir::DeclareOp>(reductionVar.getDefiningOp()))
-      reductionVar = declare.getMemref();
+  if (auto declare =
+          mlir::dyn_cast<hlfir::DeclareOp>(reductionVar.getDefiningOp()))
+    reductionVar = declare.getMemref();
 
-    if (!fir::isa_trivial(fir::unwrapRefType(reductionVar.getType())))
-      return true;
-  }
+  if (!fir::isa_trivial(fir::unwrapRefType(reductionVar.getType())))
+    return true;
+
   return false;
 }
 
@@ -683,6 +675,7 @@ void ReductionProcessor::addDeclareReduction(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const omp::clause::Reduction &reduction,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSymbols) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -761,8 +754,8 @@ void ReductionProcessor::addDeclareReduction(
            "reduction input var is a reference");
 
     reductionVars.push_back(symVal);
+    reduceVarByRef.push_back(doReductionByRef(symVal));
   }
-  const bool isByRef = doReductionByRef(reductionVars);
 
   if (const auto &redDefinedOp =
           std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
@@ -784,7 +777,7 @@ void ReductionProcessor::addDeclareReduction(
       break;
     }
 
-    for (mlir::Value symVal : reductionVars) {
+    for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
       auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
       const auto &kindMap = firOpBuilder.getKindMap();
       if (mlir::isa<fir::LogicalType>(redType.getEleTy()))
@@ -808,7 +801,7 @@ void ReductionProcessor::addDeclareReduction(
             *reductionIntrinsic)) {
       ReductionProcessor::ReductionIdentifier redId =
           ReductionProcessor::getReductionType(*reductionIntrinsic);
-      for (mlir::Value symVal : reductionVars) {
+      for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
         auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
         if (!redType.getEleTy().isIntOrIndexOrFloat())
           TODO(currentLocation,

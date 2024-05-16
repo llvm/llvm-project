@@ -22,6 +22,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/RegionUtils.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -813,13 +814,16 @@ static void allocByValReductionVars(
     llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
     SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
     SmallVectorImpl<llvm::Value *> &privateReductionVariables,
-    DenseMap<Value, llvm::Value *> &reductionVariableMap) {
+    DenseMap<Value, llvm::Value *> &reductionVariableMap,
+    llvm::ArrayRef<bool> isByRefs) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   builder.restoreIP(allocaIP);
   auto args =
       loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
 
   for (std::size_t i = 0; i < loop.getNumReductionVars(); ++i) {
+    if (isByRefs[i])
+      continue;
     llvm::Value *var = builder.CreateAlloca(
         moduleTranslation.convertType(reductionDecls[i].getType()));
     moduleTranslation.mapValue(args[i], var);
@@ -919,13 +923,21 @@ inlineOmpRegionCleanup(llvm::SmallVectorImpl<Region *> &cleanupRegions,
   return success();
 }
 
+static ArrayRef<bool> getIsByRef(std::optional<ArrayRef<bool>> attr) {
+  if (!attr)
+    return {};
+  return *attr;
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto wsloopOp = cast<omp::WsloopOp>(opInst);
   auto loopOp = cast<omp::LoopNestOp>(wsloopOp.getWrappedLoop());
-  const bool isByRef = wsloopOp.getByref();
+
+  llvm::ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionVarsByref());
+  assert(isByRef.size() == wsloopOp.getNumReductionVars());
 
   // TODO: this should be in the op verifier instead.
   if (loopOp.getLowerBound().empty())
@@ -952,11 +964,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   SmallVector<llvm::Value *> privateReductionVariables;
   DenseMap<Value, llvm::Value *> reductionVariableMap;
-  if (!isByRef) {
-    allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
-                            reductionDecls, privateReductionVariables,
-                            reductionVariableMap);
-  }
+  allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
+                          reductionDecls, privateReductionVariables,
+                          reductionVariableMap, isByRef);
 
   // Before the loop, store the initial values of reductions into reduction
   // variables. Although this could be done after allocas, we don't want to mess
@@ -974,7 +984,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       return failure();
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
-    if (isByRef) {
+    if (isByRef[i]) {
       // Allocate reduction variable (which is a pointer to the real reduction
       // variable allocated in the inlined region)
       llvm::Value *var = builder.CreateAlloca(
@@ -1108,7 +1118,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.SetInsertPoint(tempTerminator);
   llvm::OpenMPIRBuilder::InsertPointTy contInsertPoint =
       ompBuilder->createReductions(builder.saveIP(), allocaIP, reductionInfos,
-                                   wsloopOp.getNowait(), isByRef);
+                                   isByRef, wsloopOp.getNowait());
   if (!contInsertPoint.getBlock())
     return wsloopOp->emitOpError() << "failed to convert reductions";
   auto nextInsertionPoint =
@@ -1170,7 +1180,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   OmpParallelOpConversionManager raii(opInst);
-  const bool isByRef = opInst.getByref();
+  ArrayRef<bool> isByRef = getIsByRef(opInst.getReductionVarsByref());
+  assert(isByRef.size() == opInst.getNumReductionVars());
 
   // TODO: support error propagation in OpenMPIRBuilder and use it instead of
   // relying on captured variables.
@@ -1185,11 +1196,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Allocate reduction vars
     DenseMap<Value, llvm::Value *> reductionVariableMap;
-    if (!isByRef) {
-      allocByValReductionVars(opInst, builder, moduleTranslation, allocaIP,
-                              reductionDecls, privateReductionVariables,
-                              reductionVariableMap);
-    }
+    allocByValReductionVars(opInst, builder, moduleTranslation, allocaIP,
+                            reductionDecls, privateReductionVariables,
+                            reductionVariableMap, isByRef);
 
     // Initialize reduction vars
     builder.restoreIP(allocaIP);
@@ -1210,7 +1219,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
              "reduction neutral element declaration region");
       builder.restoreIP(allocaIP);
 
-      if (isByRef) {
+      if (isByRef[i]) {
         // Allocate reduction variable (which is a pointer to the real reduciton
         // variable allocated in the inlined region)
         llvm::Value *var = builder.CreateAlloca(
@@ -1269,7 +1278,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
       llvm::OpenMPIRBuilder::InsertPointTy contInsertPoint =
           ompBuilder->createReductions(builder.saveIP(), allocaIP,
-                                       reductionInfos, false, isByRef);
+                                       reductionInfos, isByRef, false);
       if (!contInsertPoint.getBlock()) {
         bodyGenStatus = opInst->emitOpError() << "failed to convert reductions";
         return;
