@@ -1,3 +1,3 @@
 run
-continue
+cont
 quit
