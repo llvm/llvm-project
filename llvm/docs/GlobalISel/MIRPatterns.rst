@@ -280,7 +280,7 @@ matching.
 Note that C++ code in ``apply`` pattern is mutually exclusive with
 other patterns. However, you can freely mix C++ code with other
 types of patterns in ``match`` patterns.
-C++ code in ``match`` patterns is always ran last, after all other
+C++ code in ``match`` patterns is always run last, after all other
 patterns matched.
 
 .. code-block:: text
