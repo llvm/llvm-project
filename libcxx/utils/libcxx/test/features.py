@@ -415,6 +415,7 @@ DEFAULT_FEATURES += [
         name="LIBCXX-FREEBSD-FIXME",
         when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
     ),
+    Feature(name="picolib", when=lambda cfg: "__PICOLIBC__" in compilerMacros(cfg)),
     Feature(
         name="LIBCXX-PICOLIBC-FIXME",
         when=lambda cfg: sourceBuilds(

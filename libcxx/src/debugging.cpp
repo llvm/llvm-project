@@ -14,9 +14,12 @@
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
-#elif defined(_AIX)
-#  include <charconv>
+#else
 #  include <csignal>
+#endif
+
+#if defined(_AIX)
+#  include <charconv>
 #  include <cstring>
 #  include <fcntl.h>
 #  include <sys/mman.h>
@@ -32,14 +35,10 @@
 #    include <sys/user.h>
 #  endif // defined(__FreeBSD__)
 #  include <array>
-#  include <csignal>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
 #  include <unistd.h>
-#elif defined(__PICOLIBC__)
-#  include <csignal>
 #elif defined(__linux__)
-#  include <csignal>
 #  include <cstdio>
 #  include <cstdlib>
 #  include <cstring>
@@ -52,10 +51,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
 #if defined(_LIBCPP_WIN32API)
   DebugBreak();
-#elif defined(_AIX) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__PICOLIBC__) || defined(__linux__)
-  raise(SIGTRAP);
 #else
-#  error "'std::breakpoint()' is not implemented on this platform."
+  raise(SIGTRAP);
 #endif // defined(_LIBCPP_WIN32API)
 }
 
