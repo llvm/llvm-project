@@ -307,7 +307,7 @@ static void addAllIndirectCallDependencies(const Module &M,
 static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
                                const Function &Fn,
                                DenseSet<const Function *> &Fns,
-                               bool &HadIndirectCall, bool &HadExternalCall) {
+                               bool &HadIndirectCall) {
   assert(!Fn.isDeclaration());
 
   const Module &M = *Fn.getParent();
@@ -358,12 +358,15 @@ struct KernelWithDependencies {
                          const DenseMap<const Function *, CostType> &FnCosts,
                          const Function *Fn)
       : Fn(Fn) {
-    addAllDependencies(SML, CG, *Fn, Dependencies, HasIndirectCall,
-                       HasExternallyVisibleDependecy);
+    addAllDependencies(SML, CG, *Fn, Dependencies, HasIndirectCall);
     TotalCost = FnCosts.at(Fn);
     for (const auto *Dep : Dependencies) {
       TotalCost += FnCosts.at(Dep);
-      HasExternallyVisibleDependecy |= Dep->hasExternalLinkage();
+
+      // We cannot duplicate functions with external linkage, or functions that
+      // may be overriden at runtime.
+      HasNonDuplicatableDependecy |=
+          (Dep->hasExternalLinkage() || !Dep->isDefinitionExact());
     }
   }
 
@@ -371,9 +374,8 @@ struct KernelWithDependencies {
   DenseSet<const Function *> Dependencies;
   /// Whether \p Fn or any of its \ref Dependencies contains an indirect call.
   bool HasIndirectCall = false;
-  /// Whether any of \p Fn's dependencies are externally visible function
-  /// definitions.
-  bool HasExternallyVisibleDependecy = false;
+  /// Whether any of \p Fn's dependencies cannot be duplicated.
+  bool HasNonDuplicatableDependecy = false;
 
   CostType TotalCost = 0;
 
@@ -514,11 +516,11 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
       continue;
     }
 
-    // When a kernel has an externally visible dependency, we have to keep it in
-    // the first partition as well. This is because we cannot duplicate external
-    // functions into multiple modules. To avoid duplicating accidentally, we
-    // conservatively put every external function in P0.
-    if (CurKernel.HasExternallyVisibleDependecy) {
+    // When a kernel has non duplicatable dependencies, we have to keep it in
+    // the first partition as well. This is a conservative approach, a
+    // finer-grained approach could keep track of which dependencies are
+    // non-duplicatable exactly and just make sure they're grouped together.
+    if (CurKernel.HasNonDuplicatableDependecy) {
       SML << "Kernel with externally visible dependency "
           << getName(*CurKernel.Fn) << " defaulting to P0\n";
       AssignToPartition(0, CurKernel);
@@ -667,7 +669,7 @@ void llvm::splitAMDGPUModule(
     for (const auto &KWD : WorkList) {
       SML << "[Kernel] " << getName(*KWD.Fn) << " (totalCost:" << KWD.TotalCost
           << " indirect:" << KWD.HasIndirectCall
-          << " hasExternalDep:" << KWD.HasExternallyVisibleDependecy << ")\n";
+          << " hasNonDuplicatableDep:" << KWD.HasNonDuplicatableDependecy << ")\n";
       for (const auto *Dep : KWD.Dependencies)
         SML << "  [Dep] " << getName(*Dep) << '\n';
     }
