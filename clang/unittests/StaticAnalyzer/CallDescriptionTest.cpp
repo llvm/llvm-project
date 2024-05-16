@@ -138,8 +138,10 @@ public:
 TEST(CallDescription, SimpleNameMatching) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{CDM::SimpleFunc, {"bar"}}, false}, // false: there's no call to 'bar' in this code.
-          {{CDM::SimpleFunc, {"foo"}}, true},  // true: there's a call to 'foo' in this code.
+          {{CDM::SimpleFunc, {"bar"}},
+           false}, // false: there's no call to 'bar' in this code.
+          {{CDM::SimpleFunc, {"foo"}},
+           true}, // true: there's a call to 'foo' in this code.
       })),
       "void foo(); void bar() { foo(); }"));
 }
@@ -202,7 +204,8 @@ TEST(CallDescription, MatchConstructor) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(
           new CallDescriptionAction<CXXConstructExpr>({
-              {{CDM::CXXMethod, {"std", "basic_string", "basic_string"}, 2, 2}, true},
+              {{CDM::CXXMethod, {"std", "basic_string", "basic_string"}, 2, 2},
+               true},
           })),
       Code));
 }
