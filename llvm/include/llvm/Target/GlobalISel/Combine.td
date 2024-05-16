@@ -338,7 +338,7 @@ def bitreverse_shl : GICombineRule<
 
 // Combine bitreverse(lshr (bitreverse x), y)) -> (shl x, y)
 def bitreverse_lshr : GICombineRule<
-  (defs root:$d, build_fn_matchinfo:$matchinfo),
+  (defs root:$d),
   (match (G_BITREVERSE $rev, $val),
          (G_LSHR $src, $rev, $amt):$mi,
          (G_BITREVERSE $d, $src),
@@ -1352,7 +1352,7 @@ def match_extract_of_element : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def extract_vector_element_not_const : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_INSERT_VECTOR_ELT $src, $x, $value, $idx),
           (G_EXTRACT_VECTOR_ELT $root, $src, $idx)),
    (apply (GIReplaceReg $root, $value))>;
@@ -1567,20 +1567,20 @@ def combine_shuffle_concat : GICombineRule<
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
 
 def insert_vector_element_idx_undef : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_IMPLICIT_DEF $idx),
           (G_INSERT_VECTOR_ELT $root, $src, $elt, $idx)),
    (apply (G_IMPLICIT_DEF $root))>;
 
 def insert_vector_element_elt_undef : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_IMPLICIT_DEF $elt),
           (G_INSERT_VECTOR_ELT $root, $src, $elt, $idx),
           [{ return isGuaranteedNotToBePoison(${src}.getReg(), MRI); }]),
    (apply (GIReplaceReg $root, $src))>;
 
 def insert_vector_element_extract_vector_element : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_EXTRACT_VECTOR_ELT $elt, $src, $idx),
           (G_INSERT_VECTOR_ELT $root, $src, $elt, $idx)),
    (apply (GIReplaceReg $root, $src))>;

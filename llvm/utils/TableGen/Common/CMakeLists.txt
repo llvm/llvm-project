@@ -16,7 +16,6 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   GlobalISel/CXXPredicates.cpp
   GlobalISel/GlobalISelMatchTable.cpp
   GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp
-  GlobalISel/MatchDataInfo.cpp
   GlobalISel/PatternParser.cpp
   GlobalISel/Patterns.cpp
 
