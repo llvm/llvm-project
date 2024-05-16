@@ -679,6 +679,10 @@ public:
                                               StringRef OptionName,
                                               StringRef PassName);
 
+  void setPipelineTuningOptions(PipelineTuningOptions Options) {
+    PTO = Options;
+  }
+
 private:
   // O1 pass pipeline
   FunctionPassManager
