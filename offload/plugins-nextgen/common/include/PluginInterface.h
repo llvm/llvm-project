@@ -958,8 +958,7 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
-        RPCServer(nullptr) {}
+      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -1028,12 +1027,6 @@ struct GenericPluginTy {
     return *RPCServer;
   }
 
-  /// Get the OpenMP requires flags set for this plugin.
-  int64_t getRequiresFlags() const { return RequiresFlags; }
-
-  /// Set the OpenMP requires flags for this plugin.
-  void setRequiresFlag(int64_t Flags) { RequiresFlags = Flags; }
-
   /// Initialize a device within the plugin.
   Error initDevice(int32_t DeviceId);
 
@@ -1073,9 +1066,6 @@ public:
 
   /// Return the number of devices this plugin can support.
   int32_t number_of_devices();
-
-  /// Initializes the OpenMP register requires information.
-  int64_t init_requires(int64_t RequiresFlags);
 
   /// Returns non-zero if the data can be exchanged between the two devices.
   int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
@@ -1202,9 +1192,6 @@ private:
   /// by its device id. A position with nullptr means that the corresponding
   /// device was not initialized yet.
   llvm::SmallVector<GenericDeviceTy *> Devices;
-
-  /// OpenMP requires flags.
-  int64_t RequiresFlags;
 
   /// Pointer to the global handler for this plugin.
   GenericGlobalHandlerTy *GlobalHandler;
