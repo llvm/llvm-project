@@ -1300,7 +1300,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     unsigned Op = MI->getOpcode();
 
-    // Change the opcode to load address for toc data.
+    // Change the opcode to load address for toc-data.
     // ADDItocL is only used for 32-bit toc-data on AIX and will always use LA.
     TmpInst.setOpcode(Op == PPC::ADDItocL8 ? (IsAIX ? PPC::LA8 : PPC::ADDI8)
                                            : PPC::LA);
