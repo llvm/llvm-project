@@ -2441,7 +2441,7 @@ void OmpStructureChecker::CheckReductionModifier(
     // Catch-all for potential future modifiers to make sure that this
     // function is up-tp-date.
     context_.Say(GetContext().clauseSource,
-          "Unexpected modifier on REDUCTION clause"_err_en_US);
+        "Unexpected modifier on REDUCTION clause"_err_en_US);
   }
 }
 
