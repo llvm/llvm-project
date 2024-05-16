@@ -217,7 +217,7 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
 
   // In the new debug mode, debug records get attached to instructions.
   // Insert a `br` and `ret` now to absorb the debug records which are
-  // currently "trailling", meaning that they're associated with a block
+  // currently "trailing", meaning that they're associated with a block
   // but no particular instruction, which is only valid as a transient state.
   LLVMContextRef Ctx = LLVMGetModuleContext(M);
   LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
