@@ -833,11 +833,8 @@ AsmParser::~AsmParser() {
 
 void AsmParser::printMacroInstantiations() {
   // Print the active macro instantiation stack.
-  for (std::vector<MacroInstantiation *>::const_reverse_iterator
-           it = ActiveMacros.rbegin(),
-           ie = ActiveMacros.rend();
-       it != ie; ++it)
-    printMessage((*it)->InstantiationLoc, SourceMgr::DK_Note,
+  for (MacroInstantiation *M : reverse(ActiveMacros))
+    printMessage(M->InstantiationLoc, SourceMgr::DK_Note,
                  "while in macro instantiation");
 }
 
@@ -1510,9 +1507,7 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // As a special case, we support 'a op b @ modifier' by rewriting the
   // expression to include the modifier. This is inefficient, but in general we
   // expect users to use 'a@modifier op b'.
-  if (Lexer.getKind() == AsmToken::At) {
-    Lex();
-
+  if (parseOptionalToken(AsmToken::At)) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
@@ -2708,10 +2703,8 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
       if (Lexer.is(AsmToken::Comma))
         break;
 
-      if (Lexer.is(AsmToken::Space)) {
+      if (parseOptionalToken(AsmToken::Space))
         SpaceEaten = true;
-        Lexer.Lex(); // Eat spaces
-      }
 
       // Spaces can delimit parameters, but could also be part an expression.
       // If the token after a space is an operator, add the token and the next
@@ -2722,9 +2715,7 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
           Lexer.Lex();
 
           // Whitespace after an operator can be ignored.
-          if (Lexer.is(AsmToken::Space))
-            Lexer.Lex();
-
+          parseOptionalToken(AsmToken::Space);
           continue;
         }
       }
@@ -2865,8 +2856,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
       return Failure;
     }
 
-    if (Lexer.is(AsmToken::Comma))
-      Lex();
+    parseOptionalToken(AsmToken::Comma);
   }
 
   return TokError("too many positional arguments");
