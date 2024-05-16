@@ -488,6 +488,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_fdebug_unparse_with_symbols:
       opts.programAction = DebugUnparseWithSymbols;
       break;
+    case clang::driver::options::OPT_fdebug_unparse_with_modules:
+      opts.programAction = DebugUnparseWithModules;
+      break;
     case clang::driver::options::OPT_fdebug_dump_symbols:
       opts.programAction = DebugDumpSymbols;
       break;
