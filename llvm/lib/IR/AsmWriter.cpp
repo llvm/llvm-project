@@ -3837,7 +3837,7 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
     // FIXME: Ban DIExpressions in NamedMDNodes, they will serve no purpose.
     MDNode *Op = NMD->getOperand(i);
     if (auto *Expr = dyn_cast<DIExpression>(Op)) {
-      writeDIExpression(Out, Expr, AsmWriterContext::getEmpty());
+      writeDIExpression(Out, Expr, WriterCtx);
       continue;
     }
     if (auto *Expr = dyn_cast<DIExpr>(Op)) {
