@@ -320,11 +320,8 @@ void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
 }
 
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
-  if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
-    Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
-  if (Trace.FunctionNameRefs.empty())
-    return;
-
+  assert(Trace.FunctionNameRefs.size() <= MaxTemporalProfTraceLength);
+  assert(!Trace.FunctionNameRefs.empty());
   if (TemporalProfTraceStreamSize < TemporalProfTraceReservoirSize) {
     // Simply append the trace if we have not yet hit our reservoir size limit.
     TemporalProfTraces.push_back(std::move(Trace));
@@ -341,6 +338,10 @@ void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
 
 void InstrProfWriter::addTemporalProfileTraces(
     SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
+  for (auto &Trace : SrcTraces)
+    if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
+      Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
+  llvm::erase_if(SrcTraces, [](auto &T) { return T.FunctionNameRefs.empty(); });
   // Assume that the source has the same reservoir size as the destination to
   // avoid needing to record it in the indexed profile format.
   bool IsDestSampled =

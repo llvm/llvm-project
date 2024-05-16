@@ -54,6 +54,7 @@ namespace fir {
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
+std::unique_ptr<mlir::Pass> createCFGConversionPassWithNSW();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
 std::unique_ptr<mlir::Pass>
 createExternalNameConversionPass(bool appendUnderscore);
@@ -68,7 +69,7 @@ std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 
-std::unique_ptr<mlir::Pass> createOMPDescriptorMapInfoGenPass();
+std::unique_ptr<mlir::Pass> createOMPMapInfoFinalizationPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();
@@ -89,7 +90,8 @@ createFunctionAttrPass(FunctionAttrTypes &functionAttr, bool noInfsFPMath,
                        bool noSignedZerosFPMath, bool unsafeFPMath);
 
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
-                                   bool forceLoopToExecuteOnce = false);
+                                   bool forceLoopToExecuteOnce = false,
+                                   bool setNSW = false);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

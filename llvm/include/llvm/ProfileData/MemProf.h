@@ -426,8 +426,8 @@ struct IndexedMemProfRecord {
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
-      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
-      const;
+      llvm::function_ref<const llvm::SmallVector<Frame>(const CallStackId)>
+          Callback) const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
@@ -784,6 +784,12 @@ template <typename MapTy> struct FrameIdConverter {
   FrameIdConverter() = delete;
   FrameIdConverter(MapTy &Map) : Map(Map) {}
 
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of FrameIdConverter gets an error in LastUnmappedId
+  // while the original instance doesn't.
+  FrameIdConverter(const FrameIdConverter &) = delete;
+  FrameIdConverter &operator=(const FrameIdConverter &) = delete;
+
   Frame operator()(FrameId Id) {
     auto Iter = Map.find(Id);
     if (Iter == Map.end()) {
@@ -798,11 +804,18 @@ template <typename MapTy> struct FrameIdConverter {
 template <typename MapTy> struct CallStackIdConverter {
   std::optional<CallStackId> LastUnmappedId;
   MapTy &Map;
-  std::function<Frame(FrameId)> FrameIdToFrame;
+  llvm::function_ref<Frame(FrameId)> FrameIdToFrame;
 
   CallStackIdConverter() = delete;
-  CallStackIdConverter(MapTy &Map, std::function<Frame(FrameId)> FrameIdToFrame)
+  CallStackIdConverter(MapTy &Map,
+                       llvm::function_ref<Frame(FrameId)> FrameIdToFrame)
       : Map(Map), FrameIdToFrame(FrameIdToFrame) {}
+
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of CallStackIdConverter gets an error in
+  // LastUnmappedId while the original instance doesn't.
+  CallStackIdConverter(const CallStackIdConverter &) = delete;
+  CallStackIdConverter &operator=(const CallStackIdConverter &) = delete;
 
   llvm::SmallVector<Frame> operator()(CallStackId CSId) {
     llvm::SmallVector<Frame> Frames;

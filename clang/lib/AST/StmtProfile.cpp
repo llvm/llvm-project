@@ -2585,6 +2585,9 @@ void OpenACCClauseProfiler::VisitWaitClause(const OpenACCWaitClause &Clause) {
   for (auto *E : Clause.getQueueIdExprs())
     Profiler.VisitStmt(E);
 }
+/// Nothing to do here, there are no sub-statements.
+void OpenACCClauseProfiler::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &Clause) {}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

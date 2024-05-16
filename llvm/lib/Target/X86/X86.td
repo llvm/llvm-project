@@ -351,6 +351,8 @@ def FeatureNDD : SubtargetFeature<"ndd", "HasNDD", "true",
                                   "Support non-destructive destination">;
 def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
+def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
+                                 "Support status flags update suppression">;
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 
