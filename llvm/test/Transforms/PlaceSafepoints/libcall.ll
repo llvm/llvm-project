@@ -1,5 +1,8 @@
 ; RUN: opt -S -passes=place-safepoints < %s | FileCheck %s
 
+; FIXME: This should fail without the ldexp builtin
+; RUN: opt -S -passes=place-safepoints -disable-builtin=ldexp < %s | FileCheck %s
+
 ; Libcalls will not contain a safepoint poll, so check that we insert
 ; a safepoint in a loop containing a libcall.
 declare double @ldexp(double %x, i32 %n) nounwind readnone
