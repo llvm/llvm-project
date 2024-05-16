@@ -1041,12 +1041,12 @@ void RuleMatcher::emit(MatchTable &Table) {
     assert(none_of(Actions, [](auto &A) {
       return A->getKind() != MatchAction::AK_DebugComment;
     }));
+    for (const auto &MA : Actions)
+      MA->emitActionOpcodes(Table, *this);
     Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
           << MatchTable::Comment("Fn")
           << MatchTable::NamedValue(2, CustomCXXAction)
           << MatchTable::LineBreak;
-    for (const auto &MA : Actions)
-      MA->emitActionOpcodes(Table, *this);
   } else {
     // Emit all actions except the last one, then emit coverage and emit the
     // final action.

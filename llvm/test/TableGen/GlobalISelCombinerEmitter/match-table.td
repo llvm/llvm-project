@@ -154,6 +154,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // MIs[1] c
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
+// CHECK-NEXT:       // Combiner Rule #3: InstTest1
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2),
 // CHECK-NEXT:     // Label 7: @490
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(501), // Rule ID 3 //
@@ -162,6 +163,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #2: InstTest0
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
 // CHECK-NEXT:     // Label 8: @501
 // CHECK-NEXT:     GIM_Reject,
@@ -207,16 +209,19 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     // Label 3: @583
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 11*/ GIMT_Encode4(594), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
+// CHECK-NEXT:       // Combiner Rule #0: WipOpcodeTest0; wip_match_opcode 'G_TRUNC'
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 11: @594
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 12*/ GIMT_Encode4(605), // Rule ID 1 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
+// CHECK-NEXT:       // Combiner Rule #1: WipOpcodeTest1; wip_match_opcode 'G_TRUNC'
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 12: @605
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 4: @606
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(617), // Rule ID 2 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
+// CHECK-NEXT:       // Combiner Rule #1: WipOpcodeTest1; wip_match_opcode 'G_SEXT'
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 13: @617
 // CHECK-NEXT:     GIM_Reject,

@@ -187,6 +187,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner22),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner23),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/4,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[1]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 1: @66
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(131), // Rule ID 6 //
@@ -218,6 +219,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner19),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner20),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/5,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[0]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 2: @131
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(196), // Rule ID 5 //
@@ -249,6 +251,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner16),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner17),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/5,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[0], c[1]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 3: @196
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(269), // Rule ID 4 //
@@ -283,6 +286,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner13),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner14),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/6,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[0], c[0]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 4: @269
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(334), // Rule ID 3 //
@@ -314,6 +318,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner10),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner11),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/5,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[1]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 5: @334
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(407), // Rule ID 2 //
@@ -348,6 +353,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner7),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner8),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/6,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[0]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 6: @407
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(480), // Rule ID 1 //
@@ -382,6 +388,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner4),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner5),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/6,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[1]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 7: @480
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(561), // Rule ID 0 //
@@ -419,6 +426,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner1),
 // CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner2),
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*NumInsns*/7,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[0]]
 // CHECK-NEXT:         GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:       // Label 8: @561
 // CHECK-NEXT:       GIM_Reject,

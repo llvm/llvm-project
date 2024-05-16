@@ -110,6 +110,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] y
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #3: NoMatchTwoApply
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2),
 // CHECK-NEXT:     // Label 6: @439
 // CHECK-NEXT:     GIM_Reject,
@@ -120,6 +121,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #1: TwoMatchTwoApply
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
 // CHECK-NEXT:     // Label 7: @451
 // CHECK-NEXT:     GIM_Reject,
@@ -130,6 +132,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #0: OneMatchOneApply
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 8: @463
 // CHECK-NEXT:     GIM_Reject,

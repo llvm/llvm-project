@@ -48,6 +48,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #2: InstTest2
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 3: @40
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(54), // Rule ID 3 //
@@ -61,6 +62,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] d
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #3: InstTest3
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 4: @54
 // CHECK-NEXT:     GIM_Reject,
@@ -72,6 +74,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #1: InstTest1
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 5: @69
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(83), // Rule ID 0 //
@@ -85,6 +88,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] d
 // CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #0: InstTest0
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 6: @83
 // CHECK-NEXT:     GIM_Reject,
