@@ -333,6 +333,7 @@ struct TransferOpReduceRank
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    // TODO: support masked case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
 

@@ -219,21 +219,6 @@ func.func @transfer_broadcasting_2D(%mem : memref<8x8xf32>, %i : index) -> vecto
   return %res : vector<4x4xf32>
 }
 
-// CHECK-LABEL:   func @masked_transfer_read_reduce_rank_with_broadcast(
-// CHECK-SAME:                                %[[MEM:.*]]: memref<8x8x8x8xf32>,
-// CHECK-SAME:                                %[[MASK:.*]]: vector<4x4xi1>,
-// CHECK-SAME:                                %[[IDX:.*]]: index) -> vector<4x4x4x4xf32> {
-//      CHECK:      %[[RES:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %cst {in_bounds = [true, true, true, true], permutation_map = #map2} : memref<8x8x8x8xf32>, vector<4x4x4x4xf32> } : vector<4x4xi1> -> vector<4x4x4x4xf32>
-// CHECK-NEXT:      return %[[RES]] : vector<4x4x4x4xf32>
-#rank_reducing = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
-func.func @masked_transfer_read_reduce_rank_with_broadcast(%mem : memref<8x8x8x8xf32>, %mask : vector<4x4xi1>, %i : index) -> vector<4x4x4x4xf32> {
-  %cf0 = arith.constant 0.0 : f32
-  %res = vector.mask %mask {vector.transfer_read %mem[%i, %i, %i, %i], %cf0
-    {in_bounds = [true, true, true, true], permutation_map = #rank_reducing}
-      : memref<8x8x8x8xf32>, vector<4x4x4x4xf32>} : vector<4x4xi1> -> vector<4x4x4x4xf32>
-  return %res : vector<4x4x4x4xf32>
-}
-
 // More complex broadcasting case (here a `vector.load` is generated).
 // CHECK-LABEL:   func @transfer_broadcasting_complex(
 // CHECK-SAME:                                %[[MEM:.*]]: memref<10x20x30x8x8xf32>,
