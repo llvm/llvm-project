@@ -57,12 +57,6 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
       continue;
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
     const MCInstrDesc &OtherInstrDesc = OtherInstr.Description;
-    // Ignore instructions that we cannot run.
-    if (OtherInstrDesc.isPseudo() || OtherInstrDesc.usesCustomInsertionHook() ||
-        OtherInstrDesc.isBranch() || OtherInstrDesc.isIndirectBranch() ||
-        OtherInstrDesc.isCall() || OtherInstrDesc.isReturn()) {
-      continue;
-    }
     if (OtherInstr.hasMemoryOperands())
       continue;
     if (!ET.allowAsBackToBack(OtherInstr))
