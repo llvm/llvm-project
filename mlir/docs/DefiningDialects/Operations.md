@@ -324,6 +324,32 @@ Right now, the following primitive constraints are supported:
 
 TODO: Design and implement more primitive constraints
 
+#### Combining constraints
+
+`AllAttrOf` is provided to allow combination of multiple constraints which
+must all hold.
+
+For example:
+```tablegen
+def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
+  let arguments = (ins I64ArrayAttr:$attr);
+  let results = (outs I32);
+}
+def OpAllAttrConstraint2 : TEST_Op<"all_attr_constraint_of2"> {
+  let arguments = (ins I64ArrayAttr:$attr);
+  let results = (outs I32);
+}
+def Constraint0 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[0]).getInt() == 0">,
+    "[0] == 0">;
+def Constraint1 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[1]).getInt() == 1">,
+    "[1] == 1">;
+def : Pat<(OpAllAttrConstraint1
+            AllAttrOf<[Constraint0, Constraint1]>:$attr),
+          (OpAllAttrConstraint2 $attr)>;
+```
+
 ### Operation regions
 
 The regions of an operation are specified inside of the `dag`-typed `regions`,
@@ -1418,6 +1444,8 @@ optionality, default values, etc.:
 *   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
 *   `ConfinedAttr`: adapts an attribute with
     [further constraints](#confining-attributes).
+*   `AllAttrOf`: adapts an attribute with
+    [multiple constraints](#combining-constraints).
 
 ### Enum attributes
 
