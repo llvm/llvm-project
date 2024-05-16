@@ -499,6 +499,17 @@ static uint64_t writeMemProfCallStacks(
   return CallStackTableGenerator.Emit(OS.OS);
 }
 
+// Write out MemProf Version0 as follows:
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
 static Error writeMemProfV0(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData) {
   uint64_t HeaderUpdatePos = OS.tell();
@@ -521,6 +532,18 @@ static Error writeMemProfV0(ProfOStream &OS,
   return Error::success();
 }
 
+// Write out MemProf Version1 as follows:
+// uint64_t Version (NEW in V1)
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
 static Error writeMemProfV1(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData) {
   OS.write(memprof::Version1);
@@ -544,6 +567,21 @@ static Error writeMemProfV1(ProfOStream &OS,
   return Error::success();
 }
 
+// Write out MemProf Version2 as follows:
+// uint64_t Version
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t CallStackPayloadOffset = Offset for the call stack payload (NEW V2)
+// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit (NEW in V2)
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+// OnDiskChainedHashTable MemProfCallStackData (NEW in V2)
 static Error writeMemProfV2(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
                             bool MemProfFullSchema) {
@@ -579,19 +617,7 @@ static Error writeMemProfV2(ProfOStream &OS,
   return Error::success();
 }
 
-// The MemProf profile data includes a simple schema
-// with the format described below followed by the hashtable:
-// uint64_t Version
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Stream offset before emitting the frame table
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
+// Write out the MemProf data in a requested version.
 static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedMemProfData &MemProfData,
                           memprof::IndexedVersion MemProfVersionRequested,
