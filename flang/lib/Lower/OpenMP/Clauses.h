@@ -107,9 +107,8 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
   return std::move(func(*arg));
 }
 
-std::optional<Object>
-getBaseObject(const Object &object,
-              Fortran::semantics::SemanticsContext &semaCtx);
+std::optional<Object> getBaseObject(const Object &object,
+                                    semantics::SemanticsContext &semaCtx);
 
 namespace clause {
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
@@ -262,7 +261,7 @@ Clause makeClause(llvm::omp::Clause id, Specific &&specific,
   return Clause(typename Clause::BaseT{id, specific}, source);
 }
 
-Clause makeClause(const Fortran::parser::OmpClause &cls,
+Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx);
 
 List<Clause> makeClauses(const parser::OmpClauseList &clauses,

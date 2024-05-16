@@ -52,22 +52,22 @@ int64_t getCollapseValue(const List<Clause> &clauses) {
 }
 
 void genObjectList(const ObjectList &objects,
-                   Fortran::lower::AbstractConverter &converter,
+                   lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {
   for (const Object &object : objects) {
-    const Fortran::semantics::Symbol *sym = object.id();
+    const semantics::Symbol *sym = object.id();
     assert(sym && "Expected Symbol");
     if (mlir::Value variable = converter.getSymbolAddress(*sym)) {
       operands.push_back(variable);
     } else if (const auto *details =
-                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
+                   sym->detailsIf<semantics::HostAssocDetails>()) {
       operands.push_back(converter.getSymbolAddress(details->symbol()));
       converter.copySymbolBinding(details->symbol(), *sym);
     }
   }
 }
 
-mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize) {
   // OpenMP runtime requires 32-bit or 64-bit loop variables.
   loopVarTypeSize = loopVarTypeSize * 8;
@@ -85,24 +85,21 @@ mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
   return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
-Fortran::semantics::Symbol *
-getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval) {
-  return eval.visit(Fortran::common::visitors{
-      [&](const Fortran::parser::DoConstruct &doLoop) {
+semantics::Symbol *
+getIterationVariableSymbol(const lower::pft::Evaluation &eval) {
+  return eval.visit(common::visitors{
+      [&](const parser::DoConstruct &doLoop) {
         if (const auto &maybeCtrl = doLoop.GetLoopControl()) {
-          using LoopControl = Fortran::parser::LoopControl;
+          using LoopControl = parser::LoopControl;
           if (auto *bounds = std::get_if<LoopControl::Bounds>(&maybeCtrl->u)) {
-            static_assert(
-                std::is_same_v<decltype(bounds->name),
-                               Fortran::parser::Scalar<Fortran::parser::Name>>);
+            static_assert(std::is_same_v<decltype(bounds->name),
+                                         parser::Scalar<parser::Name>>);
             return bounds->name.thing.symbol;
           }
         }
-        return static_cast<Fortran::semantics::Symbol *>(nullptr);
+        return static_cast<semantics::Symbol *>(nullptr);
       },
-      [](auto &&) {
-        return static_cast<Fortran::semantics::Symbol *>(nullptr);
-      },
+      [](auto &&) { return static_cast<semantics::Symbol *>(nullptr); },
   });
 }
 
@@ -139,12 +136,11 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 static int
-getComponentPlacementInParent(const Fortran::semantics::Symbol *componentSym) {
-  const auto *derived =
-      componentSym->owner()
-          .derivedTypeSpec()
-          ->typeSymbol()
-          .detailsIf<Fortran::semantics::DerivedTypeDetails>();
+getComponentPlacementInParent(const semantics::Symbol *componentSym) {
+  const auto *derived = componentSym->owner()
+                            .derivedTypeSpec()
+                            ->typeSymbol()
+                            .detailsIf<semantics::DerivedTypeDetails>();
   assert(derived &&
          "expected derived type details when processing component symbol");
   for (auto [placement, name] : llvm::enumerate(derived->componentNames()))
@@ -155,7 +151,7 @@ getComponentPlacementInParent(const Fortran::semantics::Symbol *componentSym) {
 
 static std::optional<Object>
 getComponentObject(std::optional<Object> object,
-                   Fortran::semantics::SemanticsContext &semaCtx) {
+                   semantics::SemanticsContext &semaCtx) {
   if (!object)
     return std::nullopt;
 
@@ -176,7 +172,7 @@ getComponentObject(std::optional<Object> object,
 static void
 generateMemberPlacementIndices(const Object &object,
                                llvm::SmallVectorImpl<int> &indices,
-                               Fortran::semantics::SemanticsContext &semaCtx) {
+                               semantics::SemanticsContext &semaCtx) {
   auto compObj = getComponentObject(object, semaCtx);
   while (compObj) {
     indices.push_back(getComponentPlacementInParent(compObj->id()));
@@ -189,16 +185,14 @@ generateMemberPlacementIndices(const Object &object,
 
 void addChildIndexAndMapToParent(
     const omp::Object &object,
-    std::map<const Fortran::semantics::Symbol *,
+    std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
-    mlir::omp::MapInfoOp &mapOp,
-    Fortran::semantics::SemanticsContext &semaCtx) {
-  std::optional<Fortran::evaluate::DataRef> dataRef =
-      ExtractDataRef(object.designator);
+    mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx) {
+  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.designator);
   assert(dataRef.has_value() &&
          "DataRef could not be extracted during mapping of derived type "
          "cannot proceed");
-  const Fortran::semantics::Symbol *parentSym = &dataRef->GetFirstSymbol();
+  const semantics::Symbol *parentSym = &dataRef->GetFirstSymbol();
   assert(parentSym && "Could not find parent symbol during lower of "
                       "a component member in OpenMP map clause");
   llvm::SmallVector<int> indices;
@@ -236,14 +230,14 @@ static mlir::DenseIntElementsAttr createDenseElementsAttrFromIndices(
   llvm::SmallVector<int64_t> shape;
   calculateShapeAndFillIndices(shape, memberPlacementData);
 
-  llvm::SmallVector<int> indicesFlattened = std::accumulate(
-      memberPlacementData.begin(), memberPlacementData.end(),
-      llvm::SmallVector<int>(),
-      [](llvm::SmallVector<int> &x, OmpMapMemberIndicesData y) {
-        x.insert(x.end(), y.memberPlacementIndices.begin(),
-                 y.memberPlacementIndices.end());
-        return x;
-      });
+  llvm::SmallVector<int> indicesFlattened =
+      std::accumulate(memberPlacementData.begin(), memberPlacementData.end(),
+                      llvm::SmallVector<int>(),
+                      [](llvm::SmallVector<int> &x, OmpMapMemberIndicesData y) {
+                        x.insert(x.end(), y.memberPlacementIndices.begin(),
+                                 y.memberPlacementIndices.end());
+                        return x;
+                      });
 
   return mlir::DenseIntElementsAttr::get(
       mlir::VectorType::get(shape,
@@ -252,11 +246,11 @@ static mlir::DenseIntElementsAttr createDenseElementsAttrFromIndices(
 }
 
 void insertChildMapInfoIntoParent(
-    Fortran::lower::AbstractConverter &converter,
-    std::map<const Fortran::semantics::Symbol *,
+    lower::AbstractConverter &converter,
+    std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &mapSyms,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs) {
   for (auto indices : parentMemberIndices) {
@@ -323,30 +317,28 @@ void insertChildMapInfoIntoParent(
   }
 }
 
-Fortran::semantics::Symbol *
-getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
-  Fortran::semantics::Symbol *sym = nullptr;
+semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
+  semantics::Symbol *sym = nullptr;
   std::visit(
-      Fortran::common::visitors{
-          [&](const Fortran::parser::Designator &designator) {
+      common::visitors{
+          [&](const parser::Designator &designator) {
             if (auto *arrayEle =
-                    Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
-                        designator)) {
+                    parser::Unwrap<parser::ArrayElement>(designator)) {
               // Use getLastName to retrieve the arrays symbol, this will
               // provide the farthest right symbol (the last) in a designator,
               // i.e. providing something like the following:
               // "dtype1%dtype2%array[2:10]", will result in "array"
               sym = GetLastName(arrayEle->base).symbol;
-            } else if (auto *structComp = Fortran::parser::Unwrap<
-                           Fortran::parser::StructureComponent>(designator)) {
-              sym = structComp->component.symbol;
-            } else if (const Fortran::parser::Name *name =
-                           Fortran::semantics::getDesignatorNameIfDataRef(
+            } else if (auto *structComp =
+                           parser::Unwrap<parser::StructureComponent>(
                                designator)) {
+              sym = structComp->component.symbol;
+            } else if (const parser::Name *name =
+                           semantics::getDesignatorNameIfDataRef(designator)) {
               sym = name->symbol;
             }
           },
-          [&](const Fortran::parser::Name &name) { sym = name.symbol; }},
+          [&](const parser::Name &name) { sym = name.symbol; }},
       ompObject.u);
   return sym;
 }
