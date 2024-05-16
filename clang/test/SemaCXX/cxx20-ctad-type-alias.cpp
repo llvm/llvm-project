@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-linux -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
 
 namespace test1 {
 template <typename T>
