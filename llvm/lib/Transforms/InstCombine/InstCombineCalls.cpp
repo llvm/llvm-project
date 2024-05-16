@@ -1435,6 +1435,46 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
+/// Fold an unsigned minimum of trailing or leading zero bits counts:
+///   umin(cttz(CtOp, ZeroUndef), ConstOp) --> cttz(CtOp | (1 << ConstOp))
+///   umin(ctlz(CtOp, ZeroUndef), ConstOp) --> ctlz(CtOp | ((1 << (bitwidth-1))
+///                                              >> ConstOp))
+template <Intrinsic::ID IntrID>
+static Instruction *
+foldMinimumOverTrailingOrLeadingZeroCount(Instruction *OrigInst, Value *I0,
+                                          Value *I1, const DataLayout &DL,
+                                          InstCombiner::BuilderTy &Builder) {
+  static_assert(IntrID == Intrinsic::cttz || IntrID == Intrinsic::ctlz,
+                "This helper only supports cttz and ctlz intrinsics");
+
+  Value *X;
+  Value *Z;
+  if (match(I0, m_OneUse(m_Intrinsic<IntrID>(m_Value(X), m_Value(Z))))) {
+    auto BitWidth = I1->getType()->getScalarSizeInBits();
+    auto *Ty = I1->getType();
+
+    Value *NewCtOp = X;
+    auto LessBitWidth = [BitWidth](auto &C) { return C.ult(BitWidth); };
+    if (match(I1, m_CheckedInt(LessBitWidth))) {
+      Constant *NewConst = ConstantFoldBinaryOpOperands(
+          IntrID == Intrinsic::cttz ? Instruction::Shl : Instruction::LShr,
+          IntrID == Intrinsic::cttz
+              ? ConstantInt::get(Ty, 1)
+              : ConstantInt::get(Ty, APInt::getSignedMinValue(BitWidth)),
+          cast<Constant>(I1), DL);
+      NewCtOp = Builder.CreateOr(X, NewConst);
+    } else if (!match(I1, m_CheckedInt(std::not_fn(LessBitWidth)))) {
+      return nullptr; // Non-splat vector with elements < and >= BitWidth
+    }
+
+    return CallInst::Create(Intrinsic::getDeclaration(OrigInst->getModule(),
+                                                      IntrID,
+                                                      OrigInst->getType()),
+                            {NewCtOp, Z});
+  }
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1639,6 +1679,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Zero = Constant::getNullValue(I0->getType());
       Value *Cmp = Builder.CreateICmpNE(I0, Zero);
       return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
+    }
+    // umin(cttz(x), const) --> cttz(x | (1 << const))
+    if (Instruction *FoldedCttz =
+            foldMinimumOverTrailingOrLeadingZeroCount<Intrinsic::cttz>(
+                II, I0, I1, DL, Builder)) {
+      return FoldedCttz;
+    }
+    // umin(ctlz(x), const) --> ctlz(x | ((1 << (bitwidth - 1) >> const)))
+    if (Instruction *FoldedCtlz =
+            foldMinimumOverTrailingOrLeadingZeroCount<Intrinsic::ctlz>(
+                II, I0, I1, DL, Builder)) {
+      return FoldedCtlz;
     }
     [[fallthrough]];
   }
