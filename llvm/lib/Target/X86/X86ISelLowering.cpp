@@ -58034,7 +58034,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR64_ABCDRegClass);
       break;
     case 'r':   // GENERAL_REGS
-    case 'l':   // INDEX_REGS{}
+    case 'l':   // INDEX_REGS
       if (Subtarget.useInlineAsmGPR32()) {
         if (VT == MVT::i8 || VT == MVT::i1)
           return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
