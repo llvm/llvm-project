@@ -266,3 +266,51 @@ func.func @unpack_16x1x1x2_to_32x1(%arg0 : tensor<16x1x1x2xf32>) -> tensor<32x1x
     : tensor<16x1x1x2xf32> -> tensor<32x1xf32>
   return %unpack : tensor<32x1xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @pad_like_pack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64xf32>)
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] output_shape [1, 1, 32, 64] : tensor<32x64xf32> into tensor<1x1x32x64xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<1x1x32x64xf32>
+func.func @pad_like_pack(%arg0: tensor<32x64xf32>) -> tensor<1x1x32x64xf32> {
+  %empty = tensor.empty() : tensor<1x1x32x64xf32>
+  %0 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<32x64xf32> -> tensor<1x1x32x64xf32>
+  return %0 : tensor<1x1x32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @pad_like_pack_with_outer_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x64xf32>)
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] output_shape [1, 1, 32, 64] : tensor<32x64xf32> into tensor<1x1x32x64xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<1x1x32x64xf32>
+func.func @pad_like_pack_with_outer_dims_perm(%arg0: tensor<32x64xf32>) -> tensor<1x1x32x64xf32> {
+  %empty = tensor.empty() : tensor<1x1x32x64xf32>
+  %0 = tensor.pack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<32x64xf32> -> tensor<1x1x32x64xf32>
+  return %0 : tensor<1x1x32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @unpad_like_unpack(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x1x32x64xf32>)
+// CHECK:         %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] : tensor<1x1x32x64xf32> into tensor<32x64xf32>
+// CHECK:         return %[[COLLAPSED]]
+func.func @unpad_like_unpack(%arg0: tensor<1x1x32x64xf32>) -> tensor<32x64xf32> {
+  %empty = tensor.empty() : tensor<32x64xf32>
+  %0 = tensor.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<1x1x32x64xf32> -> tensor<32x64xf32>
+  return %0 : tensor<32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @unpad_like_unpack_with_outer_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x1x32x64xf32>)
+// CHECK:         %[[COLLAPSED:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]] : tensor<1x1x32x64xf32> into tensor<32x64xf32>
+// CHECK:         return %[[COLLAPSED]]
+func.func @unpad_like_unpack_with_outer_dims_perm(%arg0: tensor<1x1x32x64xf32>) -> tensor<32x64xf32> {
+  %empty = tensor.empty() : tensor<32x64xf32>
+  %0 = tensor.unpack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 64] into %empty : tensor<1x1x32x64xf32> -> tensor<32x64xf32>
+  return %0 : tensor<32x64xf32>
+}
