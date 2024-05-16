@@ -49,7 +49,7 @@ namespace llvm {
       // This is the current maximum for LAST_VALUETYPE.
       // MVT::MAX_ALLOWED_VALUETYPE is used for asserts and to size bit vectors
       // This value must be a multiple of 32.
-      MAX_ALLOWED_VALUETYPE = 224,
+      MAX_ALLOWED_VALUETYPE = 255,
     };
 
     static_assert(FIRST_VALUETYPE > 0);

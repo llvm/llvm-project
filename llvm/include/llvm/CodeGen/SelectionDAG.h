@@ -1802,6 +1802,8 @@ public:
   static const fltSemantics &EVTToAPFloatSemantics(EVT VT) {
     switch (VT.getScalarType().getSimpleVT().SimpleTy) {
     default: llvm_unreachable("Unknown FP format");
+    case MVT::f8e4m3fn:  return APFloat::Float8E4M3FN();
+    case MVT::f8e5m2:  return APFloat::Float8E5M2();
     case MVT::f16:     return APFloat::IEEEhalf();
     case MVT::bf16:    return APFloat::BFloat();
     case MVT::f32:     return APFloat::IEEEsingle();
