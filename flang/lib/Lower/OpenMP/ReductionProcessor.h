@@ -73,9 +73,6 @@ public:
   static const semantics::SourceName
   getRealName(const omp::clause::ProcedureDesignator &pd);
 
-  static bool
-  doReductionByRef(const llvm::SmallVectorImpl<mlir::Value> &reductionVars);
-
   static std::string getReductionName(llvm::StringRef name,
                                       const fir::KindMapping &kindMap,
                                       mlir::Type ty, bool isByRef);
@@ -127,6 +124,7 @@ public:
       mlir::Location currentLocation, lower::AbstractConverter &converter,
       const omp::clause::Reduction &reduction,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSymbols =
           nullptr);

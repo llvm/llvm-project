@@ -272,22 +272,21 @@ def ParallelOp : OpenMP_Op<"parallel", [
     that specify the memory allocator to be used to obtain storage for private values.
 
     Reductions can be performed in a parallel construct by specifying reduction
-    accumulator variables in `reduction_vars` and symbols referring to reduction
-    declarations in the `reductions` attribute. Each reduction is identified
-    by the accumulator it uses and accumulators must not be repeated in the same
-    reduction. The `omp.reduction` operation accepts the accumulator and a
-    partial value which is considered to be produced by the thread for the
-    given reduction. If multiple values are produced for the same accumulator,
-    i.e. there are multiple `omp.reduction`s, the last value is taken. The
-    reduction declaration specifies how to combine the values from each thread
-    into the final value, which is available in the accumulator after all the
-    threads complete.
+    accumulator variables in `reduction_vars`, symbols referring to reduction
+    declarations in the `reductions` attribute, and whether the reduction
+    variable should be passed into the reduction region by value or by reference
+    in `reduction_vars_byref`. Each reduction is identified by the accumulator
+    it uses and accumulators must not be repeated in the same reduction. The
+    `omp.reduction` operation accepts the accumulator and a partial value which
+    is considered to be produced by the thread for the given reduction. If
+    multiple values are produced for the same accumulator, i.e. there are
+    multiple `omp.reduction`s, the last value is taken. The reduction
+    declaration specifies how to combine the values from each thread into the
+    final value, which is available in the accumulator after all the threads
+    complete.
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
-
-    The optional byref attribute controls whether reduction arguments are passed by
-    reference or by value.
   }];
 
   let arguments = (ins Optional<I1>:$if_expr_var,
@@ -295,11 +294,11 @@ def ParallelOp : OpenMP_Op<"parallel", [
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+             OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
              Variadic<AnyType>:$private_vars,
-             OptionalAttr<SymbolRefArrayAttr>:$privatizers,
-             UnitAttr:$byref);
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers);
 
   let regions = (region AnyRegion:$region);
 
@@ -321,10 +320,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
-          | `byref` $byref
     ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
-                             $reductions, $private_vars, type($private_vars),
-                             $privatizers) attr-dict
+                             $reduction_vars_byref, $reductions, $private_vars,
+                             type($private_vars), $privatizers) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -649,14 +647,15 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     elements.
 
     Reductions can be performed in a worksharing-loop by specifying reduction
-    accumulator variables in `reduction_vars` and symbols referring to reduction
-    declarations in the `reductions` attribute. Each reduction is identified
-    by the accumulator it uses and accumulators must not be repeated in the same
-    reduction. A private variable corresponding to the accumulator is used in
-    place of the accumulator inside the body of the worksharing-loop. The
-    reduction declaration specifies how to combine the values from each
-    iteration into the final value, which is available in the accumulator after
-    the loop completes.
+    accumulator variables in `reduction_vars`, symbols referring to reduction
+    declarations in the `reductions` attribute, and whether the reduction
+    variable should be passed by reference or value in `reduction_vars_byref`.
+    Each reduction is identified by the accumulator it uses and accumulators
+    must not be repeated in the same reduction. A private variable corresponding
+    to the accumulator is used in place of the accumulator inside the body of
+    the worksharing-loop. The reduction declaration specifies how to combine the
+    values from each iteration into the final value, which is available in the
+    accumulator after the loop completes.
 
     The optional `schedule_val` attribute specifies the loop schedule for this
     loop, determining how the loop is distributed across the parallel threads.
@@ -677,21 +676,18 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `order` attribute specifies which order the iterations of the
     associate loops are executed in. Currently the only option for this
     attribute is "concurrent".
-
-    The optional `byref` attribute indicates that reduction arguments should be
-    passed by reference.
   }];
 
   let arguments = (ins Variadic<AnyType>:$linear_vars,
              Variadic<I32>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+             OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKindAttr>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
-             UnitAttr:$byref,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val);
 
@@ -716,11 +712,10 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
           |`nowait` $nowait
-          |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
     ) custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
-                     $reductions) attr-dict
+                     $reduction_vars_byref, $reductions) attr-dict
   }];
   let hasVerifier = 1;
 }

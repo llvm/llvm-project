@@ -42,7 +42,7 @@
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(byref @eqv_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
 ! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
@@ -91,7 +91,7 @@ end subroutine
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(byref @eqv_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
 ! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
@@ -150,7 +150,7 @@ end subroutine
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_21:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, @eqv_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, @eqv_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK:             omp.wsloop reduction(byref @eqv_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, byref @eqv_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, byref @eqv_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_26:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
 ! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
