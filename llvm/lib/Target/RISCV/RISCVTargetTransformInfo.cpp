@@ -613,14 +613,19 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
     if (LT.second.isVector()) {
-      auto *LegalVTy = VectorType::get(VTy->getElementType(),
-                                       LT.second.getVectorElementCount());
-      // FIXME: We use the memory op cost of the *legalized* type here, becuase
-      // it's getMemoryOpCost returns a really expensive cost for types like
-      // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
-      // Should the memory op cost of these be cheaper?
-      if (TLI->isLegalInterleavedAccessType(LegalVTy, Factor, Alignment,
+      auto *SubVecTy =
+          VectorType::get(VTy->getElementType(),
+                          VTy->getElementCount().divideCoefficientBy(Factor));
+
+      if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
+          TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
+        // FIXME: We use the memory op cost of the *legalized* type here,
+        // because it's getMemoryOpCost returns a really expensive cost for
+        // types like <6 x i8>, which show up when doing interleaves of
+        // Factor=3 etc. Should the memory op cost of these be cheaper?
+        auto *LegalVTy = VectorType::get(VTy->getElementType(),
+                                         LT.second.getVectorElementCount());
         InstructionCost LegalMemCost = getMemoryOpCost(
             Opcode, LegalVTy, Alignment, AddressSpace, CostKind);
         return LT.first + LegalMemCost;

@@ -13,10 +13,10 @@
 // CHECK: .long	1
 // CHECK: .long	1
 
-// CHECK: .long	0
-// CHECK: .long	0
-// CHECK: .long	0
-
-// CHECK: .long	0
-// CHECK: .long	0
-// CHECK: .long	0
+// CHECK:      .long	0
+// CHECK-NEXT: .long	0
+// CHECK-NEXT: .long	0
+// CHECK-NEXT: .long	0
+// CHECK-NEXT: .long	0
+// CHECK-NEXT: .long	0
+// CHECK-EMPTY:

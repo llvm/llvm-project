@@ -295,10 +295,9 @@ private:
 
   void checkForBadMacro(SMLoc DirectiveLoc, StringRef Name, StringRef Body,
                         ArrayRef<MCAsmMacroParameter> Parameters);
-  bool expandMacro(raw_svector_ostream &OS, StringRef Body,
+  bool expandMacro(raw_svector_ostream &OS, const MCAsmMacro &Macro,
                    ArrayRef<MCAsmMacroParameter> Parameters,
-                   ArrayRef<MCAsmMacroArgument> A, bool EnableAtPseudoVariable,
-                   SMLoc L);
+                   ArrayRef<MCAsmMacroArgument> A, bool EnableAtPseudoVariable);
 
   /// Are macros enabled in the parser?
   bool areMacrosEnabled() {return MacrosEnabledFlag;}
@@ -833,11 +832,8 @@ AsmParser::~AsmParser() {
 
 void AsmParser::printMacroInstantiations() {
   // Print the active macro instantiation stack.
-  for (std::vector<MacroInstantiation *>::const_reverse_iterator
-           it = ActiveMacros.rbegin(),
-           ie = ActiveMacros.rend();
-       it != ie; ++it)
-    printMessage((*it)->InstantiationLoc, SourceMgr::DK_Note,
+  for (MacroInstantiation *M : reverse(ActiveMacros))
+    printMessage(M->InstantiationLoc, SourceMgr::DK_Note,
                  "while in macro instantiation");
 }
 
@@ -1510,9 +1506,7 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // As a special case, we support 'a op b @ modifier' by rewriting the
   // expression to include the modifier. This is inefficient, but in general we
   // expect users to use 'a@modifier op b'.
-  if (Lexer.getKind() == AsmToken::At) {
-    Lex();
-
+  if (parseOptionalToken(AsmToken::At)) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
@@ -2501,17 +2495,16 @@ static bool isIdentifierChar(char c) {
          c == '.';
 }
 
-bool AsmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
+bool AsmParser::expandMacro(raw_svector_ostream &OS, const MCAsmMacro &Macro,
                             ArrayRef<MCAsmMacroParameter> Parameters,
                             ArrayRef<MCAsmMacroArgument> A,
-                            bool EnableAtPseudoVariable, SMLoc L) {
+                            bool EnableAtPseudoVariable) {
   unsigned NParameters = Parameters.size();
   bool HasVararg = NParameters ? Parameters.back().Vararg : false;
-  if ((!IsDarwin || NParameters != 0) && NParameters != A.size())
-    return Error(L, "Wrong number of arguments");
 
   // A macro without parameters is handled differently on Darwin:
   // gas accepts no arguments and does no substitutions
+  StringRef Body = Macro.Body;
   while (!Body.empty()) {
     // Scan for the next substitution.
     std::size_t End = Body.size(), Pos = 0;
@@ -2708,10 +2701,8 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
       if (Lexer.is(AsmToken::Comma))
         break;
 
-      if (Lexer.is(AsmToken::Space)) {
+      if (parseOptionalToken(AsmToken::Space))
         SpaceEaten = true;
-        Lexer.Lex(); // Eat spaces
-      }
 
       // Spaces can delimit parameters, but could also be part an expression.
       // If the token after a space is an operator, add the token and the next
@@ -2722,9 +2713,7 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
           Lexer.Lex();
 
           // Whitespace after an operator can be ignored.
-          if (Lexer.is(AsmToken::Space))
-            Lexer.Lex();
-
+          parseOptionalToken(AsmToken::Space);
           continue;
         }
       }
@@ -2865,8 +2854,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
       return Failure;
     }
 
-    if (Lexer.is(AsmToken::Comma))
-      Lex();
+    parseOptionalToken(AsmToken::Comma);
   }
 
   return TokError("too many positional arguments");
@@ -2892,10 +2880,11 @@ bool AsmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc) {
   // Macro instantiation is lexical, unfortunately. We construct a new buffer
   // to hold the macro body with substitutions.
   SmallString<256> Buf;
-  StringRef Body = M->Body;
   raw_svector_ostream OS(Buf);
 
-  if (expandMacro(OS, Body, M->Parameters, A, true, getTok().getLoc()))
+  if ((!IsDarwin || M->Parameters.size()) && M->Parameters.size() != A.size())
+    return Error(getTok().getLoc(), "Wrong number of arguments");
+  if (expandMacro(OS, *M, M->Parameters, A, true))
     return true;
 
   // We include the .endmacro in the buffer as our cue to exit the macro
@@ -5629,27 +5618,20 @@ MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
       return nullptr;
     }
 
-    if (Lexer.is(AsmToken::Identifier) &&
-        (getTok().getIdentifier() == ".rep" ||
-         getTok().getIdentifier() == ".rept" ||
-         getTok().getIdentifier() == ".irp" ||
-         getTok().getIdentifier() == ".irpc")) {
-      ++NestLevel;
-    }
-
-    // Otherwise, check whether we have reached the .endr.
-    if (Lexer.is(AsmToken::Identifier) && getTok().getIdentifier() == ".endr") {
-      if (NestLevel == 0) {
-        EndToken = getTok();
-        Lex();
-        if (Lexer.isNot(AsmToken::EndOfStatement)) {
-          printError(getTok().getLoc(),
-                     "unexpected token in '.endr' directive");
-          return nullptr;
+    if (Lexer.is(AsmToken::Identifier)) {
+      StringRef Ident = getTok().getIdentifier();
+      if (Ident == ".rep" || Ident == ".rept" || Ident == ".irp" ||
+          Ident == ".irpc") {
+        ++NestLevel;
+      } else if (Ident == ".endr") {
+        if (NestLevel == 0) {
+          EndToken = getTok();
+          Lex();
+          if (!parseEOL())
+            break;
         }
-        break;
+        --NestLevel;
       }
-      --NestLevel;
     }
 
     // Otherwise, scan till the end of the statement.
@@ -5711,8 +5693,7 @@ bool AsmParser::parseDirectiveRept(SMLoc DirectiveLoc, StringRef Dir) {
   raw_svector_ostream OS(Buf);
   while (Count--) {
     // Note that the AtPseudoVariable is disabled for instantiations of .rep(t).
-    if (expandMacro(OS, M->Body, std::nullopt, std::nullopt, false,
-                    getTok().getLoc()))
+    if (expandMacro(OS, *M, std::nullopt, std::nullopt, false))
       return true;
   }
   instantiateMacroLikeBody(M, DirectiveLoc, OS);
@@ -5743,7 +5724,7 @@ bool AsmParser::parseDirectiveIrp(SMLoc DirectiveLoc) {
   for (const MCAsmMacroArgument &Arg : A) {
     // Note that the AtPseudoVariable is enabled for instantiations of .irp.
     // This is undocumented, but GAS seems to support it.
-    if (expandMacro(OS, M->Body, Parameter, Arg, true, getTok().getLoc()))
+    if (expandMacro(OS, *M, Parameter, Arg, true))
       return true;
   }
 
@@ -5785,7 +5766,7 @@ bool AsmParser::parseDirectiveIrpc(SMLoc DirectiveLoc) {
 
     // Note that the AtPseudoVariable is enabled for instantiations of .irpc.
     // This is undocumented, but GAS seems to support it.
-    if (expandMacro(OS, M->Body, Parameter, Arg, true, getTok().getLoc()))
+    if (expandMacro(OS, *M, Parameter, Arg, true))
       return true;
   }
 

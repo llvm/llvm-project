@@ -428,6 +428,9 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
 
+  // Use Assembler information for parsing.
+  Str->setUseAssemblerInfoForParsing(true);
+
   int Res = 1;
   if (InputArgs.hasArg(OPT_as_lex)) {
     // -as-lex; Lex only, and output a stream of tokens
