@@ -319,7 +319,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   SourceLocation IdLoc = Result.getBeginLoc();
 
   ParsedAttributes Attrs(AttrFactory);
-  MaybeParseAttributes(PAKM_GNU | PAKM_Declspec | PAKM_CXX11, Attrs);
+  MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
   if (!TryConsumeToken(tok::equal)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;

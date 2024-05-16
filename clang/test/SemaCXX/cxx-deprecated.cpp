@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -fms-extensions %s
 
 namespace [[deprecated]] {}  // expected-warning {{'deprecated' attribute on anonymous namespace ignored}}
 
@@ -37,14 +36,4 @@ template <C T>
 // expected-warning@-1 {{'C' is deprecated}}
 //   expected-note@#C {{'C' has been explicitly marked deprecated here}}
 void f();
-
-#ifdef _MSC_VER
-template <typename>
-concept C2 __declspec(deprecated) = true; // #C2
-
-template <C2 T>
-// expected-warning@-1 {{'C2' is deprecated}}
-//   expected-note@#C2 {{'C2' has been explicitly marked deprecated here}}
-void g();
-#endif
 } // namespace cxx20_concept
