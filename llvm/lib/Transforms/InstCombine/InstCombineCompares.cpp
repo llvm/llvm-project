@@ -8104,7 +8104,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_ULE:
         // fcmp pred (x - y), 0 --> fcmp pred x, y
         if (match(RHSC, m_AnyZeroFP()) &&
-            match(LHSI, m_FSub(m_Value(X), m_Value(Y))) &&
+            match(LHSI, m_OneUse(m_FSub(m_Value(X), m_Value(Y)))) &&
             I.getFunction()->getDenormalMode(
                 LHSI->getType()->getScalarType()->getFltSemantics()) ==
                 DenormalMode::getIEEE()) {
