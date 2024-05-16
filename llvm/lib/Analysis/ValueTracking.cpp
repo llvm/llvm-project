@@ -1126,8 +1126,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
       KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
       FPClassTest FPClasses = Result.KnownFPClasses;
 
-      if (FPClasses != fcNone &&
-          Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
+      // Treat it as zero if the use of I is unreachable.
+      if (FPClasses == fcNone) {
+        Known.setAllZero();
+        break;
+      }
+
+      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
         Known.Zero.setAllBits();
         Known.One.setAllBits();
 
