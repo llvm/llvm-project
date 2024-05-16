@@ -5910,7 +5910,8 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
   if (auto *AT = CanonT->getAs<AutoType>()) {
     if (!AT->isConstrained())
       return T;
-    return getQualifiedType(getAutoType(QualType(), AT->getKeyword(), false,
+    return getQualifiedType(getAutoType(QualType(), AT->getKeyword(),
+                                        AT->isDependentType(),
                                         AT->containsUnexpandedParameterPack()),
                             T.getQualifiers());
   }
