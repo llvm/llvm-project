@@ -1636,9 +1636,8 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
   Offsets.emplace(0, 0);
-  int Cnt = 1;
   bool IsConsecutive = true;
-  for (auto *Ptr : VL.drop_front()) {
+  for (auto [Idx, Ptr] : drop_begin(enumerate(VL))) {
     std::optional<int> Diff = getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, DL, SE,
                                               /*StrictCheck=*/true);
     if (!Diff)
@@ -1646,19 +1645,18 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
 
     // Check if the pointer with the same offset is found.
     int64_t Offset = *Diff;
-    auto [It, IsInserted] = Offsets.emplace(Offset, Cnt++);
+    auto [It, IsInserted] = Offsets.emplace(Offset, Idx);
     if (!IsInserted)
       return false;
     // Consecutive order if the inserted element is the last one.
     IsConsecutive = IsConsecutive && std::next(It) == Offsets.end();
   }
   SortedIndices.clear();
-  Cnt = 0;
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
     SortedIndices.resize(VL.size());
-    for (const auto &[_, Off] : Offsets)
-      SortedIndices[Cnt++] = Off;
+    for (auto [Idx, Off] : enumerate(Offsets))
+      SortedIndices[Idx] = Off.second;
   }
   return true;
 }
