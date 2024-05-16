@@ -20,9 +20,7 @@ define void @dispatch(ptr %func) {
     ret void
 }
 
-
 define void @caller() {
-entry:
   tail call void @dispatch(ptr @callee)
   ret void
 }
@@ -45,5 +43,4 @@ define internal void @callee.avx2.0(i32 %a) {
   ret void
 }
 
-declare i32 @rand()
 declare void @__cpu_indicator_init()
