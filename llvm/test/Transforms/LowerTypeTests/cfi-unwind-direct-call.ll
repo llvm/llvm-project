@@ -174,8 +174,8 @@ attributes #8 = { noreturn nounwind }
 ; CHECK-LABEL: define dso_local void @_Z10call_catchi(
 ; CHECK-SAME: i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] personality ptr @__gxx_personality_v0 !type [[META4]] !type [[META5]] !type [[META6]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store ptr @.cfi.jumptable, ptr @catch_ptr, align 8, !tbaa [[TBAA11:![0-9]+]]
-; CHECK-NEXT:    invoke void @.cfi.jumptable(i32 noundef [[NUM]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    store ptr @_Z7throw_ei.cfi_jt, ptr @catch_ptr, align 8, !tbaa [[TBAA11:![0-9]+]]
+; CHECK-NEXT:    invoke void @_Z7throw_ei.cfi_jt(i32 noundef [[NUM]]) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:            to label [[TRY_CONT:%.*]] unwind label [[LPAD:%.*]], !callees [[META13:![0-9]+]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
@@ -220,7 +220,7 @@ attributes #8 = { noreturn nounwind }
 ;
 ;
 ; CHECK: Function Attrs: naked nocf_check noinline
-; CHECK-LABEL: define private void @.cfi.jumptable(
+; CHECK-LABEL: define internal void @_Z7throw_ei.cfi_jt(
 ; CHECK-SAME: ) #[[ATTR5:[0-9]+]] align 8 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr nonnull @_Z7throw_ei) #[[ATTR6]]
@@ -236,6 +236,6 @@ attributes #8 = { noreturn nounwind }
 ; CHECK: [[META10]] = !{!"Simple C++ TBAA"}
 ; CHECK: [[TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
 ; CHECK: [[META12]] = !{!"any pointer", [[META9]], i64 0}
-; CHECK: [[META13]] = !{ptr @.cfi.jumptable}
+; CHECK: [[META13]] = !{ptr @_Z7throw_ei.cfi_jt}
 ; CHECK: [[META14]] = !{}
 ;.
