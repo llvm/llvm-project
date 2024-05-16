@@ -954,6 +954,40 @@ private:
     InstIdx++;
   }
 
+  /// Serialise ptrtoint instruction.
+  void serialisePtrToIntInst(PtrToIntInst *I, FuncLowerCtxt &FLCtxt,
+                             unsigned BBIdx, unsigned &InstIdx) {
+    if (I->getType()->isVectorTy()) {
+      // Vector variants are currently not supported.
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+    DataLayout DL(&M);
+    TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
+    TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
+
+    if (SrcSize <= DstSize) {
+      // Zero extend
+      // FIXME: We probably want to lower same-sized types to a bitcast, but
+      // zeroextend will do for now.
+      // opcode:
+      serialiseOpcode(OpCodeCast);
+      // cast_kind:
+      serialiseCastKind(CastKindZeroExt);
+      // val:
+      serialiseOperand(I, FLCtxt, I->getPointerOperand());
+      // dest_type_idx:
+      OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
+    } else if (SrcSize > DstSize) {
+      // Truncate
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
   void serialiseSwitchInst(SwitchInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                            unsigned &InstIdx) {
     // opcode:
@@ -1034,6 +1068,7 @@ private:
     INST_SERIALISE(I, SExtInst, serialiseSExtInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
     INST_SERIALISE(I, SwitchInst, serialiseSwitchInst);
+    INST_SERIALISE(I, PtrToIntInst, serialisePtrToIntInst);
 
     // INST_SERIALISE does an early return upon a match, so if we get here then
     // the instruction wasn't handled.
