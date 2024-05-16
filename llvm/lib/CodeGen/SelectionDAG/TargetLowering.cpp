@@ -1732,9 +1732,9 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op1 = Op.getOperand(1);
     EVT ShiftVT = Op1.getValueType();
 
-    if (const APInt *SA =
-            TLO.DAG.getValidShiftAmountConstant(Op, DemandedElts)) {
-      unsigned ShAmt = SA->getZExtValue();
+    KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
+    if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
+      unsigned ShAmt = KnownSA.getConstant().getZExtValue();
       if (ShAmt == 0)
         return TLO.CombineTo(Op, Op0);
 
@@ -1744,9 +1744,10 @@ bool TargetLowering::SimplifyDemandedBits(
       // TODO - support non-uniform vector amounts.
       if (Op0.getOpcode() == ISD::SRL) {
         if (!DemandedBits.intersects(APInt::getLowBitsSet(BitWidth, ShAmt))) {
-          if (const APInt *SA2 =
-                  TLO.DAG.getValidShiftAmountConstant(Op0, DemandedElts)) {
-            unsigned C1 = SA2->getZExtValue();
+          KnownBits InnerSA = TLO.DAG.computeKnownBits(Op0.getOperand(1),
+                                                       DemandedElts, Depth + 1);
+          if (InnerSA.isConstant() && InnerSA.getConstant().ult(BitWidth)) {
+            unsigned C1 = InnerSA.getConstant().getZExtValue();
             unsigned Opc = ISD::SHL;
             int Diff = ShAmt - C1;
             if (Diff < 0) {
@@ -1912,9 +1913,9 @@ bool TargetLowering::SimplifyDemandedBits(
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
-    if (const APInt *SA =
-            TLO.DAG.getValidShiftAmountConstant(Op, DemandedElts)) {
-      unsigned ShAmt = SA->getZExtValue();
+    KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
+    if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
+      unsigned ShAmt = KnownSA.getConstant().getZExtValue();
       if (ShAmt == 0)
         return TLO.CombineTo(Op, Op0);
 
@@ -1924,9 +1925,10 @@ bool TargetLowering::SimplifyDemandedBits(
       // TODO - support non-uniform vector amounts.
       if (Op0.getOpcode() == ISD::SHL) {
         if (!DemandedBits.intersects(APInt::getHighBitsSet(BitWidth, ShAmt))) {
-          if (const APInt *SA2 =
-                  TLO.DAG.getValidShiftAmountConstant(Op0, DemandedElts)) {
-            unsigned C1 = SA2->getZExtValue();
+          KnownBits InnerSA = TLO.DAG.computeKnownBits(Op0.getOperand(1),
+                                                       DemandedElts, Depth + 1);
+          if (InnerSA.isConstant() && InnerSA.getConstant().ult(BitWidth)) {
+            unsigned C1 = InnerSA.getConstant().getZExtValue();
             unsigned Opc = ISD::SRL;
             int Diff = ShAmt - C1;
             if (Diff < 0) {
@@ -2018,24 +2020,25 @@ bool TargetLowering::SimplifyDemandedBits(
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
-    if (const APInt *SA =
-            TLO.DAG.getValidShiftAmountConstant(Op, DemandedElts)) {
-      unsigned ShAmt = SA->getZExtValue();
+    KnownBits KnownSA = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
+    if (KnownSA.isConstant() && KnownSA.getConstant().ult(BitWidth)) {
+      unsigned ShAmt = KnownSA.getConstant().getZExtValue();
       if (ShAmt == 0)
         return TLO.CombineTo(Op, Op0);
 
       // fold (sra (shl x, c1), c1) -> sext_inreg for some c1 and target
       // supports sext_inreg.
       if (Op0.getOpcode() == ISD::SHL) {
-        if (const APInt *InnerSA =
-                TLO.DAG.getValidShiftAmountConstant(Op0, DemandedElts)) {
+        KnownBits InnerSA = TLO.DAG.computeKnownBits(Op0.getOperand(1),
+                                                     DemandedElts, Depth + 1);
+        if (InnerSA.isConstant() && InnerSA.getConstant().ult(BitWidth)) {
           unsigned LowBits = BitWidth - ShAmt;
           EVT ExtVT = EVT::getIntegerVT(*TLO.DAG.getContext(), LowBits);
           if (VT.isVector())
             ExtVT = EVT::getVectorVT(*TLO.DAG.getContext(), ExtVT,
                                      VT.getVectorElementCount());
 
-          if (*InnerSA == ShAmt) {
+          if (InnerSA.getConstant() == ShAmt) {
             if (!TLO.LegalOperations() ||
                 getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) == Legal)
               return TLO.CombineTo(
