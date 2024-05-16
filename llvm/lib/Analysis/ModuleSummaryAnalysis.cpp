@@ -89,11 +89,11 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
 //
-// Return true if any user makes the analyzed instruction or global variable not
-// eligible to import.
-// - If a local-linkage ifunc is referenced, mark the analyzed value as not
-// eligible for import.
-// - Additionally, global vars are marked as not eligible to import if they
+// Return true if any user references a block address, and sets
+// `RefLocalLinkageIFunc` to true if the analyzed value references local ifunc.
+// - If a local-linkage ifunc is referenced, the analyzed value is not eligible
+// for import.
+// - Additionally, global vars will be marked as not eligible to import if they
 // references references basic block address, because we can't import it
 // separately from function containing that basic block. For simplicity we
 // currently don't import such global vars at all. When importing functions we
@@ -804,8 +804,9 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    SmallVectorImpl<MDNode *> &Types) {
   SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  bool Unused = false;
-  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited, Unused);
+  bool RefIFunc = false;
+  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited, RefIFunc);
+  const bool NotEligibleForImport = (HasBlockAddress || RefIFunc);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
@@ -839,7 +840,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                                          RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
-  if (HasBlockAddress)
+  if (NotEligibleForImport)
     GVarSummary->setNotEligibleToImport();
   if (!VTableFuncs.empty())
     GVarSummary->setVTableFuncs(VTableFuncs);
