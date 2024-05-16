@@ -4273,6 +4273,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     Res = WidenVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N));
     break;
+  case ISD::MCOMPRESS:
+    Res = WidenVecRes_MCOMPRESS(N);
+    break;
   case ISD::MLOAD:
     Res = WidenVecRes_MLOAD(cast<MaskedLoadSDNode>(N));
     break;
@@ -5653,6 +5656,19 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_MCOMPRESS(SDNode *N) {
+  SDValue Vec = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), Vec.getValueType());
+  EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType());
+
+  // In the default expanded case, adding UNDEF values for the new widened lanes
+  // allows us to remove their access later, which reduces the number os stores.
+  SDValue WideVec = ModifyToType(Vec, WideVecVT, /*FillWithZeroes=*/true);
+  SDValue WideMask = ModifyToType(Mask, WideMaskVT, /*FillWithZeroes=*/true);
+  return DAG.getNode(ISD::MCOMPRESS, SDLoc(N), WideVecVT, WideVec, WideMask);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {

@@ -975,6 +975,7 @@ private:
   SDValue WidenVecRes_LOAD(SDNode* N);
   SDValue WidenVecRes_VP_LOAD(VPLoadSDNode *N);
   SDValue WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N);
+  SDValue WidenVecRes_MCOMPRESS(SDNode* N);
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_VP_GATHER(VPGatherSDNode* N);
