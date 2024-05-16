@@ -1454,9 +1454,32 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
+      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
+      // encode the signing schema. We've put relocations in .relr.auth.dyn
+      // during RelocationScanner::processAux, but the target VA for some of
+      // them might be wider than 32 bits. We can only know the final VA at this
+      // point, so move relocations with large values from .relr.auth.dyn to
+      // .rela.dyn. See also AArch64::relocate.
+      if (part.relrAuthDyn) {
+        auto it = llvm::remove_if(
+            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+                return false;
+              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
+                                      reloc.offset,
+                                      DynamicReloc::AddendOnlyWithTargetVA,
+                                      *reloc.sym, reloc.addend, R_ABS});
+              return true;
+            });
+        changed |= (it != part.relrAuthDyn->relocs.end());
+        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
+      }
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.relrAuthDyn)
+        changed |= part.relrAuthDyn->updateAllocSize();
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
@@ -1614,6 +1637,14 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
+        // .relr.auth.dyn relocations may be moved to .rela.dyn in
+        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
+        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
+        // we would fail to remove it here.
+        if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
+          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
+            if (relSec == mainPart->relaDyn.get())
+              return false;
         unused.insert(sec);
         return true;
       });
@@ -1925,6 +1956,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
         finalizeSynthetic(part.relrDyn.get());
+      }
+      if (part.relrAuthDyn) {
+        part.relrAuthDyn->mergeRels();
+        finalizeSynthetic(part.relrAuthDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());
