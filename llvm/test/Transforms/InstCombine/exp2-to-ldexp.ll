@@ -39,11 +39,17 @@ define float @exp2_f32_sitofp_i8_flags(i8 %x) {
 }
 
 define <2 x float> @exp2_v2f32_sitofp_v2i8(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x float> @exp2_v2f32_sitofp_v2i8(
-; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i8> [[X]] to <2 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
-; CHECK-NEXT:    ret <2 x float> [[EXP2]]
+; LDEXP-LABEL: define <2 x float> @exp2_v2f32_sitofp_v2i8(
+; LDEXP-SAME: <2 x i8> [[X:%.*]]) {
+; LDEXP-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
+; LDEXP-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
+; LDEXP-NEXT:    ret <2 x float> [[EXP2]]
+;
+; NOLDEXP-LABEL: define <2 x float> @exp2_v2f32_sitofp_v2i8(
+; NOLDEXP-SAME: <2 x i8> [[X:%.*]]) {
+; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <2 x i8> [[X]] to <2 x float>
+; NOLDEXP-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
+; NOLDEXP-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = sitofp <2 x i8> %x to <2 x float>
   %exp2 = call <2 x float> @llvm.exp2.v2f32(<2 x float> %itofp)
@@ -117,11 +123,17 @@ define fp128 @exp2_fp128_sitofp_i8(i8 %x) {
 }
 
 define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(<vscale x 4 x i8> %x) {
-; CHECK-LABEL: define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(
-; CHECK-SAME: <vscale x 4 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = sitofp <vscale x 4 x i8> [[X]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> [[ITOFP]])
-; CHECK-NEXT:    ret <vscale x 4 x float> [[EXP2]]
+; LDEXP-LABEL: define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(
+; LDEXP-SAME: <vscale x 4 x i8> [[X:%.*]]) {
+; LDEXP-NEXT:    [[TMP1:%.*]] = sext <vscale x 4 x i8> [[X]] to <vscale x 4 x i32>
+; LDEXP-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[TMP1]])
+; LDEXP-NEXT:    ret <vscale x 4 x float> [[EXP2]]
+;
+; NOLDEXP-LABEL: define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(
+; NOLDEXP-SAME: <vscale x 4 x i8> [[X:%.*]]) {
+; NOLDEXP-NEXT:    [[ITOFP:%.*]] = sitofp <vscale x 4 x i8> [[X]] to <vscale x 4 x float>
+; NOLDEXP-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> [[ITOFP]])
+; NOLDEXP-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
   %itofp = sitofp <vscale x 4 x i8> %x to <vscale x 4 x float>
   %exp2 = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> %itofp)
