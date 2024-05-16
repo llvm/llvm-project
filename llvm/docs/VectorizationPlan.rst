@@ -289,5 +289,5 @@ References
 .. [9] "Extending LoopVectorizer: OpenMP4.5 SIMD and Outer Loop
     Auto-Vectorization", Intel Vectorizer Team, LLVM Developers' Meeting 2016.
 
-.. [10] "VPlan: Status Update and Future Roadmap", Florian Hahn, LLVM
-         Developers' Meeting 2023, https://www.youtube.com/watch?v=SzGP4PgMuLE
+.. [10] "VPlan: Status Update and Future Roadmap", Ayal Zaks and Florian Hahn,
+    LLVM Developers' Meeting 2023, https://www.youtube.com/watch?v=SzGP4PgMuLE
