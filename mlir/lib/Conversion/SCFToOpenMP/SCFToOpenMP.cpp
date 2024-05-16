@@ -469,6 +469,8 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
               ArrayAttr::get(rewriter.getContext(), reductionDeclSymbols));
           wsloopOp.getReductionVarsMutable().append(reductionVariables);
           llvm::SmallVector<bool> byRefVec;
+          // false because these reductions always reduce scalars and so do
+          // not need to pass by reference
           byRefVec.resize(reductionVariables.size(), false);
           wsloopOp.setReductionVarsByref(
               DenseBoolArrayAttr::get(rewriter.getContext(), byRefVec));
