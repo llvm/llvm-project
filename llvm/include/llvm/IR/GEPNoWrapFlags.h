@@ -15,6 +15,12 @@
 
 namespace llvm {
 
+/// Represents flags for the getelementptr instruction/expression.
+/// The following flags are supported:
+///  * inbounds (implies nusw)
+///  * nusw (no unsigned signed wrap)
+///  * nuw (no unsigned wrap)
+/// See LangRef for a description of their semantics.
 class GEPNoWrapFlags {
   enum : unsigned {
     InBoundsFlag = (1 << 0),
@@ -31,6 +37,7 @@ class GEPNoWrapFlags {
 public:
   GEPNoWrapFlags() : Flags(0) {}
   // For historical reasons, interpret plain boolean as InBounds.
+  // TODO: Migrate users to pass explicit GEPNoWrapFlags and remove this ctor.
   GEPNoWrapFlags(bool IsInBounds)
       : Flags(IsInBounds ? (InBoundsFlag | NUSWFlag) : 0) {}
 
