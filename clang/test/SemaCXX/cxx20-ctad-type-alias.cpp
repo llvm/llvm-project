@@ -111,7 +111,7 @@ struct Foo {
 template <typename X, int Y>
 using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
                                // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
-                               // expected-note {{because '__is_deducible}}
+                               // expected-note {{cannot deduce template arguments for 'Bar' from 'Foo<int, 4UL>'}}
 
 
 Bar s = {{1}}; // expected-error {{no viable constructor or deduction guide }}
@@ -138,7 +138,7 @@ template<class T> struct Foo { T c; };
 template<class X, class Y=A>
 using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0>' against 'int'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied [with Y = int]}} \
-                    // expected-note {{because '__is_deducible(AFoo, Foo<int>)' evaluated to false}} \
+                    // expected-note {{cannot deduce template arguments for 'AFoo' from 'Foo<int>'}} \
                     // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
 
 AFoo s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}}
@@ -196,10 +196,9 @@ template <class T> struct Foo { Foo(T); };
 
 template<class V> using AFoo = Foo<V *>;
 template<typename> concept False = false;
-// FIXME: emit a more descriptive diagnostic for "__is_deducible" constraint failure.
 template<False W>
 using BFoo = AFoo<W>; // expected-note {{candidate template ignored: constraints not satisfied [with V = int]}} \
-                      // expected-note {{because '__is_deducible(BFoo, Foo<int *>)' evaluated to false}} \
+                      // expected-note {{cannot deduce template arguments for 'BFoo' from 'Foo<int *>'}} \
                       // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0 *>' against 'int *'}}
 int i = 0;
 AFoo a1(&i); // OK, deduce Foo<int *>

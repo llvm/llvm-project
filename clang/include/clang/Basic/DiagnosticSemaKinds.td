@@ -3003,6 +3003,8 @@ def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
   "%select{and|because}0 %1 does not satisfy %2">;
 def note_atomic_constraint_evaluated_to_false_elaborated : Note<
   "%select{and|because}0 '%1' (%2 %3 %4) evaluated to false">;
+def note_is_deducible_constraint_evaluated_to_false : Note<
+  "cannot deduce template arguments for %0 from %1">;
 def err_constrained_virtual_method : Error<
   "virtual function cannot have a requires clause">;
 def err_trailing_requires_clause_on_deduction_guide : Error<
