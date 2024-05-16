@@ -1,9 +1,10 @@
 #ifndef LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H
 #define LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H
 
-#include "benchmarks/gpu/timing/timing.h"
-
 #include "benchmarks/gpu/BenchmarkLogger.h"
+#include "benchmarks/gpu/timing/timing.h"
+#include "src/__support/CPP/functional.h"
+#include "src/__support/CPP/string_view.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -13,104 +14,102 @@ namespace LIBC_NAMESPACE {
 namespace libc_gpu_benchmarks {
 
 struct BenchmarkOptions {
-  uint32_t InitialIterations = 1;
-  uint32_t MaxIterations = 10000000;
-  uint32_t MinSamples = 4;
-  uint32_t MaxSamples = 1000;
-  double Epsilon = 0.01;
-  double ScalingFactor = 1.4;
+  uint32_t initial_iterations = 1;
+  uint32_t max_iterations = 10000000;
+  uint32_t min_samples = 4;
+  uint32_t max_samples = 1000;
+  double epsilon = 0.01;
+  double scaling_factor = 1.4;
 };
 
 struct Measurement {
-  size_t Iterations = 0;
-  uint64_t ElapsedCycles = 0;
+  size_t iterations = 0;
+  uint64_t elapsed_cycles = 0;
 };
 
 class RefinableRuntimeEstimation {
-  uint64_t TotalCycles = 0;
-  size_t TotalIterations = 0;
+  uint64_t total_cycles = 0;
+  size_t total_iterations = 0;
 
 public:
-  uint64_t Update(const Measurement &M) {
-    TotalCycles += M.ElapsedCycles;
-    TotalIterations += M.Iterations;
-    return TotalCycles / TotalIterations;
+  uint64_t update(const Measurement &M) {
+    total_cycles += M.elapsed_cycles;
+    total_iterations += M.iterations;
+    return total_cycles / total_iterations;
   }
 };
 
 // Tracks the progression of the runtime estimation
 class RuntimeEstimationProgression {
-  RefinableRuntimeEstimation RRE;
+  RefinableRuntimeEstimation rre;
 
 public:
-  uint64_t CurrentEstimation = 0;
+  uint64_t current_estimation = 0;
 
-  double ComputeImprovement(const Measurement &M) {
-    const uint64_t NewEstimation = RRE.Update(M);
-    double Ratio = ((double)CurrentEstimation / NewEstimation) - 1.0;
+  double compute_improvement(const Measurement &M) {
+    const uint64_t new_estimation = rre.update(M);
+    double ratio = ((double)current_estimation / new_estimation) - 1.0;
 
     // Get absolute value
-    if (Ratio < 0) {
-      Ratio *= -1;
-    }
+    if (ratio < 0)
+      ratio *= -1;
 
-    CurrentEstimation = NewEstimation;
-    return Ratio;
+    current_estimation = new_estimation;
+    return ratio;
   }
 };
 
 struct BenchmarkResult {
-  uint64_t Cycles = 0;
-  size_t Samples = 0;
-  size_t TotalIterations = 0;
+  uint64_t cycles = 0;
+  size_t samples = 0;
+  size_t total_iterations = 0;
 };
 
-BenchmarkResult benchmark(const BenchmarkOptions &Options,
-                          uint64_t (*WrapperFunc)());
+BenchmarkResult benchmark(const BenchmarkOptions &options,
+                          cpp::function<uint64_t(void)> wrapper_func);
 
 class Benchmark {
-  Benchmark *Next = nullptr;
+  Benchmark *next = nullptr;
 
 public:
   virtual ~Benchmark() {}
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  virtual void set_up() {}
+  virtual void tear_down() {}
 
-  static int runBenchmarks();
+  static int run_benchmarks();
 
 protected:
-  static void addBenchmark(Benchmark *);
+  static void add_benchmark(Benchmark *);
 
 private:
-  virtual void Run() = 0;
-  virtual const char *getName() const = 0;
+  virtual void run() = 0;
+  virtual const cpp::string_view get_name() const = 0;
 
-  static Benchmark *Start;
-  static Benchmark *End;
+  static Benchmark *start;
+  static Benchmark *end;
 };
 
 class WrapperBenchmark : public Benchmark {
-  using BenchmarkWrapperFunction = uint64_t (*)();
-  BenchmarkWrapperFunction Func;
-  const char *Name;
+  const cpp::function<uint64_t(void)> func;
+  const cpp::string_view name;
 
 public:
-  WrapperBenchmark(BenchmarkWrapperFunction Func, char const *Name)
-      : Func(Func), Name(Name) {
-    addBenchmark(this);
+  WrapperBenchmark(cpp::function<uint64_t(void)> func, char const *name)
+      : func(func), name(name) {
+    add_benchmark(this);
   }
 
 private:
-  void Run() override {
-    BenchmarkOptions Options;
-    auto result = benchmark(Options, Func);
+  void run() override {
+    BenchmarkOptions options;
+    auto result = benchmark(options, func);
     constexpr auto GREEN = "\033[32m";
     constexpr auto RESET = "\033[0m";
-    blog << GREEN << "[ RUN      ] " << RESET << Name << '\n';
-    blog << GREEN << "[       OK ] " << RESET << Name << ": " << result.Cycles
-         << " cycles, " << result.TotalIterations << " iterations\n";
+    blog << GREEN << "[ RUN      ] " << RESET << name << '\n';
+    blog << GREEN << "[       OK ] " << RESET << name << ": " << result.cycles
+         << " cycles, " << result.total_iterations << " iterations\n";
   }
-  const char *getName() const override { return Name; }
+  const cpp::string_view get_name() const override { return name; }
 };
 } // namespace libc_gpu_benchmarks
 } // namespace LIBC_NAMESPACE

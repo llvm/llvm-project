@@ -3,67 +3,66 @@
 namespace LIBC_NAMESPACE {
 namespace libc_gpu_benchmarks {
 
-Benchmark *Benchmark::Start = nullptr;
-Benchmark *Benchmark::End = nullptr;
+Benchmark *Benchmark::start = nullptr;
+Benchmark *Benchmark::end = nullptr;
 
-void Benchmark::addBenchmark(Benchmark *B) {
-  if (End == nullptr) {
-    Start = B;
-    End = B;
+void Benchmark::add_benchmark(Benchmark *benchmark) {
+  if (end == nullptr) {
+    start = benchmark;
+    end = benchmark;
     return;
   }
-
-  End->Next = B;
-  End = B;
+  end->next = benchmark;
+  end = benchmark;
 }
 
-int Benchmark::runBenchmarks() {
-  for (Benchmark *B = Start; B != nullptr; B = B->Next) {
-    B->Run();
-  }
-
+int Benchmark::run_benchmarks() {
+  for (Benchmark *b = start; b != nullptr; b = b->next)
+    b->run();
   return 0;
 }
 
-BenchmarkResult benchmark(const BenchmarkOptions &Options,
-                          uint64_t (*WrapperFunc)()) {
-  BenchmarkResult Result;
-  RuntimeEstimationProgression REP;
-  size_t TotalIterations = 0;
-  size_t Iterations = Options.InitialIterations;
-  if (Iterations < (uint32_t)1) {
-    Iterations = 1;
-  }
-  size_t Samples = 0;
-  uint64_t BestGuess = 0;
-  uint64_t TotalCycles = 0;
+BenchmarkResult benchmark(const BenchmarkOptions &options,
+                          cpp::function<uint64_t(void)> wrapper_func) {
+  BenchmarkResult result;
+  RuntimeEstimationProgression rep;
+  size_t total_iterations = 0;
+  size_t iterations = options.initial_iterations;
+  if (iterations < (uint32_t)1)
+    iterations = 1;
+
+  size_t samples = 0;
+  uint64_t best_guess = 0;
+  uint64_t total_cycles = 0;
   for (;;) {
-    uint64_t SampleCycles = 0;
-    for (uint32_t i = 0; i < Iterations; i++) {
-      auto overhead = LIBC_NAMESPACE::overhead();
-      uint64_t result = WrapperFunc() - overhead;
-      SampleCycles += result;
+    uint64_t sample_cycles = 0;
+    uint64_t overhead = LIBC_NAMESPACE::overhead();
+    for (uint32_t i = 0; i < iterations; i++) {
+      uint64_t result = wrapper_func() - overhead;
+      sample_cycles += result;
     }
 
-    Samples++;
-    TotalCycles += SampleCycles;
-    TotalIterations += Iterations;
-    const double ChangeRatio =
-        REP.ComputeImprovement({Iterations, SampleCycles});
-    BestGuess = REP.CurrentEstimation;
+    samples++;
+    total_cycles += sample_cycles;
+    total_iterations += iterations;
+    const double change_ratio =
+        rep.compute_improvement({iterations, sample_cycles});
+    best_guess = rep.current_estimation;
 
-    if (Samples >= Options.MaxSamples || Iterations >= Options.MaxIterations) {
+    if (samples >= options.max_samples ||
+        iterations >= options.max_iterations) {
       break;
-    } else if (Samples >= Options.MinSamples && ChangeRatio < Options.Epsilon) {
+    } else if (samples >= options.min_samples &&
+               change_ratio < options.epsilon) {
       break;
     }
 
-    Iterations *= Options.ScalingFactor;
+    iterations *= options.scaling_factor;
   }
-  Result.Cycles = BestGuess;
-  Result.Samples = Samples;
-  Result.TotalIterations = TotalIterations;
-  return Result;
+  result.cycles = best_guess;
+  result.samples = samples;
+  result.total_iterations = total_iterations;
+  return result;
 };
 
 } // namespace libc_gpu_benchmarks
