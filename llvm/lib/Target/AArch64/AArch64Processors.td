@@ -626,13 +626,16 @@ def ProcessorFeatures {
   list<SubtargetFeature> A510 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
-                                 FeatureFP16FML];
+                                 FeatureFP16FML,
+                                 FeatureSB, FeaturePAuth, FeatureSSBS, FeatureSVE, FeatureSVE2];
   list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
-                                 FeatureFP16FML];
+                                 FeatureFP16FML,
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
   list<SubtargetFeature> A520AE = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
-                                 FeatureFP16FML];
+                                 FeatureFP16FML,
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeatureSSBS, FeatureRAS,
@@ -658,27 +661,33 @@ def ProcessorFeatures {
                                  FeatureSSBS];
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureETE, FeatureMTE, FeatureFP16FML,
-                                 FeatureSVE2BitPerm, FeatureBF16, FeatureMatMulInt8];
+                                 FeatureSVE2BitPerm, FeatureBF16, FeatureMatMulInt8,
+                                 FeaturePAuth, FeatureFlagM, FeatureSB, FeatureSVE, FeatureSVE2];
   list<SubtargetFeature> A715 = [HasV9_0aOps, FeatureNEON, FeatureMTE,
                                  FeatureFP16FML, FeatureSVE, FeatureTRBE,
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureETE,
-                                 FeaturePerfMon, FeatureMatMulInt8, FeatureSPE];
+                                 FeaturePerfMon, FeatureMatMulInt8, FeatureSPE,
+                                 FeatureSB, FeatureSSBS, FeatureFullFP16, FeaturePAuth, FeaturePredRes, FeatureFlagM];
   list<SubtargetFeature> A720 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
-                                 FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
+                                 FeaturePerfMon, FeatureSPE, FeatureSPE_EEF,
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
   list<SubtargetFeature> A720AE = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
-                                 FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
+                                 FeaturePerfMon, FeatureSPE, FeatureSPE_EEF,
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
                                  FeatureComplxNum, FeatureJS,
-                                 FeatureCacheDeepPersist];
+                                 FeatureCacheDeepPersist,
+                                 FeatureLSE, FeatureFlagM];
   list<SubtargetFeature> R82AE = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                   FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                   FeatureSB, FeatureRDM, FeatureDotProd,
                                   FeatureComplxNum, FeatureJS,
-                                  FeatureCacheDeepPersist];
+                                  FeatureCacheDeepPersist,
+                                  FeatureLSE, FeatureFlagM];
   list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
@@ -687,23 +696,28 @@ def ProcessorFeatures {
                                  FeatureNEON, FeatureRCPC_IMMO, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
                                  FeaturePAuth, FeatureSSBS, FeatureFlagM,
-                                 FeatureLSE2];
+                                 FeatureLSE2,
+                                 FeatureRCPC];
   list<SubtargetFeature> X2   = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
-                                 FeatureFP16FML];
+                                 FeatureFP16FML,
+                                 FeaturePAuth, FeatureSSBS, FeatureSB, FeatureSVE, FeatureSVE2, FeatureFlagM];
   list<SubtargetFeature> X3 =   [HasV9_0aOps, FeatureSVE, FeatureNEON,
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
                                  FeatureSPE, FeatureBF16, FeatureMatMulInt8,
                                  FeatureMTE, FeatureSVE2BitPerm, FeatureFullFP16,
-                                 FeatureFP16FML];
+                                 FeatureFP16FML,
+                                 FeatureSB, FeaturePAuth, FeaturePredRes, FeatureFlagM, FeatureSSBS];
   list<SubtargetFeature> X4 =   [HasV9_2aOps,
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
                                  FeatureSPE, FeatureMTE, FeatureSVE2BitPerm,
-                                 FeatureFP16FML, FeatureSPE_EEF];
+                                 FeatureFP16FML, FeatureSPE_EEF,
+                                 FeatureSB, FeatureSSBS, FeaturePAuth, FeatureFlagM, FeaturePredRes];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
-                                     FeatureSVE, FeatureComplxNum];
+                                     FeatureSVE, FeatureComplxNum,
+                                     FeatureAES];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16];
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -752,33 +766,40 @@ def ProcessorFeatures {
   list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE, FeatureFP16FML,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
                                        FeatureSVE2BitPerm, FeatureTRBE,
-                                       FeaturePerfMon];
+                                       FeaturePerfMon,
+                                       FeatureDotProd, FeatureFullFP16, FeatureSB, FeatureSSBS, FeatureSVE];
   list<SubtargetFeature> NeoverseN3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureMTE, FeaturePerfMon,
                                       FeatureRandGen, FeatureSPE, FeatureSPE_EEF,
-                                      FeatureSVE2BitPerm];
+                                      FeatureSVE2BitPerm,
+                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM];
   list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                            FeatureSHA2, FeatureAES, FeatureFPARMv8, FeatureFP16FML,
                                            FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
                                            FeaturePerfMon, FeatureRandGen, FeatureSPE,
-                                           FeatureSSBS, FeatureSVE];
+                                           FeatureSSBS, FeatureSVE,
+                                           FeatureSHA3, FeatureSM4, FeatureDotProd];
   list<SubtargetFeature> NeoverseV1 = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                        FeatureSHA2, FeatureAES, FeatureFPARMv8, FeatureFP16FML,
                                        FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
                                        FeaturePerfMon, FeatureRandGen, FeatureSPE,
-                                       FeatureSSBS, FeatureSVE];
+                                       FeatureSSBS, FeatureSVE,
+                                       FeatureSHA3, FeatureSM4, FeatureDotProd];
   list<SubtargetFeature> NeoverseV2 = [HasV9_0aOps, FeatureBF16, FeatureSPE,
                                        FeaturePerfMon, FeatureETE, FeatureMatMulInt8,
                                        FeatureNEON, FeatureSVE2BitPerm, FeatureFP16FML,
-                                       FeatureMTE, FeatureRandGen];
+                                       FeatureMTE, FeatureRandGen,
+                                       FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
-                                      FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE];
+                                      FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE,
+                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM];
   list<SubtargetFeature> NeoverseV3AE = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
-                                      FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE];
+                                      FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE,
+                                      FeatureSSBS, FeatureSB, FeaturePredRes, FeaturePAuth, FeatureFlagM];
   list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                        FeatureNEON, FeatureSPE, FeaturePerfMon];
   list<SubtargetFeature> ThunderX   = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
@@ -794,11 +815,13 @@ def ProcessorFeatures {
                                    FeatureJS, FeatureComplxNum];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRandGen, FeatureSB,
-                                    FeatureSHA2, FeatureSHA3, FeatureAES];
+                                    FeatureSHA2, FeatureSHA3, FeatureAES,
+                                    FeatureFullFP16];
   list<SubtargetFeature> Ampere1A = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
-                                     FeatureSHA3, FeatureAES];
+                                     FeatureSHA3, FeatureAES,
+                                     FeatureFullFP16];
   list<SubtargetFeature> Ampere1B = [HasV8_7aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
@@ -817,266 +840,187 @@ class AArch64Processor<
   Architecture64 arch,
   SchedMachineModel m,
   list<SubtargetFeature> f,
-  list<SubtargetFeature> tunef,
-  list<Extension> default_extensions
+  list<SubtargetFeature> tunef
 > : ProcessorModel<n, m, f, tunef> {
   // The base architecture for this processor.
   Architecture64 Arch = arch;
-
-  // The set of extensions enabled by default for this processor.
-  list<Extension> DefaultExts = default_extensions;
 }
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
 // optimizations.
 def : AArch64Processor<"generic", HasV8_0aOps, CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
-                      FeatureEnableSelectOptimize],
-                     [FeatureNEON]>;
+                      FeatureEnableSelectOptimize]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
 
 def : AArch64Processor<"cortex-a34", HasV8_0aOps, CortexA53Model, ProcessorFeatures.A53,
-                     [TuneA35],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneA35]>;
 def : AArch64Processor<"cortex-a35", HasV8_0aOps, CortexA53Model, ProcessorFeatures.A53,
-                     [TuneA35],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneA35]>;
 def : AArch64Processor<"cortex-a53", HasV8_0aOps, CortexA53Model, ProcessorFeatures.A53,
-                     [TuneA53],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneA53]>;
 def : AArch64Processor<"cortex-a55", HasV8_2aOps, CortexA55Model, ProcessorFeatures.A55,
-                     [TuneA55],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC]>;
+                     [TuneA55]>;
 def : AArch64Processor<"cortex-a510", HasV9_0aOps, CortexA510Model, ProcessorFeatures.A510,
-                     [TuneA510],
-                     [FeatureBF16, FeatureMatMulInt8, FeatureSB, FeaturePAuth, FeatureMTE, FeatureSSBS, FeatureSVE, FeatureSVE2, FeatureSVE2BitPerm, FeatureFP16FML]>;
+                     [TuneA510]>;
 def : AArch64Processor<"cortex-a520", HasV9_2aOps, CortexA510Model, ProcessorFeatures.A520,
-                     [TuneA520],
-                     [FeatureSB, FeatureSSBS, FeatureMTE, FeatureFP16FML, FeaturePAuth, FeatureSVE2BitPerm, FeatureFlagM, FeaturePerfMon, FeaturePredRes]>;
+                     [TuneA520]>;
 def : AArch64Processor<"cortex-a520ae", HasV9_2aOps, CortexA510Model, ProcessorFeatures.A520AE,
-                     [TuneA520AE],
-                     [FeatureSB, FeatureSSBS, FeatureMTE, FeatureFP16FML, FeaturePAuth, FeatureSVE2BitPerm, FeatureFlagM, FeaturePerfMon, FeaturePredRes]>;
+                     [TuneA520AE]>;
 def : AArch64Processor<"cortex-a57", HasV8_0aOps, CortexA57Model, ProcessorFeatures.A53,
-                     [TuneA57],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneA57]>;
 def : AArch64Processor<"cortex-a65", HasV8_2aOps, CortexA53Model, ProcessorFeatures.A65,
-                     [TuneA65],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16, FeatureRCPC, FeatureSSBS]>;
+                     [TuneA65]>;
 def : AArch64Processor<"cortex-a65ae", HasV8_2aOps, CortexA53Model, ProcessorFeatures.A65,
-                     [TuneA65],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16, FeatureRCPC, FeatureSSBS]>;
+                     [TuneA65]>;
 def : AArch64Processor<"cortex-a72", HasV8_0aOps, CortexA57Model, ProcessorFeatures.A53,
-                     [TuneA72],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneA72]>;
 def : AArch64Processor<"cortex-a73", HasV8_0aOps, CortexA57Model, ProcessorFeatures.A53,
-                     [TuneA73],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneA73]>;
 def : AArch64Processor<"cortex-a75", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A55,
-                     [TuneA75],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC]>;
+                     [TuneA75]>;
 def : AArch64Processor<"cortex-a76", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A76,
-                     [TuneA76],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS]>;
+                     [TuneA76]>;
 def : AArch64Processor<"cortex-a76ae", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A76,
-                     [TuneA76],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS]>;
+                     [TuneA76]>;
 def : AArch64Processor<"cortex-a77", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A77,
-                     [TuneA77],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureRCPC, FeatureDotProd, FeatureSSBS]>;
+                     [TuneA77]>;
 def : AArch64Processor<"cortex-a78", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A78,
-                     [TuneA78],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS, FeatureSPE]>;
+                     [TuneA78]>;
 def : AArch64Processor<"cortex-a78ae", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A78AE,
-                     [TuneA78AE],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS, FeatureSPE]>;
+                     [TuneA78AE]>;
 def : AArch64Processor<"cortex-a78c", HasV8_2aOps, CortexA57Model, ProcessorFeatures.A78C,
-                     [TuneA78C],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS, FeatureSPE, FeatureFlagM, FeaturePAuth]>;
+                     [TuneA78C]>;
 def : AArch64Processor<"cortex-a710", HasV9_0aOps, NeoverseN2Model, ProcessorFeatures.A710,
-                     [TuneA710],
-                     [FeatureMTE, FeaturePAuth, FeatureFlagM, FeatureSB, FeatureMatMulInt8, FeatureFP16FML, FeatureSVE, FeatureSVE2, FeatureSVE2BitPerm, FeatureBF16]>;
+                     [TuneA710]>;
 def : AArch64Processor<"cortex-a715", HasV9_0aOps, NeoverseN2Model, ProcessorFeatures.A715,
-                     [TuneA715],
-                     [FeatureSB, FeatureSSBS, FeatureMTE, FeatureFullFP16, FeatureFP16FML, FeaturePAuth, FeatureMatMulInt8, FeaturePredRes, FeaturePerfMon, FeatureSPE, FeatureSVE, FeatureSVE2BitPerm, FeatureBF16, FeatureFlagM]>;
+                     [TuneA715]>;
 def : AArch64Processor<"cortex-a720", HasV9_2aOps, NeoverseN2Model, ProcessorFeatures.A720,
-                     [TuneA720],
-                     [FeatureSB, FeatureSSBS, FeatureMTE, FeatureFP16FML, FeaturePAuth, FeatureSVE2BitPerm, FeatureFlagM, FeaturePerfMon, FeaturePredRes, FeatureSPE]>;
+                     [TuneA720]>;
 def : AArch64Processor<"cortex-a720ae", HasV9_2aOps, NeoverseN2Model, ProcessorFeatures.A720AE,
-                     [TuneA720AE],
-                     [FeatureSB, FeatureSSBS, FeatureMTE, FeatureFP16FML, FeaturePAuth, FeatureSVE2BitPerm, FeatureFlagM, FeaturePerfMon, FeaturePredRes, FeatureSPE]>;
+                     [TuneA720AE]>;
 def : AArch64Processor<"cortex-r82", HasV8_0rOps, CortexA55Model, ProcessorFeatures.R82,
-                     [TuneR82],
-                     [FeatureLSE, FeatureFlagM, FeaturePerfMon, FeaturePredRes]>;
+                     [TuneR82]>;
 def : AArch64Processor<"cortex-r82ae", HasV8_0rOps, CortexA55Model, ProcessorFeatures.R82AE,
-                     [TuneR82AE],
-                     [FeatureLSE, FeatureFlagM, FeaturePerfMon, FeaturePredRes]>;
+                     [TuneR82AE]>;
 def : AArch64Processor<"cortex-x1", HasV8_2aOps, CortexA57Model, ProcessorFeatures.X1,
-                     [TuneX1],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS, FeatureSPE]>;
+                     [TuneX1]>;
 def : AArch64Processor<"cortex-x1c", HasV8_2aOps, CortexA57Model, ProcessorFeatures.X1C,
-                     [TuneX1],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureDotProd, FeatureRCPC, FeatureSSBS, FeaturePAuth, FeatureSPE, FeatureFlagM]>;
+                     [TuneX1]>;
 def : AArch64Processor<"cortex-x2", HasV9_0aOps, NeoverseN2Model, ProcessorFeatures.X2,
-                     [TuneX2],
-                     [FeatureMTE, FeatureBF16, FeatureMatMulInt8, FeaturePAuth, FeatureSSBS, FeatureSB, FeatureSVE, FeatureSVE2, FeatureSVE2BitPerm, FeatureFP16FML, FeatureFlagM]>;
+                     [TuneX2]>;
 def : AArch64Processor<"cortex-x3", HasV9_0aOps, NeoverseN2Model, ProcessorFeatures.X3,
-                     [TuneX3],
-                     [FeatureSVE, FeaturePerfMon, FeatureSPE, FeatureBF16, FeatureMatMulInt8, FeatureMTE, FeatureSVE2BitPerm, FeatureSB, FeaturePAuth, FeatureFullFP16, FeatureFP16FML, FeaturePredRes, FeatureFlagM, FeatureSSBS]>;
+                     [TuneX3]>;
 def : AArch64Processor<"cortex-x4", HasV9_2aOps, NeoverseN2Model, ProcessorFeatures.X4,
-                     [TuneX4],
-                     [FeatureSB, FeatureSSBS, FeatureMTE, FeatureFP16FML, FeaturePAuth, FeatureSVE2BitPerm, FeatureFlagM, FeaturePerfMon, FeaturePredRes, FeatureSPE]>;
+                     [TuneX4]>;
 def : AArch64Processor<"neoverse-e1", HasV8_2aOps, CortexA53Model, ProcessorFeatures.NeoverseE1,
-                     [TuneNeoverseE1],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16, FeatureRCPC, FeatureSSBS]>;
+                     [TuneNeoverseE1]>;
 def : AArch64Processor<"neoverse-n1", HasV8_2aOps, NeoverseN1Model, ProcessorFeatures.NeoverseN1,
-                     [TuneNeoverseN1],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16, FeatureSPE, FeatureRCPC, FeatureSSBS]>;
+                     [TuneNeoverseN1]>;
 def : AArch64Processor<"neoverse-n2", HasV9_0aOps, NeoverseN2Model, ProcessorFeatures.NeoverseN2,
-                     [TuneNeoverseN2],
-                     [FeatureBF16, FeatureDotProd, FeatureFullFP16, FeatureFP16FML, FeatureMatMulInt8, FeatureMTE, FeatureSB, FeatureSSBS, FeatureSVE, FeatureSVE2, FeatureSVE2BitPerm]>;
+                     [TuneNeoverseN2]>;
 def : AArch64Processor<"neoverse-n3", HasV9_2aOps, NeoverseN2Model, ProcessorFeatures.NeoverseN3,
-                     [TuneNeoverseN3],
-                     [FeatureMTE, FeatureSSBS, FeatureSB, FeaturePredRes, FeatureFP16FML, FeaturePAuth, FeatureFlagM, FeaturePerfMon, FeatureRandGen, FeatureSVE2BitPerm, FeatureSPE, FeaturePerfMon]>;
+                     [TuneNeoverseN3]>;
 def : AArch64Processor<"neoverse-512tvb", HasV8_4aOps, NeoverseV1Model, ProcessorFeatures.Neoverse512TVB,
-                     [TuneNeoverse512TVB],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureSM4, FeatureSVE, FeatureSSBS, FeatureFullFP16, FeatureBF16, FeatureDotProd, FeatureSPE, FeatureRandGen, FeatureFP16FML, FeatureMatMulInt8]>;
+                     [TuneNeoverse512TVB]>;
 def : AArch64Processor<"neoverse-v1", HasV8_4aOps, NeoverseV1Model, ProcessorFeatures.NeoverseV1,
-                     [TuneNeoverseV1],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureSM4, FeatureSVE, FeatureSSBS, FeatureFullFP16, FeatureBF16, FeatureDotProd, FeatureSPE, FeatureRandGen, FeatureFP16FML, FeatureMatMulInt8]>;
+                     [TuneNeoverseV1]>;
 def : AArch64Processor<"neoverse-v2", HasV9_0aOps, NeoverseV2Model, ProcessorFeatures.NeoverseV2,
-                     [TuneNeoverseV2],
-                     [FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureBF16, FeatureRandGen, FeatureDotProd, FeatureSPE, FeatureSVE2BitPerm, FeatureFP16FML, FeatureMatMulInt8, FeatureMTE]>;
+                     [TuneNeoverseV2]>;
 def : AArch64Processor<"neoverse-v3", HasV9_2aOps, NeoverseV2Model, ProcessorFeatures.NeoverseV3,
-                     [TuneNeoverseV3],
-                     [FeatureSPE, FeatureMTE, FeatureSSBS, FeatureSB, FeaturePredRes, FeatureLS64, FeatureBRBE, FeaturePAuth, FeatureFlagM, FeaturePerfMon, FeatureRandGen, FeatureSVE2BitPerm, FeatureFP16FML]>;
+                     [TuneNeoverseV3]>;
 def : AArch64Processor<"neoverse-v3ae", HasV9_2aOps, NeoverseV2Model, ProcessorFeatures.NeoverseV3AE,
-                     [TuneNeoverseV3AE],
-                     [FeatureSPE, FeatureMTE, FeatureSSBS, FeatureSB, FeaturePredRes, FeatureLS64, FeatureBRBE, FeaturePAuth, FeatureFlagM, FeaturePerfMon, FeatureRandGen, FeatureSVE2BitPerm, FeatureFP16FML]>;
+                     [TuneNeoverseV3AE]>;
 def : AArch64Processor<"exynos-m3", HasV8_0aOps, ExynosM3Model, ProcessorFeatures.ExynosM3,
-                     [TuneExynosM3],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneExynosM3]>;
 def : AArch64Processor<"exynos-m4", HasV8_2aOps, ExynosM4Model, ProcessorFeatures.ExynosM4,
-                     [TuneExynosM4],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16]>;
+                     [TuneExynosM4]>;
 def : AArch64Processor<"exynos-m5", HasV8_2aOps, ExynosM5Model, ProcessorFeatures.ExynosM4,
-                     [TuneExynosM4],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16]>;
+                     [TuneExynosM4]>;
 def : AArch64Processor<"falkor", HasV8_0aOps, FalkorModel, ProcessorFeatures.Falkor,
-                     [TuneFalkor],
-                     [FeatureAES, FeatureSHA2, FeatureCRC, FeatureRDM]>;
+                     [TuneFalkor]>;
 def : AArch64Processor<"saphira", HasV8_4aOps, FalkorModel, ProcessorFeatures.Saphira,
-                     [TuneSaphira],
-                     [FeatureAES, FeatureSHA2, FeatureSPE]>;
+                     [TuneSaphira]>;
 def : AArch64Processor<"kryo", HasV8_0aOps, KryoModel, ProcessorFeatures.A53,
-                     [TuneKryo],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneKryo]>;
 
 // Cavium ThunderX/ThunderX T8X  Processors
 def : AArch64Processor<"thunderx", HasV8_0aOps, ThunderXT8XModel,  ProcessorFeatures.ThunderX,
-                     [TuneThunderX],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneThunderX]>;
 def : AArch64Processor<"thunderxt88", HasV8_0aOps, ThunderXT8XModel, ProcessorFeatures.ThunderX,
-                     [TuneThunderXT88],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneThunderXT88]>;
 def : AArch64Processor<"thunderxt81", HasV8_0aOps, ThunderXT8XModel, ProcessorFeatures.ThunderX,
-                     [TuneThunderXT81],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneThunderXT81]>;
 def : AArch64Processor<"thunderxt83", HasV8_0aOps, ThunderXT8XModel, ProcessorFeatures.ThunderX,
-                     [TuneThunderXT83],
-                     [FeatureAES, FeatureSHA2, FeatureCRC]>;
+                     [TuneThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
 def : AArch64Processor<"thunderx2t99", HasV8_1aOps, ThunderX2T99Model, ProcessorFeatures.ThunderX2T99,
-                     [TuneThunderX2T99],
-                     [FeatureAES, FeatureSHA2]>;
+                     [TuneThunderX2T99]>;
 // Marvell ThunderX3T110 Processors.
 def : AArch64Processor<"thunderx3t110", HasV8_3aOps, ThunderX3T110Model, ProcessorFeatures.ThunderX3T110,
-                     [TuneThunderX3T110],
-                     [FeatureAES, FeatureSHA2]>;
+                     [TuneThunderX3T110]>;
 def : AArch64Processor<"tsv110", HasV8_2aOps, TSV110Model, ProcessorFeatures.TSV110,
-                     [TuneTSV110],
-                     [FeatureAES, FeatureSHA2, FeatureDotProd, FeatureFullFP16, FeatureFP16FML, FeatureSPE, FeatureJS, FeatureComplxNum]>;
+                     [TuneTSV110]>;
 
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
 def : AArch64Processor<"cyclone", HasV8_0aOps, CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7],
-                     [FeatureAES, FeatureSHA2]>;
+                     [TuneAppleA7]>;
 
 // iPhone and iPad CPUs
 def : AArch64Processor<"apple-a7", HasV8_0aOps, CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7],
-                     [FeatureAES, FeatureSHA2]>;
+                     [TuneAppleA7]>;
 def : AArch64Processor<"apple-a8", HasV8_0aOps, CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7],
-                     [FeatureAES, FeatureSHA2]>;
+                     [TuneAppleA7]>;
 def : AArch64Processor<"apple-a9", HasV8_0aOps, CycloneModel, ProcessorFeatures.AppleA7,
-                     [TuneAppleA7],
-                     [FeatureAES, FeatureSHA2]>;
+                     [TuneAppleA7]>;
 def : AArch64Processor<"apple-a10", HasV8_0aOps, CycloneModel, ProcessorFeatures.AppleA10,
-                     [TuneAppleA10],
-                     [FeatureAES, FeatureSHA2, FeatureCRC, FeatureRDM]>;
+                     [TuneAppleA10]>;
 def : AArch64Processor<"apple-a11", HasV8_2aOps, CycloneModel, ProcessorFeatures.AppleA11,
-                     [TuneAppleA11],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16]>;
+                     [TuneAppleA11]>;
 def : AArch64Processor<"apple-a12", HasV8_3aOps, CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16]>;
+                     [TuneAppleA12]>;
 def : AArch64Processor<"apple-a13", HasV8_4aOps, CycloneModel, ProcessorFeatures.AppleA13,
-                     [TuneAppleA13],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA13]>;
 def : AArch64Processor<"apple-a14", HasV8_5aOps, CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA14]>;
 def : AArch64Processor<"apple-a15", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA15,
-                     [TuneAppleA15],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA15]>;
 // Alias for the latest Apple processor model supported by LLVM.
 def : AArch64Processor<"apple-a16", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA16]>;
 def : AArch64Processor<"apple-a17", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA17,
-                     [TuneAppleA17],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA17]>;
 // Mac CPUs
 def : AArch64Processor<"apple-m1", HasV8_5aOps, CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA14]>;
 def : AArch64Processor<"apple-m2", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA15,
-                     [TuneAppleA15],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA15]>;
 def : AArch64Processor<"apple-m3", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureFP16FML]>;
+                     [TuneAppleA16]>;
 
 // watch CPUs.
 def : AArch64Processor<"apple-s4", HasV8_3aOps, CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16]>;
+                     [TuneAppleA12]>;
 def : AArch64Processor<"apple-s5", HasV8_3aOps, CycloneModel, ProcessorFeatures.AppleA12,
-                     [TuneAppleA12],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16]>;
+                     [TuneAppleA12]>;
 
 // Fujitsu A64FX
 def : AArch64Processor<"a64fx", HasV8_2aOps, A64FXModel, ProcessorFeatures.A64FX,
-                     [TuneA64FX],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16, FeatureSVE]>;
+                     [TuneA64FX]>;
 
 // Nvidia Carmel
 def : AArch64Processor<"carmel", HasV8_2aOps, NoSchedModel, ProcessorFeatures.Carmel,
-                     [TuneCarmel],
-                     [FeatureAES, FeatureSHA2, FeatureFullFP16]>;
+                     [TuneCarmel]>;
 
 // Ampere Computing
 def : AArch64Processor<"ampere1", HasV8_6aOps, Ampere1Model, ProcessorFeatures.Ampere1,
-                     [TuneAmpere1],
-                     [FeatureAES, FeatureSHA2, FeatureSHA3, FeatureFullFP16, FeatureSB, FeatureSSBS, FeatureRandGen]>;
+                     [TuneAmpere1]>;
 
 def : AArch64Processor<"ampere1a", HasV8_6aOps, Ampere1Model, ProcessorFeatures.Ampere1A,
-                     [TuneAmpere1A],
-                     [FeatureFullFP16, FeatureRandGen, FeatureSM4, FeatureSHA3, FeatureSHA2, FeatureAES, FeatureMTE, FeatureSB, FeatureSSBS]>;
+                     [TuneAmpere1A]>;
 
 def : AArch64Processor<"ampere1b", HasV8_7aOps, Ampere1BModel, ProcessorFeatures.Ampere1B,
-                     [TuneAmpere1B],
-                     [FeatureFullFP16, FeatureRandGen, FeatureSM4, FeatureSHA3, FeatureSHA2, FeatureAES, FeatureMTE, FeatureSB, FeatureSSBS, FeatureCSSC]>;
+                     [TuneAmpere1B]>;

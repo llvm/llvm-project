@@ -158,7 +158,6 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     // Construct the list of default extensions
     OS << "  (AArch64::ExtensionBitset({";
     for (auto *E : Rec->getValueAsListOfDefs("DefaultExts")) {
-      // Only process subclasses of Extension
       OS << "AArch64::" << E->getValueAsString("ArchExtKindSpelling").upper()
          << ", ";
     }
@@ -196,9 +195,17 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
        << "    \"" << Name << "\",\n"
        << "    " << ArchInfo << ",\n"
        << "    AArch64::ExtensionBitset({\n";
-    for (auto E : Rec->getValueAsListOfDefs("DefaultExts"))
-      OS << "      AArch64::"
-         << E->getValueAsString("ArchExtKindSpelling").upper() << ",\n";
+
+    // Keep track of extensions we have seen
+    StringSet<> SeenExts;
+    for (auto *E : Rec->getValueAsListOfDefs("Features"))
+      // Only process subclasses of Extension
+      if (E->isSubClassOf("Extension")) {
+        const auto AEK = E->getValueAsString("ArchExtKindSpelling").upper();
+        if (!SeenExts.insert(AEK).second)
+          PrintError(Rec, "feature already added: " + E->getName());
+        OS << "      AArch64::" << AEK << ",\n";
+      }
     OS << "    })\n"
        << "  },\n";
   }
