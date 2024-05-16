@@ -879,7 +879,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   // from a loop-invariant address predictable; we were unable to prove that it
   // doesn't alias any of the memory-writes in the loop, but it is likely to
   // read to same value multiple times.
-  if (CurrentLoop && any_of(IfConv.Cond, [&](MachineOperand &MO) {
+  if (CurrentLoop && all_of(IfConv.Cond, [&](MachineOperand &MO) {
         if (!MO.isReg() || !MO.isUse())
           return false;
         Register Reg = MO.getReg();
