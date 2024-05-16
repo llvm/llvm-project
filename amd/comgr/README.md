@@ -8,11 +8,11 @@ Building the Code Object Manager
 --------------------------------
 
 Comgr depends on [LLVM](https://github.com/ROCm/llvm-project) and
-[AMDDeviceLibs](https://github.com/ROCm/llvm-project/tree/amd-stg-open/amd/device-libs).
+[AMDDeviceLibs](https://github.com/ROCm/llvm-project/tree/amd-staging/amd/device-libs).
 One way to make these visible to the Comgr build process is by setting the
 `CMAKE_PREFIX_PATH` to include either the build directory or install prefix of
 each of these components, separated by a semicolon. Both should be built using
-either sources with the same ROCm release tag, or from the `amd-stg-open`
+either sources with the same ROCm release tag, or from the `amd-staging`
 branch. LLVM should be built with at least
 `LLVM_ENABLE_PROJECTS='llvm;clang;lld'` and
 `LLVM_TARGETS_TO_BUILD='AMDGPU;X86'`.
@@ -20,8 +20,8 @@ branch. LLVM should be built with at least
 An example `bash` session to build Comgr on Linux using GNUMakefiles is:
 
     $ LLVM_PROJECT=~/llvm-project
-    $ DEVICE_LIBS=~/device-libs
-    $ COMGR=~/support/lib/comgr
+    $ DEVICE_LIBS=~/llvm-project/amd/device-libs
+    $ COMGR=~/llvm-project/amd/comgr
     $ mkdir -p "$LLVM_PROJECT/build"
     $ cd "$LLVM_PROJECT/build"
     $ cmake \
@@ -49,8 +49,8 @@ An example `bash` session to build Comgr on Linux using GNUMakefiles is:
 The equivalent on Windows in `cmd.exe` using Visual Studio project files is:
 
     > set LLVM_PROJECT="%HOMEPATH%\llvm-project"
-    > set DEVICE_LIBS="%HOMEPATH%\device-libs"
-    > set COMGR="%HOMEPATH%\support\lib\comgr"
+    > set DEVICE_LIBS="%HOMEPATH%\llvm-project\amd\device-libs"
+    > set COMGR="%HOMEPATH%\llvm-project\amd\comgr"
     > mkdir "%LLVM_PROJECT%\build"
     > cd "%LLVM_PROJECT%\build"
     > cmake ^
