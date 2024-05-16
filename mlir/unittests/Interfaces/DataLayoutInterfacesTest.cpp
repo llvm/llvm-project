@@ -22,6 +22,7 @@ using namespace mlir;
 
 namespace {
 constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
+constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
 constexpr static llvm::StringLiteral kProgramKeyName =
@@ -73,6 +74,9 @@ struct CustomDataLayoutSpec
   }
   DataLayoutEntryListRef getEntries() const { return getImpl()->entries; }
   LogicalResult verifySpec(Location loc) { return success(); }
+  StringAttr getEndiannessIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kEndiannesKeyName);
+  }
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kAllocaKeyName);
   }
@@ -128,6 +132,15 @@ struct SingleQueryType
 
     executed = true;
     return 4;
+  }
+
+  Attribute getEndianness(DataLayoutEntryInterface entry) {
+    static bool executed = false;
+    if (executed)
+      llvm::report_fatal_error("repeated call");
+
+    executed = true;
+    return Attribute();
   }
 
   Attribute getAllocaMemorySpace(DataLayoutEntryInterface entry) {
@@ -317,6 +330,7 @@ module {}
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
 
+  EXPECT_EQ(layout.getEndianness(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
@@ -345,7 +359,10 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
+  EXPECT_EQ(layout.getEndianness(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
@@ -373,7 +390,10 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
+  EXPECT_EQ(layout.getEndianness(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
@@ -385,6 +405,8 @@ TEST(DataLayout, SpecWithEntries) {
 "dltest.op_with_layout"() { dltest.layout = #dltest.spec<
   #dlti.dl_entry<i42, 5>,
   #dlti.dl_entry<i16, 6>,
+  #dlti.dl_entry<index, 42>,
+  #dlti.dl_entry<"dltest.endianness", "little">,
   #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>,
   #dlti.dl_entry<"dltest.program_memory_space", 3 : i32>,
   #dlti.dl_entry<"dltest.global_memory_space", 2 : i32>,
@@ -408,6 +430,8 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 16u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 42u);
 
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 32)), 32u);
   EXPECT_EQ(layout.getTypeSize(Float32Type::get(&ctx)), 32u);
@@ -418,6 +442,7 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 32)), 64u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float32Type::get(&ctx)), 64u);
 
+  EXPECT_EQ(layout.getEndianness(), Builder(&ctx).getStringAttr("little"));
   EXPECT_EQ(layout.getAllocaMemorySpace(), Builder(&ctx).getI32IntegerAttr(5));
   EXPECT_EQ(layout.getProgramMemorySpace(), Builder(&ctx).getI32IntegerAttr(3));
   EXPECT_EQ(layout.getGlobalMemorySpace(), Builder(&ctx).getI32IntegerAttr(2));

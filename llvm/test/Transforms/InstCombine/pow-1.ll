@@ -893,3 +893,134 @@ define double @test_simplify19(double %x) {
   %retval = call double @pow(double 10.0, double %x)
   ret double %retval
 }
+
+define float @test_libcall_powf_10_f32_noerrno(float %x) {
+; CHECK-EXP10-LABEL: define float @test_libcall_powf_10_f32_noerrno(
+; CHECK-EXP10-SAME: float [[X:%.*]]) {
+; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @llvm.exp10.f32(float [[X]])
+; CHECK-EXP10-NEXT:    ret float [[__EXP10F]]
+;
+; CHECK-NO-EXP10-LABEL: define float @test_libcall_powf_10_f32_noerrno(
+; CHECK-NO-EXP10-SAME: float [[X:%.*]]) {
+; CHECK-NO-EXP10-NEXT:    [[RETVAL:%.*]] = call float @powf(float 1.000000e+01, float [[X]]) #[[ATTR3:[0-9]+]]
+; CHECK-NO-EXP10-NEXT:    ret float [[RETVAL]]
+;
+  %retval = call float @powf(float 10.0, float %x) memory(none)
+  ret float %retval
+}
+
+define double @test_libcall_pow_10_f64_noerrno(double %x) {
+; CHECK-EXP10-LABEL: define double @test_libcall_pow_10_f64_noerrno(
+; CHECK-EXP10-SAME: double [[X:%.*]]) {
+; CHECK-EXP10-NEXT:    [[__EXP10:%.*]] = call double @llvm.exp10.f64(double [[X]])
+; CHECK-EXP10-NEXT:    ret double [[__EXP10]]
+;
+; CHECK-NO-EXP10-LABEL: define double @test_libcall_pow_10_f64_noerrno(
+; CHECK-NO-EXP10-SAME: double [[X:%.*]]) {
+; CHECK-NO-EXP10-NEXT:    [[RETVAL:%.*]] = call double @pow(double 1.000000e+01, double [[X]]) #[[ATTR3]]
+; CHECK-NO-EXP10-NEXT:    ret double [[RETVAL]]
+;
+  %retval = call double @pow(double 10.0, double %x) memory(none)
+  ret double %retval
+}
+
+define half @test_pow_10_f16(half %x) {
+; CHECK-LABEL: define half @test_pow_10_f16(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call half @llvm.pow.f16(half 0xH4900, half [[X]])
+; CHECK-NEXT:    ret half [[RETVAL]]
+;
+  %retval = call half @llvm.pow.f16(half 10.0, half %x)
+  ret half %retval
+}
+
+define float @test_pow_10_f32(float %x) {
+; CHECK-EXP10-LABEL: define float @test_pow_10_f32(
+; CHECK-EXP10-SAME: float [[X:%.*]]) {
+; CHECK-EXP10-NEXT:    [[__EXP10F:%.*]] = call float @llvm.exp10.f32(float [[X]])
+; CHECK-EXP10-NEXT:    ret float [[__EXP10F]]
+;
+; CHECK-NO-EXP10-LABEL: define float @test_pow_10_f32(
+; CHECK-NO-EXP10-SAME: float [[X:%.*]]) {
+; CHECK-NO-EXP10-NEXT:    [[RETVAL:%.*]] = call float @llvm.pow.f32(float 1.000000e+01, float [[X]])
+; CHECK-NO-EXP10-NEXT:    ret float [[RETVAL]]
+;
+  %retval = call float @llvm.pow.f32(float 10.0, float %x)
+  ret float %retval
+}
+
+define double @test_pow_10_f64(double %x) {
+; CHECK-EXP10-LABEL: define double @test_pow_10_f64(
+; CHECK-EXP10-SAME: double [[X:%.*]]) {
+; CHECK-EXP10-NEXT:    [[__EXP10:%.*]] = call double @llvm.exp10.f64(double [[X]])
+; CHECK-EXP10-NEXT:    ret double [[__EXP10]]
+;
+; CHECK-NO-EXP10-LABEL: define double @test_pow_10_f64(
+; CHECK-NO-EXP10-SAME: double [[X:%.*]]) {
+; CHECK-NO-EXP10-NEXT:    [[RETVAL:%.*]] = call double @llvm.pow.f64(double 1.000000e+01, double [[X]])
+; CHECK-NO-EXP10-NEXT:    ret double [[RETVAL]]
+;
+  %retval = call double @llvm.pow.f64(double 10.0, double %x)
+  ret double %retval
+}
+
+define fp128 @test_pow_10_fp128(fp128 %x) {
+; CHECK-LABEL: define fp128 @test_pow_10_fp128(
+; CHECK-SAME: fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call fp128 @llvm.pow.f128(fp128 0xL00000000000000004002400000000000, fp128 [[X]])
+; CHECK-NEXT:    ret fp128 [[RETVAL]]
+;
+  %ten = fpext double 10.0 to fp128
+  %retval = call fp128 @llvm.pow.fp128(fp128 %ten, fp128 %x)
+  ret fp128 %retval
+}
+
+define bfloat @test_pow_10_bf16(bfloat %x) {
+; CHECK-LABEL: define bfloat @test_pow_10_bf16(
+; CHECK-SAME: bfloat [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call bfloat @llvm.pow.bf16(bfloat 0xR4120, bfloat [[X]])
+; CHECK-NEXT:    ret bfloat [[RETVAL]]
+;
+  %retval = call bfloat @llvm.pow.bf16(bfloat 10.0, bfloat %x)
+  ret bfloat %retval
+}
+
+define <2 x half> @test_pow_10_v2f16(<2 x half> %x) {
+; CHECK-LABEL: define <2 x half> @test_pow_10_v2f16(
+; CHECK-SAME: <2 x half> [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> <half 0xH4900, half 0xH4900>, <2 x half> [[X]])
+; CHECK-NEXT:    ret <2 x half> [[RETVAL]]
+;
+  %retval = call <2 x half> @llvm.pow.v2f16(<2 x half> <half 10.0, half 10.0>, <2 x half> %x)
+  ret <2 x half> %retval
+}
+
+define <2 x float> @test_pow_10_v2f32(<2 x float> %x) {
+; CHECK-LABEL: define <2 x float> @test_pow_10_v2f32(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 1.000000e+01, float 1.000000e+01>, <2 x float> [[X]])
+; CHECK-NEXT:    ret <2 x float> [[RETVAL]]
+;
+  %retval = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 10.0, float 10.0>, <2 x float> %x)
+  ret <2 x float> %retval
+}
+
+define <2 x double> @test_pow_10_v2f64(<2 x double> %x) {
+; CHECK-LABEL: define <2 x double> @test_pow_10_v2f64(
+; CHECK-SAME: <2 x double> [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 1.000000e+01, double 1.000000e+01>, <2 x double> [[X]])
+; CHECK-NEXT:    ret <2 x double> [[RETVAL]]
+;
+  %retval = call <2 x double> @llvm.pow.v2f64(<2 x double> <double 10.0, double 10.0>, <2 x double> %x)
+  ret <2 x double> %retval
+}
+
+define <2 x bfloat> @test_pow_10_v2bf16(<2 x bfloat> %x) {
+; CHECK-LABEL: define <2 x bfloat> @test_pow_10_v2bf16(
+; CHECK-SAME: <2 x bfloat> [[X:%.*]]) {
+; CHECK-NEXT:    [[RETVAL:%.*]] = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> <bfloat 0xR4120, bfloat 0xR4120>, <2 x bfloat> [[X]])
+; CHECK-NEXT:    ret <2 x bfloat> [[RETVAL]]
+;
+  %retval = call <2 x bfloat> @llvm.pow.v2bf16(<2 x bfloat> <bfloat 10.0, bfloat 10.0>, <2 x bfloat> %x)
+  ret <2 x bfloat> %retval
+}

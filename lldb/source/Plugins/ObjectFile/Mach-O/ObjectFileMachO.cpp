@@ -905,6 +905,11 @@ ConstString ObjectFileMachO::GetSegmentNameDWARF() {
   return g_section_name;
 }
 
+ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static ConstString g_section_name("__LLVM_COV");
+  return g_section_name;
+}
+
 ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
@@ -5135,8 +5140,17 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       case LC_LOADFVMLIB:
       case LC_LOAD_UPWARD_DYLIB: {
         uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+        bool is_delayed_init = false;
+        uint32_t use_command_marker = m_data.GetU32(&offset);
+        if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
+          offset += 4; /* uint32_t current_version */
+          offset += 4; /* uint32_t compat_version */
+          uint32_t flags = m_data.GetU32(&offset);
+          if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
+            is_delayed_init = true;
+        }
         const char *path = m_data.PeekCStr(name_offset);
-        if (path) {
+        if (path && !is_delayed_init) {
           if (load_cmd.cmd == LC_RPATH)
             rpath_paths.push_back(path);
           else {
@@ -6145,6 +6159,13 @@ bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
     return false;
   if (GetModule().get() != section->GetModule().get())
     return false;
+  // firmware style binaries with llvm gcov segment do
+  // not have that segment mapped into memory.
+  if (section->GetName() == GetSegmentNameLLVM_COV()) {
+    const Strata strata = GetStrata();
+    if (strata == eStrataKernel || strata == eStrataRawImage)
+      return false;
+  }
   // Be careful with __LINKEDIT and __DWARF segments
   if (section->GetName() == GetSegmentNameLINKEDIT() ||
       section->GetName() == GetSegmentNameDWARF()) {

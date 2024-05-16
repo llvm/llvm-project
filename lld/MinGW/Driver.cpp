@@ -69,11 +69,21 @@ enum {
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
-  {PREFIX,      NAME,        HELPTEXT,                                         \
-   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
-   PARAM,       FLAGS,       VISIBILITY,                                       \
-   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
+  {PREFIX,                                                                     \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   HELPTEXTSFORVARIANTS,                                                       \
+   METAVAR,                                                                    \
+   OPT_##ID,                                                                   \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   VISIBILITY,                                                                 \
+   OPT_##GROUP,                                                                \
+   OPT_##ALIAS,                                                                \
+   ALIASARGS,                                                                  \
    VALUES},
 #include "Options.inc"
 #undef OPTION
@@ -455,6 +465,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lldemit:llvm");
   if (args.hasArg(OPT_lto_emit_asm))
     add("-lldemit:asm");
+  if (auto *arg = args.getLastArg(OPT_lto_sample_profile))
+    add("-lto-sample-profile:" + StringRef(arg->getValue()));
 
   if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
     add("-lldltocache:" + StringRef(a->getValue()));

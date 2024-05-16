@@ -86,7 +86,7 @@ class BUF_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_soffset = 1;
   bits<1> has_offset  = 1;
   bits<1> has_slc     = 1;
-  bits<1> tfe         = ?;
+  bits<1> tfe         = 0;
   bits<4> elements    = 0;
   bits<1> has_sccb    = 1;
   bits<1> sccb_value  = 0;
@@ -323,6 +323,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   Instruction BaseOpcode = !cast<Instruction>(MUBUFGetBaseOpcode<NAME>.ret);
   let MUBUF = 1;
   let AsmMatchConverter = "cvtMubuf";
+  let usesCustomInserter = 1;
 }
 
 class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -1725,7 +1726,7 @@ let SubtargetPredicate = isGFX12Plus in {
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["noret"]>;
 }
 
-let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
+let OtherPredicates = [isGFX6GFX7GFX10Plus] in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f32, "BUFFER_ATOMIC_FMIN">;
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmax", f32, "BUFFER_ATOMIC_FMAX">;
 }
@@ -2455,13 +2456,19 @@ class get_BUF_ps<string name> {
 
 // gfx11 instruction that accept both old and new assembler name.
 class Mnem_gfx11_gfx12 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Plus]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX11Plus;
+}
 
 class Mnem_gfx11 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Only]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX11Only;
+}
 
 class Mnem_gfx12 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX12Plus;
+}
 
 multiclass MUBUF_Real_AllAddr_gfx11_Impl2<bits<8> op, string real_name> {
   defm _BOTHEN : MUBUF_Real_gfx11<op, real_name>;
@@ -3369,7 +3376,7 @@ def MUBUFInfoTable : GenericTable {
   let CppTypeName = "MUBUFInfo";
   let Fields = [
     "Opcode", "BaseOpcode", "elements", "has_vaddr", "has_srsrc", "has_soffset",
-    "IsBufferInv"
+    "IsBufferInv", "tfe"
   ];
 
   let PrimaryKey = ["Opcode"];

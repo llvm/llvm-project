@@ -14,17 +14,17 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaConsumer.h"
-#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 
 using namespace clang;
 
 PCHGenerator::PCHGenerator(
-    const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-    StringRef OutputFile, StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+    Preprocessor &PP, InMemoryModuleCache &ModuleCache, StringRef OutputFile,
+    StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
@@ -88,25 +88,35 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
 }
 
-ReducedBMIGenerator::ReducedBMIGenerator(const Preprocessor &PP,
-                                         InMemoryModuleCache &ModuleCache,
-                                         StringRef OutputFile)
+void PCHGenerator::anchor() {}
+
+CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
+                                             InMemoryModuleCache &ModuleCache,
+                                             StringRef OutputFile,
+                                             bool GeneratingReducedBMI)
     : PCHGenerator(
           PP, ModuleCache, OutputFile, llvm::StringRef(),
           std::make_shared<PCHBuffer>(),
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
           /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
           /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
-          /*GeneratingReducedBMI=*/true) {}
+          GeneratingReducedBMI) {}
 
-Module *ReducedBMIGenerator::getEmittingModule(ASTContext &Ctx) {
+Module *CXX20ModulesGenerator::getEmittingModule(ASTContext &Ctx) {
   Module *M = Ctx.getCurrentNamedModule();
-  assert(M->isNamedModuleUnit() &&
-         "ReducedBMIGenerator should only be used with C++20 Named modules.");
+  assert(M && M->isNamedModuleUnit() &&
+         "CXX20ModulesGenerator should only be used with C++20 Named modules.");
   return M;
 }
 
-void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+  // FIMXE: We'd better to wrap such options to a new class ASTWriterOptions
+  // since this is not about searching header really.
+  HeaderSearchOptions &HSOpts =
+      getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
+  HSOpts.ModulesSkipDiagnosticOptions = true;
+  HSOpts.ModulesSkipHeaderSearchPaths = true;
+
   PCHGenerator::HandleTranslationUnit(Ctx);
 
   if (!isComplete())
@@ -123,3 +133,7 @@ void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   *OS << getBufferPtr()->Data;
   OS->flush();
 }
+
+void CXX20ModulesGenerator::anchor() {}
+
+void ReducedBMIGenerator::anchor() {}

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -153,6 +154,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else
     LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
 
+  BitIntMaxAlign = 128;
   MaxVectorAlign = 128;
   MaxAtomicInlineWidth = 128;
   MaxAtomicPromoteWidth = 128;
@@ -187,6 +189,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  HasUnalignedAccess = true;
+
   // AArch64 targets default to using the ARM C++ ABI.
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 
@@ -200,10 +204,20 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
+  return true;
+}
+
+bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
+  if (hasFeature("fp") && ABI == "aapcs-soft") {
+    // aapcs-soft is not allowed for targets with an FPU, to avoid there being
+    // two incomatible ABIs.
+    Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
+    return false;
+  }
   return true;
 }
 
@@ -211,7 +225,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
     return false;
 
   BPI.SignReturnAddr =
@@ -485,7 +499,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuthLR)
     Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
 
-  if (HasUnaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   if ((FPU & NeonMode) && HasFullFP16)
@@ -681,7 +695,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Cases("aarch64", "arm64", "arm", true)
       .Case("fmv", HasFMV)
-      .Cases("neon", "fp", "simd", FPU & NeonMode)
+      .Case("fp", FPU & FPUMode)
+      .Cases("neon", "simd", FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -909,7 +924,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     }
     if (Feature == "+strict-align")
-      HasUnaligned = false;
+      HasUnalignedAccess = false;
+
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
       ArchInfo = &llvm::AArch64::ARMV8A;
@@ -1465,11 +1481,11 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
 void AArch64leTargetInfo::setDataLayout() {
   if (getTriple().isOSBinFormatMachO()) {
     if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128", "_");
+      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32", "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128", "_");
+      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128-Fn32", "_");
   } else
-    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -1492,7 +1508,7 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 void AArch64beTargetInfo::setDataLayout() {
   assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
@@ -1515,8 +1531,8 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 
 void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-i64:64-i128:128-n32:64-S128"
-                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128",
+                      ? "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
+                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32",
                   Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
@@ -1528,10 +1544,13 @@ WindowsARM64TargetInfo::getBuiltinVaListKind() const {
 TargetInfo::CallingConvCheckResult
 WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {
+  case CC_X86VectorCall:
+    if (getTriple().isWindowsArm64EC())
+      return CCCR_OK;
+    return CCCR_Ignore;
   case CC_X86StdCall:
   case CC_X86ThisCall:
   case CC_X86FastCall:
-  case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:

@@ -11,7 +11,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
-#include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 
 // We use a template to implement likely/unlikely to make sure that we don't

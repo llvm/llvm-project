@@ -146,6 +146,55 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
   return false;
 }
 
+bool static canProcess(const DWARFUnit &Unit, const DIE &Die,
+                       std::string &NameToUse, const bool TagsOnly) {
+  switch (Die.getTag()) {
+  case dwarf::DW_TAG_base_type:
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_enumeration_type:
+  case dwarf::DW_TAG_imported_declaration:
+  case dwarf::DW_TAG_pointer_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_unspecified_type:
+    if (TagsOnly || Die.findAttribute(dwarf::Attribute::DW_AT_name))
+      return true;
+    return false;
+  case dwarf::DW_TAG_namespace:
+    // According to DWARF5 spec namespaces without DW_AT_name needs to have
+    // "(anonymous namespace)"
+    if (!Die.findAttribute(dwarf::Attribute::DW_AT_name))
+      NameToUse = "(anonymous namespace)";
+    return true;
+  case dwarf::DW_TAG_inlined_subroutine:
+  case dwarf::DW_TAG_label:
+  case dwarf::DW_TAG_subprogram:
+    if (TagsOnly || Die.findAttribute(dwarf::Attribute::DW_AT_low_pc) ||
+        Die.findAttribute(dwarf::Attribute::DW_AT_high_pc) ||
+        Die.findAttribute(dwarf::Attribute::DW_AT_ranges) ||
+        Die.findAttribute(dwarf::Attribute::DW_AT_entry_pc))
+      return true;
+    return false;
+  case dwarf::DW_TAG_variable:
+    return TagsOnly || shouldIncludeVariable(Unit, Die);
+  default:
+    break;
+  }
+  return false;
+}
+
+bool DWARF5AcceleratorTable::canGenerateEntryWithCrossCUReference(
+    const DWARFUnit &Unit, const DIE &Die,
+    const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
+  if (!isCreated())
+    return false;
+  std::string NameToUse = "";
+  if (!canProcess(Unit, Die, NameToUse, true))
+    return false;
+  return (AttrSpec.Attr == dwarf::Attribute::DW_AT_abstract_origin ||
+          AttrSpec.Attr == dwarf::Attribute::DW_AT_specification) &&
+         AttrSpec.Form == dwarf::DW_FORM_ref_addr;
+}
 /// Returns name offset in String Offset section.
 static uint64_t getNameOffset(BinaryContext &BC, DWARFUnit &Unit,
                               const uint64_t Index) {
@@ -175,41 +224,6 @@ DWARF5AcceleratorTable::addAccelTableEntry(
   if (Unit.getVersion() < 5 || !NeedToCreate)
     return std::nullopt;
   std::string NameToUse = "";
-  auto canProcess = [&](const DIE &Die) -> bool {
-    switch (Die.getTag()) {
-    case dwarf::DW_TAG_base_type:
-    case dwarf::DW_TAG_class_type:
-    case dwarf::DW_TAG_enumeration_type:
-    case dwarf::DW_TAG_imported_declaration:
-    case dwarf::DW_TAG_pointer_type:
-    case dwarf::DW_TAG_structure_type:
-    case dwarf::DW_TAG_typedef:
-    case dwarf::DW_TAG_unspecified_type:
-      if (Die.findAttribute(dwarf::Attribute::DW_AT_name))
-        return true;
-      return false;
-    case dwarf::DW_TAG_namespace:
-      // According to DWARF5 spec namespaces without DW_AT_name needs to have
-      // "(anonymous namespace)"
-      if (!Die.findAttribute(dwarf::Attribute::DW_AT_name))
-        NameToUse = "(anonymous namespace)";
-      return true;
-    case dwarf::DW_TAG_inlined_subroutine:
-    case dwarf::DW_TAG_label:
-    case dwarf::DW_TAG_subprogram:
-      if (Die.findAttribute(dwarf::Attribute::DW_AT_low_pc) ||
-          Die.findAttribute(dwarf::Attribute::DW_AT_high_pc) ||
-          Die.findAttribute(dwarf::Attribute::DW_AT_ranges) ||
-          Die.findAttribute(dwarf::Attribute::DW_AT_entry_pc))
-        return true;
-      return false;
-    case dwarf::DW_TAG_variable:
-      return shouldIncludeVariable(Unit, Die);
-    default:
-      break;
-    }
-    return false;
-  };
 
   auto getUnitID = [&](const DWARFUnit &Unit, bool &IsTU,
                        uint32_t &DieTag) -> uint32_t {
@@ -223,7 +237,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     return CUList.size() - 1;
   };
 
-  if (!canProcess(Die))
+  if (!canProcess(Unit, Die, NameToUse, false))
     return std::nullopt;
 
   // Addes a Unit to either CU, LocalTU or ForeignTU list the first time we
@@ -234,8 +248,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     addUnit(Unit, DWOID);
   }
 
-  auto addEntry =
-      [&](DIEValue ValName) -> std::optional<BOLTDWARF5AccelTableData *> {
+  auto getName = [&](DIEValue ValName) -> std::optional<std::string> {
     if ((!ValName || ValName.getForm() == dwarf::DW_FORM_string) &&
         NameToUse.empty())
       return std::nullopt;
@@ -268,7 +281,16 @@ DWARF5AcceleratorTable::addAccelTableEntry(
       // This the same hash function used in DWARF5AccelTableData.
       It.HashValue = caseFoldingDjbHash(Name);
     }
+    return Name;
+  };
 
+  auto addEntry =
+      [&](DIEValue ValName) -> std::optional<BOLTDWARF5AccelTableData *> {
+    std::optional<std::string> Name = getName(ValName);
+    if (!Name)
+      return std::nullopt;
+
+    auto &It = Entries[*Name];
     bool IsTU = false;
     uint32_t DieTag = 0;
     uint32_t UnitID = getUnitID(Unit, IsTU, DieTag);
@@ -278,7 +300,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
       if (Iter == CUOffsetsToPatch.end())
         BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                      "DWO ID in CU offsets for second Unit Index "
-                  << Name << ". For DIE at offset: "
+                  << *Name << ". For DIE at offset: "
                   << Twine::utohexstr(CurrentUnitOffset + Die.getOffset())
                   << ".\n";
       SecondIndex = Iter->second;
@@ -295,11 +317,49 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     return It.Values.back();
   };
 
-  std::optional<BOLTDWARF5AccelTableData *> NameEntry =
-      addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_name));
-  std::optional<BOLTDWARF5AccelTableData *> LinkageNameEntry =
-      addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
-  return NameEntry ? NameEntry : LinkageNameEntry;
+  // Minor optimization not to add entry twice for DW_TAG_namespace if it has no
+  // DW_AT_name.
+  if (!(Die.getTag() == dwarf::DW_TAG_namespace &&
+        !Die.findAttribute(dwarf::Attribute::DW_AT_name)))
+    addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_linkage_name));
+  // For the purposes of determining whether a debugging information entry has a
+  // particular attribute (such as DW_AT_name), if debugging information entry A
+  // has a DW_AT_specification or DW_AT_abstract_origin attribute pointing to
+  // another debugging information entry B, any attributes of B are considered
+  // to be part of A.
+  auto processReferencedDie = [&](const dwarf::Attribute &Attr)
+      -> std::optional<BOLTDWARF5AccelTableData *> {
+    const DIEValue Value = Die.findAttribute(Attr);
+    if (!Value)
+      return std::nullopt;
+    const DIE *EntryDie = nullptr;
+    if (Value.getForm() == dwarf::DW_FORM_ref_addr) {
+      auto Iter = CrossCUDies.find(Value.getDIEInteger().getValue());
+      if (Iter == CrossCUDies.end()) {
+        BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
+                     "referenced DIE in CrossCUDies for "
+                  << Twine::utohexstr(Value.getDIEInteger().getValue())
+                  << ".\n";
+        return std::nullopt;
+      }
+      EntryDie = Iter->second;
+    } else {
+      const DIEEntry &DIEENtry = Value.getDIEEntry();
+      EntryDie = &DIEENtry.getEntry();
+    }
+
+    addEntry(EntryDie->findAttribute(dwarf::Attribute::DW_AT_linkage_name));
+    return addEntry(EntryDie->findAttribute(dwarf::Attribute::DW_AT_name));
+  };
+
+  if (std::optional<BOLTDWARF5AccelTableData *> Entry =
+          processReferencedDie(dwarf::Attribute::DW_AT_abstract_origin))
+    return *Entry;
+  if (std::optional<BOLTDWARF5AccelTableData *> Entry =
+          processReferencedDie(dwarf::Attribute::DW_AT_specification))
+    return *Entry;
+
+  return addEntry(Die.findAttribute(dwarf::Attribute::DW_AT_name));
 }
 
 /// Algorithm from llvm implementation.

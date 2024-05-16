@@ -62,6 +62,7 @@ STATISTIC(NumAShrsConverted, "Number of ashr converted to lshr");
 STATISTIC(NumAShrsRemoved, "Number of ashr removed");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
+STATISTIC(NumSIToFP,    "Number of sitofp converted to uitofp");
 STATISTIC(NumSICmps,    "Number of signed icmp preds simplified to unsigned");
 STATISTIC(NumAnd,       "Number of ands removed");
 STATISTIC(NumNW,        "Number of no-wrap deductions");
@@ -89,7 +90,7 @@ STATISTIC(NumSMinMax,
           "Number of llvm.s{min,max} intrinsics simplified to unsigned");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
-STATISTIC(NumZExt, "Number of non-negative deductions");
+STATISTIC(NumNNeg, "Number of zext/uitofp non-negative deductions");
 
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (Constant *C = LVI->getConstant(V, At))
@@ -497,7 +498,7 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
   if (Range.getSignedMax().isNonPositive()) {
     IRBuilder<> B(II);
-    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+    Value *NegX = B.CreateNeg(X, II->getName(),
                               /*HasNSW=*/IsIntMinPoison);
     ++NumAbs;
     II->replaceAllUsesWith(NegX);
@@ -1075,20 +1076,49 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
-  if (ZExt->getType()->isVectorTy())
+static bool processPossibleNonNeg(PossiblyNonNegInst *I, LazyValueInfo *LVI) {
+  if (I->getType()->isVectorTy())
     return false;
 
-  if (ZExt->hasNonNeg())
+  if (I->hasNonNeg())
     return false;
 
-  const Use &Base = ZExt->getOperandUse(0);
+  const Use &Base = I->getOperandUse(0);
   if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
            .isAllNonNegative())
     return false;
 
-  ++NumZExt;
-  ZExt->setNonNeg();
+  ++NumNNeg;
+  I->setNonNeg();
+
+  return true;
+}
+
+static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
+  return processPossibleNonNeg(cast<PossiblyNonNegInst>(ZExt), LVI);
+}
+
+static bool processUIToFP(UIToFPInst *UIToFP, LazyValueInfo *LVI) {
+  return processPossibleNonNeg(cast<PossiblyNonNegInst>(UIToFP), LVI);
+}
+
+static bool processSIToFP(SIToFPInst *SIToFP, LazyValueInfo *LVI) {
+  if (SIToFP->getType()->isVectorTy())
+    return false;
+
+  const Use &Base = SIToFP->getOperandUse(0);
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
+    return false;
+
+  ++NumSIToFP;
+  auto *UIToFP = CastInst::Create(Instruction::UIToFP, Base, SIToFP->getType(),
+                                  "", SIToFP->getIterator());
+  UIToFP->takeName(SIToFP);
+  UIToFP->setDebugLoc(SIToFP->getDebugLoc());
+  UIToFP->setNonNeg();
+  SIToFP->replaceAllUsesWith(UIToFP);
+  SIToFP->eraseFromParent();
 
   return true;
 }
@@ -1105,13 +1135,10 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
     return false;
 
   Instruction::BinaryOps Opcode = BinOp->getOpcode();
-  Value *LHS = BinOp->getOperand(0);
-  Value *RHS = BinOp->getOperand(1);
-
-  ConstantRange LRange =
-      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed*/ false);
-  ConstantRange RRange =
-      LVI->getConstantRange(RHS, BinOp, /*UndefAllowed*/ false);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(0),
+                                                    /*UndefAllowed=*/false);
+  ConstantRange RRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(1),
+                                                    /*UndefAllowed=*/false);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;
@@ -1199,6 +1226,12 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::ZExt:
         BBChanged |= processZExt(cast<ZExtInst>(&II), LVI);
+        break;
+      case Instruction::UIToFP:
+        BBChanged |= processUIToFP(cast<UIToFPInst>(&II), LVI);
+        break;
+      case Instruction::SIToFP:
+        BBChanged |= processSIToFP(cast<SIToFPInst>(&II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:

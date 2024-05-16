@@ -16,6 +16,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 
 using namespace clang;
 
@@ -52,49 +53,54 @@ static void applyNullability(Sema &S, Decl *D, NullabilityKind Nullability,
   if (!Metadata.IsActive)
     return;
 
-  auto IsModified = [&](Decl *D, QualType QT,
-                        NullabilityKind Nullability) -> bool {
+  auto GetModified =
+      [&](Decl *D, QualType QT,
+          NullabilityKind Nullability) -> std::optional<QualType> {
     QualType Original = QT;
     S.CheckImplicitNullabilityTypeSpecifier(QT, Nullability, D->getLocation(),
                                             isa<ParmVarDecl>(D),
                                             /*OverrideExisting=*/true);
-    return QT.getTypePtr() != Original.getTypePtr();
+    return (QT.getTypePtr() != Original.getTypePtr()) ? std::optional(QT)
+                                                      : std::nullopt;
   };
 
   if (auto Function = dyn_cast<FunctionDecl>(D)) {
-    if (IsModified(D, Function->getReturnType(), Nullability)) {
-      QualType FnType = Function->getType();
-      Function->setType(FnType);
+    if (auto Modified =
+            GetModified(D, Function->getReturnType(), Nullability)) {
+      const FunctionType *FnType = Function->getType()->castAs<FunctionType>();
+      if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(FnType))
+        Function->setType(S.Context.getFunctionType(
+            *Modified, proto->getParamTypes(), proto->getExtProtoInfo()));
+      else
+        Function->setType(
+            S.Context.getFunctionNoProtoType(*Modified, FnType->getExtInfo()));
     }
   } else if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-    QualType Type = Method->getReturnType();
-    if (IsModified(D, Type, Nullability)) {
-      Method->setReturnType(Type);
+    if (auto Modified = GetModified(D, Method->getReturnType(), Nullability)) {
+      Method->setReturnType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
-      if (!isIndirectPointerType(Type))
+      if (!isIndirectPointerType(*Modified))
         Method->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
             Method->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
     }
   } else if (auto Value = dyn_cast<ValueDecl>(D)) {
-    QualType Type = Value->getType();
-    if (IsModified(D, Type, Nullability)) {
-      Value->setType(Type);
+    if (auto Modified = GetModified(D, Value->getType(), Nullability)) {
+      Value->setType(*Modified);
 
       // Make it a context-sensitive keyword if we can.
       if (auto Parm = dyn_cast<ParmVarDecl>(D)) {
-        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(Type))
+        if (Parm->isObjCMethodParameter() && !isIndirectPointerType(*Modified))
           Parm->setObjCDeclQualifier(Decl::ObjCDeclQualifier(
               Parm->getObjCDeclQualifier() | Decl::OBJC_TQ_CSNullability));
       }
     }
   } else if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-    QualType Type = Property->getType();
-    if (IsModified(D, Type, Nullability)) {
-      Property->setType(Type, Property->getTypeSourceInfo());
+    if (auto Modified = GetModified(D, Property->getType(), Nullability)) {
+      Property->setType(*Modified, Property->getTypeSourceInfo());
 
       // Make it a property attribute if we can.
-      if (!isIndirectPointerType(Type))
+      if (!isIndirectPointerType(*Modified))
         Property->setPropertyAttributes(
             ObjCPropertyAttribute::kind_null_resettable);
     }
@@ -367,7 +373,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       if (auto Var = dyn_cast<VarDecl>(D)) {
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(Var)) {
-          Type = S.AdjustParameterTypeForObjCAutoRefCount(
+          Type = S.ObjC().AdjustParameterTypeForObjCAutoRefCount(
               Type, D->getLocation(), TypeInfo);
           Type = S.Context.getAdjustedParameterType(Type);
         }
@@ -457,6 +463,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     MD = AnyFunc.get<ObjCMethodDecl *>();
     D = MD;
   }
+
+  assert((FD || MD) && "Expecting Function or ObjCMethod");
 
   // Nullability of return type.
   if (Info.NullabilityAudited)
@@ -586,6 +594,11 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+
+  if (auto Copyable = Info.isSwiftCopyable()) {
+    if (!*Copyable)
+      D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+  }
 
   if (auto Extensibility = Info.EnumExtensibility) {
     using api_notes::EnumExtensibilityKind;

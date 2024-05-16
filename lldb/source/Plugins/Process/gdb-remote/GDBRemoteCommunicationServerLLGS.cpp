@@ -2087,7 +2087,7 @@ void GDBRemoteCommunicationServerLLGS::AddProcessThreads(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
     StringExtractorGDBRemote &packet) {
-  assert(m_debugged_processes.size() == 1 ||
+  assert(m_debugged_processes.size() <= 1 ||
          bool(m_extensions_supported &
               NativeProcessProtocol::Extension::multiprocess));
 

@@ -233,7 +233,10 @@ private:
   void alignChainedConditionals();
 
   /// Align consecutive short case statements over all \c Changes.
-  void alignConsecutiveShortCaseStatements();
+  void alignConsecutiveShortCaseStatements(bool IsExpr);
+
+  /// Align consecutive TableGen DAGArg colon over all \c Changes.
+  void alignConsecutiveTableGenBreakingDAGArgColons();
 
   /// Align consecutive TableGen cond operator colon over all \c Changes.
   void alignConsecutiveTableGenCondOperatorColons();

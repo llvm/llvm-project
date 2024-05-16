@@ -48,8 +48,8 @@ define i8 @andv_v16i8(<16 x i8> %a) {
 define i8 @andv_v32i8(ptr %a) {
 ; CHECK-LABEL: andv_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -98,8 +98,8 @@ define i16 @andv_v8i16(<8 x i16> %a) {
 define i16 @andv_v16i16(ptr %a) {
 ; CHECK-LABEL: andv_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -136,8 +136,8 @@ define i32 @andv_v4i32(<4 x i32> %a) {
 define i32 @andv_v8i32(ptr %a) {
 ; CHECK-LABEL: andv_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -162,8 +162,8 @@ define i64 @andv_v2i64(<2 x i64> %a) {
 define i64 @andv_v4i64(ptr %a) {
 ; CHECK-LABEL: andv_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
@@ -216,8 +216,8 @@ define i8 @eorv_v16i8(<16 x i8> %a) {
 define i8 @eorv_v32i8(ptr %a) {
 ; CHECK-LABEL: eorv_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -266,8 +266,8 @@ define i16 @eorv_v8i16(<8 x i16> %a) {
 define i16 @eorv_v16i16(ptr %a) {
 ; CHECK-LABEL: eorv_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -304,8 +304,8 @@ define i32 @eorv_v4i32(<4 x i32> %a) {
 define i32 @eorv_v8i32(ptr %a) {
 ; CHECK-LABEL: eorv_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -330,8 +330,8 @@ define i64 @eorv_v2i64(<2 x i64> %a) {
 define i64 @eorv_v4i64(ptr %a) {
 ; CHECK-LABEL: eorv_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
@@ -384,8 +384,8 @@ define i8 @orv_v16i8(<16 x i8> %a) {
 define i8 @orv_v32i8(ptr %a) {
 ; CHECK-LABEL: orv_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -434,8 +434,8 @@ define i16 @orv_v8i16(<8 x i16> %a) {
 define i16 @orv_v16i16(ptr %a) {
 ; CHECK-LABEL: orv_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -472,8 +472,8 @@ define i32 @orv_v4i32(<4 x i32> %a) {
 define i32 @orv_v8i32(ptr %a) {
 ; CHECK-LABEL: orv_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -498,8 +498,8 @@ define i64 @orv_v2i64(<2 x i64> %a) {
 define i64 @orv_v4i64(ptr %a) {
 ; CHECK-LABEL: orv_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0

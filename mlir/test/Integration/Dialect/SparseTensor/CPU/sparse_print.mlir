@@ -120,6 +120,14 @@
   )
 }>
 
+#COOAoS = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
+}>
+
+#COOSoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
+}>
+
 module {
 
   //
@@ -139,7 +147,7 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 5, 0, 0,
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 5, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %XO : tensor<4x8xi32, #AllDense>
 
@@ -147,7 +155,7 @@ module {
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0,
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %XT : tensor<4x8xi32, #AllDenseT>
 
@@ -161,14 +169,16 @@ module {
     %h = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSCC>
     %i = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSR0>
     %j = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #BSC0>
+    %AoS = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #COOAoS>
+    %SoA = sparse_tensor.convert %x : tensor<4x8xi32> to tensor<4x8xi32, #COOSoA>
 
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 2, 5,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 2, 3, 5,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5,
+    // CHECK-NEXT: pos[1] : ( 0, 2, 2, 2, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 2, 3, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
     // CHECK-NEXT: ----
     sparse_tensor.print %a : tensor<4x8xi32, #CSR>
 
@@ -176,11 +186,11 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 2,
-    // CHECK-NEXT: crd[0] : ( 0, 3,
-    // CHECK-NEXT: pos[1] : ( 0, 2, 5,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 2, 3, 5,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5,
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 2, 3, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
     // CHECK-NEXT: ----
     sparse_tensor.print %b : tensor<4x8xi32, #DCSR>
 
@@ -188,9 +198,9 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 1, 1, 3, 4, 4, 5, 5, 5,
-    // CHECK-NEXT: crd[1] : ( 0, 0, 3, 3, 3,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5,
+    // CHECK-NEXT: pos[1] : ( 0, 1, 1, 3, 4, 4, 5, 5, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 3, 3, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
     // CHECK-NEXT: ----
     sparse_tensor.print %c : tensor<4x8xi32, #CSC>
 
@@ -198,11 +208,11 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 8, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 4,
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3, 5,
-    // CHECK-NEXT: pos[1] : ( 0, 1, 3, 4, 5,
-    // CHECK-NEXT: crd[1] : ( 0, 0, 3, 3, 3,
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5,
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3, 5 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 3, 4, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 3, 3, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
     // CHECK-NEXT: ----
     sparse_tensor.print %d : tensor<4x8xi32, #DCSC>
 
@@ -210,11 +220,11 @@ module {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 2, 2, 2, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 2,
-    // CHECK-NEXT: crd[0] : ( 0, 1,
-    // CHECK-NEXT: pos[1] : ( 0, 1, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 0, 1,
-    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0,
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %e : tensor<4x8xi32, #BSR>
 
@@ -222,11 +232,11 @@ module {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 2, 2, 4, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 2,
-    // CHECK-NEXT: crd[0] : ( 0, 1,
-    // CHECK-NEXT: pos[1] : ( 0, 1, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 0, 1,
-    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 0, 5, 0, 0, 0, 0,
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 0, 5, 0, 0, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %f : tensor<4x8xi32, #BSRC>
 
@@ -234,11 +244,11 @@ module {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 2, 2, 2, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 2,
-    // CHECK-NEXT: crd[0] : ( 0, 1,
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 1, 1,
-    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0,
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %g : tensor<4x8xi32, #BSC>
 
@@ -246,11 +256,11 @@ module {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 2, 2, 4, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 2,
-    // CHECK-NEXT: crd[0] : ( 0, 1,
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 1, 1,
-    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 0, 5, 0, 0, 0, 0,
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 1 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 0, 5, 0, 0, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %h : tensor<4x8xi32, #BSCC>
 
@@ -258,9 +268,9 @@ module {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 2, 2, 2, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 1, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 0, 1,
-    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0,
+    // CHECK-NEXT: pos[1] : ( 0, 1, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %i : tensor<4x8xi32, #BSR0>
 
@@ -268,25 +278,48 @@ module {
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 2, 2, 2, 4 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 1, 1,
-    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0,
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %j : tensor<4x8xi32, #BSC0>
 
+    // CHECK-NEXT: ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 5 )
+    // CHECK-NEXT: crd[0] : ( 0, 0, 0, 2, 3, 2, 3, 3, 3, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
+    // CHECK-NEXT: ----
+    sparse_tensor.print %AoS : tensor<4x8xi32, #COOAoS>
+
+    // CHECK-NEXT: ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 4, 8 )
+    // CHECK-NEXT: lvl = ( 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 5 )
+    // CHECK-NEXT: crd[0] : ( 0, 0, 3, 3, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 2, 3, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
+    // CHECK-NEXT: ----
+    sparse_tensor.print %SoA : tensor<4x8xi32, #COOSoA>
+
     // Release the resources.
-    bufferization.dealloc_tensor %XO : tensor<4x8xi32, #AllDense>
-    bufferization.dealloc_tensor %XT : tensor<4x8xi32, #AllDenseT>
-    bufferization.dealloc_tensor %a : tensor<4x8xi32, #CSR>
-    bufferization.dealloc_tensor %b : tensor<4x8xi32, #DCSR>
-    bufferization.dealloc_tensor %c : tensor<4x8xi32, #CSC>
-    bufferization.dealloc_tensor %d : tensor<4x8xi32, #DCSC>
-    bufferization.dealloc_tensor %e : tensor<4x8xi32, #BSR>
-    bufferization.dealloc_tensor %f : tensor<4x8xi32, #BSRC>
-    bufferization.dealloc_tensor %g : tensor<4x8xi32, #BSC>
-    bufferization.dealloc_tensor %h : tensor<4x8xi32, #BSCC>
-    bufferization.dealloc_tensor %i : tensor<4x8xi32, #BSR0>
-    bufferization.dealloc_tensor %j : tensor<4x8xi32, #BSC0>
+    bufferization.dealloc_tensor %XO  : tensor<4x8xi32, #AllDense>
+    bufferization.dealloc_tensor %XT  : tensor<4x8xi32, #AllDenseT>
+    bufferization.dealloc_tensor %a   : tensor<4x8xi32, #CSR>
+    bufferization.dealloc_tensor %b   : tensor<4x8xi32, #DCSR>
+    bufferization.dealloc_tensor %c   : tensor<4x8xi32, #CSC>
+    bufferization.dealloc_tensor %d   : tensor<4x8xi32, #DCSC>
+    bufferization.dealloc_tensor %e   : tensor<4x8xi32, #BSR>
+    bufferization.dealloc_tensor %f   : tensor<4x8xi32, #BSRC>
+    bufferization.dealloc_tensor %g   : tensor<4x8xi32, #BSC>
+    bufferization.dealloc_tensor %h   : tensor<4x8xi32, #BSCC>
+    bufferization.dealloc_tensor %i   : tensor<4x8xi32, #BSR0>
+    bufferization.dealloc_tensor %j   : tensor<4x8xi32, #BSC0>
+    bufferization.dealloc_tensor %AoS : tensor<4x8xi32, #COOAoS>
+    bufferization.dealloc_tensor %SoA : tensor<4x8xi32, #COOSoA>
 
     return
   }

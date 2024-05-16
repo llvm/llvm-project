@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -fsyntax-only -triple aarch64 -target-feature +neon -emit-llvm -O2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -emit-llvm -O2 -o - %s | FileCheck %s
 #include <stdarg.h>
 #include <arm_neon.h>
 
@@ -73,7 +73,7 @@ __attribute__((noinline)) void named_arg_non_packed_struct(double d0, double d1,
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
@@ -128,7 +128,7 @@ __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, dou
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_packed_struct(double d0, double d1, double d2, double d3,
@@ -183,7 +183,7 @@ __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, dou
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_packed_member(double d0, double d1, double d2, double d3,
@@ -238,7 +238,7 @@ __attribute__((noinline)) void named_arg_aligned_struct_8(double d0, double d1, 
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
@@ -293,7 +293,7 @@ __attribute__((noinline)) void named_arg_aligned_member_8(double d0, double d1, 
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
@@ -348,7 +348,7 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, doubl
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
@@ -403,7 +403,7 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, doubl
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,

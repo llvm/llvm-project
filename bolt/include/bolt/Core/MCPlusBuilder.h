@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -533,9 +535,7 @@ public:
     return Analysis->isReturn(Inst);
   }
 
-  virtual bool isTerminator(const MCInst &Inst) const {
-    return Analysis->isTerminator(Inst);
-  }
+  virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -1199,6 +1199,16 @@ public:
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
+  /// Check if the branch instruction could be modified at runtime.
+  bool isDynamicBranch(const MCInst &Inst) const;
+
+  /// Return ID for runtime-modifiable instruction.
+  std::optional<uint32_t> getDynamicBranchID(const MCInst &Inst) const;
+
+  /// Mark instruction as a dynamic branch, i.e. a branch that can be
+  /// overwritten at runtime.
+  void setDynamicBranch(MCInst &Inst, uint32_t ID) const;
+
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
   /// the operand - return nullptr.
@@ -1685,6 +1695,13 @@ public:
   /// Create a conditional branch with a target-specific conditional code \p CC.
   virtual void createCondBranch(MCInst &Inst, const MCSymbol *Target,
                                 unsigned CC, MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Create long conditional branch with a target-specific conditional code
+  /// \p CC.
+  virtual void createLongCondBranch(MCInst &Inst, const MCSymbol *Target,
+                                    unsigned CC, MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

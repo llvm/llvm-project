@@ -179,7 +179,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.ferror
     libc.src.stdio.fseek
     libc.src.stdio.fflush
-    libc.src.stdio.fileno
     libc.src.stdio.ftell
     libc.src.stdio.clearerr
     libc.src.stdio.puts
@@ -212,6 +211,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
+    libc.src.gpu.rpc_fprintf
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

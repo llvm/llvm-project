@@ -57,8 +57,8 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; RV32-V512-NEXT:    vid.v v10
 ; RV32-V512-NEXT:    vsrl.vi v11, v10, 1
 ; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-V512-NEXT:    vmv.v.i v0, 10
 ; RV32-V512-NEXT:    vrgatherei16.vv v10, v8, v11
+; RV32-V512-NEXT:    vmv.v.i v0, 10
 ; RV32-V512-NEXT:    vrgatherei16.vv v10, v9, v11, v0.t
 ; RV32-V512-NEXT:    vmv.v.v v8, v10
 ; RV32-V512-NEXT:    ret
@@ -68,8 +68,8 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; RV64-V512-NEXT:    vid.v v10
 ; RV64-V512-NEXT:    vsrl.vi v11, v10, 1
-; RV64-V512-NEXT:    vmv.v.i v0, 10
 ; RV64-V512-NEXT:    vrgather.vv v10, v8, v11
+; RV64-V512-NEXT:    vmv.v.i v0, 10
 ; RV64-V512-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; RV64-V512-NEXT:    vmv.v.v v8, v10
 ; RV64-V512-NEXT:    ret

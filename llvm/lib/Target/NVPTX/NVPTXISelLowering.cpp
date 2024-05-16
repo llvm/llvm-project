@@ -447,6 +447,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       case ISD::FFLOOR:
       case ISD::FNEARBYINT:
       case ISD::FRINT:
+      case ISD::FROUNDEVEN:
       case ISD::FTRUNC:
         IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 78;
         break;
@@ -580,9 +581,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ROTL, MVT::i8, Expand);
   setOperationAction(ISD::ROTR, MVT::i8, Expand);
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
-  setOperationAction(ISD::BSWAP, MVT::v2i16, Expand);
-  setOperationAction(ISD::BSWAP, MVT::i32, Expand);
-  setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
   // Indirect branch is not supported.
   // This also disables Jump Table creation.
@@ -6126,6 +6124,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
       if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
           STI.getPTXVersion() >= 63)
+        return AtomicExpansionKind::None;
+      if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
+          STI.getPTXVersion() >= 78)
         return AtomicExpansionKind::None;
       if (Ty->isFloatTy())
         return AtomicExpansionKind::None;

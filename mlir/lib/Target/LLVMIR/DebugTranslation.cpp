@@ -104,7 +104,10 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
-          attr.getEmissionKind()));
+          attr.getEmissionKind()),
+      0, true, false,
+      static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+          attr.getNameTableKind()));
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on
@@ -116,8 +119,20 @@ static DINodeT *getDistinctOrUnique(bool isDistinct, Ts &&...args) {
   return DINodeT::get(std::forward<Ts>(args)...);
 }
 
+llvm::TempDICompositeType
+DebugTranslation::translateTemporaryImpl(DICompositeTypeAttr attr) {
+  return llvm::DICompositeType::getTemporary(
+      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()), nullptr,
+      attr.getLine(), nullptr, nullptr, attr.getSizeInBits(),
+      attr.getAlignInBits(),
+      /*OffsetInBits=*/0,
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      /*Elements=*/nullptr, /*RuntimeLang=*/0,
+      /*VTableHolder=*/nullptr);
+}
+
 llvm::DICompositeType *
-DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
+DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   // TODO: Use distinct attributes to model this, once they have landed.
   // Depending on the tag, composite types must be distinct.
   bool isDistinct = false;
@@ -129,8 +144,10 @@ DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
     isDistinct = true;
   }
 
-  llvm::TempMDTuple placeholderElements =
-      llvm::MDNode::getTemporary(llvmCtx, std::nullopt);
+  SmallVector<llvm::Metadata *> elements;
+  for (DINodeAttr member : attr.getElements())
+    elements.push_back(translate(member));
+
   return getDistinctOrUnique<llvm::DICompositeType>(
       isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
@@ -138,23 +155,8 @@ DebugTranslation::translateImplGetPlaceholder(DICompositeTypeAttr attr) {
       attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      /*Elements=*/placeholderElements.get(), /*RuntimeLang=*/0,
-      /*VTableHolder=*/nullptr);
-}
-
-void DebugTranslation::translateImplFillPlaceholder(
-    DICompositeTypeAttr attr, llvm::DICompositeType *placeholder) {
-  SmallVector<llvm::Metadata *> elements;
-  for (DINodeAttr member : attr.getElements())
-    elements.push_back(translate(member));
-  placeholder->replaceElements(llvm::MDNode::get(llvmCtx, elements));
-}
-
-llvm::DICompositeType *
-DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
-  llvm::DICompositeType *placeholder = translateImplGetPlaceholder(attr);
-  translateImplFillPlaceholder(attr, placeholder);
-  return placeholder;
+      llvm::MDNode::get(llvmCtx, elements),
+      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
@@ -163,7 +165,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, /*Flags=*/llvm::DINode::FlagZero);
+      attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
+      /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
@@ -216,27 +219,27 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
 llvm::DIType *
 DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   DistinctAttr recursiveId = attr.getRecId();
-  if (attr.isRecSelf()) {
-    auto *iter = recursiveTypeMap.find(recursiveId);
-    assert(iter != recursiveTypeMap.end() && "unbound DI recursive self type");
+  if (auto *iter = recursiveTypeMap.find(recursiveId);
+      iter != recursiveTypeMap.end()) {
     return iter->second;
+  } else {
+    assert(!attr.isRecSelf() && "unbound DI recursive self type");
   }
 
   auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
-    [[maybe_unused]] auto [iter, inserted] =
-        recursiveTypeMap.try_emplace(recursiveId, placeholder);
-    (void)iter;
-    (void)inserted;
-    assert(inserted && "illegal reuse of recursive id");
+    recursiveTypeMap.try_emplace(recursiveId, placeholder);
   };
 
   llvm::DIType *result =
       TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DIType *>(attr)
           .Case<DICompositeTypeAttr>([&](auto attr) {
-            auto *placeholder = translateImplGetPlaceholder(attr);
-            setRecursivePlaceholder(placeholder);
-            translateImplFillPlaceholder(attr, placeholder);
-            return placeholder;
+            auto temporary = translateTemporaryImpl(attr);
+            setRecursivePlaceholder(temporary.get());
+            // Must call `translateImpl` directly instead of `translate` to
+            // avoid handling the recursive interface again.
+            auto *concrete = translateImpl(attr);
+            temporary->replaceAllUsesWith(concrete);
+            return concrete;
           });
 
   assert(recursiveTypeMap.back().first == recursiveId &&
@@ -349,7 +352,8 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
                      DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
-  attrToNode.insert({attr, node});
+  if (node && !node->isTemporary())
+    attrToNode.insert({attr, node});
   return node;
 }
 
@@ -402,6 +406,15 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
+    // If the caller scope is not translatable, the overall callsite cannot be
+    // represented in LLVM (the callee scope may not match the parent function).
+    if (!callerLoc) {
+      // If there is an inlinedAt scope (an outer caller), skip to that
+      // directly. Otherwise, cannot translate.
+      if (!inlinedAt)
+        return nullptr;
+      callerLoc = inlinedAt;
+    }
     llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
     // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)

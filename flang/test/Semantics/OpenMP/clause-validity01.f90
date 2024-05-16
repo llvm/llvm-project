@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
@@ -340,6 +342,9 @@ use omp_lib
   a = 1.0
   !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
+  !ERROR: NOWAIT clause is not allowed on the OMP WORKSHARE directive, use it on OMP END WORKSHARE directive 
+  !$omp workshare nowait
+  !$omp end workshare
   !$omp end parallel
 
 ! 2.8.1 simd-clause -> safelen-clause |

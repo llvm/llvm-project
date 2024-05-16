@@ -1,12 +1,12 @@
 // Test without serialization:
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -ast-dump %s \
-// RUN: | FileCheck -strict-whitespace %s --check-prefix=DIRECT
+// RUN: | FileCheck -strict-whitespace %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -x c++ -std=c++17 -triple x86_64-unknown-unknown -include-pch %t -ast-dump-all /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
-// RUN: | FileCheck --strict-whitespace %s --check-prefix=SERIALIZED
+// RUN: | FileCheck --strict-whitespace %s
 
 template <typename Ty>
 // CHECK: FunctionTemplateDecl 0x{{[^ ]*}} <{{.*}}:1, line:[[@LINE+2]]:10> col:6 a
@@ -189,15 +189,13 @@ T unTempl = 1;
 
 template<>
 int unTempl<int>;
-// FIXME (#61680) - serializing and loading AST should not affect reported source range
-// DIRECT:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:16> col:5 unTempl 'int'
-// SERIALIZED: VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:5> col:5 unTempl 'int'
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:16> col:5 unTempl 'int'
 // CHECK-NEXT: `-TemplateArgument type 'int'
 // CHECK-NEXT: `-BuiltinType 0x{{[^ ]*}} 'int'
 
 template<>
 float unTempl<float> = 1;
-// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float' cinit
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: `-ImplicitCastExpr 0x{{[^ ]*}} <col:24> 'float' <IntegralToFloating>
@@ -222,7 +220,7 @@ int binTempl<int, U>;
 
 template<class U>
 float binTempl<float, U> = 1;
-// CHECK:      VarTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 binTempl 'float' cinit
+// CHECK:      VarTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:28> col:7 binTempl 'float'
 // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:10, col:16> col:16 referenced class depth 0 index 0 U
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
@@ -233,9 +231,7 @@ float binTempl<float, U> = 1;
 
 template<>
 int binTempl<int, int>;
-// FIXME (#61680) - serializing and loading AST should not affect reported source range
-// DIRECT:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:22> col:5 binTempl 'int'
-// SERIALIZED: VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:5> col:5 binTempl 'int'
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:22> col:5 binTempl 'int'
 // CHECK-NEXT: |-TemplateArgument type 'int'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'int'
 // CHECK-NEXT: `-TemplateArgument type 'int'
@@ -243,7 +239,7 @@ int binTempl<int, int>;
 
 template<>
 float binTempl<float, float> = 1;
-// CHECK:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float' cinit
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'

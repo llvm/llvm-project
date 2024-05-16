@@ -16,12 +16,12 @@ int f3() __attribute__((no_sanitize("address")));
 
 // DUMP-LABEL: FunctionDecl {{.*}} f4
 // DUMP: NoSanitizeAttr {{.*}} thread
-// PRINT: int f4() {{\[\[}}clang::no_sanitize("thread")]]
+// PRINT: {{\[\[}}clang::no_sanitize("thread")]] int f4()
 [[clang::no_sanitize("thread")]] int f4();
 
 // DUMP-LABEL: FunctionDecl {{.*}} f4
 // DUMP: NoSanitizeAttr {{.*}} hwaddress
-// PRINT: int f4() {{\[\[}}clang::no_sanitize("hwaddress")]]
+// PRINT: {{\[\[}}clang::no_sanitize("hwaddress")]] int f4()
 [[clang::no_sanitize("hwaddress")]] int f4();
 
 // DUMP-LABEL: FunctionDecl {{.*}} f5
@@ -36,5 +36,5 @@ int f6() __attribute__((no_sanitize("unknown"))); // expected-warning{{unknown s
 
 // DUMP-LABEL: FunctionDecl {{.*}} f7
 // DUMP: NoSanitizeAttr {{.*}} memtag
-// PRINT: int f7() {{\[\[}}clang::no_sanitize("memtag")]]
+// PRINT: {{\[\[}}clang::no_sanitize("memtag")]] int f7()
 [[clang::no_sanitize("memtag")]] int f7();

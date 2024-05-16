@@ -425,8 +425,19 @@ if(runtimes)
   # together in a single CMake invocation.
   set(extra_deps "")
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+    if (${LLVM_TOOL_FLANG_BUILD})
+      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
+      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang-new")
+      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      # TODO: This is a workaround until flang becomes a first-class project
+      # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
+      # built before "openmp" is built as a runtime project.  Besides "flang-new"
+      # to build the compiler, we also need to add "module_files" to make sure
+      # that all .mod files are also properly build.
+      list(APPEND extra_deps "flang-new" "module_files")
+    endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
-      if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
+      if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
@@ -522,7 +533,7 @@ if(runtimes)
       check_apple_target(${name} runtime)
 
       runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${hdrgen_deps}
+        DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
@@ -550,6 +561,13 @@ if(runtimes)
     # We need to add the runtimes as a dependency because compiler-rt can be
     # built as part of runtimes and we need the profile runtime for PGO
     add_dependencies(clang-bootstrap-deps runtimes)
+    # The bootstrap build will attempt to configure the offload runtime
+    # before the openmp project which will error out due to failing to
+    # find libomp.so. We must add omp as a dependency before runtimes
+    # are configured.
+    if("openmp" IN_LIST LLVM_ENABLE_PROJECTS AND "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+      add_dependencies(clang-bootstrap-deps omp)
+    endif()
   endif()
 
   if(LLVM_INCLUDE_TESTS)

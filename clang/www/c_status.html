@@ -105,7 +105,7 @@ conformance.</p>
     <tr>
       <td>restricted character set support via digraphs and &lt;iso646.h&gt;</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>more precise aliasing rules via effective type</td>
@@ -133,33 +133,21 @@ conformance.</p>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
-      <td>more precise aliasing rules via effective type</td>
-      <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td>complex and imaginary support in &lt;complex.h&gt;</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n693.ps">N693</a></td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang supports <code>_Complex</code> type specifiers but does not
+          support <code>_Imaginary</code> type specifiers. Support for
+          <code>_Imaginary</code> is optional in C99 and Clang does not claim
+          conformance to Annex G.<br />
+          <br />
+          <code>_Complex</code> support requires an underlying support library
+          such as compiler-rt to provide functions like <code>__divsc3</code>,
+          but compiler-rt is not supported on Windows.
+        </details>
+      </td>
     </tr>
-    <tr id="complex">
-      <td rowspan="6">complex and imaginary support in &lt;complex.h&gt;</td>
-    </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n620.ps">N620</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n638.ps">N638</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n657.ps">N657</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n694.ps">N694</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
-      <tr>
-        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n809.ps">N809</a></td>
-        <td class="unknown" align="center">Unknown</td>
-      </tr>
     <tr>
       <td>type-generic math macros in &lt;tgmath.h&gt;</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n693.ps">N693</a></td>
@@ -173,12 +161,12 @@ conformance.</p>
     <tr>
       <td>increase minimum translation limits</td>
       <td>N590</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 3.2</td>
     </tr>
     <tr>
       <td>additional floating-point characteristics in &lt;float.h&gt;</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr id="implicit int">
       <td rowspan="4">remove implicit int</td>
@@ -208,7 +196,7 @@ conformance.</p>
     <tr>
       <td>extended identifiers</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n717.htm">N717</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>hexadecimal floating-point constants</td>
@@ -260,7 +248,7 @@ conformance.</p>
     <tr>
       <td>new block scopes for selection and iteration statements</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>integer constant type rules</td>
@@ -305,17 +293,18 @@ conformance.</p>
     <tr>
       <td>empty macro arguments</td>
       <td>N570</td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
-      <td>new structure type compatibility (tag compatibility)</td>
-      <td>N522</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>additional predefined macro names</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- It is unknown which paper brought in this change, which was listed in
+           the C99 front matter. After hunting around for what these changes are,
+           I found a mention in the C99 rationale document that implementers who
+           wish to add their own predefined macros must not start them with
+           __STDC_, which was a new restriction in C99. As best I can tell, that
+           is what this particular feature is about. -->
     </tr>
     <tr>
       <td>_Pragma preprocessing operator</td>
@@ -330,11 +319,11 @@ conformance.</p>
     </tr>
       <tr>
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n631.htm">N631</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Yes</td>
       </tr>
       <tr>
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n696.ps">N696</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Yes</td>
       </tr>
     <tr>
       <td>__func__ predefined identifier</td>
@@ -347,29 +336,24 @@ conformance.</p>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
-      <td>LIA compatibility annex</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n792.htm">N792</a></td>
-      <td class="none" align="center">No</td>
-    </tr>
-    <tr>
       <td>remove deprecation of aliased array parameters</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>conversion of array to pointer not limited to lvalues</td>
-      <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n835.pdf">N835</a></td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>relaxed constraints on aggregate and union initialization</td>
-      <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n782.htm">N782</a></td>
+      <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>relaxed restrictions on portable header names</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n772.htm">N772</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>return without an expression not permitted in function that returns a value</td>
@@ -401,7 +385,7 @@ conformance.</p>
     <tr>
       <td>Clarification of expressions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1282.pdf">N1282</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Extending the lifetime of temporary objects (factored approach)</td>
@@ -411,7 +395,7 @@ conformance.</p>
     <tr>
       <td>Requiring signed char to have no padding bits</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1310.htm">N1310</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Initializing static or external variables</td>
@@ -471,7 +455,7 @@ conformance.</p>
     <tr>
       <td>Constant expressions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1365.htm">N1365</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Contractions and expression evaluation methods</td>
@@ -552,7 +536,7 @@ conformance.</p>
     <tr>
       <td>Explicit initializers for atomics</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1482.htm">N1482</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td>Atomics proposal (minus ternary op)</td>
@@ -572,7 +556,7 @@ conformance.</p>
     <tr>
       <td>Conditional normative status for Annex G</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1514.pdf">N1514</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes <a href="#annex-g">(1)</a></td>
     </tr>
     <tr>
       <td>Creation of complex value</td>
@@ -610,6 +594,9 @@ conformance.</p>
       <td class="unknown" align="center">Unknown</td>
     </tr>
 </table>
+<span id="annex-g">(1): Clang does not implement Annex G, so our conditional support
+conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
+</span>
 </details>
 
 <h2 id="c17">C17 implementation status</h2>
@@ -752,11 +739,6 @@ conformance.</p>
     <tr>
       <td>*_IS_IEC_60559 feature test macros</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2379.htm">N2379</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
-      <td>Floating-point negation and conversion</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2416.pdf">N2416</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>

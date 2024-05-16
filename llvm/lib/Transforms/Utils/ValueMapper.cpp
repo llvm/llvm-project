@@ -146,7 +146,7 @@ public:
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
-  void remapDbgRecord(DbgRecord &DPV);
+  void remapDbgRecord(DbgRecord &DVR);
 
   Constant *mapConstant(const Constant *C) {
     return cast_or_null<Constant>(mapValue(C));
@@ -538,17 +538,20 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
-  if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-    DPL->setLabel(cast<DILabel>(mapMetadata(DPL->getLabel())));
+  // Remap DILocations.
+  auto *MappedDILoc = mapMetadata(DR.getDebugLoc());
+  DR.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
+
+  if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+    // Remap labels.
+    DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
     return;
   }
 
-  DPValue &V = cast<DPValue>(DR);
-  // Remap variables and DILocations.
+  DbgVariableRecord &V = cast<DbgVariableRecord>(DR);
+  // Remap variables.
   auto *MappedVar = mapMetadata(V.getVariable());
-  auto *MappedDILoc = mapMetadata(V.getDebugLoc());
   V.setVariable(cast<DILocalVariable>(MappedVar));
-  V.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
 
   bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
 
@@ -1233,14 +1236,14 @@ void ValueMapper::remapInstruction(Instruction &I) {
   FlushingMapper(pImpl)->remapInstruction(&I);
 }
 
-void ValueMapper::remapDPValue(Module *M, DPValue &V) {
-  FlushingMapper(pImpl)->remapDbgRecord(V);
+void ValueMapper::remapDbgRecord(Module *M, DbgRecord &DR) {
+  FlushingMapper(pImpl)->remapDbgRecord(DR);
 }
 
-void ValueMapper::remapDPValueRange(
+void ValueMapper::remapDbgRecordRange(
     Module *M, iterator_range<DbgRecord::self_iterator> Range) {
-  for (DPValue &DPV : filterDbgVars(Range)) {
-    remapDPValue(M, DPV);
+  for (DbgRecord &DR : Range) {
+    remapDbgRecord(M, DR);
   }
 }
 

@@ -509,6 +509,7 @@ private:
   bool TraverseOpenACCConstructStmt(OpenACCConstructStmt *S);
   bool
   TraverseOpenACCAssociatedStmtConstruct(OpenACCAssociatedStmtConstruct *S);
+  bool VisitOpenACCClauseList(ArrayRef<const OpenACCClause *>);
 };
 
 template <typename Derived>
@@ -993,6 +994,12 @@ DEF_TRAVERSE_TYPE(ConstantArrayType, {
     TRY_TO(TraverseStmt(const_cast<Expr*>(T->getSizeExpr())));
 })
 
+DEF_TRAVERSE_TYPE(ArrayParameterType, {
+  TRY_TO(TraverseType(T->getElementType()));
+  if (T->getSizeExpr())
+    TRY_TO(TraverseStmt(const_cast<Expr *>(T->getSizeExpr())));
+})
+
 DEF_TRAVERSE_TYPE(IncompleteArrayType,
                   { TRY_TO(TraverseType(T->getElementType())); })
 
@@ -1109,6 +1116,12 @@ DEF_TRAVERSE_TYPE(InjectedClassNameType, {})
 
 DEF_TRAVERSE_TYPE(AttributedType,
                   { TRY_TO(TraverseType(T->getModifiedType())); })
+
+DEF_TRAVERSE_TYPE(CountAttributedType, {
+  if (T->getCountExpr())
+    TRY_TO(TraverseStmt(T->getCountExpr()));
+  TRY_TO(TraverseType(T->desugar()));
+})
 
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
@@ -1250,6 +1263,11 @@ bool RecursiveASTVisitor<Derived>::TraverseArrayTypeLocHelper(ArrayTypeLoc TL) {
 }
 
 DEF_TRAVERSE_TYPELOC(ConstantArrayType, {
+  TRY_TO(TraverseTypeLoc(TL.getElementLoc()));
+  TRY_TO(TraverseArrayTypeLocHelper(TL));
+})
+
+DEF_TRAVERSE_TYPELOC(ArrayParameterType, {
   TRY_TO(TraverseTypeLoc(TL.getElementLoc()));
   TRY_TO(TraverseArrayTypeLocHelper(TL));
 })
@@ -1400,6 +1418,9 @@ DEF_TRAVERSE_TYPELOC(MacroQualifiedType,
 
 DEF_TRAVERSE_TYPELOC(AttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getModifiedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(CountAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
@@ -2009,6 +2030,15 @@ DEF_TRAVERSE_DECL(RecordDecl, { TRY_TO(TraverseRecordHelper(D)); })
 
 DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
+    const TemplateArgumentLoc *TAL, unsigned Count) {
+  for (unsigned I = 0; I < Count; ++I) {
+    TRY_TO(TraverseTemplateArgumentLoc(TAL[I]));
+  }
+  return true;
+}
+
 #define DEF_TRAVERSE_TMPL_SPEC_DECL(TMPLDECLKIND, DECLKIND)                    \
   DEF_TRAVERSE_DECL(TMPLDECLKIND##TemplateSpecializationDecl, {                \
     /* For implicit instantiations ("set<int> x;"), we don't want to           \
@@ -2018,9 +2048,12 @@ DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
        TemplateSpecializationType).  For explicit instantiations               \
        ("template set<int>;"), we do need a callback, since this               \
        is the only callback that's made for this instantiation.                \
-       We use getTypeAsWritten() to distinguish. */                            \
-    if (TypeSourceInfo *TSI = D->getTypeAsWritten())                           \
-      TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));                              \
+       We use getTemplateArgsAsWritten() to distinguish. */                    \
+    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
+      /* The args that remains unspecialized. */                               \
+      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
+          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+    }                                                                          \
                                                                                \
     if (getDerived().shouldVisitTemplateInstantiations() ||                    \
         D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
@@ -2039,15 +2072,6 @@ DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)
 DEF_TRAVERSE_TMPL_SPEC_DECL(Var, Var)
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
-    const TemplateArgumentLoc *TAL, unsigned Count) {
-  for (unsigned I = 0; I < Count; ++I) {
-    TRY_TO(TraverseTemplateArgumentLoc(TAL[I]));
-  }
-  return true;
-}
 
 #define DEF_TRAVERSE_TMPL_PART_SPEC_DECL(TMPLDECLKIND, DECLKIND)               \
   DEF_TRAVERSE_DECL(TMPLDECLKIND##TemplatePartialSpecializationDecl, {         \
@@ -2719,7 +2743,7 @@ DEF_TRAVERSE_STMT(CXXMemberCallExpr, {})
 DEF_TRAVERSE_STMT(AddrLabelExpr, {})
 DEF_TRAVERSE_STMT(ArraySubscriptExpr, {})
 DEF_TRAVERSE_STMT(MatrixSubscriptExpr, {})
-DEF_TRAVERSE_STMT(OMPArraySectionExpr, {})
+DEF_TRAVERSE_STMT(ArraySectionExpr, {})
 DEF_TRAVERSE_STMT(OMPArrayShapingExpr, {})
 DEF_TRAVERSE_STMT(OMPIteratorExpr, {})
 
@@ -3916,8 +3940,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPXBareClause(OMPXBareClause *C) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseOpenACCConstructStmt(
-    OpenACCConstructStmt *) {
-  // TODO OpenACC: When we implement clauses, ensure we traverse them here.
+    OpenACCConstructStmt *C) {
+  TRY_TO(VisitOpenACCClauseList(C->clauses()));
   return true;
 }
 
@@ -3926,6 +3950,14 @@ bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
     OpenACCAssociatedStmtConstruct *S) {
   TRY_TO(TraverseOpenACCConstructStmt(S));
   TRY_TO(TraverseStmt(S->getAssociatedStmt()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
+    ArrayRef<const OpenACCClause *>) {
+  // TODO OpenACC: When we have Clauses with expressions, we should visit them
+  // here.
   return true;
 }
 

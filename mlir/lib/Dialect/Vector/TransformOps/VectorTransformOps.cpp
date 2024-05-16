@@ -13,8 +13,8 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -162,6 +162,11 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
 void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorInterleaveLoweringPatterns(patterns);
+}
+
+void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorInterleaveToShufflePatterns(patterns);
 }
 
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(

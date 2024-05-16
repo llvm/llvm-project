@@ -61,7 +61,8 @@ if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   endif()
 endif()
 # We will build the GPU utilities if we are not doing a runtimes build.
-if(LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD)
+option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
+if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
 
@@ -380,6 +381,7 @@ endforeach()
 
 add_subdirectory(include)
 add_subdirectory(config)
+add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 

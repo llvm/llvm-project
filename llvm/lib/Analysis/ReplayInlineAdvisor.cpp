@@ -43,8 +43,8 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
   //   main:3:1.1;
   // We use the callsite string after `at callsite` to replay inlining.
   line_iterator LineIt(*BufferOrErr.get(), /*SkipBlanks=*/true);
-  static const std::string PositiveRemark = "' inlined into '";
-  static const std::string NegativeRemark = "' will not be inlined into '";
+  const std::string PositiveRemark = "' inlined into '";
+  const std::string NegativeRemark = "' will not be inlined into '";
 
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;

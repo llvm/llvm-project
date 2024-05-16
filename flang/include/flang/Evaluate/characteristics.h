@@ -177,6 +177,14 @@ public:
   int corank() const { return corank_; }
 
   int Rank() const { return GetRank(shape_); }
+
+  // Can sequence association apply to this argument?
+  bool CanBeSequenceAssociated() const {
+    constexpr Attrs notAssumedOrExplicitShape{
+        ~Attrs{Attr::AssumedSize, Attr::Coarray}};
+    return Rank() > 0 && (attrs() & notAssumedOrExplicitShape).none();
+  }
+
   bool IsCompatibleWith(parser::ContextualMessages &, const TypeAndShape &that,
       const char *thisIs = "pointer", const char *thatIs = "target",
       bool omitShapeConformanceCheck = false,
@@ -357,7 +365,7 @@ struct Procedure {
   static std::optional<Procedure> Characterize(
       const semantics::Symbol &, FoldingContext &);
   static std::optional<Procedure> Characterize(
-      const ProcedureDesignator &, FoldingContext &);
+      const ProcedureDesignator &, FoldingContext &, bool emitError);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
   static std::optional<Procedure> Characterize(

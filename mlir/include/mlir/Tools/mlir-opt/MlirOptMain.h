@@ -144,7 +144,6 @@ public:
     splitInputFileFlag = std::move(splitMarker);
     return *this;
   }
-  bool shouldSplitInputFile() const { return splitInputFileFlag.empty(); }
   StringRef inputSplitMarker() const { return splitInputFileFlag; }
 
   /// Set whether to merge the output chunks into one file using the given

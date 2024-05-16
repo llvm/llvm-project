@@ -68,13 +68,15 @@ int __attribute__((target_version(""))) unsup1(void) { return 1; }
 void __attribute__((target_version("crc32"))) unsup2(void) {}
 
 void __attribute__((target_version("default+fp16"))) koo(void) {}
+//expected-error@-1 {{function multiversioning doesn't support feature 'default'}}
 void __attribute__((target_version("default+default+default"))) loo(void) {}
+//expected-error@-1 {{function multiversioning doesn't support feature 'default'}}
 void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 //expected-error@+2 {{redefinition of 'redef'}}
 //expected-note@-2 {{previous definition is here}}
 void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 
-int __attribute__((target_version("sm4"))) def(void);
+int def(void);
 void __attribute__((target_version("dit"))) nodef(void);
 void __attribute__((target_version("ls64"))) nodef(void);
 void __attribute__((target_version("aes"))) ovl(void);
@@ -83,7 +85,6 @@ int bar() {
   // expected-error@+2 {{reference to overloaded function could not be resolved; did you mean to call it?}}
   // expected-note@-3 {{possible target for call}}
   ovl++;
-  // expected-error@+1 {{no matching function for call to 'nodef'}}
   nodef();
   return def();
 }
@@ -92,8 +93,6 @@ int __attribute__((target_version("sha1"))) def(void) { return 1; }
 
 int __attribute__((target_version("sve"))) prot();
 // expected-error@-1 {{multiversioned function must have a prototype}}
-// expected-note@+1 {{function multiversioning caused by this declaration}}
-int __attribute__((target_version("fcma"))) prot();
 
 int __attribute__((target_version("pmull"))) rtype(int);
 // expected-error@+1 {{multiversioned function declaration has a different return type}}
@@ -104,6 +103,7 @@ int __attribute__((target_version("sha2"))) combine(void) { return 1; }
 int __attribute__((aarch64_vector_pcs, target_version("sha3"))) combine(void) { return 2; }
 
 int __attribute__((target_version("fp+aes+pmull+rcpc"))) unspec_args() { return -1; }
+// expected-error@-1 {{multiversioned function must have a prototype}}
 // expected-error@+1 {{multiversioned function must have a prototype}}
 int __attribute__((target_version("default"))) unspec_args() { return 0; }
 int cargs() { return unspec_args(); }

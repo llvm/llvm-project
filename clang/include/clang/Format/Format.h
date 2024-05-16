@@ -375,8 +375,25 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AcrossComments;
-    /// Whether aligned case labels are aligned on the colon, or on the
-    /// , or on the tokens after the colon.
+    /// Whether to align the case arrows when aligning short case expressions.
+    /// \code{.java}
+    ///   true:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY          -> 9;
+    ///     default                 -> 0;
+    ///   };
+    ///
+    ///   false:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY ->          9;
+    ///     default ->                 0;
+    ///   };
+    /// \endcode
+    bool AlignCaseArrows;
+    /// Whether aligned case labels are aligned on the colon, or on the tokens
+    /// after the colon.
     /// \code
     ///   true:
     ///   switch (level) {
@@ -396,12 +413,14 @@ struct FormatStyle {
     bool operator==(const ShortCaseStatementsAlignmentStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
+             AlignCaseArrows == R.AlignCaseArrows &&
              AlignCaseColons == R.AlignCaseColons;
     }
   };
 
   /// Style of aligning consecutive short case labels.
-  /// Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+  /// Only applies if ``AllowShortCaseExpressionOnASingleLine`` or
+  /// ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
   ///
   /// \code{.yaml}
   ///   # Example of usage:
@@ -413,6 +432,21 @@ struct FormatStyle {
   /// \endcode
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
+
+  /// Style of aligning consecutive TableGen DAGArg operator colons.
+  /// If enabled, align the colon inside DAGArg which have line break inside.
+  /// This works only when TableGenBreakInsideDAGArg is BreakElements or
+  /// BreakAll and the DAGArg is not excepted by
+  /// TableGenBreakingDAGArgOperators's effect.
+  /// \code
+  ///   let dagarg = (ins
+  ///       a  :$src1,
+  ///       aa :$src2,
+  ///       aaa:$src3
+  ///   )
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
 
   /// Style of aligning consecutive TableGen cond operator colons.
   /// Align the colons of cases inside !cond operators.
@@ -708,6 +742,19 @@ struct FormatStyle {
   /// single line.
   /// \version 3.5
   ShortBlockStyle AllowShortBlocksOnASingleLine;
+
+  /// Whether to merge a short switch labeled rule into a single line.
+  /// \code{.java}
+  ///   true:                               false:
+  ///   switch (a) {           vs.          switch (a) {
+  ///   case 1 -> 1;                        case 1 ->
+  ///   default -> 0;                         1;
+  ///   };                                  default ->
+  ///                                         0;
+  ///                                       };
+  /// \endcode
+  /// \version 19
+  bool AllowShortCaseExpressionOnASingleLine;
 
   /// If ``true``, short case labels will be contracted to a single line.
   /// \code
@@ -2207,6 +2254,20 @@ struct FormatStyle {
   /// The break constructor initializers style to use.
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
+
+  /// If ``true``, clang-format will always break before function definition
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDefinition(
+  ///             int A, int B) {}
+  ///
+  ///    false:
+  ///    void functionDefinition(int A, int B) {}
+  ///
+  /// \endcode
+  /// \version 19
+  bool BreakFunctionDefinitionParameters;
 
   /// Break after each annotation on a field in Java files.
   /// \code{.java}
@@ -4735,7 +4796,7 @@ struct FormatStyle {
   /// the specified identifiers.
   ///
   /// For example the configuration,
-  /// \code
+  /// \code{.yaml}
   ///   TableGenBreakInsideDAGArg: BreakAll
   ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
   /// \endcode
@@ -4879,6 +4940,8 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenBreakingDAGArgColons ==
+               R.AlignConsecutiveTableGenBreakingDAGArgColons &&
            AlignConsecutiveTableGenCondOperatorColons ==
                R.AlignConsecutiveTableGenCondOperatorColons &&
            AlignConsecutiveTableGenDefinitionColons ==
@@ -4892,6 +4955,8 @@ struct FormatStyle {
            AllowBreakBeforeNoexceptSpecifier ==
                R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
+           AllowShortCaseExpressionOnASingleLine ==
+               R.AllowShortCaseExpressionOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
            AllowShortCompoundRequirementOnASingleLine ==
@@ -4921,6 +4986,8 @@ struct FormatStyle {
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDefinitionParameters ==
+               R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&

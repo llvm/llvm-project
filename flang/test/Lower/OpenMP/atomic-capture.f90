@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! This test checks the lowering of atomic capture
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s

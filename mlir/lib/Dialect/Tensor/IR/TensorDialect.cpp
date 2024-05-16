@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
@@ -62,7 +62,7 @@ void TensorDialect::initialize() {
                             ParallelInsertSliceOp>();
   declarePromisedInterfaces<SubsetInsertionOpInterface, InsertSliceOp,
                             ParallelInsertSliceOp>();
-  declarePromisedInterface<ExtractSliceOp, SubsetExtractionOpInterface>();
+  declarePromisedInterface<SubsetExtractionOpInterface, ExtractSliceOp>();
   declarePromisedInterfaces<TilingInterface, PadOp, PackOp, UnPackOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, CastOp, DimOp, EmptyOp,
                             ExtractSliceOp, PadOp, RankOp>();

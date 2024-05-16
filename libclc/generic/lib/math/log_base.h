@@ -209,7 +209,7 @@ log(double x)
     const double log_thresh1 = 0x1.e0faap-1;
     const double log_thresh2 = 0x1.1082cp+0;
 
-    int is_near = x >= log_thresh1 & x <= log_thresh2;
+    bool is_near = x >= log_thresh1 && x <= log_thresh2;
 
     // Near 1 code
     double r = x - 1.0;
@@ -289,7 +289,7 @@ log(double x)
     double ret = is_near ? ret_near : ret_far;
 
     ret = isinf(x) ? as_double(PINFBITPATT_DP64) : ret;
-    ret = isnan(x) | (x < 0.0) ? as_double(QNANBITPATT_DP64) : ret;
+    ret = (isnan(x) | (x < 0.0)) ? as_double(QNANBITPATT_DP64) : ret;
     ret = x == 0.0 ? as_double(NINFBITPATT_DP64) : ret;
     return ret;
 }

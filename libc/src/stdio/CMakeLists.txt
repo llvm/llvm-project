@@ -256,6 +256,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.remove
 )
 
+add_entrypoint_object(
+  rename
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.rename
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
@@ -263,6 +270,8 @@ add_stdio_entrypoint_object(ferror)
 add_stdio_entrypoint_object(ferror_unlocked)
 add_stdio_entrypoint_object(fseek)
 add_stdio_entrypoint_object(ftell)
+add_stdio_entrypoint_object(fseeko)
+add_stdio_entrypoint_object(ftello)
 add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)

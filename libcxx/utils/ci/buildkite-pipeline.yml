@@ -43,7 +43,6 @@ definitions:
 
 environment_definitions:
   _common_env: &common_env
-      ENABLE_CLANG_TIDY: "On"
       LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
       CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
       CC: clang-${LLVM_HEAD_VERSION}
@@ -207,10 +206,10 @@ steps:
 - group: ':freebsd: FreeBSD'
   steps:
   - label: FreeBSD 13 amd64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
+    command: libcxx/utils/ci/run-buildbot generic-cxx26
     env:
-      CC: clang16
-      CXX: clang++16
+      CC: clang17
+      CXX: clang++17
     agents:
       queue: libcxx-builders
       os: freebsd

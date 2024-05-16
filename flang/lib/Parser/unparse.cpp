@@ -1827,6 +1827,10 @@ public:
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
+            [&](const CompilerDirective::Unrecognized &) {
+              Word("!DIR$ ");
+              Word(x.source.ToString());
+            },
         },
         x.u);
     Put('\n');
@@ -2086,6 +2090,8 @@ public:
     Walk(":", x.step);
   }
   void Unparse(const OmpReductionClause &x) {
+    Walk(std::get<std::optional<OmpReductionClause::ReductionModifier>>(x.t),
+        ",");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
@@ -2699,7 +2705,6 @@ public:
   void Unparse(const CLASS::ENUM &x) { Word(CLASS::EnumToString(x)); }
   WALK_NESTED_ENUM(AccDataModifier, Modifier)
   WALK_NESTED_ENUM(AccessSpec, Kind) // R807
-  WALK_NESTED_ENUM(AccReductionOperator, Operator)
   WALK_NESTED_ENUM(common, TypeParamAttr) // R734
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
@@ -2723,11 +2728,38 @@ public:
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
+  WALK_NESTED_ENUM(
+      OmpReductionClause, ReductionModifier) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
 #undef WALK_NESTED_ENUM
+  void Unparse(const AccReductionOperator::Operator x) {
+    switch (x) {
+    case AccReductionOperator::Operator::Plus:
+      Word("+");
+      break;
+    case AccReductionOperator::Operator::Multiply:
+      Word("*");
+      break;
+    case AccReductionOperator::Operator::And:
+      Word(".AND.");
+      break;
+    case AccReductionOperator::Operator::Or:
+      Word(".OR.");
+      break;
+    case AccReductionOperator::Operator::Eqv:
+      Word(".EQV.");
+      break;
+    case AccReductionOperator::Operator::Neqv:
+      Word(".NEQV.");
+      break;
+    default:
+      Word(AccReductionOperator::EnumToString(x));
+      break;
+    }
+  }
 
   void Unparse(const CUFKernelDoConstruct::StarOrExpr &x) {
     if (x.v) {
@@ -2760,12 +2792,18 @@ public:
     if (const auto &stream{std::get<3>(x.t)}) {
       Word(",STREAM="), Walk(*stream);
     }
-    Word(">>>\n");
+    Word(">>>");
+    Walk(" ", std::get<std::list<CUFReduction>>(x.t), " ");
+    Word("\n");
   }
-
   void Unparse(const CUFKernelDoConstruct &x) {
     Walk(std::get<CUFKernelDoConstruct::Directive>(x.t));
     Walk(std::get<std::optional<DoConstruct>>(x.t));
+  }
+  void Unparse(const CUFReduction &x) {
+    Word("REDUCE(");
+    Walk(std::get<CUFReduction::Operator>(x.t));
+    Walk(":", std::get<std::list<Scalar<Variable>>>(x.t), ",", ")");
   }
 
   void Done() const { CHECK(indent_ == 0); }

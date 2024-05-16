@@ -32,7 +32,7 @@ namespace clang {
     enum {
       DIAG_SIZE_COMMON        =  300,
       DIAG_SIZE_DRIVER        =  400,
-      DIAG_SIZE_FRONTEND      =  150,
+      DIAG_SIZE_FRONTEND      =  200,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
       DIAG_SIZE_PARSE         =  700,
@@ -277,6 +277,9 @@ public:
   /// Return true if a given diagnostic falls into an ARC diagnostic
   /// category.
   static bool isARCDiagnostic(unsigned DiagID);
+
+  /// Return true if a given diagnostic is a codegen-time ABI check.
+  static bool isCodegenABICheckDiagnostic(unsigned DiagID);
 
   /// Enumeration describing how the emission of a diagnostic should
   /// be treated when it occurs during C++ template argument deduction.

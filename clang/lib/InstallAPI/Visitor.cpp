@@ -205,9 +205,10 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
   const StringRef InterfaceName = InterfaceD->getName();
 
-  auto [Category, FA] = Ctx.Slice->addObjCCategory(InterfaceName, CategoryName,
-                                                   Avail, D, *Access);
-  recordObjCInstanceVariables(D->getASTContext(), Category, InterfaceName,
+  ObjCCategoryRecord *CategoryRecord =
+      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D, *Access)
+          .first;
+  recordObjCInstanceVariables(D->getASTContext(), CategoryRecord, InterfaceName,
                               D->ivars());
   return true;
 }
@@ -254,7 +255,7 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
       return true;
 
     // Skip methods in CXX RecordDecls.
-    for (auto P : D->getASTContext().getParents(*M)) {
+    for (const DynTypedNode &P : D->getASTContext().getParents(*M)) {
       if (P.get<CXXRecordDecl>())
         return true;
     }
@@ -681,7 +682,7 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     std::string Name = getMangledName(M);
     auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                                         GlobalRecord::Kind::Function, Avail, D,
+                                         GlobalRecord::Kind::Function, Avail, M,
                                          *Access, getFlags(WeakDef));
     Ctx.Verifier->verify(GR, FA);
   }

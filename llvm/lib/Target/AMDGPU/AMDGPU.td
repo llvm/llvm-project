@@ -168,6 +168,10 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+def FeaturePreciseMemory
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
+
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
@@ -301,6 +305,12 @@ def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
   "HasMSAALoadDstSelBug",
   "true",
   "MSAA loads not honoring dst_sel bug"
+>;
+
+def FeaturePrivEnabledTrap2NopBug : SubtargetFeature<"priv-enabled-trap2-nop-bug",
+  "HasPrivEnabledTrap2NopBug",
+  "true",
+  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug"
 >;
 
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
@@ -831,10 +841,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
-def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
-  "HasGFX11FullVGPRs",
+// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// with allocation granularity 24 for wave32 and 12 for wave64
+def Feature1_5xVGPRs : SubtargetFeature<"allocate1_5xvgprs",
+  "Has1_5xVGPRs",
   "true",
-  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
+  "Has 50% more physical VGPRs and 50% larger allocation granule"
 >;
 
 
@@ -1481,22 +1493,25 @@ def FeatureISAVersion11_Generic: FeatureSet<
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureUserSGPRInit16Bug,
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
-     FeatureMADIntraFwdBug])>;
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs,
+    [Feature1_5xVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [Feature1_5xVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1517,7 +1532,7 @@ def FeatureISAVersion11_5_1 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     FeatureGFX11FullVGPRs])>;
+     Feature1_5xVGPRs])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1890,7 +1905,7 @@ def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
-def HasLDSFPAtomicAdd : Predicate<"Subtarget->hasLDSFPAtomicAdd()">,
+def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
   AssemblerPredicate<(all_of FeatureGFX8Insts)>;
 
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
@@ -1903,7 +1918,8 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
+  AssemblerPredicate<(all_of (not FeatureTrue16BitInsts))>;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
@@ -1912,7 +1928,10 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
-                                              "!Subtarget->useRealTrue16Insts()">;
+                                              "!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
+  // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
+  // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;

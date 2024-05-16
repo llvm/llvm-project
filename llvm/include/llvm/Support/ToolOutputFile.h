@@ -18,6 +18,19 @@
 
 namespace llvm {
 
+class CleanupInstaller {
+public:
+  /// The name of the file.
+  std::string Filename;
+
+  /// The flag which indicates whether we should not delete the file.
+  bool Keep;
+
+  StringRef getFilename() { return Filename; }
+  explicit CleanupInstaller(StringRef Filename);
+  ~CleanupInstaller();
+};
+
 /// This class contains a raw_fd_ostream and adds a few extra features commonly
 /// needed for compiler-like tool output files:
 ///   - The file is automatically deleted if the process is killed.
@@ -28,18 +41,7 @@ class ToolOutputFile {
   /// before the raw_fd_ostream is constructed and destructed after the
   /// raw_fd_ostream is destructed. It installs cleanups in its constructor and
   /// uninstalls them in its destructor.
-  class CleanupInstaller {
-  public:
-    /// The name of the file.
-    std::string Filename;
-
-    /// The flag which indicates whether we should not delete the file.
-    bool Keep;
-
-    StringRef getFilename() { return Filename; }
-    explicit CleanupInstaller(StringRef Filename);
-    ~CleanupInstaller();
-  } Installer;
+  CleanupInstaller Installer;
 
   /// Storage for the stream, if we're owning our own stream. This is
   /// intentionally declared after Installer.

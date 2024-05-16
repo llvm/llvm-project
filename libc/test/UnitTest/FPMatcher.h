@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -17,7 +18,7 @@
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace testing {
@@ -63,7 +64,6 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 template <typename T> struct FPTest : public Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
   static constexpr StorageType STORAGE_MAX =
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
   static constexpr T zero = FPBits::zero(Sign::POS).get_val();
@@ -92,7 +92,7 @@ template <typename T> struct FPTest : public Test {
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
   using StorageType = typename FPBits::StorageType;                            \
-  using Sign = LIBC_NAMESPACE::fputil::Sign;                                   \
+                                                                               \
   static constexpr StorageType STORAGE_MAX =                                   \
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
   const T zero = FPBits::zero(Sign::POS).get_val();                            \
@@ -106,7 +106,14 @@ template <typename T> struct FPTest : public Test {
   const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
   const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
   const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
-  const T max_denormal = FPBits::max_subnormal().get_val();
+  const T max_denormal = FPBits::max_subnormal().get_val();                    \
+  static constexpr int UNKNOWN_MATH_ROUNDING_DIRECTION = 99;                   \
+  static constexpr LIBC_NAMESPACE::cpp::array<int, 6>                          \
+      MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN = {                           \
+          FP_INT_UPWARD,     FP_INT_DOWNWARD,                                  \
+          FP_INT_TOWARDZERO, FP_INT_TONEARESTFROMZERO,                         \
+          FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
+  };
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -152,18 +159,18 @@ template <typename T> struct FPTest : public Test {
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    (expected),                                                \
-                expected);                                                     \
+      EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
+                    ((expected) ? (expected) : FE_ALL_EXCEPT),                 \
+                (expected));                                                   \
     }                                                                          \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    (expected),                                                \
-                expected);                                                     \
+      ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
+                    ((expected) ? (expected) : FE_ALL_EXCEPT),                 \
+                (expected));                                                   \
     }                                                                          \
   } while (0)
 
@@ -171,24 +178,14 @@ template <typename T> struct FPTest : public Test {
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
-    if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    (expected_except),                                         \
-                expected_except);                                              \
-      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
-    }                                                                          \
+    EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
 #define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_IS_NAN(actual_val);                                              \
-    if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_GE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    (expected_except),                                         \
-                expected_except);                                              \
-      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
-    }                                                                          \
+    EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
 #define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
@@ -211,5 +208,26 @@ template <typename T> struct FPTest : public Test {
       EXPECT_FP_EQ((expected), (actual));                                      \
     }                                                                          \
   } while (0)
+
+#define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_EQ_ROUNDING_NEAREST(expected, actual)                        \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
+
+#define EXPECT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
+
+#define EXPECT_FP_EQ_ROUNDING_DOWNWARD(expected, actual)                       \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Downward)
+
+#define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

@@ -105,9 +105,11 @@ copy("Headers") {
     "__clang_hip_stdlib.h",
     "__stdarg___gnuc_va_list.h",
     "__stdarg___va_copy.h",
+    "__stdarg_header_macro.h",
     "__stdarg_va_arg.h",
     "__stdarg_va_copy.h",
     "__stdarg_va_list.h",
+    "__stddef_header_macro.h",
     "__stddef_max_align_t.h",
     "__stddef_null.h",
     "__stddef_nullptr_t.h",
@@ -205,6 +207,7 @@ copy("Headers") {
     "ia32intrin.h",
     "immintrin.h",
     "intrin.h",
+    "intrin0.h",
     "inttypes.h",
     "invpcidintrin.h",
     "iso646.h",
@@ -310,6 +313,8 @@ copy("Headers") {
     "xsaveoptintrin.h",
     "xsavesintrin.h",
     "xtestintrin.h",
+    "yvals_core.h",
+    "zos_wrappers/builtins.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

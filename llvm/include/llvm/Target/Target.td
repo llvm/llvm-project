@@ -83,9 +83,26 @@ class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
   list<RegInfo> Objects = Ts;
 }
 
+class SubRegRange<int size, int offset = 0> {
+  int Size = size;      // Sub register size in bits.
+  int Offset = offset;  // Offset of the first bit of the sub-reg index.
+}
+
+class SubRegRangeByHwMode<list<HwMode> Ms = [], list<SubRegRange> Ts = []>
+    : HwModeSelect<Ms> {
+  // The length of this list must be the same as the length of Ms.
+  list<SubRegRange> Objects = Ts;
+}
+
 // SubRegIndex - Use instances of SubRegIndex to identify subregisters.
 class SubRegIndex<int size, int offset = 0> {
   string Namespace = "";
+
+  // The size/offset information, parameterized by a HW mode.
+  // If the HwModes provided for SubRegRanges does not include the DefaultMode,
+  // the/ Size and Offset fields below will be used for the default. Otherwise,
+  // the Size and Offset fields are ignored.
+  SubRegRangeByHwMode SubRegRanges;
 
   // Size - Size (in bits) of the sub-registers represented by this index.
   int Size = size;
@@ -697,7 +714,20 @@ class Instruction : InstructionEncoding {
   // Scheduling information from TargetSchedule.td.
   list<SchedReadWrite> SchedRW;
 
-  string Constraints = "";  // OperandConstraint, e.g. $src = $dst.
+  /// Support for operand constraints. There are currently two kinds:
+  /// "$src = $dst"
+  ///   Ensures that the operands are allocated to the same register.
+  ///
+  /// "@earlyclobber $rd"
+  ///   Ensures that LLVM will not use the same register for any inputs (other
+  ///   than an input tied to this output).
+  ///
+  /// See also:
+  /// - MC/MCInstrDesc.h:OperandConstraint::{TIED_TO, EARLY_CLOBBER}.
+  /// - CodeGen/MachineOperand.h:MachineOperand::{TiedTo, IsEarlyClobber}.
+  /// - The LLVM IR specification: Section `Output constraints` in the
+  ///   discussion of inline assembly constraint strings.
+  string Constraints = "";
 
   /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
   /// be encoded into the output machineinstr.
@@ -735,8 +765,8 @@ class Instruction : InstructionEncoding {
 
   /// Should generate helper functions that help you to map a logical operand's
   /// index to the underlying MIOperand's index.
-  /// In most architectures logical operand indicies are equal to
-  /// MIOperand indicies, but for some CISC architectures, a logical operand
+  /// In most architectures logical operand indices are equal to
+  /// MIOperand indices, but for some CISC architectures, a logical operand
   /// might be consist of multiple MIOperand (e.g. a logical operand that
   /// uses complex address mode).
   bit UseLogicalOperandMappings = false;
@@ -1877,3 +1907,8 @@ include "llvm/Target/GlobalISel/SelectionDAGCompat.td"
 // Pull in the common support for Pfm Counters generation.
 //
 include "llvm/Target/TargetPfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Pull in the common support for macro fusion.
+//
+include "llvm/Target/TargetMacroFusion.td"

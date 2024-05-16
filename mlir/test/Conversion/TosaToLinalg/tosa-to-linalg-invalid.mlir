@@ -15,3 +15,15 @@ func.func @tensor_with_unknown_rank(%arg0: tensor<*xi8>) -> tensor<*xi8> {
   %0 = "tosa.abs"(%arg0) : (tensor<*xi8>) -> tensor<*xi8>
   return %0 : tensor<*xi8>
 }
+
+// -----
+
+// CHECK-LABEL: @unranked_add
+func.func @unranked_add(%arg0 : tensor<10x10xf32> , %arg1 : tensor<10x10xf32>, %arg2 : tensor<*xf32>) -> (tensor<10x10xf32>) {
+  // expected-error@+3 {{failed to legalize operation 'tosa.add'}}
+  %reduce = tosa.reduce_max %arg0 {axis = 1 : i32} : (tensor<10x10xf32>) -> tensor<10x1xf32>
+  %1 = tosa.add %reduce, %arg1 : (tensor<10x1xf32>, tensor<10x10xf32>) -> tensor<10x10xf32>
+  %0 = tosa.add %1, %arg2 : (tensor<10x10xf32>, tensor<*xf32>) -> tensor<*xf32>
+  %2 = tosa.reshape %0 {new_shape = array<i64: 10, 10>} : (tensor<*xf32>) -> tensor<10x10xf32>
+  return %2 : tensor<10x10xf32>
+}

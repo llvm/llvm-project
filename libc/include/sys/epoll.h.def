@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SYS_EPOLL_H
 #define LLVM_LIBC_SYS_EPOLL_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
+
+#include "llvm-libc-macros/sys-epoll-macros.h"
 
 %%public_api()
 

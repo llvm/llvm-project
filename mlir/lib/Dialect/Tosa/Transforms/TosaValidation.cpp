@@ -200,7 +200,7 @@ private:
     CHECK_RANKS_FOR(BitwiseAnd);
     CHECK_RANKS_FOR(BitwiseOr);
     CHECK_RANKS_FOR(BitwiseXor);
-    CHECK_RANKS_FOR(Div);
+    CHECK_RANKS_FOR(IntDiv);
     CHECK_RANKS_FOR(LogicalAnd);
     CHECK_RANKS_FOR(LogicalLeftShift);
     CHECK_RANKS_FOR(LogicalRightShift);
@@ -357,7 +357,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              transpose.getFilter().getType().dyn_cast<ShapedType>()) {
+              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
@@ -409,6 +409,8 @@ private:
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
+
+  bool isValidElementType(Type type);
 
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
   TosaLevel tosaLevel;
@@ -503,15 +505,57 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
   return success();
 }
 
+bool TosaValidation::isValidElementType(Type type) {
+  if (isa<FloatType>(type)) {
+    if (profile == TosaProfileEnum::BaseInference)
+      return false;
+    return type.isF32() || type.isF16() || type.isBF16();
+  }
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
+    if (intTy.isUnsigned()) {
+      switch (intTy.getWidth()) {
+      case 8:
+      case 16:
+        return true;
+      default:
+        return false;
+      }
+    } else {
+      // Signless - treated as signed.
+      switch (intTy.getWidth()) {
+      case 1:
+      case 4:
+      case 8:
+      case 16:
+      case 32:
+      case 48:
+      case 64:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
   getOperation().walk([&](Operation *op) {
     for (Value operand : op->getOperands()) {
-      if ((profile == TosaProfileEnum::BaseInference) &&
-          isa<FloatType>(getElementTypeOrSelf(operand))) {
+      auto elementTy = getElementTypeOrSelf(operand);
+      if (!isValidElementType(elementTy)) {
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
         return signalPassFailure();
       }
-      if (getElementTypeOrSelf(operand).isF64()) {
+    }
+    for (Type resultTy : op->getResultTypes()) {
+      auto elementTy = getElementTypeOrSelf(resultTy);
+      if (!isValidElementType(elementTy)) {
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
         return signalPassFailure();
       }
     }

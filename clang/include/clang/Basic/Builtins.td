@@ -676,7 +676,11 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int clzimax(uintmax_t)
+def Clzg : Builtin {
+  let Spellings = ["__builtin_clzg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Spellings = ["__builtin_ctz"];
@@ -684,7 +688,11 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
   let Prototype = "int(unsigned T)";
 }
 
-// FIXME: Add int ctzimax(uintmax_t)
+def Ctzg : Builtin {
+  let Spellings = ["__builtin_ctzg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
 
 def FFS : Builtin, BitInt_Long_LongLongTemplate {
   let Spellings = ["__builtin_ffs"];
@@ -1156,6 +1164,12 @@ def Unreachable : Builtin {
   let Prototype = "void()";
 }
 
+def AllowRuntimeCheck : Builtin {
+  let Spellings = ["__builtin_allow_runtime_check"];
+  let Attributes = [NoThrow, Pure, Const];
+  let Prototype = "bool(char const*)";
+}
+
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1308,6 +1322,12 @@ def ElementwiseSin : Builtin {
 
 def ElementwiseSqrt : Builtin {
   let Spellings = ["__builtin_elementwise_sqrt"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseTan : Builtin {
+  let Spellings = ["__builtin_elementwise_tan"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4579,6 +4599,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_any"];
   let Attributes = [NoThrow, Const];
@@ -4589,6 +4615,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int()";
 }
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {

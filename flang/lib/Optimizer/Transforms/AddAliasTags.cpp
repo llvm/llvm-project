@@ -105,6 +105,7 @@ static std::string getFuncArgName(mlir::Value arg) {
          "arg is a function argument");
   mlir::FunctionOpInterface func = mlir::dyn_cast<mlir::FunctionOpInterface>(
       blockArg.getOwner()->getParentOp());
+  assert(func && "This is not a function argument");
   mlir::StringAttr attr = func.getArgAttrOfType<mlir::StringAttr>(
       blockArg.getArgNumber(), "fir.bindc_name");
   if (!attr)

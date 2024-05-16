@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WhitespaceManager.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 
 namespace clang {
 namespace format {
@@ -104,11 +107,13 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   llvm::sort(Changes, Change::IsBeforeInFile(SourceMgr));
   calculateLineBreakInformation();
   alignConsecutiveMacros();
-  alignConsecutiveShortCaseStatements();
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/true);
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/false);
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
   if (Style.isTableGen()) {
+    alignConsecutiveTableGenBreakingDAGArgColons();
     alignConsecutiveTableGenCondOperatorColons();
     alignConsecutiveTableGenDefinitions();
   }
@@ -124,11 +129,14 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
 void WhitespaceManager::calculateLineBreakInformation() {
   Changes[0].PreviousEndOfTokenColumn = 0;
   Change *LastOutsideTokenChange = &Changes[0];
-  for (unsigned i = 1, e = Changes.size(); i != e; ++i) {
+  for (unsigned I = 1, e = Changes.size(); I != e; ++I) {
+    auto &C = Changes[I];
+    auto &P = Changes[I - 1];
+    auto &PrevTokLength = P.TokenLength;
     SourceLocation OriginalWhitespaceStart =
-        Changes[i].OriginalWhitespaceRange.getBegin();
+        C.OriginalWhitespaceRange.getBegin();
     SourceLocation PreviousOriginalWhitespaceEnd =
-        Changes[i - 1].OriginalWhitespaceRange.getEnd();
+        P.OriginalWhitespaceRange.getEnd();
     unsigned OriginalWhitespaceStartOffset =
         SourceMgr.getFileOffset(OriginalWhitespaceStart);
     unsigned PreviousOriginalWhitespaceEndOffset =
@@ -163,31 +171,28 @@ void WhitespaceManager::calculateLineBreakInformation() {
     // line of the token.
     auto NewlinePos = Text.find_first_of('\n');
     if (NewlinePos == StringRef::npos) {
-      Changes[i - 1].TokenLength = OriginalWhitespaceStartOffset -
-                                   PreviousOriginalWhitespaceEndOffset +
-                                   Changes[i].PreviousLinePostfix.size() +
-                                   Changes[i - 1].CurrentLinePrefix.size();
+      PrevTokLength = OriginalWhitespaceStartOffset -
+                      PreviousOriginalWhitespaceEndOffset +
+                      C.PreviousLinePostfix.size() + P.CurrentLinePrefix.size();
+      if (!P.IsInsideToken)
+        PrevTokLength = std::min(PrevTokLength, P.Tok->ColumnWidth);
     } else {
-      Changes[i - 1].TokenLength =
-          NewlinePos + Changes[i - 1].CurrentLinePrefix.size();
+      PrevTokLength = NewlinePos + P.CurrentLinePrefix.size();
     }
 
     // If there are multiple changes in this token, sum up all the changes until
     // the end of the line.
-    if (Changes[i - 1].IsInsideToken && Changes[i - 1].NewlinesBefore == 0) {
-      LastOutsideTokenChange->TokenLength +=
-          Changes[i - 1].TokenLength + Changes[i - 1].Spaces;
-    } else {
-      LastOutsideTokenChange = &Changes[i - 1];
-    }
+    if (P.IsInsideToken && P.NewlinesBefore == 0)
+      LastOutsideTokenChange->TokenLength += PrevTokLength + P.Spaces;
+    else
+      LastOutsideTokenChange = &P;
 
-    Changes[i].PreviousEndOfTokenColumn =
-        Changes[i - 1].StartOfTokenColumn + Changes[i - 1].TokenLength;
+    C.PreviousEndOfTokenColumn = P.StartOfTokenColumn + PrevTokLength;
 
-    Changes[i - 1].IsTrailingComment =
-        (Changes[i].NewlinesBefore > 0 || Changes[i].Tok->is(tok::eof) ||
-         (Changes[i].IsInsideToken && Changes[i].Tok->is(tok::comment))) &&
-        Changes[i - 1].Tok->is(tok::comment) &&
+    P.IsTrailingComment =
+        (C.NewlinesBefore > 0 || C.Tok->is(tok::eof) ||
+         (C.IsInsideToken && C.Tok->is(tok::comment))) &&
+        P.Tok->is(tok::comment) &&
         // FIXME: This is a dirty hack. The problem is that
         // BreakableLineCommentSection does comment reflow changes and here is
         // the aligning of trailing comments. Consider the case where we reflow
@@ -460,16 +465,16 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
 
-    // If PointerAlignment is PAS_Right, keep *s or &s next to the token
+    // If PointerAlignment is PAS_Right, keep *s or &s next to the token,
+    // except if the token is equal, then a space is needed.
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
-        CurrentChange.Spaces != 0) {
+        CurrentChange.Spaces != 0 && CurrentChange.Tok->isNot(tok::equal)) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
       for (int Previous = i - 1;
-           Previous >= 0 &&
-           Changes[Previous].Tok->getType() == TT_PointerOrReference;
+           Previous >= 0 && Changes[Previous].Tok->is(TT_PointerOrReference);
            --Previous) {
         assert(Changes[Previous].Tok->isPointerOrReference());
         if (Changes[Previous].Tok->isNot(tok::star)) {
@@ -874,22 +879,27 @@ void WhitespaceManager::alignConsecutiveColons(
       Changes, /*StartAt=*/0, AlignStyle);
 }
 
-void WhitespaceManager::alignConsecutiveShortCaseStatements() {
+void WhitespaceManager::alignConsecutiveShortCaseStatements(bool IsExpr) {
   if (!Style.AlignConsecutiveShortCaseStatements.Enabled ||
-      !Style.AllowShortCaseLabelsOnASingleLine) {
+      !(IsExpr ? Style.AllowShortCaseExpressionOnASingleLine
+               : Style.AllowShortCaseLabelsOnASingleLine)) {
     return;
   }
 
+  const auto Type = IsExpr ? TT_CaseLabelArrow : TT_CaseLabelColon;
+  const auto &Option = Style.AlignConsecutiveShortCaseStatements;
+  const bool AlignArrowOrColon =
+      IsExpr ? Option.AlignCaseArrows : Option.AlignCaseColons;
+
   auto Matches = [&](const Change &C) {
-    if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons)
-      return C.Tok->is(TT_CaseLabelColon);
+    if (AlignArrowOrColon)
+      return C.Tok->is(Type);
 
     // Ignore 'IsInsideToken' to allow matching trailing comments which
     // need to be reflowed as that causes the token to appear in two
     // different changes, which will cause incorrect alignment as we'll
     // reflow early due to detecting multiple aligning tokens per line.
-    return !C.IsInsideToken && C.Tok->Previous &&
-           C.Tok->Previous->is(TT_CaseLabelColon);
+    return !C.IsInsideToken && C.Tok->Previous && C.Tok->Previous->is(Type);
   };
 
   unsigned MinColumn = 0;
@@ -940,7 +950,7 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
     if (Changes[I].Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (Changes[I].Tok->is(TT_CaseLabelColon)) {
+    if (Changes[I].Tok->is(Type)) {
       LineIsEmptyCase =
           !Changes[I].Tok->Next || Changes[I].Tok->Next->isTrailingComment();
 
@@ -976,6 +986,11 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
 
   AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn, Matches,
                              Changes);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenBreakingDAGArgColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenBreakingDAGArgColons,
+                         TT_TableGenDAGArgListColonToAlign);
 }
 
 void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
@@ -1482,7 +1497,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
                                                                 : Cell);
         // Go to the next non-comment and ensure there is a break in front
         const auto *NextNonComment = C.Tok->getNextNonComment();
-        while (NextNonComment->is(tok::comma))
+        while (NextNonComment && NextNonComment->is(tok::comma))
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
         while (j < End && Changes[j].Tok != NextNonComment)

@@ -21,6 +21,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -844,6 +845,11 @@ void Parser::HandlePragmaFPContract() {
     FPC = LangOptions::FPM_Off;
     break;
   case tok::OOS_DEFAULT:
+    // According to ISO C99 standard chapter 7.3.4, the default value
+    // for the pragma is ``off'. '-fcomplex-arithmetic=basic',
+    // '-fcx-limited-range', '-fcx-fortran-rules' and
+    // '-fcomplex-arithmetic=improved' control the default value of these
+    // pragmas.
     FPC = getLangOpts().getDefaultFPContractMode();
     break;
   }
@@ -909,15 +915,15 @@ void Parser::HandlePragmaCXLimitedRange() {
   LangOptions::ComplexRangeKind Range;
   switch (OOS) {
   case tok::OOS_ON:
-    Range = LangOptions::CX_Limited;
+    Range = LangOptions::CX_Basic;
     break;
   case tok::OOS_OFF:
     Range = LangOptions::CX_Full;
     break;
   case tok::OOS_DEFAULT:
     // According to ISO C99 standard chapter 7.3.4, the default value
-    // for the pragma is ``off'. -fcx-limited-range and -fcx-fortran-rules
-    // control the default value of these pragmas.
+    // for the pragma is ``off'. -fcomplex-arithmetic controls the default value
+    // of these pragmas.
     Range = getLangOpts().getComplexRange();
     break;
   }
@@ -1563,7 +1569,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
       ConsumeToken(); // Consume the constant expression eof terminator.
 
       if (Arg2Error || R.isInvalid() ||
-          Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation()))
+          Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation(),
+                                    /*AllowZero=*/false))
         return false;
 
       // Argument is a constant expression with an integer type.
@@ -1588,7 +1595,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     ConsumeToken(); // Consume the constant expression eof terminator.
 
     if (R.isInvalid() ||
-        Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation()))
+        Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation(),
+                                  /*AllowZero=*/true))
       return false;
 
     // Argument is a constant expression with an integer type.
@@ -3895,8 +3903,8 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
   }
 
   if (Info->isStr("begin"))
-    Actions.PushForceCUDAHostDevice();
-  else if (!Actions.PopForceCUDAHostDevice())
+    Actions.CUDA().PushForceHostDevice();
+  else if (!Actions.CUDA().PopForceHostDevice())
     PP.Diag(FirstTok.getLocation(),
             diag::err_pragma_cannot_end_force_cuda_host_device);
 

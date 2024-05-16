@@ -470,9 +470,11 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
     nf.setId(AMDGPULibFunc::EI_COS);
     FunctionCallee cosExpr = getFunction(M, nf);
     if (sinExpr && cosExpr) {
-      Value *sinval = CallInst::Create(sinExpr, opr0, "splitsin", aCI);
-      Value *cosval = CallInst::Create(cosExpr, opr0, "splitcos", aCI);
-      new StoreInst(cosval, aCI->getArgOperand(1), aCI);
+      Value *sinval =
+          CallInst::Create(sinExpr, opr0, "splitsin", aCI->getIterator());
+      Value *cosval =
+          CallInst::Create(cosExpr, opr0, "splitcos", aCI->getIterator());
+      new StoreInst(cosval, aCI->getArgOperand(1), aCI->getIterator());
 
       DEBUG_WITH_TYPE("usenative", dbgs() << "<useNative> replace " << *aCI
                                           << " with native version of sin/cos");
@@ -655,6 +657,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     return true;
 
   IRBuilder<> B(CI);
+  if (CI->isStrictFP())
+    B.setIsFPConstrained(true);
 
   if (FPMathOperator *FPOp = dyn_cast<FPMathOperator>(CI)) {
     // Under unsafe-math, evaluate calls if possible.
@@ -902,8 +906,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
   const APFloat *CF = nullptr;
   const APInt *CINT = nullptr;
-  if (!match(opr1, m_APFloatAllowUndef(CF)))
-    match(opr1, m_APIntAllowUndef(CINT));
+  if (!match(opr1, m_APFloatAllowPoison(CF)))
+    match(opr1, m_APIntAllowPoison(CINT));
 
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
@@ -1035,7 +1039,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   Constant *cnval = nullptr;
   if (getVecSize(FInfo) == 1) {
     CF = nullptr;
-    match(opr0, m_APFloatAllowUndef(CF));
+    match(opr0, m_APFloatAllowPoison(CF));
 
     if (CF) {
       double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
@@ -1655,7 +1659,7 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     // sincos
     assert(FInfo.getId() == AMDGPULibFunc::EI_SINCOS &&
            "math function with ptr arg not supported yet");
-    new StoreInst(nval1, aCI->getArgOperand(1), aCI);
+    new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
 
   replaceCall(aCI, nval0);

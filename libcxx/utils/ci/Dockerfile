@@ -7,15 +7,13 @@
 #===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build & push both images using:
+# You can build both images using:
 #
 #   docker compose build
-#   docker compose push
 #
-# Or you can select a single image to build & push using:
+# Or you can select a single image to build
 #
 #  docker compose build buildkite-builder
-#  docker compose push buildkite-builder
 #
 # The final images can be found at
 #
@@ -23,7 +21,8 @@
 #  ghcr.io/libcxx/actions-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
-# Members of the github.com/libcxx/ organizations have permissions required to push new images.
+# Members of the github.com/libcxx/ organizations can push new images to the CI.
+# This is done by GitHub actions in the https://github.com/libcxx/builders repo.
 #
 # ===----------------------------------------------------------------------===##
 #                     Running the buildkite image
@@ -73,33 +72,32 @@ RUN sudo apt-get update \
 
 RUN sudo apt-get update \
     && sudo apt-get install -y \
-        python3 \
-        python3-distutils \
-        python3-psutil \
-        git \
-        gdb \
-        ccache \
-        gpg \
-        wget \
         bash \
+        ccache \
         curl \
-        python3 \
-        python3-dev \
-        libpython3-dev \
-        uuid-dev \
-        libncurses5-dev \
-        swig3.0 \
-        libxml2-dev \
-        libedit-dev \
+        gdb \
+        git \
+        gpg \
         language-pack-en \
         language-pack-fr \
         language-pack-ja \
         language-pack-ru \
         language-pack-zh-hans \
+        libedit-dev \
+        libncurses5-dev \
+        libpython3-dev \
+        libxml2-dev \
         lsb-release \
-        wget \
-        unzip \
+        make \
+        python3 \
+        python3-dev \
+        python3-distutils \
+        python3-psutil \
         software-properties-common \
+        swig4.0 \
+        unzip \
+        uuid-dev \
+        wget \
     && sudo rm -rf /var/lib/apt/lists/*
 
 

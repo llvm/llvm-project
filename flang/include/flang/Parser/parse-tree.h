@@ -455,7 +455,8 @@ struct SpecificationPart {
 struct InternalSubprogram {
   UNION_CLASS_BOILERPLATE(InternalSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
-      common::Indirection<SubroutineSubprogram>>
+      common::Indirection<SubroutineSubprogram>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -991,7 +992,7 @@ struct ComponentArraySpec {
 //        access-spec | ALLOCATABLE |
 //        CODIMENSION lbracket coarray-spec rbracket |
 //        CONTIGUOUS | DIMENSION ( component-array-spec ) | POINTER |
-// (CUDA) CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE
+// (CUDA) CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED
 EMPTY_CLASS(Allocatable);
 EMPTY_CLASS(Pointer);
 EMPTY_CLASS(Contiguous);
@@ -1097,7 +1098,8 @@ struct ProcComponentDefStmt {
 // R736 component-def-stmt -> data-component-def-stmt | proc-component-def-stmt
 struct ComponentDefStmt {
   UNION_CLASS_BOILERPLATE(ComponentDefStmt);
-  std::variant<DataComponentDefStmt, ProcComponentDefStmt, ErrorRecovery
+  std::variant<DataComponentDefStmt, ProcComponentDefStmt,
+      common::Indirection<CompilerDirective>, ErrorRecovery
       // , TypeParamDefStmt -- PGI accidental extension, not enabled
       >
       u;
@@ -2903,7 +2905,8 @@ struct ModuleSubprogram {
   UNION_CLASS_BOILERPLATE(ModuleSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
-      common::Indirection<SeparateModuleSubprogram>>
+      common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -3298,7 +3301,8 @@ struct StmtFunctionStmt {
 // Compiler directives
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
-// !DIR$ name...
+// !DIR$ name[=value] [, name[=value]]...    = can be :
+// !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
   struct IgnoreTKR {
@@ -3316,9 +3320,10 @@ struct CompilerDirective {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
   };
+  EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      std::list<NameValue>>
+      std::list<NameValue>, Unrecognized>
       u;
 };
 
@@ -3549,7 +3554,10 @@ struct OmpReductionOperator {
 //                                         variable-name-list)
 struct OmpReductionClause {
   TUPLE_CLASS_BOILERPLATE(OmpReductionClause);
-  std::tuple<OmpReductionOperator, OmpObjectList> t;
+  ENUM_CLASS(ReductionModifier, Inscan, Task, Default)
+  std::tuple<std::optional<ReductionModifier>, OmpReductionOperator,
+      OmpObjectList>
+      t;
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
@@ -4295,12 +4303,23 @@ struct OpenACCConstruct {
 };
 
 // CUF-kernel-do-construct ->
-//     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
-//     >>> do-construct
+//   !$CUF KERNEL DO [ (scalar-int-constant-expr) ]
+//      <<< grid, block [, stream] >>>
+//      [ cuf-reduction... ]
+//      do-construct
 // star-or-expr -> * | scalar-int-expr
 // grid -> * | scalar-int-expr | ( star-or-expr-list )
 // block -> * | scalar-int-expr | ( star-or-expr-list )
 // stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
+// cuf-reduction -> [ REDUCE | REDUCTION ] (
+//                  acc-reduction-op : scalar-variable-list )
+
+struct CUFReduction {
+  TUPLE_CLASS_BOILERPLATE(CUFReduction);
+  using Operator = AccReductionOperator;
+  std::tuple<Operator, std::list<Scalar<Variable>>> t;
+};
+
 struct CUFKernelDoConstruct {
   TUPLE_CLASS_BOILERPLATE(CUFKernelDoConstruct);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarIntExpr>);
@@ -4308,7 +4327,8 @@ struct CUFKernelDoConstruct {
     TUPLE_CLASS_BOILERPLATE(Directive);
     CharBlock source;
     std::tuple<std::optional<ScalarIntConstantExpr>, std::list<StarOrExpr>,
-        std::list<StarOrExpr>, std::optional<ScalarIntExpr>>
+        std::list<StarOrExpr>, std::optional<ScalarIntExpr>,
+        std::list<CUFReduction>>
         t;
   };
   std::tuple<Directive, std::optional<DoConstruct>> t;

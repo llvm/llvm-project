@@ -373,8 +373,8 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
     m_hijacking_masks.pop_back();
 }
 
-ConstString &Broadcaster::GetBroadcasterClass() const {
-  static ConstString class_name("lldb.anonymous");
+llvm::StringRef Broadcaster::GetBroadcasterClass() const {
+  static constexpr llvm::StringLiteral class_name("lldb.anonymous");
   return class_name;
 }
 

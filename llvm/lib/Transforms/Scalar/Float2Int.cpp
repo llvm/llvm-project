@@ -359,9 +359,7 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 
     // The number of bits required is the maximum of the upper and
     // lower limits, plus one so it can be signed.
-    unsigned MinBW = std::max(R.getLower().getSignificantBits(),
-                              R.getUpper().getSignificantBits()) +
-                     1;
+    unsigned MinBW = R.getMinSignedBits() + 1;
     LLVM_DEBUG(dbgs() << "F2I: MinBitwidth=" << MinBW << ", R: " << R << "\n");
 
     // If we've run off the realms of the exactly representable integers,
@@ -388,8 +386,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       } else if (MinBW <= 64) {
         Ty = Type::getInt64Ty(*Ctx);
       } else {
-        LLVM_DEBUG(dbgs() << "F2I: Value requires more than bits to represent "
-                             "than the target supports!\n");
+        LLVM_DEBUG(dbgs() << "F2I: Value requires more bits to represent than "
+                             "the target supports!\n");
         continue;
       }
     }
