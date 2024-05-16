@@ -91,11 +91,15 @@ class DebuggerAPITestCase(TestBase):
         # Test the local property again, is it set to new_cache_line_size?
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
 
+    @expectedFailureAll(
+        hostoslist=["windows"],
+        remote=True,
+        bugnumber="github.com/llvm/llvm-project/issues/92419",
+    )
     def test_CreateTarget_platform(self):
         exe = self.getBuildArtifact("a.out")
         self.yaml2obj("elf.yaml", exe)
         error = lldb.SBError()
-        self.dbg.SetSelectedPlatform(lldb.SBPlatform("remote-linux"))
         target1 = self.dbg.CreateTarget(exe, None, "remote-linux", False, error)
         self.assertSuccess(error)
         platform1 = target1.GetPlatform()
