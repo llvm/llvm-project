@@ -2312,56 +2312,14 @@ void DAGTypeLegalizer::SplitVecRes_MCOMPRESS(SDNode *N, SDValue &Lo,
   // This is not "trivial", as there is a dependency between the two subvectors.
   // Depending on the number of 1s in the mask, the elements from the Hi vector
   // need to be moved to the Lo vector. So we just perform this as one "big"
-  // operation (analogously to the default MCOMPRESS expand implementation), by
-  // writing to memory and then loading the Lo and Hi vectors from that. This
-  // gets rid of MCOMPRESS and all other operands can be legalized later.
+  // operation and then extract the Lo and Hi vectors from that. This gets rid
+  // of MCOMPRESS and all other operands can be legalized later.
+  SDValue Compressed = TLI.expandMCOMPRESS(N, DAG);
+
   SDLoc DL(N);
-  SDValue Vec = N->getOperand(0);
-  SDValue Mask = N->getOperand(1);
-
-  EVT VecVT = Vec.getValueType();
-  EVT SubVecVT = VecVT.getHalfNumVectorElementsVT(*DAG.getContext());
-  EVT ScalarVT = VecVT.getScalarType();
-  EVT MaskScalarVT = Mask.getValueType().getScalarType();
-
-  // TODO: This code is duplicated here and in LegalizeVectorOps.
-  SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
-  SDValue Chain = DAG.getEntryNode();
-  SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
-
-  unsigned NumElms = VecVT.getVectorNumElements();
-  // Skip element zero, as we always copy this to the output vector.
-  for (unsigned I = 0; I < NumElms; I++) {
-    SDValue Idx = DAG.getVectorIdxConstant(I, DL);
-
-    SDValue ValI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec, Idx);
-    SDValue OutPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
-    Chain = DAG.getStore(
-        Chain, DL, ValI, OutPtr,
-        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
-
-    // Skip this for last element.
-    if (I < NumElms - 1) {
-      // Get the mask value and add it to the current output position. This
-      // either increments by 1 if MaskI is true or adds 0 otherwise.
-      SDValue MaskI =
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskScalarVT, Mask, Idx);
-      MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
-      MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskI);
-      OutPos = DAG.getNode(ISD::ADD, DL, MVT::i32, OutPos, MaskI);
-    }
-  }
-
-  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
-  SDValue HiPtr = TLI.getVectorElementPointer(
-      DAG, StackPtr, VecVT, DAG.getConstant(NumElms / 2, DL, MVT::i32));
-
-  Lo = DAG.getLoad(SubVecVT, DL, Chain, StackPtr, PtrInfo);
-  Hi = DAG.getLoad(
-      SubVecVT, DL, Chain, HiPtr,
-      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+  EVT SubVecVT = Compressed.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
+  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed, DAG.getVectorIdxConstant(0, DL));
+  Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed, DAG.getVectorIdxConstant(SubVecVT.getVectorNumElements(), DL));
 }
 
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {

@@ -11226,6 +11226,53 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                      MachinePointerInfo::getUnknownStack(MF));
 }
 
+SDValue TargetLowering::expandMCOMPRESS(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDValue Vec = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Vec.getValueType();
+  EVT ScalarVT = VecVT.getScalarType();
+  EVT MaskScalarVT = Mask.getValueType().getScalarType();
+
+  if (VecVT.isScalableVector())
+    report_fatal_error(
+        "Expanding masked_compress for scalable vectors is undefined.");
+
+  SDValue StackPtr = DAG.CreateStackTemporary(VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));
+  SDValue Chain = DAG.getEntryNode();
+  SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned NumElms = VecVT.getVectorNumElements();
+  // Skip element zero, as we always copy this to the output vector.
+  for (unsigned I = 0; I < NumElms; I++) {
+    SDValue Idx = DAG.getVectorIdxConstant(I, DL);
+
+    SDValue ValI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec, Idx);
+    SDValue OutPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
+    Chain = DAG.getStore(
+        Chain, DL, ValI, OutPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+
+    // Skip this for last element.
+    if (I < NumElms - 1) {
+      // Get the mask value and add it to the current output position. This
+      // either increments by 1 if MaskI is true or adds 0 otherwise.
+      SDValue MaskI =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskScalarVT, Mask, Idx);
+      MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
+      MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskI);
+      OutPos = DAG.getNode(ISD::ADD, DL, MVT::i32, OutPos, MaskI);
+    }
+  }
+
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+  return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+}
+
 bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
                                            SDValue &LHS, SDValue &RHS,
                                            SDValue &CC, SDValue Mask,

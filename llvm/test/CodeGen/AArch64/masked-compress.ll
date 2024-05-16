@@ -154,57 +154,50 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-LABEL: test_compress_large:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ; kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    umov.b w9, v2[0]
-; CHECK-NEXT:    umov.b w10, v2[1]
+; CHECK-NEXT:    umov.b w8, v2[0]
+; CHECK-NEXT:    umov.b w9, v2[1]
 ; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    umov.b w11, v2[2]
+; CHECK-NEXT:    umov.b w10, v2[2]
 ; CHECK-NEXT:    umov.b w13, v2[3]
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov x11, sp
 ; CHECK-NEXT:    umov.b w14, v2[4]
 ; CHECK-NEXT:    str s0, [sp]
-; CHECK-NEXT:    bfi x12, x9, #2, #1
-; CHECK-NEXT:    and w10, w10, #0x1
 ; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    add w9, w9, w10
-; CHECK-NEXT:    and w10, w11, #0x1
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr x11, x8, x9, lsl #2
-; CHECK-NEXT:    add w9, w9, w10
+; CHECK-NEXT:    and w15, w8, #0x1
+; CHECK-NEXT:    bfi x12, x8, #2, #1
+; CHECK-NEXT:    and w8, w10, #0x1
+; CHECK-NEXT:    add w9, w15, w9
 ; CHECK-NEXT:    umov.b w10, v2[5]
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    orr x15, x11, x9, lsl #2
+; CHECK-NEXT:    umov.b w9, v2[6]
 ; CHECK-NEXT:    st1.s { v0 }[1], [x12]
-; CHECK-NEXT:    add w13, w9, w13
-; CHECK-NEXT:    orr x9, x8, x9, lsl #2
-; CHECK-NEXT:    st1.s { v0 }[2], [x11]
-; CHECK-NEXT:    umov.b w11, v2[6]
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    bfi x12, x13, #2, #3
-; CHECK-NEXT:    st1.s { v0 }[3], [x9]
-; CHECK-NEXT:    add w13, w13, w14
-; CHECK-NEXT:    and w9, w10, #0x1
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    add w9, w13, w9
-; CHECK-NEXT:    mov x14, sp
-; CHECK-NEXT:    str s1, [x12]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    bfi x10, x9, #2, #3
-; CHECK-NEXT:    bfi x14, x13, #2, #3
-; CHECK-NEXT:    add w9, w9, w11
-; CHECK-NEXT:    bfi x8, x9, #2, #3
-; CHECK-NEXT:    st1.s { v1 }[1], [x14]
-; CHECK-NEXT:    st1.s { v1 }[2], [x10]
-; CHECK-NEXT:    st1.s { v1 }[3], [x8]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NEXT:    add x12, x11, w8, uxtw #2
+; CHECK-NEXT:    and w13, w13, #0x1
+; CHECK-NEXT:    st1.s { v0 }[2], [x15]
+; CHECK-NEXT:    add w8, w8, w13
+; CHECK-NEXT:    st1.s { v0 }[3], [x12]
+; CHECK-NEXT:    and w12, w14, #0x1
+; CHECK-NEXT:    and w10, w10, #0x1
+; CHECK-NEXT:    add w12, w8, w12
+; CHECK-NEXT:    and w9, w9, #0x1
+; CHECK-NEXT:    and x8, x8, #0x7
+; CHECK-NEXT:    add w10, w12, w10
+; CHECK-NEXT:    and x12, x12, #0x7
+; CHECK-NEXT:    str s1, [x11, x8, lsl #2]
+; CHECK-NEXT:    add w9, w10, w9
+; CHECK-NEXT:    and x10, x10, #0x7
+; CHECK-NEXT:    add x12, x11, x12, lsl #2
+; CHECK-NEXT:    and x9, x9, #0x7
+; CHECK-NEXT:    add x8, x11, x10, lsl #2
+; CHECK-NEXT:    add x9, x11, x9, lsl #2
+; CHECK-NEXT:    st1.s { v1 }[1], [x12]
+; CHECK-NEXT:    st1.s { v1 }[2], [x8]
+; CHECK-NEXT:    st1.s { v1 }[3], [x9]
+; CHECK-NEXT:    ldp q0, q1, [sp], #32
 ; CHECK-NEXT:    ret
     %out = call <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> %vec, <8 x i1> %mask)
     ret <8 x i32> %out
