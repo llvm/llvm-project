@@ -173,18 +173,16 @@ private:
 
   template <class _Ref, class _Val, class _Allocator>
   struct __recursive_awaiter {
-    generator<_Ref, _Val, _Allocator> __gen;
-
     _LIBCPP_HIDE_FROM_ABI explicit __recursive_awaiter(generator<_Ref, _Val, _Allocator>&& __gen) noexcept
-        : __gen{std::move(__gen)} {}
+        : __gen_{std::move(__gen)} {}
 
-    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool await_ready() noexcept { return !__gen.__coroutine_; }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool await_ready() noexcept { return !__gen_.__coroutine_; }
 
     template <class _Promise>
     _LIBCPP_HIDE_FROM_ABI coroutine_handle<__gen_promise_base>
     await_suspend(coroutine_handle<_Promise> __current) noexcept {
       // Stores a `__recursive_data` in the promise object associated with `__gen`
-      auto __recursive = coroutine_handle<__gen_promise_base>::from_address(__gen.__coroutine_.address());
+      auto __recursive = coroutine_handle<__gen_promise_base>::from_address(__gen_.__coroutine_.address());
       __recursive.promise().__set_recursive_tag();
       auto&& __recursive_data = __recursive.promise().__get_recursive_data();
 
@@ -208,12 +206,15 @@ private:
     }
 
     _LIBCPP_HIDE_FROM_ABI void await_resume() {
-      auto __recursive        = coroutine_handle<__gen_promise_base>::from_address(__gen.__coroutine_.address());
+      auto __recursive        = coroutine_handle<__gen_promise_base>::from_address(__gen_.__coroutine_.address());
       auto&& __recursive_data = __recursive.promise().__get_recursive_data();
       if (__recursive_data.__exception) {
         std::rethrow_exception(std::move(__recursive_data.__exception));
       }
     }
+
+  private:
+    generator<_Ref, _Val, _Allocator> __gen_;
   };
 
 public:
@@ -275,11 +276,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI void return_void() const noexcept {}
 
   _LIBCPP_HIDE_FROM_ABI void unhandled_exception() {
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     if (__is_root()) {
       throw;
     } else {
       __get_recursive_data().__exception = std::current_exception();
     }
+#  endif
   }
 };
 
