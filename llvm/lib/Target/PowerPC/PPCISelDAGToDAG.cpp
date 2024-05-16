@@ -6143,11 +6143,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
            " ELF/AIX or 32-bit AIX in the following.");
 
     // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode,
-    // 64-bit medium (ELF-only), or large (ELF and AIX) code model code that
-    // does not contain TOC data symbols.
-    // We generate two instructions as described below. The first source
-    // operand is a symbol reference. If it must be referenced via the TOC
-    // according to Subtarget, we generate:
+    // 64-bit medium (ELF-only), or 64-bit large (ELF and AIX) code model code
+    // that does not contain TOC data symbols. We generate two instructions as
+    // described below. The first source operand is a symbol reference. If it
+    // must be referenced via the TOC according to Subtarget, we generate:
     // [32-bit AIX]
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
     // [64-bit ELF/AIX]
