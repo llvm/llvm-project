@@ -1157,7 +1157,7 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
     }
   }
 
-  return PreservedGVs;
+  return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
 } // namespace
