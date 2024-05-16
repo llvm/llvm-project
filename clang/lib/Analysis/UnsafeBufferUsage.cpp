@@ -421,15 +421,15 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //  - call both from Sema and from here
 
   if (const auto *BaseDRE =
-      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts())) {
+          dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts())) {
     if (!BaseDRE->getDecl())
       return false;
     if (const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseDRE->getDecl()->getType())) {
+            BaseDRE->getDecl()->getType())) {
       if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
         const APInt ArrIdx = IdxLit->getValue();
-        // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
-        // bug
+        // FIXME: ArrIdx.isNegative() we could immediately emit an error as
+        // that's a bug
         if (ArrIdx.isNonNegative() &&
             ArrIdx.getLimitedValue() < CATy->getLimitedSize())
           return true;
@@ -438,16 +438,16 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   }
 
   if (const auto *BaseSL =
-      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts())) {
-    if (const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseSL->getType())) {
+          dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts())) {
+    if (const auto *CATy =
+            Finder->getASTContext().getAsConstantArrayType(BaseSL->getType())) {
       if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-          const APInt ArrIdx = IdxLit->getValue();
-          // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
-          // bug
-          if (ArrIdx.isNonNegative() &&
-              ArrIdx.getLimitedValue() < CATy->getLimitedSize())
-            return true;
+        const APInt ArrIdx = IdxLit->getValue();
+        // FIXME: ArrIdx.isNegative() we could immediately emit an error as
+        // that's a bug
+        if (ArrIdx.isNonNegative() &&
+            ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+          return true;
       }
     }
   }
@@ -459,13 +459,12 @@ AST_MATCHER(BinaryOperator, isSafePtrArithmetic) {
   if (Node.getOpcode() != BinaryOperatorKind::BO_Add)
     return false;
 
-  const auto *LHSDRE =
-      dyn_cast<DeclRefExpr>(Node.getLHS()->IgnoreImpCasts());
+  const auto *LHSDRE = dyn_cast<DeclRefExpr>(Node.getLHS()->IgnoreImpCasts());
   if (!LHSDRE)
     return false;
 
   const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-    LHSDRE->getDecl()->getType());
+      LHSDRE->getDecl()->getType());
   if (!CATy)
     return false;
 
@@ -731,7 +730,8 @@ public:
               hasLHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
               hasRHS(HasIntegerType));
 
-    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight), unless(isSafePtrArithmetic()))
+    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight),
+                               unless(isSafePtrArithmetic()))
                     .bind(PointerArithmeticTag));
   }
 
