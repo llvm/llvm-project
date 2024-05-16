@@ -1703,6 +1703,66 @@ struct DropUnitDimFromElementwiseOps final
   }
 };
 
+/// Drops unit non scalable dimensions inside a broadcastOp which are shared
+/// among source and result with shape_casts.
+/// The newly inserted shape_cast Ops fold (before Op) and then
+/// restore the unit dim after Op. Source type is required to be a vector.
+///
+/// Ex:
+/// ```
+///  %bc = vector.broadcast %arg0 : vector<1x4xf32> to vector<1x3x1x4xf32>
+///  %cast = vector.shape_cast %bc : vector<1x3x1x4xf32> to vector<1x3x4xf32>
+/// ```
+///
+/// Gets converted to:
+///
+/// ```
+///  %sc_arg = vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
+///  %bc = vector.broadcast %arg : vector<4xf32> to vector<1x3x4xf32>
+///  %cast_new = vector.shape_cast %bc : vector<1x3x4xf32> to
+///    vector<1x3x1x4xf32>
+///  %cast = vector.shape_cast %cast_new : vector<1x3x1x4xf32> to
+///    vector<1x3x4xf32>
+/// ```
+/// %cast_new and %cast can be folded away.
+struct DropUnitDimFromBroadcastOp final
+    : public OpRewritePattern<vector::BroadcastOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcVT = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    if (!srcVT)
+      return failure();
+    auto resVT = broadcastOp.getResultVectorType();
+    VectorType newSrcVT = srcVT;
+    VectorType newResVT = resVT;
+    auto broadcastedUnitDims = broadcastOp.computeBroadcastedUnitDims();
+    // Reversing allows us to remove dims from the back without keeping track of
+    // removed dimensions.
+    for (const auto &dim : llvm::enumerate(llvm::reverse(srcVT.getShape()))) {
+      if (dim.value() == 1 &&
+          !srcVT.getScalableDims()[srcVT.getRank() - dim.index() - 1] &&
+          !broadcastedUnitDims.contains(srcVT.getRank() - dim.index() - 1)) {
+        newSrcVT = VectorType::Builder(newSrcVT).dropDim(srcVT.getRank() -
+                                                         dim.index() - 1);
+        newResVT = VectorType::Builder(newResVT).dropDim(resVT.getRank() -
+                                                         dim.index() - 1);
+      }
+    }
+
+    if (newSrcVT == srcVT)
+      return failure();
+    auto loc = broadcastOp->getLoc();
+    auto newSource = rewriter.create<vector::ShapeCastOp>(
+        loc, newSrcVT, broadcastOp.getSource());
+    auto newOp = rewriter.create<vector::BroadcastOp>(loc, newResVT, newSource);
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(broadcastOp, resVT,
+                                             newOp.getResult());
+    return success();
+  }
+};
+
 /// Pattern to eliminate redundant zero-constants added to reduction operands.
 /// It's enough for there to be one initial zero value, so we can eliminate the
 /// extra ones that feed into `vector.reduction <add>`. These get created by the
@@ -1827,8 +1887,8 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<DropUnitDimFromElementwiseOps, ShapeCastOpFolder>(
-      patterns.getContext(), benefit);
+  patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimFromBroadcastOp,
+               ShapeCastOpFolder>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
