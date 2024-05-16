@@ -148,9 +148,14 @@ static void addCanonicalizerPassWithoutRegionSimplification(
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
-inline void addCfgConversionPass(mlir::PassManager &pm) {
-  addNestedPassToAllTopLevelOperationsConditionally(
-      pm, disableCfgConversion, fir::createCFGConversion);
+inline void addCfgConversionPass(
+    mlir::PassManager &pm, const MLIRToLLVMPassPipelineConfig &config) {
+  if (config.NSWOnLoopVarInc)
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
+  else
+    addNestedPassToAllTopLevelOperationsConditionally(
+        pm, disableCfgConversion, fir::createCFGConversion);
 }
 
 inline void addAVC(
@@ -290,7 +295,7 @@ inline void createDefaultFIROptimizerPassPipeline(
     pm.addPass(fir::createAliasTagsPass());
 
   // convert control flow to CFG form
-  fir::addCfgConversionPass(pm);
+  fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
