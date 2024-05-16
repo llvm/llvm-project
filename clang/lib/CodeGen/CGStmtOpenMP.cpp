@@ -5187,6 +5187,8 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
   llvm::Function *OutlinedFn = CGM.getOpenMPRuntime().emitTaskOutlinedFunction(
       S, *I, *PartId, *TaskT, S.getDirectiveKind(), CodeGen, /*Tied=*/true,
       Data.NumberOfParts);
+  llvm::errs() << "LLVMDEBUG::Outlined Task Fn is \n";
+  OutlinedFn->dump();
   llvm::APInt TrueOrFalse(32, S.hasClausesOfKind<OMPNowaitClause>() ? 1 : 0);
   IntegerLiteral IfCond(getContext(), TrueOrFalse,
                         getContext().getIntTypeForBitwidth(32, /*Signed=*/0),

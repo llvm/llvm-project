@@ -1049,6 +1049,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
       Builder.CreateAlloca(OpenMPIRBuilder::KernelArgs, nullptr, "kernel_args");
   Builder.restoreIP(Loc.IP);
 
+  llvm::errs() << "LLVMDEBUG::KernelArgs.size() in emitTargetKernel = "
+               << KernelArgs.size() << "\n";
+
   for (unsigned I = 0, Size = KernelArgs.size(); I != Size; ++I) {
     llvm::Value *Arg =
         Builder.CreateStructGEP(OpenMPIRBuilder::KernelArgs, KernelArgsPtr, I);
@@ -1757,7 +1760,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
-
+    llvm::errs() << "LLVMDEBUG::StaleCI is \n";
+    StaleCI->dump();
+    StaleCI->getParent()->getParent()->dump();
     // HasShareds is true if any variables are captured in the outlined region,
     // false otherwise.
     bool HasShareds = StaleCI->arg_size() > 1;
@@ -5234,7 +5239,46 @@ static void emitTargetOutlinedFunction(
   OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction, true,
                                       OutlinedFn, OutlinedFnID);
 }
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
+    IRBuilderBase &Builder, Function *OutlinedFn, Value *OutlinedFnID,
+    EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
+    Value *DeviceID, Value *RTLoc) {
 
+  // BasicBlock *TargetTaskExitBB = splitBB(Builder, /*CreateBranch=*/true,
+  // "target.task.exit");
+  BasicBlock *TargetTaskBodyBB =
+      splitBB(Builder, /*CreateBranch=*/true, "target.task.body");
+  BasicBlock *TargetTaskAllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "target.task.alloca");
+
+  InsertPointTy TargetTaskAllocaIP =
+      InsertPointTy(TargetTaskAllocaBB, TargetTaskAllocaBB->begin());
+  InsertPointTy TargetTaskBodyIP =
+      InsertPointTy(TargetTaskBodyBB, TargetTaskBodyBB->begin());
+
+  {
+    // debug prints block
+    llvm::errs() << "Insert block before emitKernelLaunch in emittargettask\n";
+    Builder.GetInsertBlock()->dump();
+    llvm::errs()
+        << "LLVMDEBUG:: module before emitKernelLaunch in emittargettask is \n";
+    Builder.GetInsertBlock()->getParent()->getParent()->dump();
+  }
+  Builder.restoreIP(TargetTaskBodyIP);
+  Builder.restoreIP(emitKernelLaunch(Builder, OutlinedFn, OutlinedFnID,
+                                     EmitTargetCallFallbackCB, Args, DeviceID,
+                                     RTLoc, TargetTaskAllocaIP));
+  {
+    // debug prints block
+    llvm::errs()
+        << "Insert block after emitKernelLaunch in emittargettask is \n";
+    Builder.GetInsertBlock()->dump();
+    llvm::errs()
+        << "LLVMDEBUG:: module after emitKernelLaunch in emittargettask is \n";
+    Builder.GetInsertBlock()->getParent()->getParent()->dump();
+  }
+  return Builder.saveIP();
+}
 static void emitTargetCall(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     OpenMPIRBuilder::InsertPointTy AllocaIP, Function *OutlinedFn,
@@ -5288,14 +5332,44 @@ static void emitTargetCall(
   //       Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
   //       DeviceID, RTLoc, AllocaIP));
   // else {
-  //     create task
-  //     make task call emitkernellaunch.
-  //     make task call
+  //   codegen_callback = codegen callback to create task logic which should be
+  //   received from openmptollvmirtranslation + emitkernellaunch
+  //   create_task(codegen_callback)
+  //   make task call
   // }
   //
-  Builder.restoreIP(OMPBuilder.emitKernelLaunch(
-      Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
-      DeviceID, RTLoc, AllocaIP));
+  {
+    // Debug block
+    llvm::errs() << "Outlined Target Func is \n";
+    OutlinedFn->dump();
+    llvm::errs() << "CurrentInsertBlock is \n";
+    if (Builder.GetInsertBlock()) {
+      Builder.GetInsertBlock()->dump();
+      llvm::errs() << "Builder.GetInsertBlock = " << Builder.GetInsertBlock()
+                   << "\n";
+    } else
+      llvm::errs() << "CurrentInsertBlock not set\n";
+
+    OpenMPIRBuilder::InsertPointTy IP = Builder.saveIP();
+    if (IP.getBlock() == nullptr) {
+      llvm::errs() << "InsertPoint block is null\n";
+    } else {
+      llvm::errs() << "IP.getBlock() = " << IP.getBlock() << "\n";
+    }
+    llvm::errs() << "AllocaIP = \n";
+    llvm::errs() << "Block:\n";
+    AllocaIP.getBlock()->dump();
+    llvm::errs() << "Point:\n";
+    AllocaIP.getPoint()->dump();
+  }
+  if (NewOMPIRBuilderTargetCodegen) {
+    OMPBuilder.emitTargetTask(Builder, OutlinedFn, OutlinedFnID,
+                              EmitTargetCallFallbackCB, KArgs, DeviceID, RTLoc);
+  } else {
+    Builder.restoreIP(OMPBuilder.emitKernelLaunch(
+        Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
+        DeviceID, RTLoc, AllocaIP));
+  }
 }
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::newCreateTarget(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
@@ -5615,6 +5689,9 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     return;
 
   Builder.restoreIP(AllocaIP);
+  llvm::errs() << "LLVMDEBUG::Before emitOffloadingArrays in "
+                  "CGOpenMPRuntime.cpp::emitTargetCallKernelLaunch\n";
+  Builder.GetInsertBlock()->dump();
   // Detect if we have any capture size requiring runtime evaluation of the
   // size so that a constant array could be eventually used.
   ArrayType *PointerArrayType =

@@ -1766,7 +1766,11 @@ public:
       const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
-
+  InsertPointTy emitTargetTask(IRBuilderBase &Builder, Function *OutlinedFn,
+                               Value *OutlinedFnID,
+                               EmitFallbackCallbackTy EmitTargetCallFallbackCB,
+                               TargetKernelArgs &Args, Value *DeviceID,
+                               Value *RTLoc);
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
   /// ForEndCall, emit map types to be passed for the end of the region instead

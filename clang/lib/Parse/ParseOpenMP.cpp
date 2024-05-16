@@ -2980,11 +2980,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       {
         Sema::CompoundScopeRAII Scope(Actions);
         AssociatedStmt = ParseStatement();
-        Stmt *pdb_print = AssociatedStmt.get();
-        if (pdb_print) {
-          llvm::errs() << __FUNCTION__ << "Loc0:\n";
-          pdb_print->dump();
-        }
+        // Stmt *pdb_print = AssociatedStmt.get();
+        // if (pdb_print) {
+        //   llvm::errs() << __FUNCTION__ << "Loc0:\n";
+        //   pdb_print->dump();
+        // }
         if (AssociatedStmt.isUsable() && isOpenMPLoopDirective(DKind) &&
             getLangOpts().OpenMPIRBuilder)
           AssociatedStmt =
@@ -2992,8 +2992,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
       AssociatedStmt =
           Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
-      llvm::errs() << __FUNCTION__ << "Loc1:\n";
-      AssociatedStmt.get()->dump();
+      // llvm::errs() << __FUNCTION__ << "Loc1:\n";
+      // AssociatedStmt.get()->dump();
     } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
                DKind == OMPD_target_exit_data) {
       Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());

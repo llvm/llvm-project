@@ -3135,6 +3135,12 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
   SourceLocation Loc = S.getBeginLoc();
   assert(CD->hasBody() && "missing CapturedDecl body");
+  llvm::errs() << "LLVMDEBUG:: In GenerateCapturedStmtFunction\n";
+  if (Builder.GetInsertBlock()) {
+    llvm::errs()
+        << "LLVMDEBUG:: In GenerateCapturedStmtFunction, InsertBlock is \n";
+    Builder.GetInsertBlock()->dump();
+  }
 
   // Build the argument list.
   ASTContext &Ctx = CGM.getContext();
@@ -3156,6 +3162,13 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   // Generate the function.
   StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, CD->getLocation(),
                 CD->getBody()->getBeginLoc());
+  llvm::errs()
+      << "LLVMDEBUG:: In GenerateCapturedStmtFunction: After StartFunction\n";
+  if (Builder.GetInsertBlock()) {
+    llvm::errs()
+        << "LLVMDEBUG:: In GenerateCapturedStmtFunction, Function is \n";
+    Builder.GetInsertBlock()->getParent()->dump();
+  }
   // Set the context parameter in CapturedStmtInfo.
   Address DeclPtr = GetAddrOfLocalVar(CD->getContextParam());
   CapturedStmtInfo->setContextValue(Builder.CreateLoad(DeclPtr));
@@ -3181,7 +3194,21 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   }
 
   PGO.assignRegionCounters(GlobalDecl(CD), F);
+  llvm::errs()
+      << "LLVMDEBUG:: In GenerateCapturedStmtFunction: Before EmitBody\n";
+  if (Builder.GetInsertBlock()) {
+    llvm::errs()
+        << "LLVMDEBUG:: In GenerateCapturedStmtFunction, Function is \n";
+    Builder.GetInsertBlock()->getParent()->dump();
+  }
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
+  llvm::errs()
+      << "LLVMDEBUG:: In GenerateCapturedStmtFunction: After EmitBody\n";
+  if (Builder.GetInsertBlock()) {
+    llvm::errs()
+        << "LLVMDEBUG:: In GenerateCapturedStmtFunction, Function is \n";
+    Builder.GetInsertBlock()->getParent()->dump();
+  }
   FinishFunction(CD->getBodyRBrace());
 
   return F;
