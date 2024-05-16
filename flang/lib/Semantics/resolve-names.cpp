@@ -5013,8 +5013,7 @@ bool DeclarationVisitor::HasCycle(
     if (procsInCycle.count(*interface) > 0) {
       for (const auto &procInCycle : procsInCycle) {
         Say(procInCycle->name(),
-            "The interface for procedure '%s' is recursively "
-            "defined"_err_en_US,
+            "The interface for procedure '%s' is recursively defined"_err_en_US,
             procInCycle->name());
         context().SetError(*procInCycle);
       }
