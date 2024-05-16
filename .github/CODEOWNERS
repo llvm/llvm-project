@@ -132,7 +132,7 @@ clang/test/AST/Interp/ @tbaederr
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith
+/utils/bazel/ @rupprecht
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida
