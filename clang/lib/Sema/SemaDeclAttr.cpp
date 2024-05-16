@@ -2713,11 +2713,6 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  if (S.getLangOpts().HLSL && IsStrict) {
-    S.Diag(AL.getStrictLoc(), diag::warn_availability_hlsl_strict_not_supported);
-    return;
-  }
-
   int PriorityModifier = AL.isPragmaClangAttribute()
                              ? Sema::AP_PragmaClangAttribute
                              : Sema::AP_Explicit;

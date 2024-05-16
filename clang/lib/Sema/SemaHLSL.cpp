@@ -309,7 +309,8 @@ namespace {
 /// and of all exported functions, and any functions that are refrenced
 /// from this AST. In other words, any function that are reachable from
 /// the entry points.
-class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailability> {
+class DiagnoseHLSLAvailability
+    : public RecursiveASTVisitor<DiagnoseHLSLAvailability> {
   // HEKOTAS this is probably not needed
   // typedef RecursiveASTVisitor<DiagnoseHLSLAvailability> Base;
 
@@ -339,7 +340,14 @@ class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailabi
   llvm::Triple::EnvironmentType CurrentShaderEnvironment;
   unsigned CurrentShaderStageBit;
 
+  // True if scanning a function that was already scanned in a different
+  // shader stage context, and therefore we should not report issues that 
+  // depend only on shader model version because they would be duplicate.
+  bool ReportOnlyShaderStageIssues;
+
   void SetShaderStageContext(HLSLShaderAttr::ShaderType ShaderType) {
+    assert((((unsigned)1) << (unsigned)ShaderType) != 0 &&
+           "ShaderType is too big for this bitmap");
     CurrentShaderEnvironment = HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
     CurrentShaderStageBit = (1 << ShaderType);
   }
@@ -362,7 +370,8 @@ class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailabi
                              SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
-  bool WasAlreadyScanned(const FunctionDecl *FD);
+  bool WasAlreadyScannedInCurrentShaderStage(const FunctionDecl *FD,
+                                             bool *WasNeverScanned = nullptr);
   void AddToScannedFunctions(const FunctionDecl *FD);
 
 public:
@@ -388,9 +397,13 @@ public:
 };
 
 // Returns true if the function has already been scanned in the current
-// shader environment
-bool DiagnoseHLSLAvailability::WasAlreadyScanned(const FunctionDecl *FD) {
+// shader environment. WasNeverScanned will be set to true if the function
+// has never been scanned before for any shader environment.
+bool DiagnoseHLSLAvailability::WasAlreadyScannedInCurrentShaderStage(
+    const FunctionDecl *FD, bool *WasNeverScanned) {
   const unsigned &ScannedStages = ScannedDecls.getOrInsertDefault(FD);
+  if (WasNeverScanned)
+    *WasNeverScanned = (ScannedStages == 0);
   return ScannedStages & CurrentShaderStageBit;
 }
 
@@ -400,13 +413,15 @@ void DiagnoseHLSLAvailability::AddToScannedFunctions(const FunctionDecl *FD) {
   ScannedStages |= CurrentShaderStageBit;
 }
 
-void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr) {
-  assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) && "expected DeclRefExpr or MemberExpr");
+void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
+                                                         Expr *RefExpr) {
+  assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
+         "expected DeclRefExpr or MemberExpr");
 
   // has a definition -> add to stack to be scanned
   const FunctionDecl *FDWithBody = nullptr;
   if (FD->hasBody(FDWithBody)) {
-    if (!WasAlreadyScanned(FDWithBody))
+    if (!WasAlreadyScannedInCurrentShaderStage(FDWithBody))
       DeclsToScan.push_back(FDWithBody);
     return;
   }
@@ -418,7 +433,8 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr 
         FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
 }
 
-void DiagnoseHLSLAvailability::RunOnTranslationUnit(const TranslationUnitDecl *TU) {
+void DiagnoseHLSLAvailability::RunOnTranslationUnit(
+    const TranslationUnitDecl *TU) {
   // Iterate over all shader entry functions and library exports, and for those
   // that have a body (definiton), run diag scan on each, setting appropriate
   // shader environment context based on whether it is a shader entry function
@@ -452,14 +468,18 @@ void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
 
   while (!DeclsToScan.empty()) {
     // Take one decl from the stack and check it by traversing its AST.
-    // For any CallExpr found during the traversal add it's callee to the top of the stack 
-    // to be processed next. Functions already processed are stored in ScannedDecls.
+    // For any CallExpr found during the traversal add it's callee to the top of
+    // the stack to be processed next. Functions already processed are stored in
+    // ScannedDecls.
     const FunctionDecl *FD = DeclsToScan.back();
     DeclsToScan.pop_back();
 
     // Decl was already scanned
-    if (WasAlreadyScanned(FD))
+    bool WasNeverScanned;
+    if (WasAlreadyScannedInCurrentShaderStage(FD, &WasNeverScanned))
       continue;
+
+    ReportOnlyShaderStageIssues = !WasNeverScanned;
 
     AddToScannedFunctions(FD);
 
@@ -470,7 +490,8 @@ void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
   }
 }
 
-bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA) {
+bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(
+    const AvailabilityAttr *AA) {
   IdentifierInfo *IIEnvironment = AA->getEnvironment();
   if (!IIEnvironment)
     return true;
@@ -485,7 +506,8 @@ bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(const AvailabilityAt
   return CurrentEnv == AttrEnv;
 }
 
-const AvailabilityAttr *DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
+const AvailabilityAttr *
+DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
   AvailabilityAttr const *PartialMatch = nullptr;
   // Check each AvailabilityAttr to find the one for this platform.
   // For multiple attributes with the same platform try to find one for this
@@ -493,7 +515,8 @@ const AvailabilityAttr *DiagnoseHLSLAvailability::FindAvailabilityAttr(const Dec
   for (const auto *A : D->attrs()) {
     if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
       StringRef AttrPlatform = Avail->getPlatform()->getName();
-      StringRef TargetPlatform = SemaRef.getASTContext().getTargetInfo().getPlatformName();
+      StringRef TargetPlatform =
+          SemaRef.getASTContext().getTargetInfo().getPlatformName();
 
       // Match the platform name.
       if (AttrPlatform == TargetPlatform) {
@@ -512,9 +535,13 @@ const AvailabilityAttr *DiagnoseHLSLAvailability::FindAvailabilityAttr(const Dec
 void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
                                                      const AvailabilityAttr *AA,
                                                      SourceRange Range) {
+  if (ReportOnlyShaderStageIssues && !AA->getEnvironment())
+    return;
+
   bool EnvironmentMatches = HasMatchingEnvironmentOrNone(AA);
   VersionTuple Introduced = AA->getIntroduced();
-  VersionTuple TargetVersion = SemaRef.Context.getTargetInfo().getPlatformMinVersion();
+  VersionTuple TargetVersion =
+      SemaRef.Context.getTargetInfo().getPlatformMinVersion();
 
   if (TargetVersion >= Introduced && EnvironmentMatches)
     return;
