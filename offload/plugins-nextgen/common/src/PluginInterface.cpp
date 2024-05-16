@@ -1618,11 +1618,6 @@ int32_t GenericPluginTy::init_device(int32_t DeviceId) {
 
 int32_t GenericPluginTy::number_of_devices() { return getNumDevices(); }
 
-int64_t GenericPluginTy::init_requires(int64_t RequiresFlags) {
-  setRequiresFlag(RequiresFlags);
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
                                              int32_t DstDeviceId) {
   return isDataExchangable(SrcDeviceId, DstDeviceId);
@@ -1964,11 +1959,6 @@ int32_t GenericPluginTy::set_device_offset(int32_t DeviceIdOffset) {
 }
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
-  // Automatic zero-copy only applies to programs that did
-  // not request unified_shared_memory and are deployed on an
-  // APU with XNACK enabled.
-  if (getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    return false;
   return getDevice(DeviceId).useAutoZeroCopy();
 }
 
