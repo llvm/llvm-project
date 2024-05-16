@@ -136,6 +136,8 @@ include(LibomptargetGetDependencies)
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
+check_cxx_compiler_flag(-Werror=global-constructors OFFLOAD_HAVE_WERROR_CTOR)
+
 # LLVM source tree is required at build time for libomptarget
 if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
@@ -206,6 +208,9 @@ endif()
 set(offload_compile_flags -fno-exceptions)
 if(NOT LLVM_ENABLE_RTTI)
   set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
+endif()
+if(OFFLOAD_HAVE_WERROR_CTOR)
+  list(APPEND offload_compile_flags -Werror=global-constructors)
 endif()
 
 # TODO: Consider enabling LTO by default if supported.
