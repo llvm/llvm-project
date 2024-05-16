@@ -2272,3 +2272,22 @@ func.func @undefined_privatizer(%arg0: !llvm.ptr) {
     }) : (!llvm.ptr) -> ()
   return
 }
+
+// -----
+
+omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+func.func @byref_in_private(%arg0: index) {
+  // expected-error @below {{private clause cannot have byref attributes}}
+  omp.parallel private(byref @var1.privatizer %arg0 -> %arg2 : index) {
+    omp.terminator
+  }
+
+  return
+}
