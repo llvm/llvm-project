@@ -137,3 +137,61 @@ namespace ttp_defaults {
   // old-error@-2 {{template template argument has different template parameters}}
   // old-error@-3 {{explicit instantiation of 'f' does not refer to a function template}}
 } // namespace ttp_defaults
+
+namespace ttp_only {
+  template <template <class...    > class TT1> struct A      { static constexpr int V = 0; };
+  // new-note@-1 2{{template is declared here}}
+  template <template <class       > class TT2> struct A<TT2> { static constexpr int V = 1; };
+  // new-error@-1 {{not more specialized than the primary template}}
+  // new-note@-2 {{partial specialization matches}}
+  template <template <class, class> class TT3> struct A<TT3> { static constexpr int V = 2; };
+  // new-error@-1 {{not more specialized than the primary template}}
+  // new-note@-2 {{partial specialization matches}}
+
+  template <class ...          > struct B;
+  template <class              > struct C;
+  template <class, class       > struct D;
+  template <class, class, class> struct E;
+
+  static_assert(A<B>::V == 0); // new-error {{ambiguous partial specializations}}
+  static_assert(A<C>::V == 1);
+  static_assert(A<D>::V == 2);
+  static_assert(A<E>::V == 0);
+} // namespace ttp_only
+
+namespace consistency {
+  template<class T> struct nondeduced { using type = T; };
+  template<class T8, class T9 = float> struct B;
+
+  namespace t1 {
+    template<class T1, class T2, class T3> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T2>>::type> {};
+
+    template<template<class> class UU1,
+             template<class> class UU2,
+             class U1, class U2>
+    struct A<UU1<U1>, UU2<U2>, typename nondeduced<UU1<U1>>::type>;
+
+    template struct A<B<int>, B<int>, B<int>>;
+  } // namespace t1
+  namespace t2 {
+    template<class T1, class T2, class T3> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T4>>::type> {};
+    // new-note@-1 {{partial specialization matches}}
+
+    template<template<class> class UU1,
+             template<class> class UU2,
+             class U1, class U2>
+    struct A<UU1<U1>, UU2<U2>, typename nondeduced<UU1<U1>>::type>;
+    // new-note@-1 {{partial specialization matches}}
+
+    template struct A<B<int>, B<int>, B<int>>;
+    // new-error@-1 {{ambiguous partial specializations}}
+  } // namespace t1
+} // namespace consistency
