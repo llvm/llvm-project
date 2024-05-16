@@ -1,5 +1,7 @@
 ; RUN: opt < %s -passes=gvn-sink -S | FileCheck %s
 
+; Test that GVNSink correctly performs the sink optimization in the presence of debug information
+
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @fun(i32 noundef %a, i32 noundef %b) #0 !dbg !10 {
 entry:
@@ -25,9 +27,9 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 ; CHECK-LABEL: if.end:
-; CHECK: [[SINK:%.*.sink]] = phi i32 [ %a, %if.then ], [ %b, %if.else ]
-; CHECK: %add = add nsw i32 [[SINK]], 1
-; CHECK: %xor = xor i32 %add, 1
+; CHECK: [[SINK:%.*sink]] = phi i32 [ {{.*}} ], [ {{.*}} ]
+; CHECK: [[ADD:%.*]] = add nsw i32 [[SINK]], 1
+; CHECK: [[XOR:%.*]] = xor i32 [[ADD]], 1
 if.end:                                           ; preds = %if.else, %if.then
   %ret.0 = phi i32 [ %xor, %if.then ], [ %xor2, %if.else ], !dbg !35
   tail call void @llvm.dbg.value(metadata i32 %ret.0, metadata !27, metadata !DIExpression()), !dbg !16
