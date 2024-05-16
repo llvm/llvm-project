@@ -19,7 +19,7 @@ class Pass;
 
 /// Populate the given list with patterns that convert from LibC to Func.
 void populateLibCToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                RewritePatternSet &patterns);
+                                          RewritePatternSet &patterns);
 
 void registerConvertLibCToLLVMInterface(DialectRegistry &registry);
 } // namespace mlir
