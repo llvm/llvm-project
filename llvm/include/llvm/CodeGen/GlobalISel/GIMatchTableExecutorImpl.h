@@ -1344,7 +1344,9 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (runCustomAction(FnID, State, OutMIs)) {
         propagateFlags();
         return true;
-      } else if (handleReject() == RejectAndGiveUp)
+      }
+
+      if (handleReject() == RejectAndGiveUp)
         return false;
       break;
     }
