@@ -26,10 +26,8 @@ void test_note_1() {
 
 void test_note_2() {
   if (setuid(getuid()) == -1) // expected-note{{Call to 'setuid' found here that removes superuser privileges}} \
-                              // expected-note{{Assuming the condition is false}} \
-                              // expected-note{{Taking false branch}} \
-                              // expected-note{{Assuming the condition is false}} \
-                              // expected-note{{Taking false branch}}
+                              // expected-note 2 {{Assuming the condition is false}} \
+                              // expected-note 2 {{Taking false branch}}
     return;
   if (setgid(getgid()) == -1) // expected-warning{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}} \
                               // expected-note{{A 'setgid(getgid())' call following a 'setuid(getuid())' call is likely to fail}} \
