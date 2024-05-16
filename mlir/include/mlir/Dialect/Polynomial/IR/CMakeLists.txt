@@ -1,6 +1,5 @@
 add_mlir_dialect(Polynomial polynomial)
 add_mlir_doc(Polynomial PolynomialDialect Dialects/ -gen-dialect-doc -dialect=polynomial)
-add_mlir_doc(Polynomial PolynomialOps Dialects/ -gen-op-doc)
 
 set(LLVM_TARGET_DEFINITIONS Polynomial.td)
 mlir_tablegen(PolynomialAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=polynomial)

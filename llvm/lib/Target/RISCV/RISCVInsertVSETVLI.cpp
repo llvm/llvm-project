@@ -48,15 +48,13 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
-/// This should never return nullptr.
+/// This will return nullptr if the virtual register is an implicit_def.
 static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
                                 const LiveIntervals *LIS) {
   assert(Reg.isVirtual());
   auto &LI = LIS->getInterval(Reg);
   SlotIndex SI = LIS->getSlotIndexes()->getInstructionIndex(MI);
-  VNInfo *VNI = LI.getVNInfoBefore(SI);
-  assert(VNI);
-  return VNI;
+  return LI.getVNInfoBefore(SI);
 }
 
 static unsigned getVLOpNum(const MachineInstr &MI) {
@@ -870,6 +868,7 @@ private:
 } // end anonymous namespace
 
 char RISCVInsertVSETVLI::ID = 0;
+char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
@@ -894,8 +893,12 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI,
            "Can't handle X0, X0 vsetvli yet");
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
-    else
-      NewInfo.setAVLRegDef(getVNInfoFromReg(AVLReg, MI, LIS), AVLReg);
+    else if (VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS))
+      NewInfo.setAVLRegDef(VNI, AVLReg);
+    else {
+      assert(MI.getOperand(1).isUndef());
+      NewInfo.setAVLIgnored();
+    }
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
@@ -966,9 +969,11 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       }
       else
         InstrInfo.setAVLImm(Imm);
+    } else if (VNInfo *VNI = getVNInfoFromReg(VLOp.getReg(), MI, LIS)) {
+      InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
     } else {
-      InstrInfo.setAVLRegDef(getVNInfoFromReg(VLOp.getReg(), MI, LIS),
-                             VLOp.getReg());
+      assert(VLOp.isUndef());
+      InstrInfo.setAVLIgnored();
     }
   } else {
     assert(isScalarExtractInstr(MI));
