@@ -80,6 +80,103 @@ exit:
   ret i64 %iv
 }
 
+; Do not compute exhaustive trip count based on FP constant folding if the
+; involved operation has nsz or one of the algebraic FMF flags (reassoc, arcp,
+; contract) set. The examples in the following are dummies and don't illustrate
+; real cases where FMF transforms could cause issues.
+
+define i64 @test_fp_nsz() {
+; CHECK-LABEL: 'test_fp_nsz'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_nsz
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ 1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %fv.next = fadd nsz double %fv, 1.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp une double %fv, 100.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_fp_reassoc() {
+; CHECK-LABEL: 'test_fp_reassoc'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_reassoc
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ 1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %fv.next = fadd reassoc double %fv, 1.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp une double %fv, 100.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_fp_arcp() {
+; CHECK-LABEL: 'test_fp_arcp'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_arcp
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ 1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %fv.next = fadd arcp double %fv, 1.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp une double %fv, 100.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_fp_contract() {
+; CHECK-LABEL: 'test_fp_contract'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_contract
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ 1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %fv.next = fadd contract double %fv, 1.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp une double %fv, 100.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
 declare void @dummy()
 declare void @use(double %i)
 declare double @llvm.sin.f64(double)

@@ -1373,6 +1373,15 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
     if (!Op1)
       return nullptr;
 
+    // If nsz or an algebraic FMF flag is set, the result of the FP operation
+    // may change due to future optimization. Don't constant fold them if
+    // non-deterministic results are not allowed.
+    if (!AllowNonDeterministic)
+      if (auto *FP = dyn_cast_or_null<FPMathOperator>(I))
+        if (FP->hasNoSignedZeros() || FP->hasAllowReassoc() ||
+            FP->hasAllowContract() || FP->hasAllowReciprocal())
+          return nullptr;
+
     // Calculate constant result.
     Constant *C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
     if (!C)
