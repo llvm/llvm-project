@@ -2001,7 +2001,7 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
     // Make sure that the exponent fits inside an "int" of size DstWidth,
     // thus avoiding any range issues that FP has not.
     unsigned BitWidth =
-        Op->getType()->getScalarType()->getPrimitiveSizeInBits();
+        Op->getType()->getScalarSizeInBits();
     if (BitWidth < DstWidth || (BitWidth == DstWidth && isa<SIToFPInst>(I2F))) {
       Type *IntTy = Op->getType()->getWithNewBitWidth(DstWidth);
       return isa<SIToFPInst>(I2F) ? B.CreateSExt(Op, IntTy)
