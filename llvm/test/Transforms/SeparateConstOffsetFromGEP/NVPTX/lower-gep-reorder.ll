@@ -80,8 +80,8 @@ define void @inboundsPossiblyNegative2(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-LABEL: define void @inboundsPossiblyNegative2(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) {
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <2 x i8>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[TMP0]], i64 -1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <2 x i8>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <2 x i8>, ptr [[TMP1]], i64 -1
 ; CHECK-NEXT:    ret void
 ;
   %in.idx1.nneg = and i64 %in.idx1, 9223372036854775807
