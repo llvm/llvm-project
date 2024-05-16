@@ -239,8 +239,8 @@ enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
 struct ArchInfo {
   VersionTuple Version;  // Architecture version, major + minor.
   ArchProfile Profile;   // Architecuture profile
-  StringRef Name;        // Human readable name, e.g. "armv8.1-a"
-  StringRef ArchFeature; // Command line feature flag, e.g. +v8a
+  StringRef Name;        // Name as supplied to -march e.g. "armv8.1-a"
+  StringRef ArchFeature; // Name as supplied to -target-feature, e.g. "+v8a"
   AArch64::ExtensionBitset
       DefaultExts; // bitfield of default extensions ArchExtKind
 
@@ -289,48 +289,8 @@ struct ArchInfo {
   static std::optional<ArchInfo> findBySubArch(StringRef SubArch);
 };
 
-// clang-format off
-inline constexpr ArchInfo ARMV8A    = { VersionTuple{8, 0}, AProfile, "armv8-a", "+v8a", (
-                                        AArch64::ExtensionBitset({AArch64::AEK_FP, AArch64::AEK_SIMD})), };
-inline constexpr ArchInfo ARMV8_1A  = { VersionTuple{8, 1}, AProfile, "armv8.1-a", "+v8.1a", (ARMV8A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_CRC, AArch64::AEK_LSE, AArch64::AEK_RDM}))};
-inline constexpr ArchInfo ARMV8_2A  = { VersionTuple{8, 2}, AProfile, "armv8.2-a", "+v8.2a", (ARMV8_1A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_RAS}))};
-inline constexpr ArchInfo ARMV8_3A  = { VersionTuple{8, 3}, AProfile, "armv8.3-a", "+v8.3a", (ARMV8_2A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_FCMA, AArch64::AEK_JSCVT, AArch64::AEK_PAUTH, AArch64::AEK_RCPC}))};
-inline constexpr ArchInfo ARMV8_4A  = { VersionTuple{8, 4}, AProfile, "armv8.4-a", "+v8.4a", (ARMV8_3A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_DOTPROD}))};
-inline constexpr ArchInfo ARMV8_5A  = { VersionTuple{8, 5}, AProfile, "armv8.5-a", "+v8.5a", (ARMV8_4A.DefaultExts)};
-inline constexpr ArchInfo ARMV8_6A  = { VersionTuple{8, 6}, AProfile, "armv8.6-a", "+v8.6a", (ARMV8_5A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_BF16, AArch64::AEK_I8MM}))};
-inline constexpr ArchInfo ARMV8_7A  = { VersionTuple{8, 7}, AProfile, "armv8.7-a", "+v8.7a", (ARMV8_6A.DefaultExts)};
-inline constexpr ArchInfo ARMV8_8A  = { VersionTuple{8, 8}, AProfile, "armv8.8-a", "+v8.8a", (ARMV8_7A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_MOPS, AArch64::AEK_HBC}))};
-inline constexpr ArchInfo ARMV8_9A  = { VersionTuple{8, 9}, AProfile, "armv8.9-a", "+v8.9a", (ARMV8_8A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_SPECRES2, AArch64::AEK_CSSC, AArch64::AEK_RASV2}))};
-inline constexpr ArchInfo ARMV9A    = { VersionTuple{9, 0}, AProfile, "armv9-a", "+v9a", (ARMV8_5A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_FP16, AArch64::AEK_SVE, AArch64::AEK_SVE2}))};
-inline constexpr ArchInfo ARMV9_1A  = { VersionTuple{9, 1}, AProfile, "armv9.1-a", "+v9.1a", (ARMV9A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_BF16, AArch64::AEK_I8MM}))};
-inline constexpr ArchInfo ARMV9_2A  = { VersionTuple{9, 2}, AProfile, "armv9.2-a", "+v9.2a", (ARMV9_1A.DefaultExts)};
-inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a", "+v9.3a", (ARMV9_2A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_MOPS, AArch64::AEK_HBC}))};
-inline constexpr ArchInfo ARMV9_4A  = { VersionTuple{9, 4}, AProfile, "armv9.4-a", "+v9.4a", (ARMV9_3A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_SPECRES2, AArch64::AEK_CSSC, AArch64::AEK_RASV2}))};
-inline constexpr ArchInfo ARMV9_5A  = { VersionTuple{9, 5}, AProfile, "armv9.5-a", "+v9.5a", (ARMV9_4A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_CPA}))};
-// For v8-R, we do not enable crypto and align with GCC that enables a more minimal set of optional architecture extensions.
-inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", (ARMV8_5A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_SSBS,
-                                        AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SB}).flip(AArch64::AEK_LSE))};
-// clang-format on
-
-// The set of all architectures
-static constexpr std::array<const ArchInfo *, 17> ArchInfos = {
-    &ARMV8A,   &ARMV8_1A, &ARMV8_2A, &ARMV8_3A, &ARMV8_4A, &ARMV8_5A,
-    &ARMV8_6A, &ARMV8_7A, &ARMV8_8A, &ARMV8_9A, &ARMV9A,   &ARMV9_1A,
-    &ARMV9_2A, &ARMV9_3A, &ARMV9_4A, &ARMV9_5A, &ARMV8R,
-};
+#define EMIT_ARCHITECTURES
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 // Details of a specific CPU.
 struct CpuInfo {
