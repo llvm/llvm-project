@@ -196,15 +196,15 @@ namespace {
 
 void SubOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  populateWithGenerated(results);
+  results.add<SubAsAdd>(context);
 }
 
 void NTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  populateWithGenerated(results);
+  results.add<NTTAfterINTT>(context);
 }
 
 void INTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  populateWithGenerated(results);
+  results.add<INTTAfterNTT>(context);
 }
