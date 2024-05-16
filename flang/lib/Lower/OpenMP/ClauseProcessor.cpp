@@ -917,20 +917,18 @@ bool ClauseProcessor::processReduction(
     llvm::SmallVectorImpl<const semantics::Symbol *> *outReductionSyms) const {
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
-        // Use local lists of reductions to prevent variables from other
-        // already-processed reduction clauses from impacting this reduction.
-        // For example, the whole `reductionVars` array is queried to decide
-        // whether to do the reduction byref.
         llvm::SmallVector<mlir::Value> reductionVars;
+        llvm::SmallVector<bool> reduceVarByRef;
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.addDeclareReduction(currentLocation, converter, clause,
-                               reductionVars, reductionDeclSymbols,
-                               outReductionSyms ? &reductionSyms : nullptr);
+        rp.addDeclareReduction(
+            currentLocation, converter, clause, reductionVars, reduceVarByRef,
+            reductionDeclSymbols, outReductionSyms ? &reductionSyms : nullptr);
 
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
+        llvm::copy(reduceVarByRef, std::back_inserter(result.reduceVarByRef));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionDeclSymbols));
 
