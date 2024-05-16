@@ -2538,8 +2538,6 @@ bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
   assert(E->getNumSubExprs() > 2);
 
   const Expr *Vecs[] = {E->getExpr(0), E->getExpr(1)};
-  assert(Vecs[0]->getType() == Vecs[1]->getType());
-
   const VectorType *VT = Vecs[0]->getType()->castAs<VectorType>();
   PrimType ElemT = classifyPrim(VT->getElementType());
   unsigned NumInputElems = VT->getNumElements();
