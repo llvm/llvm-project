@@ -7573,6 +7573,16 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     tryToFixVariablyModifiedVarType(TInfo, R, D.getIdentifierLoc(),
                                     /*DiagID=*/0);
 
+  if (getLangOpts().CPlusPlus20) {
+    if (const AutoType *AutoT = R->getAs<AutoType>()) {
+      if (ConceptDecl *Decl = AutoT->getTypeConstraintConcept()) {
+        DiagnoseUseOfDecl(
+            Decl,
+            TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+      }
+    }
+  }
+
   bool IsMemberSpecialization = false;
   bool IsVariableTemplateSpecialization = false;
   bool IsPartialSpecialization = false;

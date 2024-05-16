@@ -74,6 +74,16 @@ void f() {
 void g(C auto a) {};
 // expected-warning@-1 {{'C' is deprecated}}
 //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+
+template <typename T>
+auto h() -> C auto {
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  C auto foo = T();
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  return foo;
+}
 #endif
 } // namespace cwg2428
 

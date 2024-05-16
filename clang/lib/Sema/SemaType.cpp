@@ -6388,6 +6388,16 @@ TypeResult Sema::ActOnTypeName(Declarator &D) {
     CheckExtraCXXDefaultArguments(D);
   }
 
+  if (getLangOpts().CPlusPlus20) {
+    if (const AutoType *AutoT = T->getAs<AutoType>()) {
+      if (ConceptDecl *Decl = AutoT->getTypeConstraintConcept()) {
+        DiagnoseUseOfDecl(
+            Decl,
+            TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+      }
+    }
+  }
+
   return CreateParsedType(T, TInfo);
 }
 
