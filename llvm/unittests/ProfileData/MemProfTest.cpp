@@ -596,4 +596,70 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   EXPECT_EQ(Record.CallSites[1][0].hash(), F2.hash());
   EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
 }
+
+using FrameIdMapTy =
+    llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
+using CallStackIdMapTy =
+    llvm::DenseMap<::llvm::memprof::CallStackId,
+                   ::llvm::SmallVector<::llvm::memprof::FrameId>>;
+
+// Populate those fields returned by getHotColdSchema.
+MemInfoBlock makePartialMIB() {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 1;
+  MIB.TotalSize = 5;
+  MIB.TotalLifetime = 10;
+  MIB.TotalLifetimeAccessDensity = 23;
+  return MIB;
+}
+
+TEST(MemProf, MissingCallStackId) {
+  // Use a non-existent CallStackId to trigger a mapping error in
+  // toMemProfRecord.
+  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
+                                          llvm::memprof::getHotColdSchema());
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.push_back(AI);
+
+  // Create empty maps.
+  const FrameIdMapTy IdToFrameMap;
+  const CallStackIdMapTy CSIdToCallStackMap;
+  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
+      IdToFrameMap);
+  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  // We are only interested in errors, not the return value.
+  (void)IndexedMR.toMemProfRecord(CSIdConv);
+
+  ASSERT_TRUE(CSIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*CSIdConv.LastUnmappedId, 0xdeadbeefU);
+  EXPECT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+}
+
+TEST(MemProf, MissingFrameId) {
+  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
+                                          llvm::memprof::getHotColdSchema());
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.push_back(AI);
+
+  // An empty map to trigger a mapping error.
+  const FrameIdMapTy IdToFrameMap;
+  CallStackIdMapTy CSIdToCallStackMap;
+  CSIdToCallStackMap.insert({0x222, {2, 3}});
+
+  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
+      IdToFrameMap);
+  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  // We are only interested in errors, not the return value.
+  (void)IndexedMR.toMemProfRecord(CSIdConv);
+
+  EXPECT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_TRUE(FrameIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*FrameIdConv.LastUnmappedId, 3U);
+}
 } // namespace
