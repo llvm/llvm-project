@@ -20,26 +20,40 @@ extern "C" bool __llvm_ctx_profile_fetch(void *Data,
                                                         const ContextNode &));
 
 extern "C" {
-__attribute__((noinline)) void someFunction() { printf("check 2\n"); }
+__attribute__((noinline)) void someFunction(int I) {
+  if (I % 2)
+    printf("check odd\n");
+  else
+    printf("check even\n");
+}
 
 // block inlining because the pre-inliner otherwise will inline this - it's
 // too small.
 __attribute__((noinline)) void the_root() {
   printf("check 1\n");
-  someFunction();
-  someFunction();
+  someFunction(1);
+#pragma nounroll
+  for (auto I = 0; I < 2; ++I) {
+    someFunction(I);
+  }
 }
 }
 
 // Make sure the program actually ran correctly.
 // CHECK: check 1
-// CHECK: check 2
-// CHECK: check 2
+// CHECK: check odd
+// CHECK: check even
 
 void printProfile(const ContextNode &Node, const std::string &Indent,
                   const std::string &Increment) {
   std::cout << Indent << "Guid: " << Node.guid() << std::endl;
   std::cout << Indent << "Entries: " << Node.entrycount() << std::endl;
+  std::cout << Indent << Node.counters_size() << " counters and "
+            << Node.callsites_size() << " callsites" << std::endl;
+  std::cout << Indent << "Counter values: ";
+  for (uint32_t I = 0U; I < Node.counters_size(); ++I)
+    std::cout << Node.counters()[I] << " ";
+  std::cout << std::endl;
   for (uint32_t I = 0U; I < Node.callsites_size(); ++I)
     for (const auto *N = Node.subContexts()[I]; N; N = N->next()) {
       std::cout << Indent << "At Index " << I << ":" << std::endl;
@@ -47,14 +61,29 @@ void printProfile(const ContextNode &Node, const std::string &Indent,
     }
 }
 
+// 11065787667334760794 is the_root. We expect 2 callsites and 2 counters - one
+// for the entry basic block and one for the loop.
+// 6759619411192316602 is someFunction. We expect all context instances to show
+// the same nr of counters and callsites, but the counters will be different.
+// The first context is for the first callsite with the_root as parent, and the
+// second counter in someFunction will be 0 (we pass an odd nr, and the other
+// path gets instrumented).
+// The second context is in the loop. We expect 2 entries and each of the
+// branches would be taken once, so the second counter is 1.
 // CHECK: Guid: 11065787667334760794
 // CHECK: Entries: 1
+// CHECK: 2 counters and 3 callsites
+// CHECK: Counter values: 1 2
 // CHECK: At Index 1:
 // CHECK:   Guid: 6759619411192316602
 // CHECK:   Entries: 1
+// CHECK:   2 counters and 2 callsites
+// CHECK:   Counter values: 1 0
 // CHECK: At Index 2:
 // CHECK:   Guid: 6759619411192316602
-// CHECK:   Entries: 1
+// CHECK:   Entries: 2
+// CHECK:   2 counters and 2 callsites
+// CHECK:   Counter values: 2 1
 
 bool profileWriter() {
   return __llvm_ctx_profile_fetch(
