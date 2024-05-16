@@ -50,7 +50,7 @@ LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
   if (!Is64Bit && HasLA64)
     report_fatal_error("Feature 64bit should be used for loongarch64 target.");
 
-  TargetABI = LoongArchABI::computeTargetABI(TT, ABIName);
+  TargetABI = LoongArchABI::computeTargetABI(TT, getFeatureBits(), ABIName);
 
   return *this;
 }
