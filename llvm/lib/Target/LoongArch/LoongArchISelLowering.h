@@ -239,6 +239,8 @@ public:
     return false;
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
+  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldExtendTypeInLibCall(EVT Type) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

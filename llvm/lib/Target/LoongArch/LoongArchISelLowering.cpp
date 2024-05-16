@@ -4983,3 +4983,20 @@ ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
   // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
   return ISD::SIGN_EXTEND;
 }
+
+bool LoongArchTargetLowering::shouldSignExtendTypeInLibCall(
+    EVT Type, bool IsSigned) const {
+  if (Subtarget.is64Bit() && Type == MVT::i32)
+    return true;
+
+  return IsSigned;
+}
+
+bool LoongArchTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
+  // Return false to suppress the unnecessary extensions if the LibCall
+  // arguments or return value is a float narrower than GRLEN on a soft FP ABI.
+  if (Subtarget.isSoftFPABI() && (Type.isFloatingPoint() && !Type.isVector() &&
+                                  Type.getSizeInBits() < Subtarget.getGRLen()))
+    return false;
+  return true;
+}
