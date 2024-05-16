@@ -830,7 +830,7 @@ let test_instructions () =
     let fty = function_type void_type [| i32_type; i32_type |] in
     let f = define_function "f" fty m in
     let bb = entry_block f in
-    let b = builder_at context (At_end bb) in
+    let b = builder_at context (At_end bb) false in
 
     insist (At_end bb = instr_begin bb);
     insist (At_start bb = instr_end bb);
@@ -1150,7 +1150,7 @@ let test_builder () =
     (* CHECK: ret{{.*}}P1
      *)
     let ret = build_ret p1 atentry in
-    position_before ret atentry
+    position_before ret false atentry
   end;
 
   (* see test/Feature/exception.ll *)

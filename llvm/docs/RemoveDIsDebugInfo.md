@@ -60,7 +60,17 @@ LLVMDIBuilderInsertDeclareBefore   # Insert a debug record (new debug info forma
 LLVMDIBuilderInsertDeclareAtEnd    # Same as above.
 LLVMDIBuilderInsertDbgValueBefore  # Same as above.
 LLVMDIBuilderInsertDbgValueAtEnd   # Same as above.
+
+Existing functions (new parameter)
+----------------------------------
+LLVMPositionBuilder               # Added BeforeDbgRecords parameter. See info below.
+LLVMPositionBuilderBefore         # Same as above.
 ```
+
+`LLVMPositionBuilder` and `LLVMPositionBuilderBefore` have gained a parameter `BeforeDbgRecords` which indicates whether or not the insertion position should also be before the debug records that precede the instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
+
+If you don't know whether it should be true or false then follow this rule:
+If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then set it to true. Otherwise set it to false.
 
 # The new "Debug Record" model
 

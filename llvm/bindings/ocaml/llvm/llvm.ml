@@ -1133,22 +1133,22 @@ external delete_instruction : llvalue -> unit = "llvm_delete_instruction"
 
 (*===-- Instruction builders ----------------------------------------------===*)
 external builder : llcontext -> llbuilder = "llvm_builder"
-external position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
-                          = "llvm_position_builder"
+external position_builder : (llbasicblock, llvalue) llpos -> bool -> llbuilder ->
+                            unit = "llvm_position_builder"
 external insertion_block : llbuilder -> llbasicblock = "llvm_insertion_block"
 external insert_into_builder : llvalue -> string -> llbuilder -> unit
                              = "llvm_insert_into_builder"
 
-let builder_at context ip =
+let builder_at context ip before_dbg_records =
   let b = builder context in
-  position_builder ip b;
+  position_builder ip before_dbg_records b;
   b
 
-let builder_before context i = builder_at context (Before i)
-let builder_at_end context bb = builder_at context (At_end bb)
+let builder_before context i before_dbg_records = builder_at context (Before i) before_dbg_records
+let builder_at_end context bb = builder_at context (At_end bb) false
 
-let position_before i = position_builder (Before i)
-let position_at_end bb = position_builder (At_end bb)
+let position_before i before_dbg_records = position_builder (Before i) before_dbg_records
+let position_at_end bb = position_builder (At_end bb) false
 
 
 (*--... Metadata ...........................................................--*)

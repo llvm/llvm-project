@@ -273,7 +273,7 @@ let test_variables f dibuilder file_di fun_di =
   stdout_metadata auto_var;
   (* CHECK: [[LOCAL_VAR_PTR:<0x[0-9a-f]*>]] = !DILocalVariable(name: "my_local", scope: <{{0x[0-9a-f]*}}>, file: <{{0x[0-9a-f]*}}>, line: 10, type: [[INT64TY_PTR]])
   *)
-  let builder = Llvm.builder_before context entry_term in
+  let builder = Llvm.builder_before context entry_term false in
   let all = Llvm.build_alloca (Llvm.i64_type context)  "my_alloca" builder in
   let scope =
     Llvm_debuginfo.dibuild_create_lexical_block dibuilder ~scope:fun_di

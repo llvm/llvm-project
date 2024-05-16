@@ -214,6 +214,32 @@ Changes to the C API
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
 
+* Added the following functions for querying and setting the debug info format and for explicitly building either debug intrinsics (old format) or records (new format). These functions will be deprecated and removed in the future as we move towards removing support for the old debug format. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info.
+
+  * ``LLVMIsNewDbgInfoFormat``
+  * ``LLVMSetIsNewDbgInfoFormat``
+  * ``LLVMDIBuilderInsertDeclareIntrinsicBefore``
+  * ``LLVMDIBuilderInsertDeclareIntrinsicAtEnd``
+  * ``LLVMDIBuilderInsertDbgValueIntrinsicBefore``
+  * ``LLVMDIBuilderInsertDbgValueIntrinsicAtEnd``
+  * ``LLVMDIBuilderInsertDeclareRecordBefore``
+  * ``LLVMDIBuilderInsertDeclareRecordAtEnd``
+  * ``LLVMDIBuilderInsertDbgValueRecordBefore``
+  * ``LLVMDIBuilderInsertDbgValueRecordAtEnd``
+
+* Modified the following functions which now always insert debug records (new debug info format) rather than debug intrinsics (old debug info format). See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info.
+
+  * ``LLVMDIBuilderInsertDeclareBefore``
+  * ``LLVMDIBuilderInsertDeclareBefore``
+  * ``LLVMDIBuilderInsertDeclareAtEnd``
+  * ``LLVMDIBuilderInsertDbgValueBefore``
+  * ``LLVMDIBuilderInsertDbgValueAtEnd``
+
+* Modified the following functions, adding a new `BeforeDbgRecords` parameter which indicates whether or not the insertion position should also be before the debug records that precede the instruction. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info.
+
+  * ``LLVMPositionBuilder``
+  * ``LLVMPositionBuilderBefore``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
