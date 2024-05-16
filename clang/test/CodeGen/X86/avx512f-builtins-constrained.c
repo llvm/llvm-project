@@ -27,10 +27,10 @@ __m512d test_mm512_sqrt_pd(__m512d a)
 __m512d test_mm512_mask_sqrt_pd (__m512d __W, __mmask8 __U, __m512d __A)
 {
   // COMMON-LABEL: test_mm512_mask_sqrt_pd
-  // COMMONIR: bitcast i8 %{{.*}} to <8 x i1>
   // UNCONSTRAINED: call <8 x double> @llvm.sqrt.v8f64(<8 x double> %{{.*}})
   // CONSTRAINED: call <8 x double> @llvm.experimental.constrained.sqrt.v8f64(<8 x double> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vsqrtpd
+  // COMMONIR: bitcast i8 %{{.*}} to <8 x i1>
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_sqrt_pd (__W,__U,__A);
 }
@@ -38,10 +38,10 @@ __m512d test_mm512_mask_sqrt_pd (__m512d __W, __mmask8 __U, __m512d __A)
 __m512d test_mm512_maskz_sqrt_pd (__mmask8 __U, __m512d __A)
 {
   // COMMON-LABEL: test_mm512_maskz_sqrt_pd
-  // COMMONIR: bitcast i8 %{{.*}} to <8 x i1>
   // UNCONSTRAINED: call <8 x double> @llvm.sqrt.v8f64(<8 x double> %{{.*}})
   // CONSTRAINED: call <8 x double> @llvm.experimental.constrained.sqrt.v8f64(<8 x double> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vsqrtpd
+  // COMMONIR: bitcast i8 %{{.*}} to <8 x i1>
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> {{.*}}
   return _mm512_maskz_sqrt_pd (__U,__A);
 }
@@ -58,10 +58,10 @@ __m512 test_mm512_sqrt_ps(__m512 a)
 __m512 test_mm512_mask_sqrt_ps(__m512 __W, __mmask16 __U, __m512 __A)
 {
   // COMMON-LABEL: test_mm512_mask_sqrt_ps
-  // COMMONIR: bitcast i16 %{{.*}} to <16 x i1>
   // UNCONSTRAINED: call <16 x float> @llvm.sqrt.v16f32(<16 x float> %{{.*}})
   // CONSTRAINED: call <16 x float> @llvm.experimental.constrained.sqrt.v16f32(<16 x float> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vsqrtps
+  // COMMONIR: bitcast i16 %{{.*}} to <16 x i1>
   // COMMONIR: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_sqrt_ps( __W, __U, __A);
 }
@@ -69,10 +69,10 @@ __m512 test_mm512_mask_sqrt_ps(__m512 __W, __mmask16 __U, __m512 __A)
 __m512 test_mm512_maskz_sqrt_ps( __mmask16 __U, __m512 __A)
 {
   // COMMON-LABEL: test_mm512_maskz_sqrt_ps
-  // COMMONIR: bitcast i16 %{{.*}} to <16 x i1>
   // UNCONSTRAINED: call <16 x float> @llvm.sqrt.v16f32(<16 x float> %{{.*}})
   // CONSTRAINED: call <16 x float> @llvm.experimental.constrained.sqrt.v16f32(<16 x float> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vsqrtps
+  // COMMONIR: bitcast i16 %{{.*}} to <16 x i1>
   // COMMONIR: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> {{.*}}
   return _mm512_maskz_sqrt_ps(__U ,__A);
 }
@@ -206,3 +206,4 @@ __m512 test_mm512_maskz_cvtph_ps (__mmask16 __U, __m256i __A)
   // COMMONIR: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvtph_ps (__U,__A);
 }
+

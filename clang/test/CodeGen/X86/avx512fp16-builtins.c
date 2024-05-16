@@ -701,7 +701,6 @@ __m512h test_mm512_conj_pch(__m512h __A) {
 __m512h test_mm512_mask_conj_pch(__m512h __W, __mmask32 __U, __m512h __A) {
   // CHECK-LABEL: @test_mm512_mask_conj_pch
   // CHECK:  %{{.*}} = trunc i32 %{{.*}} to i16
-  // CHECK:  %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // CHECK:  %{{.*}} = bitcast <32 x half> %{{.*}} to <16 x float>
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <16 x i32>
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <16 x i32>
@@ -709,6 +708,7 @@ __m512h test_mm512_mask_conj_pch(__m512h __W, __mmask32 __U, __m512h __A) {
   // CHECK:  %{{.*}} = bitcast <16 x i32> %{{.*}} to <16 x float>
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <32 x half>
   // CHECK:  %{{.*}} = bitcast <32 x half> %{{.*}} to <16 x float>
+  // CHECK:  %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // CHECK:  %{{.*}} = select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <32 x half>
   return _mm512_mask_conj_pch(__W, __U, __A);
@@ -717,13 +717,13 @@ __m512h test_mm512_mask_conj_pch(__m512h __W, __mmask32 __U, __m512h __A) {
 __m512h test_mm512_maskz_conj_pch(__mmask32 __U, __m512h __A) {
   // CHECK-LABEL: @test_mm512_maskz_conj_pch
   // CHECK:  %{{.*}} = trunc i32 %{{.*}} to i16
-  // CHECK:  %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // CHECK:  %{{.*}} = bitcast <32 x half> %{{.*}} to <16 x float>
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <16 x i32>
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <16 x i32>
   // CHECK:  %{{.*}} = xor <16 x i32> %{{.*}}, %{{.*}}
   // CHECK:  %{{.*}} = bitcast <16 x i32> %{{.*}} to <16 x float>
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <32 x half>
+  // CHECK:  %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // CHECK:  %{{.*}} = select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   // CHECK:  %{{.*}} = bitcast <16 x float> %{{.*}} to <32 x half>
   return _mm512_maskz_conj_pch(__U, __A);
@@ -2052,16 +2052,16 @@ __m512h test_mm512_sqrt_round_ph(__m512h __A) {
 
 __m512h test_mm512_mask_sqrt_round_ph(__m512h __W, __mmask32 __U, __m512h __A) {
   // CHECK-LABEL: @test_mm512_mask_sqrt_round_ph
-  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: call <32 x half> @llvm.x86.avx512fp16.sqrt.ph.512(<32 x half> %{{.*}}, i32 11)
+  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> %{{.*}}
   return _mm512_mask_sqrt_round_ph(__W, __U, __A, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
 __m512h test_mm512_maskz_sqrt_round_ph(__mmask32 __U, __m512h __A) {
   // CHECK-LABEL: @test_mm512_maskz_sqrt_round_ph
-  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: call <32 x half> @llvm.x86.avx512fp16.sqrt.ph.512(<32 x half> %{{.*}}, i32 11)
+  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> {{.*}}
   return _mm512_maskz_sqrt_round_ph(__U, __A, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
@@ -2073,15 +2073,15 @@ __m512h test_mm512_sqrt_ph(__m512h __A) {
 }
 __m512h test_mm512_mask_sqrt_ph(__m512h __W, __mmask32 __U, __m512h __A) {
   // CHECK-LABEL: @test_mm512_mask_sqrt_ph
-  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: %{{.*}} = call <32 x half> @llvm.sqrt.v32f16(<32 x half> %{{.*}})
+  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> %{{.*}}
   return _mm512_mask_sqrt_ph(__W, __U, __A);
 }
 __m512h test_mm512_maskz_sqrt_ph(__mmask32 __U, __m512h __A) {
   // CHECK-LABEL: @test_mm512_maskz_sqrt_ph
-  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: %{{.*}} = call <32 x half> @llvm.sqrt.v32f16(<32 x half> %{{.*}})
+  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> {{.*}}
   return _mm512_maskz_sqrt_ph(__U, __A);
 }
