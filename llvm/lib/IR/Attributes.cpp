@@ -211,10 +211,9 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    void *Mem = pImpl->Alloc.Allocate(
-        ConstantRangeListAttributeImpl::totalSizeToAlloc(Val),
-        alignof(ConstantRangeListAttributeImpl));
-    PA = new (Mem) ConstantRangeListAttributeImpl(Kind, Val);
+    PA = new (pImpl->ConstantRangeListAttributeAlloc.Allocate(
+        ConstantRangeListAttributeImpl::totalSizeToAlloc(Val)))
+        ConstantRangeListAttributeImpl(Kind, Val);
     pImpl->AttrsSet.InsertNode(PA, InsertPoint);
   }
 

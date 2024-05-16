@@ -38,7 +38,7 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
   // Slow insert.
   SmallVector<ConstantRange, 2> ExistingTail(LowerBound, Ranges.end());
   Ranges.erase(LowerBound, Ranges.end());
-  // "sle" instead of "slt" to merge consecutive ranges.
+  // Merge consecutive ranges.
   if (!Ranges.empty() && NewRange.getLower().sle(Ranges.back().getUpper())) {
     APInt NewLower = Ranges.back().getLower();
     APInt NewUpper =
