@@ -596,6 +596,9 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Str->EmitPtrAuthABIVersion(Opts.PointerAuthABIVersion,
                                Opts.PointerAuthKernelABIVersion);
 
+  // Assembly to object compilation should leverage assembly info.
+  Str->setUseAssemblerInfoForParsing(true);
+
   bool Failed = false;
 
   std::unique_ptr<MCAsmParser> Parser(
