@@ -595,3 +595,12 @@ int test_multiarray22() {
 }
 
 #endif
+
+namespace ArrayMemberAccess {
+  struct A {
+    int x;
+  };
+  void f(const A (&a)[]) {
+    bool cond = a->x;
+  }
+}
