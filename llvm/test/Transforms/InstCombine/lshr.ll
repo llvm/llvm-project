@@ -702,8 +702,8 @@ define i32 @shl_add_lshr_neg(i32 %x, i32 %y, i32 %z) {
 
 define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_mul_const(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 65538
-; CHECK-NEXT:    [[T:%.*]] = lshr i32 [[M]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T:%.*]] = add nuw nsw i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %m = mul nuw i32 %x, 65538
@@ -1526,8 +1526,8 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
 
 define i32 @reduce_shift(i32 %x) {
 ; CHECK-LABEL: @reduce_shift(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %mul = mul nuw i32 %x, 12
@@ -1563,8 +1563,8 @@ define i32 @reduce_shift_wrong_mul(i32 %x) {
 
 define i32 @reduce_shift_exact(i32 %x) {
 ; CHECK-LABEL: @reduce_shift_exact(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i32 [[MUL]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %mul = mul nuw i32 %x, 12

@@ -629,8 +629,8 @@ define i32 @lshr_mul_times_3_div_2_exact(i32 %x) {
 
 define i32 @reduce_shift(i32 %x) {
 ; CHECK-LABEL: @reduce_shift(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %mul = mul nsw i32 %x, 12
@@ -898,8 +898,8 @@ define i32 @reduce_shift_wrong_mul(i32 %x) {
 
 define i32 @reduce_shift_exact(i32 %x) {
 ; CHECK-LABEL: @reduce_shift_exact(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[MUL]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %mul = mul nsw i32 %x, 12
