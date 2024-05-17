@@ -13000,12 +13000,16 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
-  // When the RHS is not invariant, we do not know the end bound of the loop and
-  // cannot calculate the ExactBECount needed by ExitLimit. However, we can
-  // calculate the MaxBECount, given the start, stride and max value for the end
-  // bound of the loop (RHS), and the fact that IV does not overflow (which is
-  // checked above).
   if (!isLoopInvariant(RHS, L)) {
+    // If RHS is an add recurrence, try again with lhs=lhs-rhs and rhs=0
+    if(auto RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS)){
+       return howManyLessThans(getMinusSCEV(IV, RHSAddRec), 
+        getZero(IV->getType()), L, true, ControlsOnlyExit, AllowPredicates);
+    }
+    // If we cannot calculate ExactBECount, we can calculate the MaxBECount, 
+    // given the start, stride and max value for the end bound of the 
+    // loop (RHS), and the fact that IV does not overflow (which is
+    // checked above).
     const SCEV *MaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
     return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
