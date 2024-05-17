@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIRPolynomialDialect
   MLIRBuiltinAttributesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
   MLIRSupport
   MLIRDialect
   MLIRIR
