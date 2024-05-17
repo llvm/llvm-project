@@ -79,12 +79,42 @@ struct FoldInsertOfRankReducingInsert : public OpRewritePattern<OpTy> {
     return success();
   }
 };
+
+/// Fold rank increasing expand_shape into insert_slice.
+template <typename OpTy>
+struct FoldRankIncreasingExpandIntoInsert : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy insertSliceOp,
+                                PatternRewriter &rewriter) const override {
+    auto expandShapeOp = insertSliceOp.getSource()
+                             .template getDefiningOp<tensor::ExpandShapeOp>();
+    if (!expandShapeOp)
+      return failure();
+
+    // Only fold away simple rank increasing expansion.
+    SliceVerificationResult res = isRankReducedType(
+        expandShapeOp.getResultType(), expandShapeOp.getSrcType());
+    if (res != SliceVerificationResult::Success) {
+      return rewriter.notifyMatchFailure(insertSliceOp,
+                                         "expected rank increasing expansion");
+    }
+
+    rewriter.modifyOpInPlace(insertSliceOp, [&]() {
+      insertSliceOp.setOperand(/*source=*/0, expandShapeOp.getSrc());
+    });
+    return success();
+  }
+};
 } // namespace
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldExpandOfRankReducingExtract,
-               FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
-               FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>>(
-      patterns.getContext());
+  patterns
+      .add<FoldExpandOfRankReducingExtract,
+           FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
+           FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
+           FoldRankIncreasingExpandIntoInsert<tensor::InsertSliceOp>,
+           FoldRankIncreasingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
+          patterns.getContext());
 }
