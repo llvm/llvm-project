@@ -15,9 +15,11 @@ on:
       release-version:
         description: Release Version
         required: true
-        type: stringA
+        type: string
   # Run on pull_requests for testing purposes.
   pull_request:
+    paths:
+      - '.github/workflows/release-sources.yml'
     types:
       - opened
       - synchronize
