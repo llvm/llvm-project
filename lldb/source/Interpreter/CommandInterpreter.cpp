@@ -3586,6 +3586,6 @@ llvm::json::Value CommandInterpreter::GetStatistics() {
   return stats;
 }
 
-const StructuredData::Array& CommandInterpreter::GetTranscript() const {
+const StructuredData::Array &CommandInterpreter::GetTranscript() const {
   return m_transcript;
 }

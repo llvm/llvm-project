@@ -577,8 +577,13 @@ SBStructuredData SBCommandInterpreter::GetTranscript() {
 
   SBStructuredData data;
   if (IsValid())
-    // A deep copy is performed by `std::make_shared` on the `StructuredData::Array`, via its implicitly-declared copy constructor. This ensures thread-safety between the user changing the returned `SBStructuredData` and the `CommandInterpreter` changing its internal `m_transcript`.
-    data.m_impl_up->SetObjectSP(std::make_shared<StructuredData::Array>(m_opaque_ptr->GetTranscript()));
+    // A deep copy is performed by `std::make_shared` on the
+    // `StructuredData::Array`, via its implicitly-declared copy constructor.
+    // This ensures thread-safety between the user changing the returned
+    // `SBStructuredData` and the `CommandInterpreter` changing its internal
+    // `m_transcript`.
+    data.m_impl_up->SetObjectSP(
+        std::make_shared<StructuredData::Array>(m_opaque_ptr->GetTranscript()));
   return data;
 }
 

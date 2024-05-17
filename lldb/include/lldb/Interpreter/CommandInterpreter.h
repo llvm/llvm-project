@@ -651,7 +651,7 @@ public:
   }
 
   llvm::json::Value GetStatistics();
-  const StructuredData::Array& GetTranscript() const;
+  const StructuredData::Array &GetTranscript() const;
 
 protected:
   friend class Debugger;
