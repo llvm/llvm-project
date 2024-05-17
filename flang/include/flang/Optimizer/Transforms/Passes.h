@@ -49,6 +49,7 @@ namespace fir {
 #define GEN_PASS_DECL_ADDDEBUGINFO
 #define GEN_PASS_DECL_STACKARRAYS
 #define GEN_PASS_DECL_LOOPVERSIONING
+#define GEN_PASS_DECL_ADDALIASTAGS
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
@@ -60,7 +61,6 @@ std::unique_ptr<mlir::Pass>
 createExternalNameConversionPass(bool appendUnderscore);
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
-std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass>
 createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
 

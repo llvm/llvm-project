@@ -294,7 +294,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(fir::createPolymorphicOpConversion());
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
-    pm.addPass(fir::createAliasTagsPass());
+    pm.addPass(fir::createAddAliasTags());
 
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
