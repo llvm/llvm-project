@@ -38,7 +38,7 @@ function(add_target_library target_name lib_name)
                         PluginCommon ${OPENMP_PTHREAD_LIB})
 
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
-  target_compile_definitions(${target_name} PRIVATE 
+  target_compile_definitions(${target_name} PRIVATE
                              DEBUG_PREFIX="TARGET ${lib_name} RTL")
   set_target_properties(${target_name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endfunction()
