@@ -245,6 +245,7 @@ def Polynomial_SubOp : Polynomial_BinaryOp<"sub"> {
     %2 = polynomial.sub %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
+  let hasCanonicalizer = 1;
 }
 
 def Polynomial_MulOp : Polynomial_BinaryOp<"mul", [Commutative]> {
@@ -480,6 +481,7 @@ def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {
   let arguments = (ins Polynomial_PolynomialType:$input);
   let results = (outs RankedTensorOf<[AnyInteger]>:$output);
   let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -498,6 +500,7 @@ def Polynomial_INTTOp : Polynomial_Op<"intt", [Pure]> {
   let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
   let results = (outs Polynomial_PolynomialType:$output);
   let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 

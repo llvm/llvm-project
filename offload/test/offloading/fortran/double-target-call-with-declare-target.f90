@@ -1,6 +1,6 @@
 ! Offloading test with two target regions mapping the same
-! declare target Fortran array and writing some values to 
-! it before checking the host correctly receives the 
+! declare target Fortran array and writing some values to
+! it before checking the host correctly receives the
 ! correct updates made on the device.
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda
@@ -35,7 +35,7 @@ program main
         i = i + 1
     end do
 !$omp end target
-    
+
 print *, sp(:)
 
 end program
