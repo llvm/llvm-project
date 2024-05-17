@@ -761,8 +761,10 @@ void ProfileGeneratorBase::calculateDensity(
   if (FuncBodySize == 0) {
     for (const auto &CallsiteSamples : FSamples.getCallsiteSamples()) {
       FuncBodySize++;
-      for (const auto &Callee : CallsiteSamples.second)
+      for (const auto &Callee : CallsiteSamples.second) {
+        calculateDensity(Callee.second, DensityList, TotalProfileSamples);
         TotalBodySamples += Callee.second.getHeadSamplesEstimate();
+      }
     }
   }
 
