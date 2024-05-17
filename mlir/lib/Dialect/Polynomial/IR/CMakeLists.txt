@@ -1,3 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS PolynomialCanonicalization.td)
+mlir_tablegen(PolynomialCanonicalization.inc -gen-rewriters)
+add_public_tablegen_target(MLIRPolynomialCanonicalizationIncGen)
+
 add_mlir_dialect_library(MLIRPolynomialDialect
   Polynomial.cpp
   PolynomialAttributes.cpp
@@ -10,6 +14,7 @@ add_mlir_dialect_library(MLIRPolynomialDialect
   DEPENDS
   MLIRPolynomialIncGen
   MLIRPolynomialAttributesIncGen
+  MLIRPolynomialCanonicalizationIncGen
   MLIRBuiltinAttributesIncGen
 
   LINK_LIBS PUBLIC
