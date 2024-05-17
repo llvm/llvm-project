@@ -42,16 +42,16 @@ jobs:
       export-args: ${{ steps.inputs.outputs.export-args }}
     runs-on: ubuntu-latest
     steps:
-      id: inputs
-      run: |
-        ref=${{ inputs.release-version || github.sha }}
-        if [ -n "${{ inputs.release-version }}" ]; then
-          export_args="-release ${{ inputs.release-version }} -final"
-        else
-          export_args="-git-ref ${{ github.sha }}"
-        fi
-        echo "ref=$ref" >> $GITHUB_OUTPUT
-        echo "export-args=$export_args" >> $GITHUB_OUTPUT
+      - id: inputs
+        run: |
+          ref=${{ inputs.release-version || github.sha }}
+          if [ -n "${{ inputs.release-version }}" ]; then
+            export_args="-release ${{ inputs.release-version }} -final"
+          else
+            export_args="-git-ref ${{ github.sha }}"
+          fi
+          echo "ref=$ref" >> $GITHUB_OUTPUT
+          echo "export-args=$export_args" >> $GITHUB_OUTPUT
 
   release-sources:
     name: Package Release Sources
