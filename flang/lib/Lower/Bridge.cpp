@@ -40,6 +40,8 @@
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -2648,8 +2650,8 @@ private:
         loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
     }
 
-    auto op = builder->create<fir::CUDAKernelOp>(
-        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n);
+    auto op = builder->create<cuf::KernelOp>(loc, gridValues, blockValues,
+                                             streamValue, lbs, ubs, steps, n);
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);
     mlir::Block &b = op.getRegion().back();
@@ -3719,46 +3721,44 @@ private:
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
-      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
-          builder.getContext(), fir::CUDADataTransferKind::HostDevice);
+      auto transferKindAttr = cuf::DataTransferKindAttr::get(
+          builder.getContext(), cuf::DataTransferKind::HostDevice);
       if (!rhs.isVariable()) {
         auto associate = hlfir::genAssociateExpr(
             loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
-        builder.create<fir::CUDADataTransferOp>(loc, associate.getBase(), lhs,
-                                                transferKindAttr);
+        builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhs,
+                                            transferKindAttr);
         builder.create<hlfir::EndAssociateOp>(loc, associate);
       } else {
-        builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
-                                                transferKindAttr);
+        builder.create<cuf::DataTransferOp>(loc, rhs, lhs, transferKindAttr);
       }
       return;
     }
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
-      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
-          builder.getContext(), fir::CUDADataTransferKind::DeviceHost);
+      auto transferKindAttr = cuf::DataTransferKindAttr::get(
+          builder.getContext(), cuf::DataTransferKind::DeviceHost);
       if (!rhs.isVariable()) {
         // evaluateRhs loads scalar. Look for the memory reference to be used in
         // the transfer.
         if (mlir::isa_and_nonnull<fir::LoadOp>(rhs.getDefiningOp())) {
           auto loadOp = mlir::dyn_cast<fir::LoadOp>(rhs.getDefiningOp());
-          builder.create<fir::CUDADataTransferOp>(loc, loadOp.getMemref(), lhs,
-                                                  transferKindAttr);
+          builder.create<cuf::DataTransferOp>(loc, loadOp.getMemref(), lhs,
+                                              transferKindAttr);
           return;
         }
       } else {
-        builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
-                                                transferKindAttr);
+        builder.create<cuf::DataTransferOp>(loc, rhs, lhs, transferKindAttr);
       }
       return;
     }
 
     if (lhsIsDevice && rhsIsDevice) {
       assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
-      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
-          builder.getContext(), fir::CUDADataTransferKind::DeviceDevice);
-      builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs, transferKindAttr);
+      auto transferKindAttr = cuf::DataTransferKindAttr::get(
+          builder.getContext(), cuf::DataTransferKind::DeviceDevice);
+      builder.create<cuf::DataTransferOp>(loc, rhs, lhs, transferKindAttr);
       return;
     }
     llvm_unreachable("Unhandled CUDA data transfer");
@@ -3769,8 +3769,8 @@ private:
                               const Fortran::evaluate::Assignment &assign) {
     llvm::SmallVector<mlir::Value> temps;
     localSymbols.pushScope();
-    auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
-        builder.getContext(), fir::CUDADataTransferKind::DeviceHost);
+    auto transferKindAttr = cuf::DataTransferKindAttr::get(
+        builder.getContext(), cuf::DataTransferKind::DeviceHost);
     [[maybe_unused]] unsigned nbDeviceResidentObject = 0;
     for (const Fortran::semantics::Symbol &sym :
          Fortran::evaluate::CollectSymbols(assign.rhs)) {
@@ -3795,8 +3795,8 @@ private:
           addSymbol(sym,
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);
-          builder.create<fir::CUDADataTransferOp>(loc, addr, temp,
-                                                  transferKindAttr);
+          builder.create<cuf::DataTransferOp>(loc, addr, temp,
+                                              transferKindAttr);
           ++nbDeviceResidentObject;
         }
       }
@@ -3808,15 +3808,15 @@ private:
   // subprogram are not considered fully device context so it will return false
   // for it.
   static bool isDeviceContext(fir::FirOpBuilder &builder) {
-    if (builder.getRegion().getParentOfType<fir::CUDAKernelOp>())
+    if (builder.getRegion().getParentOfType<cuf::KernelOp>())
       return true;
     if (auto funcOp =
             builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
       if (auto cudaProcAttr =
-              funcOp.getOperation()->getAttrOfType<fir::CUDAProcAttributeAttr>(
-                  fir::getCUDAAttrName())) {
-        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host &&
-               cudaProcAttr.getValue() != fir::CUDAProcAttribute::HostDevice;
+              funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                  cuf::getProcAttrName())) {
+        return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+               cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
       }
     }
     return false;

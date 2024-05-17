@@ -1,15 +1,3 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build plugins for the user system if available.
-#
-##===----------------------------------------------------------------------===##
-
 # Common interface to handle creating a plugin library.
 set(common_dir ${CMAKE_CURRENT_SOURCE_DIR}/common)
 add_subdirectory(common)

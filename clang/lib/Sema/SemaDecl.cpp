@@ -7572,6 +7572,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     tryToFixVariablyModifiedVarType(TInfo, R, D.getIdentifierLoc(),
                                     /*DiagID=*/0);
 
+  if (const AutoType *AutoT = R->getAs<AutoType>())
+    CheckConstrainedAuto(
+        AutoT,
+        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+
   bool IsMemberSpecialization = false;
   bool IsVariableTemplateSpecialization = false;
   bool IsPartialSpecialization = false;
@@ -8899,11 +8904,20 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     const FunctionDecl *FD = cast<FunctionDecl>(CurContext);
     llvm::StringMap<bool> CallerFeatureMap;
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-    if (!Builtin::evaluateRequiredTargetFeatures(
-        "sve", CallerFeatureMap)) {
-      Diag(NewVD->getLocation(), diag::err_sve_vector_in_non_sve_target) << T;
-      NewVD->setInvalidDecl();
-      return;
+
+    if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
+      if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap)) {
+        Diag(NewVD->getLocation(), diag::err_sve_vector_in_non_sve_target) << T;
+        NewVD->setInvalidDecl();
+        return;
+      } else if (!IsArmStreamingFunction(FD,
+                                         /*IncludeLocallyStreaming=*/true)) {
+        Diag(NewVD->getLocation(),
+             diag::err_sve_vector_in_non_streaming_function)
+            << T;
+        NewVD->setInvalidDecl();
+        return;
+      }
     }
   }
 

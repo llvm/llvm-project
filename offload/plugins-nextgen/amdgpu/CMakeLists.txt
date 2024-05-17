@@ -1,21 +1,8 @@
-##===----------------------------------------------------------------------===##
-#
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.txt for details.
-#
-##===----------------------------------------------------------------------===##
-#
-# Build a plugin for an AMDGPU machine if available.
-#
-##===----------------------------------------------------------------------===##
-
 ################################################################################
 set(LIBOMPTARGET_BUILD_AMDGPU_PLUGIN TRUE CACHE BOOL
   "Whether to build AMDGPU plugin")
 if (NOT LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
-  libomptarget_say("Not building AMDGPU NextGen offloading plugin: LIBOMPTARGET_BUILD_AMDGPU_PLUGIN is false")
+  message(STATUS "Not building AMDGPU NextGen offloading plugin: LIBOMPTARGET_BUILD_AMDGPU_PLUGIN is false")
   return()
 endif()
 
@@ -35,7 +22,7 @@ else()
 endif()
 
 if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
-  libomptarget_say("Not building AMDGPU NextGen plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
+  message(STATUS "Not building AMDGPU NextGen plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
   return()
 endif()
 
@@ -50,15 +37,15 @@ target_link_libraries(omptarget.rtl.amdgpu PRIVATE
 
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" OFF)
 if(DEFINED HSA_RUNTIME AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
-  libomptarget_say("Building AMDGPU plugin linked against libhsa")
+  message(STATUS "Building AMDGPU plugin linked against libhsa")
   target_link_libraries(omptarget.rtl.amdgpu PRIVATE ${HSA_RUNTIME})
   get_filename_component(library_path ${HSA_RUNTIME} DIRECTORY)
   target_include_directories(omptarget.rtl.amdgpu PRIVATE ${library_path}/../include)
 elseif(hsa-runtime64_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
-  libomptarget_say("Building AMDGPU plugin linked against libhsa")
+  message(STATUS "Building AMDGPU plugin linked against libhsa")
   target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
-  libomptarget_say("Building AMDGPU plugin for dlopened libhsa")
+  message(STATUS "Building AMDGPU plugin for dlopened libhsa")
   target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
   target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
 endif()
@@ -73,6 +60,6 @@ if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
-  libomptarget_say("Not generating AMDGPU tests, no supported devices detected."
+  message(STATUS "Not generating AMDGPU tests, no supported devices detected."
                    " Use 'LIBOMPTARGET_FORCE_AMDGPU_TESTS' to override.")
 endif()
