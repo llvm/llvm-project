@@ -122,14 +122,14 @@ private:
     uint64_t ExternCount{0};
   };
 
-  struct BranchInfo {
+  struct TakenBranchInfo {
     uint64_t TakenCount{0};
     uint64_t MispredCount{0};
   };
 
   /// Intermediate storage for profile data. We save the results of parsing
   /// and use them later for processing and assigning profile.
-  std::unordered_map<Trace, BranchInfo, TraceHash> BranchLBRs;
+  std::unordered_map<Trace, TakenBranchInfo, TraceHash> BranchLBRs;
   std::unordered_map<Trace, FTInfo, TraceHash> FallthroughLBRs;
   std::vector<AggregatedLBREntry> AggregatedLBRs;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
