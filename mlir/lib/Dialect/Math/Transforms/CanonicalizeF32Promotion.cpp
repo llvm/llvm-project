@@ -64,7 +64,12 @@ struct MathCanonicalizeF32Promotion final
     RewritePatternSet patterns(&getContext());
     patterns.insert<CanonicalizeF32PromotionRewritePattern>(&getContext());
     FrozenRewritePatternSet patternSet(std::move(patterns));
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet)))
+    SmallVector<Operation *> ops;
+    getOperation()->walk([&](Operation *op) {
+      if (isa<arith::ExtFOp>(op))
+        ops.push_back(op);
+    });
+    if (failed(applyOpPatternsAndFold(ops, patternSet)))
       signalPassFailure();
   }
 };
