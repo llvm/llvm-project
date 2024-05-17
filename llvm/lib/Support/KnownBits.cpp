@@ -18,9 +18,8 @@
 
 using namespace llvm;
 
-static KnownBits computeForAddCarry(
-    const KnownBits &LHS, const KnownBits &RHS,
-    bool CarryZero, bool CarryOne) {
+static KnownBits computeForAddCarry(const KnownBits &LHS, const KnownBits &RHS,
+                                    bool CarryZero, bool CarryOne) {
   assert(!(CarryZero && CarryOne) &&
          "Carry can't be zero and one at the same time");
 
@@ -47,11 +46,12 @@ static KnownBits computeForAddCarry(
   return KnownOut;
 }
 
-KnownBits KnownBits::computeForAddCarry(
-    const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry) {
+KnownBits KnownBits::computeForAddCarry(const KnownBits &LHS,
+                                        const KnownBits &RHS,
+                                        const KnownBits &Carry) {
   assert(Carry.getBitWidth() == 1 && "Carry must be 1-bit");
-  return ::computeForAddCarry(
-      LHS, RHS, Carry.Zero.getBoolValue(), Carry.One.getBoolValue());
+  return ::computeForAddCarry(LHS, RHS, Carry.Zero.getBoolValue(),
+                              Carry.One.getBoolValue());
 }
 
 KnownBits KnownBits::computeForAddSub(bool Add, bool NSW, bool NUW,
@@ -475,7 +475,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   Known.Zero.setAllBits();
   Known.One.setAllBits();
   for (unsigned ShiftAmt = MinShiftAmount; ShiftAmt <= MaxShiftAmount;
-      ++ShiftAmt) {
+       ++ShiftAmt) {
     // Skip if the shift amount is impossible.
     if ((ShiftAmtZeroMask & ShiftAmt) != 0 ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
@@ -774,8 +774,8 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
-KnownBits KnownBits::avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool IsCeil,
-                     bool IsSigned) {
+KnownBits KnownBits::avgCompute(const KnownBits &LHS, const KnownBits &RHS,
+                                bool IsCeil, bool IsSigned) {
   KnownBits Known = LHS;
   KnownBits Known2 = RHS;
   unsigned BitWidth = Known.getBitWidth();
@@ -788,20 +788,23 @@ KnownBits KnownBits::avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool
 }
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
-  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ false, /* IsSigned */ true);
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ false,
+                               /* IsSigned */ true);
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
   return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ false,
-                    /* IsSigned */ false);
+                               /* IsSigned */ false);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
-  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ true);
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ true,
+                               /* IsSigned */ true);
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ false);
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ true,
+                               /* IsSigned */ false);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,

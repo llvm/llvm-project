@@ -367,7 +367,7 @@ public:
   static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Return the knownbits for computing average
-  KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS,
+  static KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS,
                               bool IsCeil, bool IsSigned);
 
   /// Compute known bits resulting from multiplying LHS and RHS.
