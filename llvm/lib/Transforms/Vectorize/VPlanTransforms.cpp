@@ -1318,7 +1318,16 @@ void VPlanTransforms::addActiveLaneMask(
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
 ///
-void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
+bool VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
+  // EVL transform doesn't support backends where EVL diffs from RuntimeVF
+  // in the second-to-last iteration.
+  // Return false if any recipes rely on RuntimeVF.
+  if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+             [](VPRecipeBase &Phi) {
+               return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
+                       isa<VPWidenPointerInductionRecipe>(&Phi));
+             }))
+    return false;
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
@@ -1377,6 +1386,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
+  return true;
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
