@@ -1179,54 +1179,6 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
-.. _security-putenv-with-auto:
-
-security.PutenvWithAuto
-"""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
-Function ``putenv`` does not copy the passed string, only a pointer to the data is stored.
-Content of an automatic variable is likely to be overwritten after returning from the parent function.
-
-The problem can be solved by using a static variable or dynamically allocated
-memory. Even better is to avoid using ``putenv`` (it has other problems
-related to memory leaks) and use ``setenv`` instead.
-
-The check corresponds to CERT rule
-`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
-<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
-
-.. code-block:: c
-
-  int f() {
-    char[] env = "NAME=value";
-    return putenv(env); // putenv function should not be called with auto variables
-  }
-
-Limitations:
-
-   - In specific cases one can pass automatic variables to ``putenv``,
-     but one needs to ensure that the given environment key stays
-     alive until it's removed or overwritten.
-     Since the analyzer cannot keep track if and when the string passed to ``putenv``
-     gets deallocated or overwritten, it needs to be slightly more aggressive
-     and warn for each case, leading in some cases to false-positive reports like this:
-
-     .. code-block:: c
-
-        void baz() {
-          char env[] = "NAME=value";
-          putenv(env); // false-positive warning: putenv function should not be called...
-          // More code...
-          // FIXME: It looks like that if one string was passed to putenv,
-          // it should not be deallocated at all, because when reading the
-          // environment variable a pointer into this string is returned.
-          // In this case, if another (or the same) thread reads variable "NAME"
-          // at this point and does not copy the returned string, the data may
-          // become invalid.
-          putenv((char *)"NAME=anothervalue");
-          // This putenv call overwrites the previous entry, thus that can no longer dangle.
-        } // 'env' array becomes dead only here.
-
 .. _unix-checkers:
 
 unix
@@ -2839,6 +2791,31 @@ Warn on mmap() calls that are both writable and executable.
    //       exploitable memory regions, which could be overwritten with malicious
    //       code
  }
+
+.. _alpha-security-putenv-stack-array:
+
+alpha.security.PutenvStackArray
+"""""""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
+(automatic) array as the argument. Function ``putenv`` does not copy the passed
+string, only a pointer to the data is stored and this data can be read even by
+other threads. Content of a stack-allocated array is likely to be overwritten
+after returning from the parent function.
+
+The problem can be solved by using a static array variable or dynamically
+allocated memory. Even better is to avoid using ``putenv`` (it has other
+problems related to memory leaks) and use ``setenv`` instead.
+
+The check corresponds to CERT rule
+`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
+<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
+
+.. code-block:: c
+
+  int f() {
+    char[] env = "NAME=value";
+    return putenv(env); // putenv function should not be called with stack-allocated string
+  }
 
 .. _alpha-security-ReturnPtrRange:
 
