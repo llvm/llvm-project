@@ -715,6 +715,9 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
           Pred->removeSuccessor(&BB);
           Pred->eraseInstruction(Pred->findInstruction(Branch));
           Pred->addTailCallInstruction(SuccSym);
+          MCInst *TailCall = Pred->getLastNonPseudoInstr();
+          assert(TailCall);
+          MIB->setOffset(*TailCall, BB.getOffset());
         } else {
           return false;
         }

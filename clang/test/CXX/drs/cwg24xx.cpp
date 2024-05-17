@@ -45,6 +45,12 @@ void fallthrough(int n) {
 #endif
 }
 
+namespace cwg2430 { // cwg2430: 2.7
+struct S {
+  S f(S s) { return s; }
+};
+} // namespace cwg2430
+
 namespace cwg2450 { // cwg2450: 18
 #if __cplusplus >= 202302L
 struct S {int a;};
