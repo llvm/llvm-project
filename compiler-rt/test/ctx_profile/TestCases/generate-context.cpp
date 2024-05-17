@@ -4,8 +4,8 @@
 // RUN: mkdir -p %t_include
 // RUN: cp %llvm_src/include/llvm/ProfileData/CtxInstrContextNode.h %t_include/
 //
-// Compile with ctx instrumentation "on". We treat "the_root" as callgraph root.
-// RUN: %clangxx %s -lclang_rt.ctx_profile -I%t_include -O2 -o %t.bin -mllvm -profile-context-root=the_root
+// Compile with ctx instrumentation "on". We treat "theRoot" as callgraph root.
+// RUN: %clangxx %s -lclang_rt.ctx_profile -I%t_include -O2 -o %t.bin -mllvm -profile-context-root=theRoot
 //
 // Run the binary, and observe the profile fetch handler's output.
 // RUN: %t.bin | FileCheck %s
@@ -19,6 +19,7 @@ extern "C" bool __llvm_ctx_profile_fetch(void *Data,
                                          bool (*Writer)(void *,
                                                         const ContextNode &));
 
+// avoid name mangling
 extern "C" {
 __attribute__((noinline)) void someFunction(int I) {
   if (I % 2)
@@ -29,7 +30,7 @@ __attribute__((noinline)) void someFunction(int I) {
 
 // block inlining because the pre-inliner otherwise will inline this - it's
 // too small.
-__attribute__((noinline)) void the_root() {
+__attribute__((noinline)) void theRoot() {
   printf("check 1\n");
   someFunction(1);
 #pragma nounroll
@@ -62,16 +63,16 @@ void printProfile(const ContextNode &Node, const std::string &Indent,
     }
 }
 
-// 11065787667334760794 is the_root. We expect 2 callsites and 2 counters - one
+// 8657661246551306189 is theRoot. We expect 2 callsites and 2 counters - one
 // for the entry basic block and one for the loop.
 // 6759619411192316602 is someFunction. We expect all context instances to show
 // the same nr of counters and callsites, but the counters will be different.
-// The first context is for the first callsite with the_root as parent, and the
+// The first context is for the first callsite with theRoot as parent, and the
 // second counter in someFunction will be 0 (we pass an odd nr, and the other
 // path gets instrumented).
 // The second context is in the loop. We expect 2 entries and each of the
 // branches would be taken once, so the second counter is 1.
-// CHECK-NEXT: Guid: 11065787667334760794
+// CHECK-NEXT: Guid: 8657661246551306189
 // CHECK-NEXT: Entries: 1
 // CHECK-NEXT: 2 counters and 3 callsites
 // CHECK-NEXT: Counter values: 1 2
@@ -95,7 +96,7 @@ bool profileWriter() {
 }
 
 int main(int argc, char **argv) {
-  the_root();
+  theRoot();
   // This would be implemented in a specific RPC handler, but here we just call
   // it directly.
   return !profileWriter();
