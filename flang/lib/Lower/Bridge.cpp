@@ -1303,20 +1303,38 @@ private:
   /// A construct contains nested evaluations. Some of these evaluations
   /// may start a new basic block, others will add code to an existing
   /// block.
-  /// Collect the list of nested evaluations that are last in their block.
-  /// These evaluations may need a branch exiting from their parent construct.
+  /// Collect the list of nested evaluations that are last in their block,
+  /// organize them into two sets:
+  /// 1. Exiting evaluations: they may need a branch exiting from their
+  ///    parent construct,
+  /// 2. Fall-through evaluations: they will continue to the following
+  ///    evaluation. They may still need a branch, but they do not exit
+  ///    the construct. They appear in cases where the following evaluation
+  ///    is a target of some branch.
   void collectFinalEvaluations(
       Fortran::lower::pft::Evaluation &construct,
-      llvm::SmallVector<Fortran::lower::pft::Evaluation *> &finals) {
-    Fortran::lower::pft::Evaluation *previous = nullptr;
+      llvm::SmallVector<Fortran::lower::pft::Evaluation *> &exits,
+      llvm::SmallVector<Fortran::lower::pft::Evaluation *> &fallThroughs) {
+    Fortran::lower::pft::EvaluationList &nested =
+        construct.getNestedEvaluations();
+    if (nested.empty())
+      return;
+
     Fortran::lower::pft::Evaluation *exit = construct.constructExit;
-    for (auto &nested : construct.getNestedEvaluations()) {
-      if (nested.block != nullptr && previous != nullptr && previous != exit)
-        finals.push_back(previous);
-      previous = &nested;
+    Fortran::lower::pft::Evaluation *previous = &nested.front();
+
+    for (auto it = ++nested.begin(), end = nested.end(); it != end;
+         previous = &*it++) {
+      if (it->block == nullptr)
+        continue;
+      // "*it" starts a new block, check what to do with "previous"
+      if (it->isIntermediateConstructStmt() && previous != exit)
+        exits.push_back(previous);
+      else if (previous->lexicalSuccessor && previous->lexicalSuccessor->block)
+        fallThroughs.push_back(previous);
     }
     if (previous != exit)
-      finals.push_back(previous);
+      exits.push_back(previous);
   }
 
   /// Generate a SelectOp or branch sequence that compares \p selector against
@@ -2126,8 +2144,8 @@ private:
     }
 
     // Unstructured branch sequence.
-    llvm::SmallVector<Fortran::lower::pft::Evaluation *> finals;
-    collectFinalEvaluations(eval, finals);
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> exits, fallThroughs;
+    collectFinalEvaluations(eval, exits, fallThroughs);
 
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
       auto genIfBranch = [&](mlir::Value cond) {
@@ -2149,8 +2167,12 @@ private:
         genIfBranch(genIfCondition(s));
       } else {
         genFIR(e);
-        if (blockIsUnterminated() && llvm::is_contained(finals, &e))
-          genConstructExitBranch(*eval.constructExit);
+        if (blockIsUnterminated()) {
+          if (llvm::is_contained(exits, &e))
+            genConstructExitBranch(*eval.constructExit);
+          else if (llvm::is_contained(fallThroughs, &e))
+            genBranch(e.lexicalSuccessor->block);
+        }
       }
     }
   }
@@ -2160,16 +2182,20 @@ private:
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(eval, stmtCtx);
 
-    llvm::SmallVector<Fortran::lower::pft::Evaluation *> finals;
-    collectFinalEvaluations(eval, finals);
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> exits, fallThroughs;
+    collectFinalEvaluations(eval, exits, fallThroughs);
 
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
       if (e.getIf<Fortran::parser::EndSelectStmt>())
         maybeStartBlock(e.block);
       else
         genFIR(e);
-      if (blockIsUnterminated() && llvm::is_contained(finals, &e))
-        genConstructExitBranch(*eval.constructExit);
+      if (blockIsUnterminated()) {
+        if (llvm::is_contained(exits, &e))
+          genConstructExitBranch(*eval.constructExit);
+        else if (llvm::is_contained(fallThroughs, &e))
+          genBranch(e.lexicalSuccessor->block);
+      }
     }
     popActiveConstruct();
   }
@@ -3035,8 +3061,8 @@ private:
     }
 
     pushActiveConstruct(getEval(), stmtCtx);
-    llvm::SmallVector<Fortran::lower::pft::Evaluation *> finals;
-    collectFinalEvaluations(getEval(), finals);
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> exits, fallThroughs;
+    collectFinalEvaluations(getEval(), exits, fallThroughs);
     Fortran::lower::pft::Evaluation &constructExit = *getEval().constructExit;
 
     for (Fortran::lower::pft::Evaluation &eval :
@@ -3235,8 +3261,12 @@ private:
       } else {
         genFIR(eval);
       }
-      if (blockIsUnterminated() && llvm::is_contained(finals, &eval))
-        genConstructExitBranch(constructExit);
+      if (blockIsUnterminated()) {
+        if (llvm::is_contained(exits, &eval))
+          genConstructExitBranch(constructExit);
+        else if (llvm::is_contained(fallThroughs, &eval))
+          genBranch(eval.lexicalSuccessor->block);
+      }
     }
     popActiveConstruct();
   }
