@@ -494,6 +494,9 @@ Improvements to Clang's diagnostics
 Improvements to Clang's time-trace
 ----------------------------------
 
+- Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
+  appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
 Bug Fixes in This Version
 -------------------------
 - Clang's ``-Wundefined-func-template`` no longer warns on pure virtual
@@ -723,6 +726,7 @@ Bug Fixes to C++ Support
 - Clang now ignores template parameters only used within the exception specification of candidate function
   templates during partial ordering when deducing template arguments from a function declaration or when
   taking the address of a function template.
+- Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
