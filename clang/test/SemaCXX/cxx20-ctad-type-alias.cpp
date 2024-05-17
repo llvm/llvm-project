@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-linux -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
 
 namespace test1 {
 template <typename T>
@@ -74,7 +74,7 @@ struct Foo {
 template <typename T>
 using AF = Foo<T, 1>;
 
-AF b{0}; 
+AF b{0};
 }  // namespace test6
 
 namespace test7 {
@@ -86,8 +86,8 @@ struct Foo {
 template <typename U>
 using AF1 = Foo<U>;
 template <typename K>
-using AF2 = AF1<K>;  
-AF2 b = 1;  
+using AF2 = AF1<K>;
+AF2 b = 1;
 }  // namespace test7
 
 namespace test8 {
@@ -149,7 +149,7 @@ namespace test12 {
 template<typename X>
 struct Foo {
   template<typename K>
-  struct Bar { 
+  struct Bar {
     Bar(K);
   };
 
