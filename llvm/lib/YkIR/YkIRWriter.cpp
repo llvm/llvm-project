@@ -874,6 +874,15 @@ private:
 
   void serialiseICmpInst(ICmpInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
+    // We don't support:
+    // - vectors
+    // - pointer comparison
+    if (I->getOperand(0)->getType()->isVectorTy() ||
+        I->getOperand(0)->getType()->isPointerTy()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodeICmp);
     // type_idx:
