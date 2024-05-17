@@ -3099,12 +3099,10 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
 
   if (PointerType *PtrTy = dyn_cast<PointerType>(Ty)) {
     const DataLayout &DL = Q.DL;
-    if (DL.isSentinelValueDefined() && PtrTy) {
+    if (DL.isSentinelValueDefined()) {
       unsigned AddrSpace = PtrTy->getPointerAddressSpace();
 
-      if (DL.getSentinelPointerValue(AddrSpace) == 0)
-        return false;
-      return true;
+      return (DL.getSentinelPointerValue(AddrSpace) != 0);
     }
 
     // A byval, inalloca may not be null in a non-default addres space. A
