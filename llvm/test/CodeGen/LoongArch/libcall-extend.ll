@@ -8,7 +8,6 @@ define signext i32 @convert_float_to_i32(i32 %tmp, float %a) nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    bstrpick.d $a0, $a1, 31, 0
 ; CHECK-NEXT:    bl %plt(__fixsfsi)
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -23,7 +22,6 @@ define signext i32 @convert_double_to_i32(i32 %tmp, double %a) nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    bl %plt(__fixdfsi)
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -39,7 +37,6 @@ define signext i32 @convert_fp128_to_i32(i32 %tmp, fp128 %a) nounwind {
 ; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    move $a1, $a2
 ; CHECK-NEXT:    bl %plt(__fixtfsi)
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
