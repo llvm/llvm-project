@@ -4008,8 +4008,6 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   };
 
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
-    if (FormatTok->is(tok::colon))
-      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -4017,9 +4015,13 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       else if (FormatTok->is(tok::greater))
         --AngleNestingLevel;
 
-      if (AngleNestingLevel == 0 && FormatTok->is(tok::l_paren) &&
-          IsNonMacroIdentifier(FormatTok->Previous)) {
-        break;
+      if (AngleNestingLevel == 0) {
+        if (FormatTok->is(tok::colon)) {
+          IsDerived = true;
+        } else if (FormatTok->is(tok::l_paren) &&
+                   IsNonMacroIdentifier(FormatTok->Previous)) {
+          break;
+        }
       }
       if (FormatTok->is(tok::l_brace)) {
         if (AngleNestingLevel == 0 && IsListInitialization())
