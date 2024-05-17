@@ -4112,7 +4112,13 @@ Speculation::Speculatability PackOp::getSpeculatability() {
 static bool hasSameInnerOuterAttribute(PackOp packOp, UnPackOp unPackOp) {
   if (packOp.getInnerDimsPos() != unPackOp.getInnerDimsPos())
     return false;
-  return packOp.getOuterDimsPerm() == unPackOp.getOuterDimsPerm();
+  if (packOp.getOuterDimsPerm() == unPackOp.getOuterDimsPerm())
+    return true;
+  // Outer dims permutation is optional.
+  // To compare unbalanced pack-unpack pair, treat no permutation as equal to
+  // identity permutation.
+  return isIdentityPermutation(packOp.getOuterDimsPerm()) &&
+         isIdentityPermutation(unPackOp.getOuterDimsPerm());
 }
 
 // Return true if pack and unpack have the same tiles.

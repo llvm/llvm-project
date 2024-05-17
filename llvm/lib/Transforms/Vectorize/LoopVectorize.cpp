@@ -10390,15 +10390,15 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
         RemoveRedundantDbgInstrs(&BB);
     }
 
-    // We currently do not preserve loopinfo/dominator analyses with outer loop
+    // We currently do not preserve dominator analyses with outer loop
     // vectorization. Until this is addressed, mark these analyses as preserved
     // only for non-VPlan-native path.
-    // TODO: Preserve Loop and Dominator analyses for VPlan-native path.
+    // TODO: Preserve Dominator analysis for VPlan-native path.
     if (!EnableVPlanNativePath) {
-      PA.preserve<LoopAnalysis>();
       PA.preserve<DominatorTreeAnalysis>();
       PA.preserve<ScalarEvolutionAnalysis>();
     }
+    PA.preserve<LoopAnalysis>();
 
     if (Result.MadeCFGChange) {
       // Making CFG changes likely means a loop got vectorized. Indicate that

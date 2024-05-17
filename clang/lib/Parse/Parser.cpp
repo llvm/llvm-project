@@ -1439,6 +1439,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
   }
 
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
   SkipBodyInfo SkipBody;
@@ -1496,8 +1498,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     Actions.ActOnSkippedFunctionBody(Res);
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
-
-  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   if (Tok.is(tok::kw_try))
     return ParseFunctionTryBlock(Res, BodyScope);
@@ -1562,7 +1562,8 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
     // Parse the common declaration-specifiers piece.
     DeclSpec DS(AttrFactory);
-    ParseDeclarationSpecifiers(DS);
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo);
 
     // C99 6.9.1p6: 'each declaration in the declaration list shall have at
     // least one declarator'.
