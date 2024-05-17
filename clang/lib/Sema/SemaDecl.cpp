@@ -9223,13 +9223,14 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
       if (const auto &FTI = ExtraArgs.D.getFunctionTypeInfo(); !NewFDisConst)
         DB << FixItHint::CreateInsertion(FTI.getRParenLoc().getLocWithOffset(1),
                                          " const");
-      else if (SourceLocation ConstLoc = FTI.getConstQualifierLoc();
-               ConstLoc.isValid())
-        DB << FixItHint::CreateRemoval(ConstLoc);
-    } else
+      else if (FTI.hasMethodTypeQualifiers() &&
+               FTI.getConstQualifierLoc().isValid())
+        DB << FixItHint::CreateRemoval(FTI.getConstQualifierLoc());
+    } else {
       SemaRef.Diag(FD->getLocation(),
                    IsMember ? diag::note_member_def_close_match
                             : diag::note_local_decl_close_match);
+    }
   }
   return nullptr;
 }

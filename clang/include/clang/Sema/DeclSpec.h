@@ -1527,20 +1527,20 @@ struct DeclaratorChunk {
 
     /// Retrieve the location of the 'const' qualifier.
     SourceLocation getConstQualifierLoc() const {
-      return MethodQualifiers ? MethodQualifiers->getConstSpecLoc()
-                              : SourceLocation();
+      assert(MethodQualifiers);
+      return MethodQualifiers->getConstSpecLoc();
     }
 
     /// Retrieve the location of the 'volatile' qualifier.
     SourceLocation getVolatileQualifierLoc() const {
-      return MethodQualifiers ? MethodQualifiers->getVolatileSpecLoc()
-                              : SourceLocation();
+      assert(MethodQualifiers);
+      return MethodQualifiers->getVolatileSpecLoc();
     }
 
     /// Retrieve the location of the 'restrict' qualifier.
     SourceLocation getRestrictQualifierLoc() const {
-      return MethodQualifiers ? MethodQualifiers->getRestrictSpecLoc()
-                              : SourceLocation();
+      assert(MethodQualifiers);
+      return MethodQualifiers->getRestrictSpecLoc();
     }
 
     /// Retrieve the location of the 'mutable' qualifier, if any.
