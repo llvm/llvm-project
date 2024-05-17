@@ -555,8 +555,6 @@ static Error writeMemProf(
 uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
                                       const bool WritePrevVersion,
                                       ProfOStream &OS) {
-  // Record the offset before writing any fields.
-  const uint64_t StartOffset = OS.tell();
   // Only write out the first four fields.
   for (int I = 0; I < 4; I++)
     OS.write(reinterpret_cast<const uint64_t *>(&Header)[I]);
