@@ -988,7 +988,6 @@ def : AArch64Processor<"apple-a14", HasV8_5aOps, CycloneModel, ProcessorFeatures
                      [TuneAppleA14]>;
 def : AArch64Processor<"apple-a15", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
-// Alias for the latest Apple processor model supported by LLVM.
 def : AArch64Processor<"apple-a16", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
 def : AArch64Processor<"apple-a17", HasV8_6aOps, CycloneModel, ProcessorFeatures.AppleA17,
