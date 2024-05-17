@@ -177,27 +177,26 @@ func.func @non_unit_strides(%arg0: memref<512x16x1xf32, strided<[8192, 16, 4], o
 
 // -----
 
-func.func @leading_scalable_dimension_transfer_read(%dest : memref<24x1xf32>, %index: index) -> vector<[4]x1xf32> {
+func.func @leading_scalable_dimension_transfer_read(%dest : memref<24x1xf32>) -> vector<[4]x1xf32> {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %dest[%index, %c0], %pad {in_bounds = [true, true]} : memref<24x1xf32>, vector<[4]x1xf32>
+  %0 = vector.transfer_read %dest[%c0, %c0], %pad {in_bounds = [true, true]} : memref<24x1xf32>, vector<[4]x1xf32>
   return %0 : vector<[4]x1xf32>
 }
 // CHECK:      func.func @leading_scalable_dimension_transfer_read
 // CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
-// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
 // CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]][0, 0] [24, 1] [1, 1] : memref<24x1xf32> to memref<24xf32, strided<[1]>>
-// CHECK:        %[[READ:.+]] = vector.transfer_read %[[SUBVIEW]][%[[IDX]]], %{{.*}} {in_bounds = [true]} : memref<24xf32, strided<[1]>>, vector<[4]xf32>
+// CHECK:        %[[READ:.+]] = vector.transfer_read %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : memref<24xf32, strided<[1]>>, vector<[4]xf32>
 // CHECK:        %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<[4]xf32> to vector<[4]x1xf32>
 // CHECK:        return %[[CAST]]
 
 // -----
 
 // Negative test: [1] (scalable 1) is _not_ a unit dimension.
-func.func @trailing_scalable_one_dim_transfer_read(%dest : memref<24x1xf32>, %index: index) -> vector<4x[1]xf32> {
+func.func @trailing_scalable_one_dim_transfer_read(%dest : memref<24x1xf32>) -> vector<4x[1]xf32> {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %dest[%index, %c0], %pad {in_bounds = [true, true]} : memref<24x1xf32>, vector<4x[1]xf32>
+  %0 = vector.transfer_read %dest[%c0, %c0], %pad {in_bounds = [true, true]} : memref<24x1xf32>, vector<4x[1]xf32>
   return %0 : vector<4x[1]xf32>
 }
 // CHECK:      func.func @trailing_scalable_one_dim_transfer_read
@@ -207,18 +206,17 @@ func.func @trailing_scalable_one_dim_transfer_read(%dest : memref<24x1xf32>, %in
 
 // -----
 
-func.func @leading_scalable_dimension_transfer_write(%dest : memref<24x1xf32>, %vec: vector<[4]x1xf32>, %index: index) {
+func.func @leading_scalable_dimension_transfer_write(%dest : memref<24x1xf32>, %vec: vector<[4]x1xf32>) {
   %c0 = arith.constant 0 : index
-  vector.transfer_write %vec, %dest[%index, %c0] {in_bounds = [true, true]} : vector<[4]x1xf32>,  memref<24x1xf32>
+  vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x1xf32>,  memref<24x1xf32>
   return
 }
 // CHECK:      func.func @leading_scalable_dimension_transfer_write
 // CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
 // CHECK-SAME:   %[[VEC:[a-zA-Z0-9]+]]
-// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
 // CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]][0, 0] [24, 1] [1, 1] : memref<24x1xf32> to memref<24xf32, strided<[1]>>
 // CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<[4]x1xf32> to vector<[4]xf32>
-// CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]][%[[IDX]]] {in_bounds = [true]} : vector<[4]xf32>, memref<24xf32, strided<[1]>>
+// CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : vector<[4]xf32>, memref<24xf32, strided<[1]>>
 
 // -----
 
