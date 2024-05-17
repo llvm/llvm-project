@@ -884,7 +884,7 @@ TemplateArgumentList::CreateCopy(ASTContext &Context,
 
 FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
     ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
-    TemplateSpecializationKind TSK, const TemplateArgumentList *TemplateArgs,
+    TemplateSpecializationKind TSK, TemplateArgumentList *TemplateArgs,
     const TemplateArgumentListInfo *TemplateArgsAsWritten, SourceLocation POI,
     MemberSpecializationInfo *MSInfo) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
