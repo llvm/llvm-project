@@ -1717,7 +1717,7 @@ def int_coro_await_suspend_bool : Intrinsic<[llvm_i1_ty],
                                             [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
                                             [Throws]>;
 
-def int_coro_await_suspend_handle : Intrinsic<[llvm_ptr_ty],
+def int_coro_await_suspend_handle : Intrinsic<[],
                                               [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
                                               [Throws]>;
 

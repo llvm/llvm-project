@@ -663,8 +663,7 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
 
   // Parse the input argument
   OpAsmParser::Argument argInfo;
-  argInfo.type = parser.getBuilder().getIndexType();
-  if (failed(parser.parseArgument(argInfo)))
+  if (failed(parser.parseArgument(argInfo, true)))
     return failure();
 
   // Parse the body region, and reuse the operand info as the argument info.
@@ -676,7 +675,7 @@ void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs());
   p << ' ';
   p.printRegionArgument(getRegion().getArgument(0), /*argAttrs=*/{},
-                        /*omitType=*/true);
+                        /*omitType=*/false);
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
 }
@@ -707,10 +706,11 @@ void TestReflectBoundsOp::inferResultRanges(
   const ConstantIntRanges &range = argRanges[0];
   MLIRContext *ctx = getContext();
   Builder b(ctx);
-  setUminAttr(b.getIndexAttr(range.umin().getZExtValue()));
-  setUmaxAttr(b.getIndexAttr(range.umax().getZExtValue()));
-  setSminAttr(b.getIndexAttr(range.smin().getSExtValue()));
-  setSmaxAttr(b.getIndexAttr(range.smax().getSExtValue()));
+  auto intTy = getType();
+  setUminAttr(b.getIntegerAttr(intTy, range.umin()));
+  setUmaxAttr(b.getIntegerAttr(intTy, range.umax()));
+  setSminAttr(b.getIntegerAttr(intTy, range.smin()));
+  setSmaxAttr(b.getIntegerAttr(intTy, range.smax()));
   setResultRanges(getResult(), range);
 }
 

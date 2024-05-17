@@ -250,18 +250,13 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                         NeedsFreeze);
 }
 
-void RuntimePointerChecking::tryToCreateDiffCheck(
+bool RuntimePointerChecking::tryToCreateDiffCheck(
     const RuntimeCheckingPtrGroup &CGI, const RuntimeCheckingPtrGroup &CGJ) {
-  if (!CanUseDiffCheck)
-    return;
-
   // If either group contains multiple different pointers, bail out.
   // TODO: Support multiple pointers by using the minimum or maximum pointer,
   // depending on src & sink.
-  if (CGI.Members.size() != 1 || CGJ.Members.size() != 1) {
-    CanUseDiffCheck = false;
-    return;
-  }
+  if (CGI.Members.size() != 1 || CGJ.Members.size() != 1)
+    return false;
 
   PointerInfo *Src = &Pointers[CGI.Members[0]];
   PointerInfo *Sink = &Pointers[CGJ.Members[0]];
@@ -269,10 +264,8 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
   // If either pointer is read and written, multiple checks may be needed. Bail
   // out.
   if (!DC.getOrderForAccess(Src->PointerValue, !Src->IsWritePtr).empty() ||
-      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty()) {
-    CanUseDiffCheck = false;
-    return;
-  }
+      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty())
+    return false;
 
   ArrayRef<unsigned> AccSrc =
       DC.getOrderForAccess(Src->PointerValue, Src->IsWritePtr);
@@ -280,10 +273,9 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
       DC.getOrderForAccess(Sink->PointerValue, Sink->IsWritePtr);
   // If either pointer is accessed multiple times, there may not be a clear
   // src/sink relation. Bail out for now.
-  if (AccSrc.size() != 1 || AccSink.size() != 1) {
-    CanUseDiffCheck = false;
-    return;
-  }
+  if (AccSrc.size() != 1 || AccSink.size() != 1)
+    return false;
+
   // If the sink is accessed before src, swap src/sink.
   if (AccSink[0] < AccSrc[0])
     std::swap(Src, Sink);
@@ -291,10 +283,8 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
   auto *SrcAR = dyn_cast<SCEVAddRecExpr>(Src->Expr);
   auto *SinkAR = dyn_cast<SCEVAddRecExpr>(Sink->Expr);
   if (!SrcAR || !SinkAR || SrcAR->getLoop() != DC.getInnermostLoop() ||
-      SinkAR->getLoop() != DC.getInnermostLoop()) {
-    CanUseDiffCheck = false;
-    return;
-  }
+      SinkAR->getLoop() != DC.getInnermostLoop())
+    return false;
 
   SmallVector<Instruction *, 4> SrcInsts =
       DC.getInstructionsForAccess(Src->PointerValue, Src->IsWritePtr);
@@ -302,10 +292,9 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
       DC.getInstructionsForAccess(Sink->PointerValue, Sink->IsWritePtr);
   Type *SrcTy = getLoadStoreType(SrcInsts[0]);
   Type *DstTy = getLoadStoreType(SinkInsts[0]);
-  if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy)) {
-    CanUseDiffCheck = false;
-    return;
-  }
+  if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
+    return false;
+
   const DataLayout &DL =
       SinkAR->getLoop()->getHeader()->getModule()->getDataLayout();
   unsigned AllocSize =
@@ -316,10 +305,8 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
   // future.
   auto *Step = dyn_cast<SCEVConstant>(SinkAR->getStepRecurrence(*SE));
   if (!Step || Step != SrcAR->getStepRecurrence(*SE) ||
-      Step->getAPInt().abs() != AllocSize) {
-    CanUseDiffCheck = false;
-    return;
-  }
+      Step->getAPInt().abs() != AllocSize)
+    return false;
 
   IntegerType *IntTy =
       IntegerType::get(Src->PointerValue->getContext(),
@@ -332,10 +319,8 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
   const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkAR->getStart(), IntTy);
   const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcAR->getStart(), IntTy);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
-      isa<SCEVCouldNotCompute>(SrcStartInt)) {
-    CanUseDiffCheck = false;
-    return;
-  }
+      isa<SCEVCouldNotCompute>(SrcStartInt))
+    return false;
 
   const Loop *InnerLoop = SrcAR->getLoop();
   // If the start values for both Src and Sink also vary according to an outer
@@ -356,8 +341,7 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
             SinkStartAR->getStepRecurrence(*SE)) {
       LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
                            "cannot be hoisted out of the outer loop\n");
-      CanUseDiffCheck = false;
-      return;
+      return false;
     }
   }
 
@@ -366,6 +350,7 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
                     << "SinkStartInt: " << *SinkStartInt << '\n');
   DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize,
                           Src->NeedsFreeze || Sink->NeedsFreeze);
+  return true;
 }
 
 SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
@@ -377,7 +362,7 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
       const RuntimeCheckingPtrGroup &CGJ = CheckingGroups[J];
 
       if (needsChecking(CGI, CGJ)) {
-        tryToCreateDiffCheck(CGI, CGJ);
+        CanUseDiffCheck = CanUseDiffCheck && tryToCreateDiffCheck(CGI, CGJ);
         Checks.push_back(std::make_pair(&CGI, &CGJ));
       }
     }
@@ -1636,9 +1621,8 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
   Offsets.emplace(0, 0);
-  int Cnt = 1;
   bool IsConsecutive = true;
-  for (auto *Ptr : VL.drop_front()) {
+  for (auto [Idx, Ptr] : drop_begin(enumerate(VL))) {
     std::optional<int> Diff = getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, DL, SE,
                                               /*StrictCheck=*/true);
     if (!Diff)
@@ -1646,22 +1630,18 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
 
     // Check if the pointer with the same offset is found.
     int64_t Offset = *Diff;
-    auto Res = Offsets.emplace(Offset, Cnt);
-    if (!Res.second)
+    auto [It, IsInserted] = Offsets.emplace(Offset, Idx);
+    if (!IsInserted)
       return false;
     // Consecutive order if the inserted element is the last one.
-    IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-    ++Cnt;
+    IsConsecutive &= std::next(It) == Offsets.end();
   }
   SortedIndices.clear();
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
     SortedIndices.resize(VL.size());
-    Cnt = 0;
-    for (const std::pair<int64_t, int> &Pair : Offsets) {
-      SortedIndices[Cnt] = Pair.second;
-      ++Cnt;
-    }
+    for (auto [Idx, Off] : enumerate(Offsets))
+      SortedIndices[Idx] = Off.second;
   }
   return true;
 }
@@ -2006,9 +1986,6 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
-  if (!isa<SCEVConstant, SCEVCouldNotCompute>(Dist))
-    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
-
   uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
@@ -2034,7 +2011,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
-  const auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
+  auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
       std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
@@ -2077,7 +2054,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
-  }
+  } else
+    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
 
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
@@ -2656,7 +2634,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                                SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
     auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
-    recordAnalysis("CantIdentifyArrayBounds", I) 
+    recordAnalysis("CantIdentifyArrayBounds", I)
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");

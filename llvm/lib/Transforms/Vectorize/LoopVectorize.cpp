@@ -5813,10 +5813,11 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
     for (Instruction &I : *BB)
       if (isScalarWithPredication(&I, VF)) {
         ScalarCostsTy ScalarCosts;
-        // Do not apply discount if scalable, because that would lead to
-        // invalid scalarization costs.
-        // Do not apply discount logic if hacked cost is needed
-        // for emulated masked memrefs.
+        // Do not apply discount logic for:
+        // 1. Scalars after vectorization, as there will only be a single copy
+        // of the instruction.
+        // 2. Scalable VF, as that would lead to invalid scalarization costs.
+        // 3. Emulated masked memrefs, if a hacked cost is needed.
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
@@ -8011,9 +8012,6 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
     EdgeMask = Builder.createNot(EdgeMask, BI->getDebugLoc());
 
   if (SrcMask) { // Otherwise block in-mask is all-one, no need to AND.
-    // Use LogicalAnd as it does not propagate poison, i.e. does not introduce
-    // new UB if SrcMask is false and EdgeMask is poison. Using 'and' here
-    // introduces undefined behavior.
     // The bitwise 'And' of SrcMask and EdgeMask introduces new UB if SrcMask
     // is false and EdgeMask is poison. Avoid that by using 'LogicalAnd'
     // instead which generates 'select i1 SrcMask, i1 EdgeMask, i1 false'.
@@ -10392,15 +10390,15 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
         RemoveRedundantDbgInstrs(&BB);
     }
 
-    // We currently do not preserve loopinfo/dominator analyses with outer loop
+    // We currently do not preserve dominator analyses with outer loop
     // vectorization. Until this is addressed, mark these analyses as preserved
     // only for non-VPlan-native path.
-    // TODO: Preserve Loop and Dominator analyses for VPlan-native path.
+    // TODO: Preserve Dominator analysis for VPlan-native path.
     if (!EnableVPlanNativePath) {
-      PA.preserve<LoopAnalysis>();
       PA.preserve<DominatorTreeAnalysis>();
       PA.preserve<ScalarEvolutionAnalysis>();
     }
+    PA.preserve<LoopAnalysis>();
 
     if (Result.MadeCFGChange) {
       // Making CFG changes likely means a loop got vectorized. Indicate that

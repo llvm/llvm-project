@@ -17,7 +17,7 @@ define <4 x half> @shuffle_v4f16(<4 x half> %x, <4 x half> %y) {
 define <8 x float> @shuffle_v8f32(<8 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: shuffle_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 236
+; CHECK-NEXT:    li a0, -20
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0

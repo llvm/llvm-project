@@ -9133,7 +9133,7 @@ public:
                                    CheckTemplateArgumentKind CTAK);
   bool CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
                                      TemplateParameterList *Params,
-                                     TemplateArgumentLoc &Arg);
+                                     TemplateArgumentLoc &Arg, bool IsDeduced);
 
   void NoteTemplateLocation(const NamedDecl &Decl,
                             std::optional<SourceRange> ParamRange = {});
@@ -9492,6 +9492,15 @@ public:
                           ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
+  /// Deduce the template arguments of the given template from \p FromType.
+  /// Used to implement the IsDeducible constraint for alias CTAD per C++
+  /// [over.match.class.deduct]p4.
+  ///
+  /// It only supports class or type alias templates.
+  TemplateDeductionResult
+  DeduceTemplateArgumentsFromType(TemplateDecl *TD, QualType FromType,
+                                  sema::TemplateDeductionInfo &Info);
+
   TemplateDeductionResult DeduceTemplateArguments(
       TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
       ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
@@ -9603,7 +9612,8 @@ public:
                                     sema::TemplateDeductionInfo &Info);
 
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
-      TemplateParameterList *PParam, TemplateDecl *AArg, SourceLocation Loc);
+      TemplateParameterList *PParam, TemplateDecl *AArg, SourceLocation Loc,
+      bool IsDeduced);
 
   void MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
                                   unsigned Depth, llvm::SmallBitVector &Used);
