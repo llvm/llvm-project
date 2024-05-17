@@ -183,8 +183,10 @@ applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
       return failure();
 
     // Report back the relevant handles to the transform op.
-    originalConsumerOps.push_back(fuseConsumerResults->origConsumer);
-    fusedConsumerOps.push_back(fuseConsumerResults->tiledAndFusedConsumer);
+    originalConsumerOps.push_back(
+        fuseConsumerResults->origConsumerOperand->getOwner());
+    fusedConsumerOps.push_back(
+        fuseConsumerResults->tiledAndFusedConsumerOperand->getOwner());
   }
 
   transformResults.set(transformOp->getOpResult(0), originalConsumerOps);

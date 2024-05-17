@@ -32,10 +32,7 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
     OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
 
 /// Method to swap an `tensor.insert_slice` with its consumer when the
-/// consumer implements the `TilingInterface`. The pattern itself does not
-/// provide a mechanism to control where the application happens. With use of
-/// transform dialect that control is done within the transform dialect. Other
-/// use cases can inherit from this pattern and add necessary controls.
+/// consumer implements the `TilingInterface`.
 FailureOr<TilingResult>
 replaceInsertSliceWithTiledConsumer(OpBuilder &builder,
                                     OffsetSizeAndStrideOpInterface sliceOp,

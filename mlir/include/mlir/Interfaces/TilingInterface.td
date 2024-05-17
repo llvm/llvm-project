@@ -89,8 +89,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           "unsigned":$resultNumber,
           "ArrayRef<OpFoldResult> ":$offsets,
           "ArrayRef<OpFoldResult> ":$sizes,
-          "SmallVectorImpl<OpFoldResult> &":$resultOffsets,
-          "SmallVectorImpl<OpFoldResult> &":$resultSizes),
+          "SmallVector<OpFoldResult> &":$resultOffsets,
+          "SmallVector<OpFoldResult> &":$resultSizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -98,8 +98,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Method to return the position of iteration domain tile computed by the
-          tiled operation.
+          Method to return the the tile of the iteration domain where
+          values from the given tile of the operand are used
         }],
         /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"getIterationDomainTileFromOperandTile",

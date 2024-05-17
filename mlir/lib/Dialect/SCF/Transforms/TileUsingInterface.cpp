@@ -1106,10 +1106,11 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
 // tileAndFuseConsumerUsingSCF implementation.
 //===----------------------------------------------------------------------===//
 
-/// A utility function that checks whether the passed value has only one user.
-/// In case the defining operation is a tensor.insert_slice, it checks if the
-/// user is scf.yield.
-static LogicalResult checkAssumptionForFusingConsumer(Value result) {
+/// A utility function that checks whether the only use of the result of a
+/// tensor.insert_slice op is in a scf.yield op.
+static LogicalResult
+checkAssumptionForFusingConsumer(tensor::InsertSliceOp candidateSliceOp) {
+  Value result = candidateSliceOp.getResult();
   Value::use_range uses = result.getUses();
   if (!llvm::hasSingleElement(uses)) {
     LLVM_DEBUG(llvm::dbgs() << "Too many uses of the candidate slice op\n");
@@ -1131,83 +1132,70 @@ static LogicalResult checkAssumptionForFusingConsumer(Value result) {
   return success();
 }
 
-/// Fetch the first untiled consumer of a scf.for's result which is yielded by
-/// a tensor.insert_slice. This function makes the following assumptions :-
+/// Fetches the OpOperand of the only user (and use) of the value `val` which
+/// implements `TilingInterface` and `DestinationStyleOpInterface`. Returns
+/// failure otherwise.
+static FailureOr<OpOperand *> getConsumerFromUses(Value val,
+                                                  Block *containingOpBlock) {
+  // Step 1. Check that the value has exactly one use.
+  if (!llvm::hasSingleElement(val.getUses()))
+    return failure();
+  // Step 2. Get uses.
+  OpOperand &operand = (*val.getUses().begin());
+  Operation *consumerOp = operand.getOwner();
+  // TODO: We have to init result of consumer before scf.for, use
+  //       DestinationStyleOpInterface to get result shape from init for now.
+  //       Add support for other op such as op has InferTypeOpInterface.
+  if (!isa<TilingInterface>(consumerOp) ||
+      !isa<DestinationStyleOpInterface>(consumerOp))
+    return failure();
+  if (containingOpBlock != consumerOp->getBlock())
+    return failure();
+  return &operand;
+}
+
+/// Fetch the untiled consumer of a scf.for's result which is yielded by a
+/// tensor.insert_slice. This function makes the following assumptions :
 /// 1.  tensor.insert_slice has scf.yield as its only user.
 /// 2.  scf.for's corresponding result has only one use.
-static OpOperand *
+static FailureOr<OpOperand *>
 getUntiledConsumerFromSlice(tensor::InsertSliceOp candidateSliceOp) {
+  if (failed(checkAssumptionForFusingConsumer(candidateSliceOp)))
+    return failure();
   Value sliceResult = candidateSliceOp.getResult();
-  if (failed(checkAssumptionForFusingConsumer(candidateSliceOp.getResult()))) {
-    return nullptr;
-  }
   // Step 1. Fetch the corresponding output.
   OpOperand &yieldOpOperand = (*sliceResult.getUses().begin());
   unsigned resultNumber = yieldOpOperand.getOperandNumber();
   // Step 2. Check containing op is scf.for.
   Operation *containingOp = candidateSliceOp->getParentOp();
   auto forOp = dyn_cast<scf::ForOp>(containingOp);
-  if (!forOp) {
-    return nullptr;
-  }
+  if (!forOp)
+    return failure();
   Value resultingValue = forOp->getResult(resultNumber);
 
-  // Step 3. Check resulting value of scf.for has exactly one use.
-  if (!llvm::hasSingleElement(resultingValue.getUses())) {
-    return nullptr;
-  }
-
-  // Step 4. Get uses.
-  OpOperand &operand = (*resultingValue.getUses().begin());
-  Operation *consumerOp = operand.getOwner();
-  // TODO: We have to init result of consumer before scf.for, use
-  //       DestinationStyleOpInterface to get result shape from init for now.
-  //       Add support for other op such as op has InferTypeOpInterface.
-  if (!isa<TilingInterface>(consumerOp) ||
-      !isa<DestinationStyleOpInterface>(consumerOp)) {
-    return nullptr;
-  }
-  if (containingOp->getBlock() != consumerOp->getBlock()) {
-    return nullptr;
-  }
-  return &operand;
+  return getConsumerFromUses(resultingValue, containingOp->getBlock());
 }
 
 /// Fetch the first untiled consumer of a scf.forall's result which is yielded
 /// by a tensor.parallel_insert_slice.
-static OpOperand *
+static FailureOr<OpOperand *>
 getUntiledConsumerFromSlice(tensor::ParallelInsertSliceOp candidateSliceOp) {
   // Step 1. Fetch the corresponding output
   Value sliceDest = candidateSliceOp.getDest();
-  auto iterArg = cast<BlockArgument>(sliceDest);
+  auto iterArg = dyn_cast<BlockArgument>(sliceDest);
+  if (!iterArg)
+    return failure();
   Operation *containingOp = iterArg.getOwner()->getParentOp();
+  if (containingOp != candidateSliceOp->getParentOp()->getParentOp())
+    return failure();
   // Step 2. Check that the containing op is scf.forall.
   auto forallOp = dyn_cast<scf::ForallOp>(containingOp);
-  if (!forallOp) {
-    return nullptr;
-  }
+  if (!forallOp)
+    return failure();
   Value resultingValue =
       forallOp.getTiedOpResult(forallOp.getTiedOpOperand(iterArg));
-  // Step 3. Check resulting value of scf.forall has exactly one use.
-  Value::use_range uses = resultingValue.getUses();
-  if (!llvm::hasSingleElement(uses)) {
-    return nullptr;
-  }
 
-  // Step 4. Get uses.
-  OpOperand &operand = (*resultingValue.getUses().begin());
-  Operation *consumerOp = operand.getOwner();
-  // TODO: We have to init result of consumer before scf.forall, use
-  //       DestinationStyleOpInterface to get result shape from init for now.
-  //       Add support for other op such as op has InferTypeOpInterface.
-  if (!isa<TilingInterface>(consumerOp) ||
-      !isa<DestinationStyleOpInterface>(consumerOp)) {
-    return nullptr;
-  }
-  if (containingOp->getBlock() != consumerOp->getBlock()) {
-    return nullptr;
-  }
-  return &operand;
+  return getConsumerFromUses(resultingValue, containingOp->getBlock());
 }
 
 /// This utility currently checks whether the loop either :-
@@ -1235,60 +1223,68 @@ static LogicalResult checkAssumptionForLoop(Operation *loopOp,
   return success();
 }
 
-static OpOperand *getUntiledConsumerFromSlice(Operation *sliceOp) {
+/// A utility to fetch an untiled consumer of
+/// tensor.insert_slice/tensor.parallel_insert_slice.
+static FailureOr<OpOperand *> getUntiledConsumerFromSlice(Operation *sliceOp) {
   if (auto insertSlice = dyn_cast<tensor::InsertSliceOp>(sliceOp)) {
     return getUntiledConsumerFromSlice(insertSlice);
   } else if (auto parallelInsertSlice =
                  dyn_cast<tensor::ParallelInsertSliceOp>(sliceOp)) {
     return getUntiledConsumerFromSlice(parallelInsertSlice);
   } else {
-    return nullptr;
+    return failure();
   }
 }
 
-static void
-fixTerminatorSCFYield(RewriterBase &rewriter, scf::ForOp newForOp,
-                      TilingResult tilingResult,
-                      SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
-                      SmallVector<SmallVector<OpFoldResult>> &resultSizes,
-                      SmallVector<OpFoldResult> &strides, unsigned initSize) {
+/// After fusing consumer into scf.for we want to modify the scf.yield operation
+/// to reflect the same by returning the values yielded by the tiled consumer.
+static void fixTerminatorSCFYield(
+    RewriterBase &rewriter, scf::ForOp newForOp, TilingResult tilingResult,
+    SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
+    SmallVector<SmallVector<OpFoldResult>> &resultSizes,
+    SmallVector<OpFoldResult> &strides, ArrayRef<BlockArgument> bbArgs) {
   scf::YieldOp oldTerminatorOp =
       cast<scf::YieldOp>(newForOp.getBody()->getTerminator());
-  SmallVector<Value> newYieldOperands(oldTerminatorOp.getResults());
+  unsigned totalOldResults = oldTerminatorOp->getNumResults();
+  unsigned totalTiledResults = tilingResult.tiledOps[0]->getNumResults();
+  SmallVector<Value> newYieldOperands;
+  newYieldOperands.reserve(totalOldResults + totalTiledResults);
+  for (auto oldResult : oldTerminatorOp.getResults()) {
+    newYieldOperands.push_back(oldResult);
+  }
   rewriter.setInsertionPointAfter(oldTerminatorOp);
-  MutableArrayRef<BlockArgument> bbArgs = newForOp.getBody()->getArguments();
   Location loc = newForOp.getLoc();
   for (auto [idx, v] :
        llvm::enumerate(tilingResult.tiledOps[0]->getResults())) {
     SmallVector<OpFoldResult> strides(resultOffsets[idx].size(),
                                       rewriter.getIndexAttr(1));
     Value newInsertSliceOp = rewriter.create<tensor::InsertSliceOp>(
-        loc, v, bbArgs[1 + initSize + idx], resultOffsets[idx],
-        resultSizes[idx], strides);
+        loc, v, bbArgs[idx], resultOffsets[idx], resultSizes[idx], strides);
     newYieldOperands.push_back(newInsertSliceOp);
   }
   rewriter.create<scf::YieldOp>(loc, newYieldOperands);
   rewriter.eraseOp(oldTerminatorOp);
 }
 
+/// After fusing consumer into scf.forall we want to yield each of the resulting
+/// values by the tiled consumer within scf.forall.in_parallel region.
 static void fixTerminatorSCFInParallel(
     RewriterBase &rewriter, scf::ForallOp newForallOp,
     TilingResult tilingResult,
     SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
     SmallVector<SmallVector<OpFoldResult>> &resultSizes,
-    SmallVector<OpFoldResult> &strides, unsigned initSize, unsigned rank) {
+    SmallVector<OpFoldResult> &strides, ArrayRef<BlockArgument> bbArgs) {
   scf::InParallelOp newTerminatorOp = newForallOp.getTerminator();
   rewriter.setInsertionPointToStart(newTerminatorOp.getBody());
   Location firstYieldOpLoc =
       (*(newTerminatorOp.getYieldingOps().begin())).getLoc();
-  MutableArrayRef<BlockArgument> bbArgs = newForallOp.getBody()->getArguments();
   for (auto [idx, v] :
        llvm::enumerate(tilingResult.tiledOps[0]->getResults())) {
     SmallVector<OpFoldResult> strides(resultOffsets[idx].size(),
                                       rewriter.getIndexAttr(1));
     rewriter.create<tensor::ParallelInsertSliceOp>(
-        firstYieldOpLoc, v, bbArgs[rank + initSize + idx], resultOffsets[idx],
-        resultSizes[idx], strides);
+        firstYieldOpLoc, v, bbArgs[idx], resultOffsets[idx], resultSizes[idx],
+        strides);
   }
 }
 
@@ -1305,15 +1301,22 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
 
   // 1. Get the consumer of scf.for for the result yielded by
   // tensor.insert_slice/parallel_insert_slice.
-  OpOperand *consumerOpOperand = getUntiledConsumerFromSlice(candidateSliceOp);
-  if (!consumerOpOperand) {
+  FailureOr<OpOperand *> maybeConsumerOpOperand =
+      getUntiledConsumerFromSlice(candidateSliceOp);
+  if (failed(maybeConsumerOpOperand)) {
     return rewriter.notifyMatchFailure(candidateSliceOp,
                                        "could not fetch consumer to fuse");
   }
+  OpOperand *consumerOpOperand = *maybeConsumerOpOperand;
   Operation *consumerOp = consumerOpOperand->getOwner();
   unsigned operandNumber = consumerOpOperand->getOperandNumber();
-  unsigned resultNumber =
-      cast<OpResult>(consumerOpOperand->get()).getResultNumber();
+  unsigned resultNumber = 0;
+  if (auto producerResult = dyn_cast<OpResult>(consumerOpOperand->get())) {
+    resultNumber = producerResult.getResultNumber();
+  } else {
+    return rewriter.notifyMatchFailure(
+        consumerOp, "consumer op's operand doesn't seem to be an OpResult");
+  }
 
   Operation *oldLoopOp = nullptr;
   SmallVector<Value> newOuts;
@@ -1466,13 +1469,16 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   }
 
   if (isInsertSliceOp) {
-    fixTerminatorSCFYield(rewriter, cast<scf::ForOp>(newLoopOp),
-                          *tileAndFuseResult, resultOffsets, resultSizes,
-                          strides, initSize);
+    auto newForOp = cast<scf::ForOp>(newLoopOp);
+    fixTerminatorSCFYield(
+        rewriter, newForOp, *tileAndFuseResult, resultOffsets, resultSizes,
+        strides, newForOp.getBody()->getArguments().drop_front(1 + initSize));
   } else {
-    fixTerminatorSCFInParallel(rewriter, cast<scf::ForallOp>(newLoopOp),
-                               *tileAndFuseResult, resultOffsets, resultSizes,
-                               strides, initSize, rank);
+    auto newForallOp = cast<scf::ForallOp>(newLoopOp);
+    fixTerminatorSCFInParallel(
+        rewriter, newForallOp, *tileAndFuseResult, resultOffsets, resultSizes,
+        strides,
+        newForallOp.getBody()->getArguments().drop_front(rank + initSize));
   }
 
   // 12. Replace the result of scf loop and consumer op with new loop's results.
@@ -1491,7 +1497,9 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   rewriter.eraseOp(clonedConsumerOp);
 
   return scf::SCFFuseConsumerOfSliceResult{
-      consumerOp, tileAndFuseResult->tiledOps[0], {}};
+      consumerOpOperand,
+      &(tileAndFuseResult->tiledOps[0]->getOpOperand(operandNumber)),
+      tileAndFuseResult->tiledOps};
 }
 
 //===----------------------------------------------------------------------===//

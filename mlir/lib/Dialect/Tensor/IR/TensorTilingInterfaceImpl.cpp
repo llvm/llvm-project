@@ -61,8 +61,8 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
   getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
                         ArrayRef<OpFoldResult> offsets,
                         ArrayRef<OpFoldResult> sizes,
-                        SmallVectorImpl<OpFoldResult> &resultOffsets,
-                        SmallVectorImpl<OpFoldResult> &resultSizes) const {
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
     resultOffsets.assign(offsets.begin(), offsets.end());
     resultSizes.assign(sizes.begin(), sizes.end());
     return success();
@@ -199,8 +199,8 @@ struct PackOpTiling
   getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
                         ArrayRef<OpFoldResult> offsets,
                         ArrayRef<OpFoldResult> sizes,
-                        SmallVectorImpl<OpFoldResult> &resultOffsets,
-                        SmallVectorImpl<OpFoldResult> &resultSizes) const {
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
     // The iteration domain is over outer dimensions of packed layout. In this
     // context, the outer dimensions of `resultOffsets` are `offsets`. The
     // inner dimensions of `resultOffsets` are zeros because tiling is not
@@ -452,8 +452,8 @@ struct UnPackOpTiling
   getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
                         ArrayRef<OpFoldResult> offsets,
                         ArrayRef<OpFoldResult> sizes,
-                        SmallVectorImpl<OpFoldResult> &resultOffsets,
-                        SmallVectorImpl<OpFoldResult> &resultSizes) const {
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
     resultOffsets = llvm::to_vector(offsets);
     resultSizes = llvm::to_vector(sizes);
     return success();
@@ -470,6 +470,8 @@ struct UnPackOpTiling
     return tilingResult.value();
   }
 
+  /// Method to return the position of iteration domain tile computed by the
+  /// tiled operation.
   LogicalResult getIterationDomainTileFromOperandTile(
       Operation *op, OpBuilder &b, unsigned operandNumber,
       ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
@@ -516,11 +518,20 @@ struct UnPackOpTiling
     return success();
   }
 
-  FailureOr<TilingResult>
-  getTiledImplementationAsConsumer(Operation *op, OpBuilder &b,
-                                   ArrayRef<OpFoldResult> offsets,
-                                   ArrayRef<OpFoldResult> sizes) const {
+  /// Method to return the tiled implementation of tensor.unpack as a consumer.
+  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
+      Operation *op, OpBuilder &b, unsigned operandNumber,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
     auto unPackOp = cast<UnPackOp>(op);
+    // tensor.unpack op is fusible (as a consumer) only if inner dims are not
+    // tiled.
+    int64_t numTiles = unPackOp.getInnerDimsPos().size();
+    for (auto iter :
+         llvm::zip_equal(unPackOp.getMixedTiles(), sizes.take_back(numTiles))) {
+      if (!isEqualConstantIntOrValue(std::get<0>(iter), std::get<1>(iter)))
+        return failure();
+    }
+
     Location loc = unPackOp.getLoc();
 
     // Fetch offset/size for creating the slice of the dest operand of
@@ -556,27 +567,6 @@ struct UnPackOpTiling
 
     return TilingResult{{tiledUnPackOp},
                         SmallVector<Value>(tiledUnPackOp->getResults())};
-  }
-
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
-    auto unPackOp = cast<UnPackOp>(op);
-    // tensor.unpack op is fusible (as a consumer) only if inner dims are not
-    // tiled.
-    int64_t numTiles = unPackOp.getInnerDimsPos().size();
-    for (auto iter :
-         llvm::zip_equal(unPackOp.getMixedTiles(), sizes.take_back(numTiles))) {
-      if (!isEqualConstantIntOrValue(std::get<0>(iter), std::get<1>(iter)))
-        return failure();
-    }
-
-    FailureOr<TilingResult> tilingResult =
-        getTiledImplementationAsConsumer(unPackOp, b, offsets, sizes);
-
-    if (failed(tilingResult))
-      return failure();
-    return tilingResult.value();
   }
 };
 

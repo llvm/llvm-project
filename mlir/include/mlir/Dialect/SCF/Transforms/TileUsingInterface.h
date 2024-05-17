@@ -245,8 +245,9 @@ tileConsumerAndFuseProducersUsingSCF(RewriterBase &rewriter,
 /// replaces the uses of `candidateSliceOp` with the tiled and fused consumer
 /// value but does not delete the slice operation.
 struct SCFFuseConsumerOfSliceResult {
-  Operation *origConsumer;          // Original untiled consumer.
-  Operation *tiledAndFusedConsumer; // Tiled and fused consumer op.
+  OpOperand *origConsumerOperand; // Original untiled consumer's operand.
+  OpOperand
+      *tiledAndFusedConsumerOperand; // Tiled and fused consumer's operand.
   SmallVector<Operation *> tiledOps;
 };
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
