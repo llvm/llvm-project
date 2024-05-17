@@ -11,10 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -164,60 +167,95 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
   return topologicalSort(slice);
 }
 
-namespace {
-/// DFS post-order implementation that maintains a global count to work across
-/// multiple invocations, to help implement topological sort on multi-root DAGs.
-/// We traverse all operations but only record the ones that appear in
-/// `toSort` for the final result.
-struct DFSState {
-  DFSState(const SetVector<Operation *> &set) : toSort(set), seen() {}
-  const SetVector<Operation *> &toSort;
-  SmallVector<Operation *, 16> topologicalCounts;
-  DenseSet<Operation *> seen;
-};
-} // namespace
-
-static void dfsPostorder(Operation *root, DFSState *state) {
-  SmallVector<Operation *> queue(1, root);
-  std::vector<Operation *> ops;
-  while (!queue.empty()) {
-    Operation *current = queue.pop_back_val();
-    ops.push_back(current);
-    for (Operation *op : current->getUsers())
-      queue.push_back(op);
-    for (Region &region : current->getRegions()) {
-      for (Operation &op : region.getOps())
-        queue.push_back(&op);
+/// TODO: deduplicate
+static SetVector<Block *> getTopologicallySortedBlocks(Region &region) {
+  // For each block that has not been visited yet (i.e. that has no
+  // predecessors), add it to the list as well as its successors.
+  SetVector<Block *> blocks;
+  for (Block &b : region) {
+    if (blocks.count(&b) == 0) {
+      llvm::ReversePostOrderTraversal<Block *> traversal(&b);
+      blocks.insert(traversal.begin(), traversal.end());
     }
   }
+  assert(blocks.size() == region.getBlocks().size() &&
+         "some blocks are not sorted");
 
-  for (Operation *op : llvm::reverse(ops)) {
-    if (state->seen.insert(op).second && state->toSort.count(op) > 0)
-      state->topologicalCounts.push_back(op);
+  return blocks;
+}
+
+/// Computes the common ancestor region of all operations in `ops`. Remembers
+/// all the traversed regions in `traversedRegions`.
+static Region *findCommonParentRegion(const SetVector<Operation *> &ops,
+                                      DenseSet<Region *> &traversedRegions) {
+  // Map to count the number of times a region was encountered.
+  llvm::DenseMap<Region *, size_t> regionCounts;
+  size_t expectedCount = ops.size();
+
+  // Walk the region tree for each operation towards the root and add to the
+  // region count.
+  Region *res = nullptr;
+  for (Operation *op : ops) {
+    Region *current = op->getParentRegion();
+    while (current) {
+      // Insert or get the count.
+      auto it = regionCounts.try_emplace(current, 0).first;
+      size_t count = ++it->getSecond();
+      if (count == expectedCount) {
+        res = current;
+        break;
+      }
+      current = current->getParentRegion();
+    }
+  }
+  auto firstRange = llvm::make_first_range(regionCounts);
+  traversedRegions.insert(firstRange.begin(), firstRange.end());
+  return res;
+}
+
+/// Topologically traverses `region` and insers all encountered operations in
+/// `toSort` into the result. Recursively traverses regions when they are
+/// present in `relevantRegions`.
+static void topoSortRegion(Region &region,
+                           const DenseSet<Region *> &relevantRegions,
+                           const SetVector<Operation *> &toSort,
+                           SetVector<Operation *> &result) {
+  SetVector<Block *> sortedBlocks = getTopologicallySortedBlocks(region);
+  for (Block *block : sortedBlocks) {
+    for (Operation &op : *block) {
+      if (toSort.contains(&op))
+        result.insert(&op);
+      for (Region &subRegion : op.getRegions()) {
+        // Skip regions that do not contain operations from `toSort`.
+        if (!relevantRegions.contains(&region))
+          continue;
+        topoSortRegion(subRegion, relevantRegions, toSort, result);
+      }
+    }
   }
 }
 
 SetVector<Operation *>
 mlir::topologicalSort(const SetVector<Operation *> &toSort) {
-  if (toSort.empty()) {
+  if (toSort.size() <= 1)
     return toSort;
-  }
 
-  // Run from each root with global count and `seen` set.
-  DFSState state(toSort);
-  for (auto *s : toSort) {
-    assert(toSort.count(s) == 1 && "NYI: multi-sets not supported");
-    dfsPostorder(s, &state);
-  }
+  assert(llvm::all_of(toSort,
+                      [&](Operation *op) { return toSort.count(op) == 1; }) &&
+         "expected only unique set entries");
 
-  // Reorder and return.
-  SetVector<Operation *> res;
-  for (auto it = state.topologicalCounts.rbegin(),
-            eit = state.topologicalCounts.rend();
-       it != eit; ++it) {
-    res.insert(*it);
-  }
-  return res;
+  // First, find the root region to start the recursive traversal through the
+  // IR.
+  DenseSet<Region *> relevantRegions;
+  Region *rootRegion = findCommonParentRegion(toSort, relevantRegions);
+  assert(rootRegion && "expected all ops to have a common ancestor");
+
+  // Sort all element in `toSort` by recursively traversing the IR.
+  SetVector<Operation *> result;
+  topoSortRegion(*rootRegion, relevantRegions, toSort, result);
+  assert(result.size() == toSort.size() &&
+         "expected all operations to be present in the result");
+  return result;
 }
 
 /// Returns true if `value` (transitively) depends on iteration-carried values
