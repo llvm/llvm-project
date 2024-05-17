@@ -33,7 +33,9 @@ Default and Relaxed Diagnostic Modes
 
 This mode is implemented in ``DiagnoseHLSLAvailability`` class in ``SemaHLSL.cpp`` and it is invoked after the whole translation unit is parsed (from ``Sema::ActOnEndOfTranslationUnit``). The implementation iterates over all shader entry points and exported library functions in the translation unit and performs an AST traversal of each function body.
 
-When a reference to another function is found and it has a body, the AST of the referenced function is also scanned. This chain of AST traversals will reach all of the code that is reachable from the initial shader entry point or exported library function.
+When a reference to another function or member method is found (``DeclRefExpr`` or ``MemberExpr``) and it has a body, the AST of the referenced function is also scanned. This chain of AST traversals will reach all of the code that is reachable from the initial shader entry point or exported library function.
+
+Another approach would be to construct a call graph by traversing the AST and recording caller and callee for each ``CallExpr``. The availability diagnostics would then run on the call graph. Since Clang currently does not build any call graph during compilation, this seems like an unnecessary step. Traversing all function references (``DeclRefExpr`` or ``MemberExpr``) works just as well, and can be easily extended to support availability diagnostic of classes and other AST nodes.
 
 All shader APIs have an availability attribute that specifies the shader model version (and environment, if applicable) when this API was first introduced.When a reference to a function without a definition is found and it has an availability attribute, the version of the attribute is checked against the target shader model version and shader stage (if shader stage context is known), and an appropriate diagnostic is generated as needed.
 
@@ -51,3 +53,86 @@ When strict HLSL availability diagnostic mode is enabled the compiler must repor
 If the compilation target is a shader library, only availability based on shader model version can be diagnosed during this scan. To diagnose availability based on shader stage, the compiler needs to run the AST traversals implementated in ``DiagnoseHLSLAvailability`` at the end of the translation unit as described above.
 
 As a result, availability based on specific shader stage will only be diagnosed in code that is reachable from a shader entry point or library export function. It also means that function bodies might be scanned multiple time. When that happens, care should be taken not to produce duplicated diagnostics.
+
+========
+Examples
+========
+
+.. note::
+   ``WaveActiveCountBits`` function became available in shader model 6.0.
+
+   ``WaveMultiPrefixSum``  function became available in shader model 6.5.
+   
+   The availability of ``ddx`` function depends on a shader stage. It is available for pixel shaders in shader model 2.1 and higher, for compute, mesh and amplification shaders in shader model 6.6 and higher. For any other shader stages it is not available.
+
+Compute shader example
+----------------------
+
+.. code-block:: c++
+
+  float unusedFunction(float f) {
+    return ddx(f);
+  }
+
+  [numthreads(4, 4, 1)]
+  void main(uint3 threadId : SV_DispatchThreadId) {
+    float f1 = ddx(threadId.x);
+    float f2 = WaveActiveCountBits(threadId.y == 1.0);
+  }
+
+When compiled as compute shader version 5.0, clang will emit the following error by default:
+
+.. code-block: none
+  <>:7:13: error: 'ddx' is only available in compute shader environment on Shader Model 6.6 or newer
+  <>:8:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
+
+With relaxed diagnostic mode this errors will become warnings.
+
+With strict deagnostic mode, in addition to the 2 errors above clang will also emit error for the ``ddx`` call in ``unusedFunction``.:
+
+.. code-block: none
+  <>:2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
+  <>:7:13: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
+  <>:7:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
+
+Shader library example
+----------------------
+
+.. code-block:: c++
+  float myFunction(float f) {
+    return ddx(f);
+  }
+
+  float unusedFunction(float f) {
+    return WaveMultiPrefixSum(f, 1.0);
+  }
+
+  [shader("compute")]
+  [numthreads(4, 4, 1)]
+  void main(uint3 threadId : SV_DispatchThreadId) {
+    float f = 3;
+    float e = myFunction(f);
+  }
+
+  [shader("pixel")]
+  void main() {
+    float f = 3;
+    float e = myFunction(f);
+  }
+
+When compiled as shader library version 6.4, clang will emit the following error by default:
+
+.. code-block: none
+  <>:2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
+
+With relaxed diagnostic mode this errors will become warnings.
+
+With strict diagnostic mode clang will also emit errors for availability issues in code that is not used by any of the entry points:
+
+.. code-block: none
+
+  <>2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.6 or newer
+
+  <>:6:9: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
+
+Note that ``myFunction`` is reachable from both pixel and compute shader entry points is therefore scanned twice - once for each context. The diagnostic is emitted only for the compute shader context.
