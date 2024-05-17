@@ -1038,6 +1038,10 @@ public:
   void Unparse(const LocalitySpec::LocalInit &x) {
     Word("LOCAL_INIT("), Walk(x.v, ", "), Put(')');
   }
+  void Unparse(const LocalitySpec::Reduce &x) {
+    Word("REDUCE("), Walk(std::get<parser::ReduceOperation>(x.t)), Put(':');
+    Walk(std::get<std::list<parser::Name>>(x.t), ", "), Put(')');
+  }
   void Unparse(const LocalitySpec::Shared &x) {
     Word("SHARED("), Walk(x.v, ", "), Put(')');
   }

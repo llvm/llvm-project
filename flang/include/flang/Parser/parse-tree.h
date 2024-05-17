@@ -1870,6 +1870,13 @@ struct ProcComponentRef {
   WRAPPER_CLASS_BOILERPLATE(ProcComponentRef, Scalar<StructureComponent>);
 };
 
+// R1522 procedure-designator ->
+//         procedure-name | proc-component-ref | data-ref % binding-name
+struct ProcedureDesignator {
+  UNION_CLASS_BOILERPLATE(ProcedureDesignator);
+  std::variant<Name, ProcComponentRef> u;
+};
+
 // R914 coindexed-named-object -> data-ref
 struct CoindexedNamedObject {
   BOILERPLATE(CoindexedNamedObject);
@@ -2236,16 +2243,29 @@ struct ConcurrentHeader {
       t;
 };
 
+// F'2023 R1131 reduce-operation ->
+//                + | * | .AND. | .OR. | .EQV. | .NEQV. |
+//                MAX | MIN | IAND | IOR | IEOR
+struct ReduceOperation {
+  UNION_CLASS_BOILERPLATE(ReduceOperation);
+  std::variant<DefinedOperator, ProcedureDesignator> u;
+};
+
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
+//         REDUCE ( reduce-operation : variable-name-list ) |
 //         SHARED ( variable-name-list ) | DEFAULT ( NONE )
 struct LocalitySpec {
   UNION_CLASS_BOILERPLATE(LocalitySpec);
   WRAPPER_CLASS(Local, std::list<Name>);
   WRAPPER_CLASS(LocalInit, std::list<Name>);
+  struct Reduce {
+    TUPLE_CLASS_BOILERPLATE(Reduce);
+    std::tuple<ReduceOperation, std::list<Name>> t;
+  };
   WRAPPER_CLASS(Shared, std::list<Name>);
   EMPTY_CLASS(DefaultNone);
-  std::variant<Local, LocalInit, Shared, DefaultNone> u;
+  std::variant<Local, LocalInit, Reduce, Shared, DefaultNone> u;
 };
 
 // R1123 loop-control ->
@@ -3179,13 +3199,6 @@ WRAPPER_CLASS(ExternalStmt, std::list<Name>);
 
 // R1519 intrinsic-stmt -> INTRINSIC [::] intrinsic-procedure-name-list
 WRAPPER_CLASS(IntrinsicStmt, std::list<Name>);
-
-// R1522 procedure-designator ->
-//         procedure-name | proc-component-ref | data-ref % binding-name
-struct ProcedureDesignator {
-  UNION_CLASS_BOILERPLATE(ProcedureDesignator);
-  std::variant<Name, ProcComponentRef> u;
-};
 
 // R1525 alt-return-spec -> * label
 WRAPPER_CLASS(AltReturnSpec, Label);

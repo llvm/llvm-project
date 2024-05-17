@@ -537,7 +537,9 @@ public:
   void SayAlreadyDeclared(const SourceName &, const SourceName &);
   void SayWithReason(
       const parser::Name &, Symbol &, MessageFixedText &&, Message &&);
-  void SayWithDecl(const parser::Name &, Symbol &, MessageFixedText &&);
+  template <typename... A>
+  void SayWithDecl(const parser::Name &, Symbol &, MessageFixedText &&,
+                   A &&...args);
   void SayLocalMustBeVariable(const parser::Name &, Symbol &);
   void SayDerivedType(const SourceName &, MessageFixedText &&, const Scope &);
   void Say2(const SourceName &, MessageFixedText &&, const SourceName &,
@@ -1041,10 +1043,10 @@ protected:
   Symbol &DeclareObjectEntity(const parser::Name &, Attrs = Attrs{});
   // Make sure that there's an entity in an enclosing scope called Name
   Symbol &FindOrDeclareEnclosingEntity(const parser::Name &);
-  // Declare a LOCAL/LOCAL_INIT entity. If there isn't a type specified
+  // Declare a LOCAL/LOCAL_INIT/REDUCE entity. If there isn't a type specified
   // it comes from the entity in the containing scope, or implicit rules.
   // Return pointer to the new symbol, or nullptr on error.
-  Symbol *DeclareLocalEntity(const parser::Name &);
+  Symbol *DeclareLocalEntity(const parser::Name &, Symbol::Flag);
   // Declare a statement entity (i.e., an implied DO loop index for
   // a DATA statement or an array constructor).  If there isn't an explict
   // type specified, implicit rules apply. Return pointer to the new symbol,
@@ -1145,7 +1147,8 @@ private:
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
-  bool PassesLocalityChecks(const parser::Name &name, Symbol &symbol);
+  bool PassesLocalityChecks(const parser::Name &name, Symbol &symbol,
+      Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
 
   // Declare an object or procedure entity.
@@ -1214,6 +1217,7 @@ public:
   bool Pre(const parser::ConcurrentHeader &);
   bool Pre(const parser::LocalitySpec::Local &);
   bool Pre(const parser::LocalitySpec::LocalInit &);
+  bool Pre(const parser::LocalitySpec::Reduce &);
   bool Pre(const parser::LocalitySpec::Shared &);
   bool Pre(const parser::AcSpec &);
   bool Pre(const parser::AcImpliedDo &);
@@ -1573,6 +1577,7 @@ public:
     ResolveName(*parser::Unwrap<parser::Name>(x.name));
   }
   void Post(const parser::ProcComponentRef &);
+  bool Pre(const parser::ReduceOperation &);
   bool Pre(const parser::FunctionReference &);
   bool Pre(const parser::CallStmt &);
   bool Pre(const parser::ImportStmt &);
@@ -2254,9 +2259,11 @@ void ScopeHandler::SayWithReason(const parser::Name &name, Symbol &symbol,
   context().SetError(symbol, isFatal);
 }
 
-void ScopeHandler::SayWithDecl(
-    const parser::Name &name, Symbol &symbol, MessageFixedText &&msg) {
-  auto &message{Say(name, std::move(msg), symbol.name())
+template <typename... A> void ScopeHandler::SayWithDecl(
+    const parser::Name &name, Symbol &symbol, MessageFixedText &&msg,
+    A &&...args) {
+  auto &message{Say(name.source, std::move(msg), symbol.name(),
+                    std::forward<A>(args)...)
                     .Attach(Message{symbol.name(),
                         symbol.test(Symbol::Flag::Implicit)
                             ? "Implicit declaration of '%s'"_en_US
@@ -6458,44 +6465,60 @@ bool DeclarationVisitor::PassesSharedLocalityChecks(
   return true;
 }
 
-// Checks for locality-specs LOCAL and LOCAL_INIT
+// Checks for locality-specs LOCAL, LOCAL_INIT, and REDUCE
 bool DeclarationVisitor::PassesLocalityChecks(
-    const parser::Name &name, Symbol &symbol) {
-  if (IsAllocatable(symbol)) { // C1128
-    SayWithDecl(name, symbol,
-        "ALLOCATABLE variable '%s' not allowed in a locality-spec"_err_en_US);
+    const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
+  bool isReduce = flag == Symbol::Flag::LocalityReduce;
+  if (IsAllocatable(symbol) && !isReduce) { // C1128, F'2023 C1130
+    SayWithDecl(name, symbol, "ALLOCATABLE variable '%s' not allowed in a "
+        "LOCAL%s locality-spec"_err_en_US,
+        (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
     return false;
   }
-  if (IsOptional(symbol)) { // C1128
+  if (IsOptional(symbol)) { // C1128, F'2023 C1130-C1131
     SayWithDecl(name, symbol,
         "OPTIONAL argument '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (IsIntentIn(symbol)) { // C1128
+  if (IsIntentIn(symbol)) { // C1128, F'2023 C1130-C1131
     SayWithDecl(name, symbol,
         "INTENT IN argument '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (IsFinalizable(symbol)) { // C1128
-    SayWithDecl(name, symbol,
-        "Finalizable variable '%s' not allowed in a locality-spec"_err_en_US);
+  if (IsFinalizable(symbol) && !isReduce) { // C1128, F'2023 C1130
+    SayWithDecl(name, symbol, "Finalizable variable '%s' not allowed in a "
+        "LOCAL%s locality-spec"_err_en_US,
+        (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
     return false;
   }
-  if (evaluate::IsCoarray(symbol)) { // C1128
-    SayWithDecl(
-        name, symbol, "Coarray '%s' not allowed in a locality-spec"_err_en_US);
+  if (evaluate::IsCoarray(symbol) && !isReduce) { // C1128, F'2023 C1130
+    SayWithDecl(name, symbol, "Coarray '%s' not allowed in a "
+        "LOCAL%s locality-spec"_err_en_US,
+        (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
     return false;
   }
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     if (type->IsPolymorphic() && IsDummy(symbol) &&
-        !IsPointer(symbol)) { // C1128
-      SayWithDecl(name, symbol,
-          "Nonpointer polymorphic argument '%s' not allowed in a "
-          "locality-spec"_err_en_US);
+        !IsPointer(symbol) && !isReduce) { // C1128, F'2023 C1130
+      SayWithDecl(name, symbol, "Nonpointer polymorphic argument '%s' not "
+          "allowed in a LOCAL%s locality-spec"_err_en_US,
+          (flag == Symbol::Flag::LocalityLocalInit) ? "_INIT" : "");
       return false;
     }
   }
-  if (IsAssumedSizeArray(symbol)) { // C1128
+  if (symbol.attrs().test(Attr::ASYNCHRONOUS) && isReduce) { // F'2023 C1131
+    SayWithDecl(name, symbol,
+        "ASYNCHRONOUS variable '%s' not allowed in a "
+        "REDUCE locality-spec"_err_en_US);
+    return false;
+  }
+  if (symbol.attrs().test(Attr::VOLATILE) && isReduce) { // F'2023 C1131
+    SayWithDecl(name, symbol,
+        "VOLATILE variable '%s' not allowed in a "
+        "REDUCE locality-spec"_err_en_US);
+    return false;
+  }
+  if (IsAssumedSizeArray(symbol)) { // C1128, F'2023 C1130-C1131
     SayWithDecl(name, symbol,
         "Assumed size array '%s' not allowed in a locality-spec"_err_en_US);
     return false;
@@ -6524,9 +6547,10 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
   return *prev;
 }
 
-Symbol *DeclarationVisitor::DeclareLocalEntity(const parser::Name &name) {
+Symbol *DeclarationVisitor::DeclareLocalEntity(
+    const parser::Name &name, Symbol::Flag flag) {
   Symbol &prev{FindOrDeclareEnclosingEntity(name)};
-  if (!PassesLocalityChecks(name, prev)) {
+  if (!PassesLocalityChecks(name, prev, flag)) {
     return nullptr;
   }
   return &MakeHostAssocSymbol(name, prev);
@@ -6866,7 +6890,7 @@ bool ConstructVisitor::Pre(const parser::ConcurrentHeader &header) {
 
 bool ConstructVisitor::Pre(const parser::LocalitySpec::Local &x) {
   for (auto &name : x.v) {
-    if (auto *symbol{DeclareLocalEntity(name)}) {
+    if (auto *symbol{DeclareLocalEntity(name, Symbol::Flag::LocalityLocal)}) {
       symbol->set(Symbol::Flag::LocalityLocal);
     }
   }
@@ -6875,8 +6899,20 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Local &x) {
 
 bool ConstructVisitor::Pre(const parser::LocalitySpec::LocalInit &x) {
   for (auto &name : x.v) {
-    if (auto *symbol{DeclareLocalEntity(name)}) {
+    if (auto *symbol{
+        DeclareLocalEntity(name, Symbol::Flag::LocalityLocalInit)}) {
       symbol->set(Symbol::Flag::LocalityLocalInit);
+    }
+  }
+  return false;
+}
+
+bool ConstructVisitor::Pre(const parser::LocalitySpec::Reduce &x) {
+  Walk(std::get<parser::ReduceOperation>(x.t));
+  for (auto &name : std::get<std::list<parser::Name>>(x.t)) {
+    if (auto *symbol{
+        DeclareLocalEntity(name, Symbol::Flag::LocalityReduce)}) {
+      symbol->set(Symbol::Flag::LocalityReduce);
     }
   }
   return false;
@@ -8214,6 +8250,15 @@ void ResolveNamesVisitor::HandleProcedureName(
           "Use of '%s' as a procedure conflicts with its declaration"_err_en_US);
     }
   }
+}
+
+bool ResolveNamesVisitor::Pre(const parser::ReduceOperation &x) {
+  if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(x.u)}) {
+    if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+      HandleProcedureName(Symbol::Flag::Function, *name);
+    }
+  }
+  return false;
 }
 
 bool ResolveNamesVisitor::CheckImplicitNoneExternal(
