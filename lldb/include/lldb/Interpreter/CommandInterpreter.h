@@ -561,6 +561,9 @@ public:
   bool GetPromptOnQuit() const;
   void SetPromptOnQuit(bool enable);
 
+  bool GetSaveTranscript() const;
+  void SetSaveTranscript(bool enable);
+
   bool GetSaveSessionOnQuit() const;
   void SetSaveSessionOnQuit(bool enable);
 
@@ -648,7 +651,7 @@ public:
   }
 
   llvm::json::Value GetStatistics();
-  StructuredData::ArraySP GetTranscript() const;
+  const StructuredData::Array& GetTranscript() const;
 
 protected:
   friend class Debugger;
@@ -773,7 +776,7 @@ private:
   /// the list is a dictionary with three keys: "command" (string), "output"
   /// (list of strings) and optionally "error" (list of strings). Each string
   /// in "output" and "error" is a line (without EOL characters).
-  StructuredData::ArraySP m_transcript;
+  StructuredData::Array m_transcript;
 };
 
 } // namespace lldb_private
