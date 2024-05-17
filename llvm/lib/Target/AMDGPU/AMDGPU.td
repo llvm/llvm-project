@@ -782,6 +782,13 @@ def FeatureDot12Insts : SubtargetFeature<"dot12-insts",
   "Has v_dot2_f32_bf16 instructions"
 >;
 
+def FeatureDot13Insts : SubtargetFeature<"dot13-insts",
+  "HasDot13Insts",
+  "true",
+  "Has v_dot2c_f32_bf16 instructions"
+>;
+
+
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
@@ -1036,6 +1043,12 @@ def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
   "Has1024AddressableVGPRs",
   "true",
   "Has 1024 addressable VGPRs"
+>;
+
+def FeatureVGPRIndexingRegisters : SubtargetFeature<"vgpr-indexing-registers",
+  "HasVGPRIndexingRegisters",
+  "true",
+  "Has index registers for VGPR indexing"
 >;
 
 def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
@@ -1569,7 +1582,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
-   FeatureDot12Insts
+   FeatureDot12Insts,
+   FeatureDot13Insts
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1870,7 +1884,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
-   FeatureMLMathInsts]>;
+   FeatureMLMathInsts,
+   FeatureVGPRIndexingRegisters
+]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -2462,6 +2478,9 @@ def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
 def HasDot12Insts : Predicate<"Subtarget->hasDot12Insts()">,
   AssemblerPredicate<(all_of FeatureDot12Insts)>;
 
+def HasDot13Insts : Predicate<"Subtarget->hasDot13Insts()">,
+  AssemblerPredicate<(all_of FeatureDot13Insts)>;
+
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
 
@@ -2568,16 +2587,19 @@ def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
 def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
 
-def HasFP8ConversionScaleInsts : Predicate<"Subtarget->HasFP8ConversionScaleInsts()">,
+def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
+  AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
 
-def HasBF8ConversionScaleInsts : Predicate<"Subtarget->HasBF8ConversionScaleInsts()">,
+def HasBF8ConversionScaleInsts : Predicate<"Subtarget->hasBF8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureBF8ConversionScaleInsts)>;
 
-def HasFP4ConversionScaleInsts : Predicate<"Subtarget->HasFP4ConversionScaleInsts()">,
+def HasFP4ConversionScaleInsts : Predicate<"Subtarget->hasFP4ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP4ConversionScaleInsts)>;
 
-def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->HasFP6BF6ConversionScaleInsts()">,
+def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP6BF6ConversionScaleInsts)>;
 
 def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,

@@ -466,6 +466,7 @@ def SGPR_1024Regs : SIRegisterTuples<getSubRegs<32>.ret, SGPR_32, 105, 4, 32, "s
 def IDX_REG_32 : SIRegisterClass<"AMDGPU", [i32], 32,
                             (add (sequence "IDX%u", 0, 3))> {
   let isAllocatable = 0;
+  let BaseClassOrder = 10000;
   let DecoderMethod = "decodeOperand_IDX_REG";
 }
 

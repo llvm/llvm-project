@@ -1945,6 +1945,8 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
+// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
+let True16Predicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
 
 let SubtargetPredicate = HasVOP3PInsts in {

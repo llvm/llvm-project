@@ -435,6 +435,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
   initializeSIWholeQuadModePass(*PR);
+  initializeAMDGPUFixWaveGroupEntryPass(*PR);
   initializeSILowerControlFlowPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
@@ -920,6 +921,7 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPreEmitPass2() override;
 };
 
 } // end anonymous namespace
@@ -1458,6 +1460,13 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
+}
+
+void GCNPassConfig::addPreEmitPass2() {
+  // we cannot add this module pass in PreEmitPass because all the passes
+  // in and before PreEmitPass are FunctionPass, the run-order makes
+  // difference: for example, RegUsageInfo of callee is used by caller.
+  addPass(&AMDGPUFixWaveGroupEntryID);
 }
 
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {

@@ -1170,7 +1170,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
       OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
       OutStreamer->emitAssignment(
-          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_WEAKREF,
+          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_None,
                                        MMI->getContext()));
     };
 

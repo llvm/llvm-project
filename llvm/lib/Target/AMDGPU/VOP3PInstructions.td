@@ -1035,6 +1035,8 @@ let isCommutable = 1, isReMaterializable = 1 in {
 
     // Scalar pseudo used to emulate AMDGPUClamp.
     // Expanded to V_PK_MAX_NUM_BF16 with unused high half.
+    // FIXME-TRUE16: Pseudo expansion of this won't work with True16.
+    let True16Predicate = UseFakeTrue16Insts in
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
 } // End isCommutable = 1, isReMaterializable = 1

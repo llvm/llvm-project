@@ -10,8 +10,11 @@ target datalayout = "A5"
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define amdgpu_kernel void @_Z3foov() #0 {
 entry:
-; CHECK: s_getreg_b32 s33, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK: s_mul_i32 s33, s33, 0x3fe00
+; CHECK: s_getreg_b32 s33, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 3)
+; CHECK: s_mul_i32 s33, s33, 4
+; CHECK: s_set_gpr_idx_u32 idx0, s33
+; CHECK: s_getreg_b32 s33, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 3)
+; CHECK: s_mul_i32 s33, s33, 64
 ; CHECK: s_add_co_i32 s33, s33, 0xfa0
 
   %array.ascast = alloca [10 x float], align 4, addrspace(5)
