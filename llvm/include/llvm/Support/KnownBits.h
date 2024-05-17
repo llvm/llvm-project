@@ -366,10 +366,6 @@ public:
   /// Compute knownbits resulting from APIntOps::avgCeilU
   static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Return the knownbits for computing average
-  static KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS,
-                              bool IsCeil, bool IsSigned);
-
   /// Compute known bits resulting from multiplying LHS and RHS.
   static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS,
                        bool NoUndefSelfMultiply = false);
