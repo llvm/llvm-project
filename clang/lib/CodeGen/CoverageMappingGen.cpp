@@ -191,10 +191,7 @@ public:
   bool isBranch() const { return FalseCount.has_value(); }
 
   bool isMCDCDecision() const {
-    const auto *DecisionParams =
-        std::get_if<mcdc::DecisionParameters>(&MCDCParams);
-    assert(!DecisionParams || DecisionParams->NumConditions > 0);
-    return DecisionParams;
+    return std::holds_alternative<mcdc::DecisionParameters>(MCDCParams);
   }
 
   const auto &getMCDCDecisionParams() const {
@@ -1442,6 +1439,10 @@ struct CounterCoverageMappingBuilder
     terminateRegion(S);
   }
 
+  void VisitCoroutineSuspendExpr(const CoroutineSuspendExpr *E) {
+    Visit(E->getOperand());
+  }
+
   void VisitCXXThrowExpr(const CXXThrowExpr *E) {
     extendRegion(E);
     if (E->getSubExpr())
@@ -2174,6 +2175,10 @@ struct CounterCoverageMappingBuilder
   void VisitLambdaExpr(const LambdaExpr *LE) {
     // Lambdas are treated as their own functions for now, so we shouldn't
     // propagate counts into them.
+  }
+
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *AILE) {
+    Visit(AILE->getCommonExpr()->getSourceExpr());
   }
 
   void VisitPseudoObjectExpr(const PseudoObjectExpr *POE) {

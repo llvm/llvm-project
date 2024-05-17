@@ -38,9 +38,6 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
-      flags: ${{ steps.vars.outputs.flags }}
-      build-dir: ${{ steps.vars.outputs.build-dir }}
-      rc-flags: ${{ steps.vars.outputs.rc-flags }}
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
 
@@ -85,17 +82,11 @@ jobs:
         fi
         bash .github/workflows/set-release-binary-outputs.sh "$tag" "$upload"
 
-  # Try to get around the 6 hour timeout by first running a job to fill
-  # the build cache.
-  fill-cache:
-    name: "Fill Cache ${{ matrix.os }}"
+  build-stage1-linux:
+    name: "Build Stage 1 Linux"
     needs: prepare
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-22.04
     if: github.repository == 'llvm/llvm-project'
-    strategy:
-      matrix:
-        os:
-          - ubuntu-22.04
     steps:
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -109,81 +100,207 @@ jobs:
       uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
       with:
         max-size: 250M
-        key: sccache-${{ matrix.os }}-release
+        key: sccache-${{ runner.os }}-release
         variant: sccache
 
-    - name: Build Clang
+    - name: Build Stage 1 Clang
       run: |
-        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_POSITION_INDEPENDENT_CODE=ON -S llvm -B build
-        ninja -v -C build clang
+        sudo chown $USER:$USER /mnt/
+        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -S llvm -B /mnt/build
+        ninja -v -C /mnt/build
 
+    # We need to create an archive of the build directory, because it has too
+    # many files to upload.
+    - name: Package Build and Source Directories
+      run: |
+        tar -c . | zstd -T0 -c > llvm-project.tar.zst
+        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
 
-  build-binaries:
-    name: ${{ matrix.target.triple }}
-    permissions:
-      contents: write # To upload assets to release.
+    - name: Upload Stage 1 Source
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: stage1-source
+        path: llvm-project.tar.zst
+        retention-days: 2
+
+    - name: Upload Stage 1 Build Dir
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: stage1-build
+        path: build.tar.zst
+        retention-days: 2
+
+  build-stage2-linux:
+    name: "Build Stage 2 Linux"
     needs:
       - prepare
-      - fill-cache
-    runs-on: ${{ matrix.target.runs-on }}
+      - build-stage1-linux
+    runs-on: ubuntu-22.04
     if: github.repository == 'llvm/llvm-project'
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - triple: x86_64-linux-gnu-ubuntu-22.04
-            os: ubuntu-22.04
-            runs-on: ubuntu-22.04-16x64
-            debian-build-deps: >
-              chrpath
-              gcc-multilib
-              ninja-build
+    steps:
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+
+    - name: Download Stage 1 Artifacts
+      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      with:
+        pattern: stage1-*
+        merge-multiple: true
+
+    - name: Unpack Artifacts
+      run: |
+        tar --zstd -xf llvm-project.tar.zst
+        rm llvm-project.tar.zst
+        sudo chown $USER:$USER /mnt/
+        tar --zstd -C /mnt -xf build.tar.zst
+        rm build.tar.zst
+
+    - name: Build Stage 2
+      run: |
+        ninja -C /mnt/build stage2-instrumented
+
+    # We need to create an archive of the build directory, because it has too
+    # many files to upload.
+    - name: Save Build and Source Directories
+      run: |
+        tar -c . | zstd -T0 -c > llvm-project.tar.zst
+        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
+
+    - name: Upload Stage 2 Source
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: stage2-source
+        path: ${{ github.workspace }}/llvm-project.tar.zst
+        retention-days: 2
+
+    - name: Upload Stage 2 Build Dir
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: stage2-build
+        path: ${{ github.workspace }}/build.tar.zst
+        retention-days: 2
+
+
+  build-stage3-linux:
+    name: "Build Stage 3 Linux"
+    needs:
+      - prepare
+      - build-stage2-linux
+    outputs:
+      filename: ${{ steps.package-info.outputs.release-filename }}
+    runs-on: ubuntu-22.04-16x64
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+
+    - name: 'Download artifact'
+      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      with:
+        pattern: stage2-*
+        merge-multiple: true
+
+    - name: Unpack Artifact
+      run: |
+        tar --zstd -xf llvm-project.tar.zst
+        rm llvm-project.tar.zst
+        sudo chown $USER:$USER /mnt/
+        tar --zstd -C /mnt -xf build.tar.zst
+        rm build.tar.zst
+
+    - name: Build Release Package
+      run: |
+        ninja -C /mnt/build stage2-package
+
+    - id: package-info
+      run: |
+        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.gz"
+        echo "filename=$filename" >> $GITHUB_OUTPUT
+        echo "path=/mnt/build/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
+
+    - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      if: always()
+      with:
+        name: release-binary
+        path: ${{ steps.package-info.outputs.path }}
+
+    # Clean up some build files to reduce size of artifact.
+    - name: Clean Up Build Directory
+      run: |
+        find /mnt/build -iname ${{ steps.package-info.outputs.filename }} -delete
+
+    # We need to create an archive of the build directory, because it has too
+    # many files to upload.
+    - name: Save Build and Source Directories
+      run: |
+        tar -c . | zstd -T0 -c > llvm-project.tar.zst
+        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
+
+    - name: Upload Stage 3 Source
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: stage3-source
+        path: llvm-project.tar.zst
+        retention-days: 2
+
+    - name: Upload Stage 3 Build Dir
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: stage3-build
+        path: build.tar.zst
+        retention-days: 2
+
+  upload-release-binaries-linux:
+    name: "Upload Linux Release Binaries"
+    needs:
+      - prepare
+      - build-stage3-linux
+    if : ${{ needs.prepare.outputs.upload == 'true' }}
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write # For release uploads
 
     steps:
-    - name: Checkout LLVM
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+    - name: 'Download artifact'
+      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
       with:
-        ref: ${{ needs.prepare.outputs.ref }}
-        path: ${{ needs.prepare.outputs.build-dir }}/llvm-project
+        name: release-binary
 
-    - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
-      with:
-        max-size: 250M
-        key: sccache-${{ matrix.target.os }}-release
-        save: false
-        variant: sccache
-
-    - name: Install Brew build dependencies
-      if: matrix.target.brew-build-deps != ''
-      run: brew install ${{ matrix.target.brew-build-deps }}
-
-    - name: Install Debian build dependencies
-      if: matrix.target.debian-build-deps != ''
-      run: sudo apt install ${{ matrix.target.debian-build-deps }}
-
-    - name: Set macOS build env variables
-      if: runner.os == 'macOS'
-      run: |
-        echo "MACOSX_DEPLOYMENT_TARGET=10.9" >> "$GITHUB_ENV"
-
-    - name: Build and test release
-      run: |
-        ${{ needs.prepare.outputs.build-dir }}/llvm-project/llvm/utils/release/test-release.sh \
-        ${{ needs.prepare.outputs.flags }} \
-        -triple ${{ matrix.target.triple }} \
-        -use-ninja \
-        -no-checkout \
-        -use-cmake-cache \
-        -no-test-suite \
-        -configure-flags "-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
-
-    - name: Upload binaries
-      if: ${{ always() && needs.prepare.outputs.upload == 'true' }}
+    - name: Upload Release
       run: |
         sudo apt install python3-github
-        ${{ needs.prepare.outputs.build-dir }}/llvm-project/llvm/utils/release/github-upload-release.py \
+        ./llvm-project/llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \
-        --files ${{ needs.prepare.outputs.build-dir }}/clang+llvm-${{ needs.prepare.outputs.release-version }}-${{ matrix.target.triple }}.tar.xz
+        --files ${{ needs.build-stage3-linux.outputs.release-filename }}
+
+
+  test-stage3-linux:
+    name: "Test Stage 3 Linux"
+    needs:
+      - prepare
+      - build-stage3-linux
+    runs-on: ubuntu-22.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
+
+    - name: 'Download artifact'
+      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      with:
+        pattern: stage3-*
+        merge-multiple: true
+
+    - name: Unpack Artifact
+      run: |
+        tar --zstd -xf llvm-project.tar.zst
+        rm llvm-project.tar.zst
+        sudo chown $USER:$USER /mnt/
+        tar --zstd -C /mnt -xf build.tar.zst
+        rm build.tar.zst
+
+    - name: Run Tests
+      run: |
+        ninja -C /mnt/build stage2-check-all

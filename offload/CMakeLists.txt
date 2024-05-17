@@ -17,26 +17,16 @@ if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   project(offload C CXX ASM)
 endif()
 
-set(ENABLE_LIBOMPTARGET ON)
-# Currently libomptarget cannot be compiled on Windows or MacOS X.
-# Since the device plugins are only supported on Linux anyway,
-# there is no point in trying to compile libomptarget on other OSes.
-# 32-bit systems are not supported either.
-if (APPLE OR WIN32 OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(ENABLE_LIBOMPTARGET OFF)
-endif()
-
-option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
-       ${ENABLE_LIBOMPTARGET})
-if (OPENMP_ENABLE_LIBOMPTARGET)
-  # Check that the library can actually be built.
-  if (APPLE OR WIN32)
-    message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
-  elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")
-  endif()
+# Check that the library can actually be built.
+if(APPLE OR WIN32 OR WASM)
+  message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
+  return()
+elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  message(WARNING "Host compiler must support C++17 to build libomptarget!")
+  return()
+elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  message(WARNING "libomptarget on 32-bit systems is not supported!")
+  return()
 endif()
 
 if(OPENMP_STANDALONE_BUILD)
@@ -146,10 +136,37 @@ include(LibomptargetGetDependencies)
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
+check_cxx_compiler_flag(-Werror=global-constructors OFFLOAD_HAVE_WERROR_CTOR)
+
 # LLVM source tree is required at build time for libomptarget
 if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
 endif()
+
+if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR 
+   DEFINED LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
+  message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
+endif()
+
+set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
+set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
+    "Semicolon-separated list of plugins to use: cuda, amdgpu, host or \"all\".")
+
+if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
+  set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
+endif()
+message("Building with support for ${LIBOMPTARGET_PLUGINS_TO_BUILD} plugins")
+
+set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS "")
+foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
+  set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS
+      "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}PLUGIN_TARGET(${plugin})\n")
+endforeach()
+string(STRIP ${LIBOMPTARGET_ENUM_PLUGIN_TARGETS} LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/Shared/Targets.def.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/Shared/Targets.def
+)
 
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
@@ -191,6 +208,9 @@ endif()
 set(offload_compile_flags -fno-exceptions)
 if(NOT LLVM_ENABLE_RTTI)
   set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
+endif()
+if(OFFLOAD_HAVE_WERROR_CTOR)
+  list(APPEND offload_compile_flags -Werror=global-constructors)
 endif()
 
 # TODO: Consider enabling LTO by default if supported.
@@ -248,11 +268,6 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
-# Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
-  include(LLVMCheckCompilerLinkerFlag)
-  if(NOT APPLE)
-    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  endif()
 
   macro(pythonize_bool var)
   if (${var})
@@ -261,6 +276,14 @@ if(OPENMP_STANDALONE_BUILD)
     set(${var} False)
   endif()
   endmacro()
+endif()
+
+if(OPENMP_STANDALONE_BUILD OR TARGET omp)
+  # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
+  include(LLVMCheckCompilerLinkerFlag)
+  if(NOT APPLE)
+    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  endif()
 endif()
 
 # OMPT support for libomptarget
@@ -283,11 +306,17 @@ endif()
 
 pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
 
-set(LIBOMPTARGET_GPU_LIBC_SUPPORT ${LLVM_LIBC_GPU_BUILD} CACHE BOOL
+if(${LLVM_LIBC_GPU_BUILD})
+  set(LIBOMPTARGET_HAS_LIBC TRUE)
+else()
+  set(LIBOMPTARGET_HAS_LIBC FALSE)
+endif()
+set(LIBOMPTARGET_GPU_LIBC_SUPPORT ${LIBOMPTARGET_HAS_LIBC} CACHE BOOL
     "Libomptarget support for the GPU libc")
 pythonize_bool(LIBOMPTARGET_GPU_LIBC_SUPPORT)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
   include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})

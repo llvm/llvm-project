@@ -162,7 +162,7 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
   args.push_back(builder.createConvert(loc, inputTypes[1], len));
   if (kind == 0)
-    kind = box.getEleTy().cast<fir::CharacterType>().getFKind();
+    kind = mlir::cast<fir::CharacterType>(box.getEleTy()).getFKind();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[2], kind));
   int rank = box.rank();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[3], rank));
@@ -859,30 +859,32 @@ genDeallocate(fir::FirOpBuilder &builder,
 void Fortran::lower::genDeallocateBox(
     Fortran::lower::AbstractConverter &converter,
     const fir::MutableBoxValue &box, mlir::Location loc,
-    mlir::Value declaredTypeDesc) {
+    const Fortran::semantics::Symbol *sym, mlir::Value declaredTypeDesc) {
   const Fortran::lower::SomeExpr *statExpr = nullptr;
   const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   ErrorManager errorManager;
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc);
+  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc,
+                sym);
 }
 
 void Fortran::lower::genDeallocateIfAllocated(
     Fortran::lower::AbstractConverter &converter,
-    const fir::MutableBoxValue &box, mlir::Location loc) {
+    const fir::MutableBoxValue &box, mlir::Location loc,
+    const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Value isAllocated =
       fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, box);
   builder.genIfThen(loc, isAllocated)
       .genThen([&]() {
         if (mlir::Type eleType = box.getEleTy();
-            eleType.isa<fir::RecordType>() && box.isPolymorphic()) {
+            mlir::isa<fir::RecordType>(eleType) && box.isPolymorphic()) {
           mlir::Value declaredTypeDesc = builder.create<fir::TypeDescOp>(
               loc, mlir::TypeAttr::get(eleType));
-          genDeallocateBox(converter, box, loc, declaredTypeDesc);
+          genDeallocateBox(converter, box, loc, sym, declaredTypeDesc);
         } else {
-          genDeallocateBox(converter, box, loc);
+          genDeallocateBox(converter, box, loc, sym);
         }
       })
       .end();
@@ -916,7 +918,7 @@ void Fortran::lower::genDeallocateStmt(
     mlir::Value declaredTypeDesc = {};
     if (box.isPolymorphic()) {
       mlir::Type eleType = box.getEleTy();
-      if (eleType.isa<fir::RecordType>())
+      if (mlir::isa<fir::RecordType>(eleType))
         if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
                 symbol.GetType()->AsDerived()) {
           declaredTypeDesc =
@@ -1005,7 +1007,7 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   fir::MutableProperties mutableProperties;
   std::string name = converter.mangleName(sym);
   mlir::Type baseAddrTy = converter.genType(sym);
-  if (auto boxType = baseAddrTy.dyn_cast<fir::BaseBoxType>())
+  if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(baseAddrTy))
     baseAddrTy = boxType.getEleTy();
   // Allocate and set a variable to hold the address.
   // It will be set to null in setUnallocatedStatus.
@@ -1030,9 +1032,9 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   mlir::Type eleTy = baseAddrTy;
   if (auto newTy = fir::dyn_cast_ptrEleTy(eleTy))
     eleTy = newTy;
-  if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
     eleTy = seqTy.getEleTy();
-  if (auto record = eleTy.dyn_cast<fir::RecordType>())
+  if (auto record = mlir::dyn_cast<fir::RecordType>(eleTy))
     if (record.getNumLenParams() != 0)
       TODO(loc, "deferred length type parameters.");
   if (fir::isa_char(eleTy) && nonDeferredParams.empty()) {

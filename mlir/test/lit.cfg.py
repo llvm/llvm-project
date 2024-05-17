@@ -100,6 +100,7 @@ tools = [
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
     "mlir-capi-ir-test",
+    "mlir-capi-irdl-test",
     "mlir-capi-llvm-test",
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
