@@ -577,18 +577,26 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 
 static bool isKnownIntegral(const Value *V, const DataLayout &DL,
                             FastMathFlags FMF) {
-  if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
     return true;
+  if (isa<UndefValue>(V))
+    return false;
 
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
     return CF->getValueAPF().isInteger();
 
-  if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(V)) {
-    for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
-      Constant *ConstElt = CDV->getElementAsConstant(i);
-      if (isa<UndefValue>(ConstElt))
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  const Constant *CV = dyn_cast<Constant>(V);
+  if (VFVTy && CV) {
+    unsigned NumElts = VFVTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = CV->getAggregateElement(i);
+      if (!Elt)
+        return false;
+      if (isa<PoisonValue>(Elt))
         continue;
-      const ConstantFP *CFP = dyn_cast<ConstantFP>(ConstElt);
+
+      const ConstantFP *CFP = dyn_cast<ConstantFP>(Elt);
       if (!CFP || !CFP->getValue().isInteger())
         return false;
     }
