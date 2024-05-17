@@ -120,11 +120,10 @@ void aggregateWithReferences() {
   clang_analyzer_dump(viaReference);    // expected-warning-re {{&lifetime_extended_object{RefAggregate, viaReference, S{{[0-9]+}}} }}
   clang_analyzer_dump(viaReference.rx); // expected-warning-re {{&lifetime_extended_object{int, viaReference, S{{[0-9]+}}} }}
   clang_analyzer_dump(viaReference.ry); // expected-warning-re {{&lifetime_extended_object{Composite, viaReference, S{{[0-9]+}}} }}
-  
-  // FIXME: clang currently support extending lifetime of object bound to reference members of aggregates,
-  // that are created from default member initializer. But CFG and ExprEngine need to be updated to address this change.
-  // The following expect warning: {{&lifetime_extended_object{Composite, defaultInitExtended, S{{[0-9]+}}} }}
-  RefAggregate defaultInitExtended{i};
+
+  // clang does not currently implement extending lifetime of object bound to reference members of aggregates,
+  // that are created from default member initializer (see `warn_unsupported_lifetime_extension` from `-Wdangling`)
+  RefAggregate defaultInitExtended{i}; // clang-bug does not extend `Composite`
   clang_analyzer_dump(defaultInitExtended.ry); // expected-warning {{Unknown }}
 }
 

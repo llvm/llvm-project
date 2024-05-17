@@ -316,6 +316,10 @@ public:
     return false;
   }
 
+  bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) const {
+    return false;
+  }
+
   bool enableOrderedReductions() const { return false; }
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) const { return false; }

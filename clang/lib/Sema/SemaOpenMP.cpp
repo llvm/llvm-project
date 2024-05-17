@@ -3757,7 +3757,8 @@ public:
   void VisitDeclRefExpr(DeclRefExpr *E) {
     if (TryCaptureCXXThisMembers || E->isTypeDependent() ||
         E->isValueDependent() || E->containsUnexpandedParameterPack() ||
-        E->isInstantiationDependent())
+        E->isInstantiationDependent() ||
+        E->isNonOdrUse() == clang::NOUR_Unevaluated)
       return;
     if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
       // Check the datasharing rules for the expressions in the clauses.
@@ -15109,13 +15110,13 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                                 SourceLocation StartLoc,
                                                 SourceLocation EndLoc) {
   ASTContext &Context = getASTContext();
-  auto SizesClauses =
-      OMPExecutableDirective::getClausesOfKind<OMPSizesClause>(Clauses);
-  if (SizesClauses.empty()) {
-    // A missing 'sizes' clause is already reported by the parser.
+  Scope *CurScope = SemaRef.getCurScope();
+
+  const auto *SizesClause =
+      OMPExecutableDirective::getSingleClause<OMPSizesClause>(Clauses);
+  if (!SizesClause ||
+      llvm::any_of(SizesClause->getSizesRefs(), [](Expr *E) { return !E; }))
     return StmtError();
-  }
-  const OMPSizesClause *SizesClause = *SizesClauses.begin();
   unsigned NumLoops = SizesClause->getNumSizes();
 
   // Empty statement should only be possible if there already was an error.
@@ -15136,7 +15137,15 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                     NumLoops, AStmt, nullptr, nullptr);
 
+  assert(LoopHelpers.size() == NumLoops &&
+         "Expecting loop iteration space dimensionality to match number of "
+         "affected loops");
+  assert(OriginalInits.size() == NumLoops &&
+         "Expecting loop iteration space dimensionality to match number of "
+         "affected loops");
+
   SmallVector<Decl *, 4> PreInits;
+  CaptureVars CopyTransformer(SemaRef);
 
   // Create iteration variables for the generated loops.
   SmallVector<VarDecl *, 4> FloorIndVars;
@@ -15194,25 +15203,69 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   // Once the original iteration values are set, append the innermost body.
   Stmt *Inner = Body;
 
+  auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, &Context,
+                          SizesClause, CurScope](int I) -> Expr * {
+    Expr *DimTileSizeExpr = SizesClause->getSizesRefs()[I];
+    if (isa<ConstantExpr>(DimTileSizeExpr))
+      return AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr));
+
+    // When the tile size is not a constant but a variable, it is possible to
+    // pass non-positive numbers. For instance:
+    // \code{c}
+    //   int a = 0;
+    //   #pragma omp tile sizes(a)
+    //   for (int i = 0; i < 42; ++i)
+    //     body(i);
+    // \endcode
+    // Although there is no meaningful interpretation of the tile size, the body
+    // should still be executed 42 times to avoid surprises. To preserve the
+    // invariant that every loop iteration is executed exactly once and not
+    // cause an infinite loop, apply a minimum tile size of one.
+    // Build expr:
+    // \code{c}
+    //   (TS <= 0) ? 1 : TS
+    // \endcode
+    QualType DimTy = DimTileSizeExpr->getType();
+    uint64_t DimWidth = Context.getTypeSize(DimTy);
+    IntegerLiteral *Zero = IntegerLiteral::Create(
+        Context, llvm::APInt::getZero(DimWidth), DimTy, {});
+    IntegerLiteral *One =
+        IntegerLiteral::Create(Context, llvm::APInt(DimWidth, 1), DimTy, {});
+    Expr *Cond = AssertSuccess(SemaRef.BuildBinOp(
+        CurScope, {}, BO_LE,
+        AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr)), Zero));
+    Expr *MinOne = new (Context) ConditionalOperator(
+        Cond, {}, One, {},
+        AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr)), DimTy,
+        VK_PRValue, OK_Ordinary);
+    return MinOne;
+  };
+
   // Create tile loops from the inside to the outside.
   for (int I = NumLoops - 1; I >= 0; --I) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     Expr *NumIterations = LoopHelper.NumIterations;
     auto *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType CntTy = OrigCntVar->getType();
-    Expr *DimTileSize = SizesClause->getSizesRefs()[I];
-    Scope *CurScope = SemaRef.getCurScope();
 
-    // Commonly used variables.
-    DeclRefExpr *TileIV = buildDeclRefExpr(SemaRef, TileIndVars[I], CntTy,
-                                           OrigCntVar->getExprLoc());
-    DeclRefExpr *FloorIV = buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
-                                            OrigCntVar->getExprLoc());
+    // Commonly used variables. One of the constraints of an AST is that every
+    // node object must appear at most once, hence we define lamdas that create
+    // a new AST node at every use.
+    auto MakeTileIVRef = [&SemaRef = this->SemaRef, &TileIndVars, I, CntTy,
+                          OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, TileIndVars[I], CntTy,
+                              OrigCntVar->getExprLoc());
+    };
+    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, CntTy,
+                           OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
+                              OrigCntVar->getExprLoc());
+    };
 
     // For init-statement: auto .tile.iv = .floor.iv
-    SemaRef.AddInitializerToDecl(TileIndVars[I],
-                                 SemaRef.DefaultLvalueConversion(FloorIV).get(),
-                                 /*DirectInit=*/false);
+    SemaRef.AddInitializerToDecl(
+        TileIndVars[I], SemaRef.DefaultLvalueConversion(MakeFloorIVRef()).get(),
+        /*DirectInit=*/false);
     Decl *CounterDecl = TileIndVars[I];
     StmtResult InitStmt = new (Context)
         DeclStmt(DeclGroupRef::Create(Context, &CounterDecl, 1),
@@ -15220,10 +15273,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     if (!InitStmt.isUsable())
       return StmtError();
 
-    // For cond-expression: .tile.iv < min(.floor.iv + DimTileSize,
-    // NumIterations)
-    ExprResult EndOfTile = SemaRef.BuildBinOp(
-        CurScope, LoopHelper.Cond->getExprLoc(), BO_Add, FloorIV, DimTileSize);
+    // For cond-expression:
+    //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
+    ExprResult EndOfTile =
+        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
+                           MakeFloorIVRef(), MakeDimTileSize(I));
     if (!EndOfTile.isUsable())
       return StmtError();
     ExprResult IsPartialTile =
@@ -15238,25 +15292,28 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
     ExprResult CondExpr =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           TileIV, MinTileAndIterSpace.get());
+                           MakeTileIVRef(), MinTileAndIterSpace.get());
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: ++.tile.iv
     ExprResult IncrStmt = SemaRef.BuildUnaryOp(
-        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, TileIV);
+        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeTileIVRef());
     if (!IncrStmt.isUsable())
       return StmtError();
 
     // Statements to set the original iteration variable's value from the
     // logical iteration number.
     // Generated for loop is:
+    // \code
     // Original_for_init;
-    // for (auto .tile.iv = .floor.iv; .tile.iv < min(.floor.iv + DimTileSize,
-    // NumIterations); ++.tile.iv) {
+    // for (auto .tile.iv = .floor.iv;
+    //      .tile.iv < min(.floor.iv + DimTileSize, NumIterations);
+    //      ++.tile.iv) {
     //   Original_Body;
     //   Original_counter_update;
     // }
+    // \endcode
     // FIXME: If the innermost body is an loop itself, inserting these
     // statements stops it being recognized  as a perfectly nested loop (e.g.
     // for applying tiling again). If this is the case, sink the expressions
@@ -15278,12 +15335,13 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     Expr *NumIterations = LoopHelper.NumIterations;
     DeclRefExpr *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType CntTy = OrigCntVar->getType();
-    Expr *DimTileSize = SizesClause->getSizesRefs()[I];
-    Scope *CurScope = SemaRef.getCurScope();
 
     // Commonly used variables.
-    DeclRefExpr *FloorIV = buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
-                                            OrigCntVar->getExprLoc());
+    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, CntTy,
+                           OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
+                              OrigCntVar->getExprLoc());
+    };
 
     // For init-statement: auto .floor.iv = 0
     SemaRef.AddInitializerToDecl(
@@ -15298,15 +15356,16 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     // For cond-expression: .floor.iv < NumIterations
-    ExprResult CondExpr = SemaRef.BuildBinOp(
-        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, FloorIV, NumIterations);
+    ExprResult CondExpr =
+        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
+                           MakeFloorIVRef(), NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: .floor.iv += DimTileSize
     ExprResult IncrStmt =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
-                           FloorIV, DimTileSize);
+                           MakeFloorIVRef(), MakeDimTileSize(I));
     if (!IncrStmt.isUsable())
       return StmtError();
 
@@ -17407,16 +17466,53 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
                                               SourceLocation StartLoc,
                                               SourceLocation LParenLoc,
                                               SourceLocation EndLoc) {
-  for (Expr *SizeExpr : SizeExprs) {
-    ExprResult NumForLoopsResult = VerifyPositiveIntegerConstantInClause(
-        SizeExpr, OMPC_sizes, /*StrictlyPositive=*/true);
-    if (!NumForLoopsResult.isUsable())
-      return nullptr;
+  SmallVector<Expr *> SanitizedSizeExprs(SizeExprs);
+
+  for (Expr *&SizeExpr : SanitizedSizeExprs) {
+    // Skip if already sanitized, e.g. during a partial template instantiation.
+    if (!SizeExpr)
+      continue;
+
+    bool IsValid = isNonNegativeIntegerValue(SizeExpr, SemaRef, OMPC_sizes,
+                                             /*StrictlyPositive=*/true);
+
+    // isNonNegativeIntegerValue returns true for non-integral types (but still
+    // emits error diagnostic), so check for the expected type explicitly.
+    QualType SizeTy = SizeExpr->getType();
+    if (!SizeTy->isIntegerType())
+      IsValid = false;
+
+    // Handling in templates is tricky. There are four possibilities to
+    // consider:
+    //
+    // 1a. The expression is valid and we are in a instantiated template or not
+    //     in a template:
+    //       Pass valid expression to be further analysed later in Sema.
+    // 1b. The expression is valid and we are in a template (including partial
+    //     instantiation):
+    //       isNonNegativeIntegerValue skipped any checks so there is no
+    //       guarantee it will be correct after instantiation.
+    //       ActOnOpenMPSizesClause will be called again at instantiation when
+    //       it is not in a dependent context anymore. This may cause warnings
+    //       to be emitted multiple times.
+    // 2a. The expression is invalid and we are in an instantiated template or
+    //     not in a template:
+    //       Invalidate the expression with a clearly wrong value (nullptr) so
+    //       later in Sema we do not have to do the same validity analysis again
+    //       or crash from unexpected data. Error diagnostics have already been
+    //       emitted.
+    // 2b. The expression is invalid and we are in a template (including partial
+    //     instantiation):
+    //       Pass the invalid expression as-is, template instantiation may
+    //       replace unexpected types/values with valid ones. The directives
+    //       with this clause must not try to use these expressions in dependent
+    //       contexts, but delay analysis until full instantiation.
+    if (!SizeExpr->isInstantiationDependent() && !IsValid)
+      SizeExpr = nullptr;
   }
 
-  DSAStack->setAssociatedLoops(SizeExprs.size());
   return OMPSizesClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                SizeExprs);
+                                SanitizedSizeExprs);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPFullClause(SourceLocation StartLoc,

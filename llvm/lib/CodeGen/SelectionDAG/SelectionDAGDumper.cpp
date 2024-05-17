@@ -529,6 +529,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::PATCHPOINT:
     return "patchpoint";
 
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    return "histogram";
+
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
   case ISD::SDID:                                                              \

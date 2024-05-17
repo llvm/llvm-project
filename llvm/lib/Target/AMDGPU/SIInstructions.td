@@ -3166,7 +3166,7 @@ def : GCNPat <
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
-foreach vecTy = [v2i16, v2f16] in {
+foreach vecTy = [v2i16, v2f16, v2bf16] in {
 
 defvar Ty = vecTy.ElementType;
 
@@ -3212,7 +3212,7 @@ def : GCNPat <
 >;
 
 
-foreach vecTy = [v2i16, v2f16] in {
+foreach vecTy = [v2i16, v2f16, v2bf16] in {
 
 defvar Ty = vecTy.ElementType;
 defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
@@ -3325,13 +3325,15 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
+foreach vt = Reg64Types.types in {
 def : GCNPat <
-  (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
+  (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
   (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$old, VReg_64_Align2:$src, (as_i32timm $dpp_ctrl),
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;
+}
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns

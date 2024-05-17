@@ -530,8 +530,8 @@ define double @powf_exp_const2_int_no_fast(double %base) {
 define <2 x float> @pow_sitofp_const_base_2_no_fast_vector(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x float> @pow_sitofp_const_base_2_no_fast_vector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[S:%.*]] = sitofp <2 x i8> [[X]] to <2 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[S]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %s = sitofp <2 x i8> %x to <2 x float>

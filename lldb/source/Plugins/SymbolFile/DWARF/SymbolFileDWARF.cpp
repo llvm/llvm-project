@@ -1632,33 +1632,27 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  // Once we start resolving this type, remove it from the forward
-  // declaration map in case anyone's child members or other types require this
-  // type to get resolved.
-  DWARFDIE dwarf_die = GetDIE(die_it->second);
-  GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  Type *type = nullptr;
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    type = dwarf_ast->FindDefinitionTypeForDIE(dwarf_die);
-  if (!type)
-    return false;
-
-  die_it = GetForwardDeclCompilerTypeToDIE().find(
-      compiler_type_no_qualifiers.GetOpaqueQualType());
-  if (die_it != GetForwardDeclCompilerTypeToDIE().end()) {
-    dwarf_die = GetDIE(die_it->getSecond());
+  DWARFDIE dwarf_die = GetDIE(die_it->getSecond());
+  if (dwarf_die) {
+    // Once we start resolving this type, remove it from the forward
+    // declaration map in case anyone child members or other types require this
+    // type to get resolved. The type will get resolved when all of the calls
+    // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
     GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  }
 
-  if (Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion))
-    GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-        log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
-        dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
-        dwarf_die.Tag(), type->GetName().AsCString());
-  assert(compiler_type);
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
-  return true;
+    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
+
+    Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
+    if (log)
+      GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
+          log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
+          dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
+          dwarf_die.Tag(), type->GetName().AsCString());
+    assert(compiler_type);
+    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+      return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  }
+  return false;
 }
 
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,

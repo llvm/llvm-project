@@ -220,8 +220,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 
       BinaryBasicBlock *ToBB = Order[YamlSI.Index];
       if (!BB.getSuccessor(ToBB->getLabel())) {
-        // Allow for BOLT-removed passthrough blocks to align with DataReader
-        // behavior.
+        // Allow passthrough blocks.
         BinaryBasicBlock *FTSuccessor = BB.getConditionalSuccessor(false);
         if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
             FTSuccessor->getSuccessor(ToBB->getLabel())) {
