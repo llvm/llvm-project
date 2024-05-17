@@ -8,6 +8,12 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sme2 -target-feature +b16b16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 #include <arm_sve.h>
 
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
+
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
 #define SVE_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
@@ -27,7 +33,7 @@
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fsub.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svsub_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) __arm_streaming_compatible
+svbfloat16_t test_svsub_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svsub, _bf16, _m)(pg, op1, op2);
 }
@@ -46,7 +52,7 @@ svbfloat16_t test_svsub_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) 
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fsub.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
-svbfloat16_t test_svsub_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) __arm_streaming_compatible
+svbfloat16_t test_svsub_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svsub, _bf16, _z)(pg, op1, op2);
 }
@@ -63,7 +69,7 @@ svbfloat16_t test_svsub_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fsub.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svsub_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) __arm_streaming_compatible
+svbfloat16_t test_svsub_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svsub, _bf16, _x)(pg, op1, op2);
 }
@@ -85,7 +91,7 @@ svbfloat16_t test_svsub_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fsub.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svsub_bf16_n_m(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) __arm_streaming_compatible
+svbfloat16_t test_svsub_bf16_n_m(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svsub, _n_bf16, _m)(pg, op1, op2);
 }
@@ -108,7 +114,7 @@ svbfloat16_t test_svsub_bf16_n_m(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) 
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fsub.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
-svbfloat16_t test_svsub_bf16_n_z(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) __arm_streaming_compatible
+svbfloat16_t test_svsub_bf16_n_z(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) MODE_ATTR
 {
    return SVE_ACLE_FUNC(svsub, _n_bf16, _z)(pg, op1, op2);
 }
@@ -129,7 +135,7 @@ svbfloat16_t test_svsub_bf16_n_z(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fsub.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svsub_bf16_n_x(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) __arm_streaming_compatible
+svbfloat16_t test_svsub_bf16_n_x(svbool_t pg, svbfloat16_t op1, bfloat16_t op2) MODE_ATTR
 {
    return SVE_ACLE_FUNC(svsub, _n_bf16, _x)(pg, op1, op2);
 }

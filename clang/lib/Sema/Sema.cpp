@@ -2054,9 +2054,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
-          !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-        Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
+        if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
+          Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+        else if (!IsArmStreamingFunction(FD,
+                                         /*IncludeLocallyStreaming=*/true)) {
+          Diag(D->getLocation(), diag::err_sve_vector_in_non_streaming_function)
+              << Ty;
+        }
+      }
     }
   };
 
