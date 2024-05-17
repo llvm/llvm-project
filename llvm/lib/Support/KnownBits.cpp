@@ -788,20 +788,20 @@ KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool IsCeil,
 }
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgFloorCeilCompute(LHS, RHS, /* IsCeil */ false, /* IsSigned */ true);
+  return avgCompute(LHS, RHS, /* IsCeil */ false, /* IsSigned */ true);
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgFloorCeilCompute(LHS, RHS, /* IsCeil */ false,
-                             /* IsSigned */ false);
+  return avgCompute(LHS, RHS, /* IsCeil */ false,
+                    /* IsSigned */ false);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgFloorCeilCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ true);
+  return avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ true);
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgFloorCeilCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ false);
+  return avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ false);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
