@@ -1289,9 +1289,6 @@ static void runThinLTOBackend(
     };
     break;
   default:
-    Conf.PreCodeGenPassesHook = [](legacy::PassManager &Pm) {
-      Pm.add(createObjCARCContractPass());
-    };
     Conf.CGFileType = getCodeGenFileType(Action);
     break;
   }

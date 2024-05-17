@@ -12,7 +12,7 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-apple-darwin"
 
 define void @use_arc(ptr %a, ptr %b) {
-  call void (...) @llvm.objc.clang.arc.use(i8* %a, i8* %b) nounwind
+  call void (...) @llvm.objc.clang.arc.use(ptr %a, ptr %b) nounwind
   ret void
 }
 
