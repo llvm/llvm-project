@@ -11,6 +11,10 @@ struct ICFG {
             CALL_EDGE, // 同一个调用点，call edge 和 return edge 的 id 必须匹配
             RETURN_EDGE
         };
+
+        Edge(Type type, int callSiteId, int target)
+            : type(type), callSiteId(callSiteId), target(target) {}
+
         Type type;
         int callSiteId;
         int target;
@@ -29,6 +33,8 @@ struct ICFG {
     std::map<std::string, std::string> sourceForFile;
 
     int getNodeId(int fid, int bid);
+
+    void addEdge(int u, Edge::Type type, int callSiteId, int v);
 
     void addNormalEdge(int fid, int uBid, int vBid);
 
