@@ -1,4 +1,4 @@
-libomptarget_say("Building the llvm-omp-kernel-replay tool")
+message(STATUS "Building the llvm-omp-kernel-replay tool")
 
 add_openmp_tool(llvm-omp-kernel-replay llvm-omp-kernel-replay.cpp)
 
