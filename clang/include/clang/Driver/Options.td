@@ -7065,6 +7065,9 @@ def coverage_version_EQ : Joined<["-"], "coverage-version=">,
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
   HelpText<"Dump the coverage mapping records, for testing">,
   MarshallingInfoFlag<CodeGenOpts<"DumpCoverageMapping">>;
+def no_unused_coverage : Flag<["-"], "no-unused-coverage">,
+  HelpText<"Turn off coverage mapping for code that is not emitted">,
+  MarshallingInfoFlag<CodeGenOpts<"NoUnusedCoverage">>;
 def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfield-access">,
   HelpText<"Use register sized accesses to bit-fields, when possible.">,
   MarshallingInfoFlag<CodeGenOpts<"UseRegisterSizedBitfieldAccess">>;
