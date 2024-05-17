@@ -108,6 +108,10 @@ bool computeTopologicalSorting(
 /// stable.
 SetVector<Block *> getBlocksSortedByDominance(Region &region);
 
+/// Sorts all operation in `toSort` topologically while also region semantics.
+/// Does not support multi-sets.
+SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
+
 } // end namespace mlir
 
 #endif // MLIR_ANALYSIS_TOPOLOGICALSORTUTILS_H
