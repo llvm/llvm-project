@@ -5,7 +5,11 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
-from ml_dtypes import bfloat16
+
+try:
+    import ml_dtypes
+except ModuleNotFoundError:
+    ml_dtypes = None
 
 
 # Log everything to stderr and flush so that we have a unified stream to match
@@ -542,9 +546,9 @@ def testBF16MemrefAdd():
     } """
         )
 
-        arg1 = np.array([11.0]).astype(bfloat16)
-        arg2 = np.array([12.0]).astype(bfloat16)
-        arg3 = np.array([0.0]).astype(bfloat16)
+        arg1 = np.array([11.0]).astype(ml_dtypes.bfloat16)
+        arg2 = np.array([12.0]).astype(ml_dtypes.bfloat16)
+        arg3 = np.array([0.0]).astype(ml_dtypes.bfloat16)
 
         arg1_memref_ptr = ctypes.pointer(
             ctypes.pointer(get_ranked_memref_descriptor(arg1))
@@ -569,7 +573,8 @@ def testBF16MemrefAdd():
         log(npout)
 
 
-run(testBF16MemrefAdd)
+if ml_dtypes is not None:
+    run(testBF16MemrefAdd)
 
 
 #  Test addition of two 2d_memref
