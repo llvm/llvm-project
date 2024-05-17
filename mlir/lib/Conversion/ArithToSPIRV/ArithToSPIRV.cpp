@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -229,16 +230,41 @@ struct ConstantCompositeOpPattern final
     if (!srcType || srcType.getNumElements() == 1)
       return failure();
 
-    // arith.constant should only have vector or tenor types.
-    assert((isa<VectorType, RankedTensorType>(srcType)));
+    // arith.constant should only have vector or tensor types. This is a MLIR
+    // wide problem at the moment.
+    if (!isa<VectorType, RankedTensorType>(srcType))
+      return rewriter.notifyMatchFailure(constOp, "unsupported ShapedType");
 
     Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
       return failure();
 
-    auto dstElementsAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
-    if (!dstElementsAttr)
-      return failure();
+    // Import the resource into the IR to make use of the special handling of
+    // element types later on.
+    mlir::DenseElementsAttr dstElementsAttr;
+    if (auto denseElementsAttr =
+            dyn_cast<DenseElementsAttr>(constOp.getValue())) {
+      dstElementsAttr = denseElementsAttr;
+    } else if (auto resourceAttr =
+                   dyn_cast<DenseResourceElementsAttr>(constOp.getValue())) {
+
+      AsmResourceBlob *blob = resourceAttr.getRawHandle().getBlob();
+      if (!blob)
+        return constOp->emitError("could not find resource blob");
+
+      ArrayRef<char> ptr = blob->getData();
+
+      // Check that the buffer meets the requirements to get converted to a
+      // DenseElementsAttr
+      bool detectedSplat = false;
+      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr, detectedSplat))
+        return constOp->emitError("resource is not a valid buffer");
+
+      dstElementsAttr =
+          DenseElementsAttr::getFromRawBuffer(resourceAttr.getType(), ptr);
+    } else {
+      return constOp->emitError("unsupported elements attribute");
+    }
 
     ShapedType dstAttrType = dstElementsAttr.getType();
 
