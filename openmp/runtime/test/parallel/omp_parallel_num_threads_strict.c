@@ -1,5 +1,5 @@
 // RUN: %libomp-compile && env OMP_NUM_THREADS=2,2,2,2,2 OMP_THREAD_LIMIT=16 \
-// %libomp-run
+// RUN: %libomp-run
 #include <stdio.h>
 #include "omp_testsuite.h"
 
@@ -22,7 +22,7 @@ void __kmpc_push_num_threads_list_strict(void *loc, int gtid, unsigned length,
 #endif
 
 int test_omp_parallel_num_threads_strict() {
-  int num_failed;
+  int num_failed = 0;
 
 // Test regular runtime warning about exceeding thread limit.
 // Tolerate whatever value was given.

@@ -17,7 +17,7 @@ void __kmpc_push_num_threads_list(void *loc, int gtid, unsigned length,
 #endif
 
 int test_omp_parallel_num_threads_list() {
-  int num_failed;
+  int num_failed = 0;
 
 // Initially, 5 levels specified via OMP_NUM_THREADS with 2 threads per level
 // Check top 3 levels
