@@ -30,7 +30,7 @@ namespace polynomial {
 /// would want to specify 128-bit polynomials statically in the source code.
 constexpr unsigned apintBitWidth = 64;
 
-template <typename CoefficientType>
+template <class Derived, typename CoefficientType>
 class MonomialBase {
 public:
   MonomialBase(const CoefficientType &coeff, const APInt &expo)
@@ -55,12 +55,21 @@ public:
     return (exponent.ult(other.exponent));
   }
 
+  Derived add(const Derived &other) {
+    assert(exponent == other.exponent);
+    CoefficientType newCoeff = coefficient + other.coefficient;
+    Derived result;
+    result.setCoefficient(newCoeff);
+    result.setExponent(exponent);
+    return result;
+  }
+
   virtual bool isMonic() const = 0;
   virtual void
   coefficientToString(llvm::SmallString<16> &coeffString) const = 0;
 
-  template <typename T>
-  friend ::llvm::hash_code hash_value(const MonomialBase<T> &arg);
+  template <class D, typename T>
+  friend ::llvm::hash_code hash_value(const MonomialBase<D, T> &arg);
 
 protected:
   CoefficientType coefficient;
@@ -69,7 +78,7 @@ protected:
 
 /// A class representing a monomial of a single-variable polynomial with integer
 /// coefficients.
-class IntMonomial : public MonomialBase<APInt> {
+class IntMonomial : public MonomialBase<IntMonomial, APInt> {
 public:
   IntMonomial(int64_t coeff, uint64_t expo)
       : MonomialBase(APInt(apintBitWidth, coeff), APInt(apintBitWidth, expo)) {}
@@ -77,7 +86,7 @@ public:
   IntMonomial()
       : MonomialBase(APInt(apintBitWidth, 0), APInt(apintBitWidth, 0)) {}
 
-  ~IntMonomial() = default;
+  ~IntMonomial() override = default;
 
   bool isMonic() const override { return coefficient == 1; }
 
@@ -88,14 +97,14 @@ public:
 
 /// A class representing a monomial of a single-variable polynomial with integer
 /// coefficients.
-class FloatMonomial : public MonomialBase<APFloat> {
+class FloatMonomial : public MonomialBase<FloatMonomial, APFloat> {
 public:
   FloatMonomial(double coeff, uint64_t expo)
       : MonomialBase(APFloat(coeff), APInt(apintBitWidth, expo)) {}
 
   FloatMonomial() : MonomialBase(APFloat((double)0), APInt(apintBitWidth, 0)) {}
 
-  ~FloatMonomial() = default;
+  ~FloatMonomial() override = default;
 
   bool isMonic() const override { return coefficient == APFloat(1.0); }
 
@@ -104,7 +113,7 @@ public:
   }
 };
 
-template <typename Monomial>
+template <class Derived, typename Monomial>
 class PolynomialBase {
 public:
   PolynomialBase() = delete;
@@ -149,6 +158,44 @@ public:
     }
   }
 
+  Derived add(const Derived &other) {
+    SmallVector<Monomial> newTerms;
+    auto it1 = terms.begin();
+    auto it2 = other.terms.begin();
+    while (it1 != terms.end() || it2 != other.terms.end()) {
+      if (it1 == terms.end()) {
+        newTerms.emplace_back(*it2);
+        it2++;
+        continue;
+      }
+
+      if (it2 == other.terms.end()) {
+        newTerms.emplace_back(*it1);
+        it1++;
+        continue;
+      }
+
+      while (it1->getExponent().ult(it2->getExponent())) {
+        newTerms.emplace_back(*it1);
+        it1++;
+        if (it1 == terms.end())
+          break;
+      }
+
+      while (it2->getExponent().ult(it1->getExponent())) {
+        newTerms.emplace_back(*it2);
+        it2++;
+        if (it2 == terms.end())
+          break;
+      }
+
+      newTerms.emplace_back(it1->add(*it2));
+      it1++;
+      it2++;
+    }
+    return Derived(newTerms);
+  }
+
   // Prints polynomial to 'os'.
   void print(raw_ostream &os) const { print(os, " + ", "**"); }
 
@@ -168,8 +215,8 @@ public:
 
   ArrayRef<Monomial> getTerms() const { return terms; }
 
-  template <typename T>
-  friend ::llvm::hash_code hash_value(const PolynomialBase<T> &arg);
+  template <class D, typename T>
+  friend ::llvm::hash_code hash_value(const PolynomialBase<D, T> &arg);
 
 private:
   // The monomial terms for this polynomial.
@@ -179,7 +226,7 @@ private:
 /// A single-variable polynomial with integer coefficients.
 ///
 /// Eg: x^1024 + x + 1
-class IntPolynomial : public PolynomialBase<IntMonomial> {
+class IntPolynomial : public PolynomialBase<IntPolynomial, IntMonomial> {
 public:
   explicit IntPolynomial(ArrayRef<IntMonomial> terms) : PolynomialBase(terms) {}
 
@@ -196,7 +243,7 @@ public:
 /// A single-variable polynomial with double coefficients.
 ///
 /// Eg: 1.0 x^1024 + 3.5 x + 1e-05
-class FloatPolynomial : public PolynomialBase<FloatMonomial> {
+class FloatPolynomial : public PolynomialBase<FloatPolynomial, FloatMonomial> {
 public:
   explicit FloatPolynomial(ArrayRef<FloatMonomial> terms)
       : PolynomialBase(terms) {}
@@ -212,20 +259,20 @@ public:
 };
 
 // Make Polynomials hashable.
-template <typename T>
-inline ::llvm::hash_code hash_value(const PolynomialBase<T> &arg) {
+template <class D, typename T>
+inline ::llvm::hash_code hash_value(const PolynomialBase<D, T> &arg) {
   return ::llvm::hash_combine_range(arg.terms.begin(), arg.terms.end());
 }
 
-template <typename T>
-inline ::llvm::hash_code hash_value(const MonomialBase<T> &arg) {
+template <class D, typename T>
+inline ::llvm::hash_code hash_value(const MonomialBase<D, T> &arg) {
   return llvm::hash_combine(::llvm::hash_value(arg.coefficient),
                             ::llvm::hash_value(arg.exponent));
 }
 
-template <typename T>
+template <class D, typename T>
 inline raw_ostream &operator<<(raw_ostream &os,
-                               const PolynomialBase<T> &polynomial) {
+                               const PolynomialBase<D, T> &polynomial) {
   polynomial.print(os);
   return os;
 }
