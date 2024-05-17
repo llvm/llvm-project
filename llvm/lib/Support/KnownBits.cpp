@@ -800,6 +800,11 @@ KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
                     /* IsSigned */ true);
 }
 
+KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ true,
+                    /* IsSigned */ false);
+}
+
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
                          bool NoUndefSelfMultiply) {
   unsigned BitWidth = LHS.getBitWidth();
