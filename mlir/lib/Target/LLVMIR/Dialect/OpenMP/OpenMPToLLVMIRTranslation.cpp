@@ -939,10 +939,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionVarsByref());
   assert(isByRef.size() == wsloopOp.getNumReductionVars());
 
-  // TODO: this should be in the op verifier instead.
-  if (loopOp.getLowerBound().empty())
-    return failure();
-
   // Static is the default.
   auto schedule =
       wsloopOp.getScheduleVal().value_or(omp::ClauseScheduleKind::Static);
