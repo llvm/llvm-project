@@ -2228,13 +2228,12 @@ class VPReductionEVLRecipe : public VPSingleDefRecipe {
   bool IsOrdered;
 
 public:
-  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL)
+  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL, VPValue *CondOp)
       : VPSingleDefRecipe(
             VPDef::VPReductionEVLSC,
             ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}),
             cast_or_null<Instruction>(R->getUnderlyingValue())),
         RdxDesc(R->getRecurrenceDescriptor()), IsOrdered(R->isOrdered()) {
-    VPValue *CondOp = R->getCondOp();
     if (CondOp)
       addOperand(CondOp);
   };

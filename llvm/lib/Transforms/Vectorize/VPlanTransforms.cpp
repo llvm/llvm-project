@@ -1462,10 +1462,12 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
 
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+      auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
+        assert(OrigMask && "Unmasked recipe when folding tail");
+        return HeaderMask == OrigMask ? nullptr : OrigMask;
+      };
       if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
-        VPValue *OrigMask = MemR->getMask();
-        assert(OrigMask && "Unmasked widen memory recipe when folding tail");
-        VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
+        VPValue *NewMask = GetNewMask(MemR->getMask());
         if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
           auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
           N->insertBefore(L);
@@ -1479,7 +1481,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
           llvm_unreachable("unsupported recipe");
         }
       } else if (auto *RedR = dyn_cast<VPReductionRecipe>(U)) {
-        auto *N = new VPReductionEVLRecipe(RedR, VPEVL);
+        auto *N = new VPReductionEVLRecipe(RedR, VPEVL,
+                                           GetNewMask(RedR->getCondOp()));
         N->insertBefore(RedR);
         RedR->replaceAllUsesWith(N);
         RedR->eraseFromParent();
