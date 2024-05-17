@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRPolynomialDialect
   DEPENDS
   MLIRPolynomialIncGen
   MLIRPolynomialAttributesIncGen
+  MLIRPolynomialCanonicalizationIncGen
   MLIRBuiltinAttributesIncGen
 
   LINK_LIBS PUBLIC
