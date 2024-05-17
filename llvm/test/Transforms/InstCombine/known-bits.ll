@@ -1702,7 +1702,10 @@ define i32 @test_none(float nofpclass(all) %x) {
 ; when the input is a negative value (except for -0).
 define i1 @pr92217() {
 ; CHECK-LABEL: @pr92217(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
   %y = bitcast float %x to i32
