@@ -778,6 +778,8 @@ static KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS,
                             bool IsCeil, bool IsSigned) {
   KnownBits Known = LHS;
   KnownBits Known2 = RHS;
+  bool IsCeil = false;
+  bool IsSigned = true;
   unsigned BitWidth = Known.getBitWidth();
   Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
   Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
