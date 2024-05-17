@@ -48,3 +48,17 @@ void PolynomialDialect::initialize() {
 #include "mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc"
       >();
 }
+
+Operation *PolynomialDialect::materializeConstant(OpBuilder &builder,
+                                                  Attribute value, Type type,
+                                                  Location loc) {
+  auto intPoly = dyn_cast<TypedIntPolynomialAttr>(value);
+  auto floatPoly = dyn_cast<TypedFloatPolynomialAttr>(value);
+  if (!intPoly && !floatPoly)
+    return nullptr;
+
+  Type ty = intPoly ? intPoly.getType() : floatPoly.getType();
+  Attribute valueAttr =
+      intPoly ? (Attribute)intPoly.getValue() : (Attribute)floatPoly.getValue();
+  return builder.create<ConstantOp>(loc, ty, valueAttr);
+}
