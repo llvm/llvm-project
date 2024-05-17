@@ -280,7 +280,8 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
       violation = true;
     } else {
       // `distribute` region has to be strictly nested inside `teams`
-      if (!llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
+      if (!OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}
+               .test(GetContextParent().directive)) {
         violation = true;
       }
     }
