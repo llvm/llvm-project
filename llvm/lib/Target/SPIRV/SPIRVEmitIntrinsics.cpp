@@ -174,7 +174,7 @@ static bool isAggrToReplace(const Value *V) {
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
-    B.SetInsertPoint(I->getParent(), I->getParent()->getFirstInsertionPt());
+    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
   else
     B.SetInsertPoint(I);
 }
@@ -491,7 +491,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     if (Instruction *User = dyn_cast<Instruction>(Op->use_begin()->get()))
       setInsertPointSkippingPhis(B, User->getNextNode());
     else
-      B.SetInsertPoint(I);
+      setInsertPointSkippingPhis(B, I);
     Value *OpTyVal = Constant::getNullValue(KnownElemTy);
     Type *OpTy = Op->getType();
     if (!Ty) {
