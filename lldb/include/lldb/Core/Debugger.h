@@ -13,7 +13,6 @@
 
 #include <memory>
 #include <optional>
-#include <unordered_map>
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
@@ -41,6 +40,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -747,11 +747,10 @@ protected:
   lldb::TargetSP m_dummy_target_sp;
   Diagnostics::CallbackID m_diagnostics_callback_id;
 
-  std::recursive_mutex m_destroy_callback_mutex;
+  std::mutex m_destroy_callback_mutex;
   lldb::destroy_callback_token_t m_destroy_callback_next_token = 0;
-  llvm::SmallDenseMap<lldb::destroy_callback_token_t,
-                      std::pair<lldb_private::DebuggerDestroyCallback, void *>>
-      m_destroy_callback_and_baton;
+  typedef std::tuple<lldb::destroy_callback_token_t, lldb_private::DebuggerDestroyCallback, void *> DebuggerDestroyCallbackTuple;
+  llvm::SmallVector<DebuggerDestroyCallbackTuple, 2> m_destroy_callbacks;
 
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests
   std::mutex m_interrupt_mutex;

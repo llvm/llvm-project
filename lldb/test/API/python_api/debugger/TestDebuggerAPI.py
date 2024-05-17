@@ -180,10 +180,11 @@ class DebuggerAPITestCase(TestBase):
         token_bar = self.dbg.AddDestroyCallback(bar)
         self.dbg.Destroy(self.dbg)
 
-        # Should call both `foo()` and `bar()`. Order is undermined because
-        # of the `unordered_map` in the implementation.
-        self.assertTrue(('foo', original_dbg_id) in called)
-        self.assertTrue(('bar', original_dbg_id) in called)
+        # Should call both `foo()` and `bar()`.
+        self.assertEqual(called, [
+            ('foo', original_dbg_id),
+            ('bar', original_dbg_id),
+        ])
 
     def test_RemoveDestroyCallback(self):
         original_dbg_id = self.dbg.GetID()
@@ -231,52 +232,53 @@ class DebuggerAPITestCase(TestBase):
     def test_HandleDestroyCallback(self):
         """
         Validates:
-        1. Add and Remove can function during debugger destroy.
-        2. HandleDestroyCallback can invoke all callbacks.
+        1. AddDestroyCallback and RemoveDestroyCallback work during debugger destroy.
+        2. HandleDestroyCallback invokes all callbacks in FIFO order.
         """
         original_dbg_id = self.dbg.GetID()
-        events = {}
+        events = []
+        bar_token = None
 
         def foo(dbg_id):
             # Need nonlocal to modify closure variable.
             nonlocal events
-            events['foo called'] = dbg_id
+            events.append(('foo called', dbg_id))
 
         def bar(dbg_id):
-            # Don't log/validate bar's invocation because it may or may not be
-            # called based on its position in the container relative to
-            # remove_bar.
-            pass
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('bar called', dbg_id))
 
         def add_foo(dbg_id):
             # Need nonlocal to modify closure variable.
             nonlocal events
-            events['add_foo called'] = dbg_id
-            events['foo token'] = self.dbg.AddDestroyCallback(foo)
+            events.append(('add_foo called', dbg_id))
+            events.append(('foo token', self.dbg.AddDestroyCallback(foo)))
 
         def remove_bar(dbg_id):
             # Need nonlocal to modify closure variable.
             nonlocal events
-            events['remove_bar called'] = dbg_id
-            events['remove bar ret'] = self.dbg.RemoveDestroyCallback(events['bar token'])
+            events.append(('remove_bar called', dbg_id))
+            events.append(('remove bar ret', self.dbg.RemoveDestroyCallback(bar_token)))
 
         # Setup
-        events['add_foo token'] = self.dbg.AddDestroyCallback(add_foo)
-        events['bar token'] = self.dbg.AddDestroyCallback(bar)
-        events['remove_bar token'] = self.dbg.AddDestroyCallback(remove_bar)
+        events.append(('add_foo token', self.dbg.AddDestroyCallback(add_foo)))
+        bar_token = self.dbg.AddDestroyCallback(bar)
+        events.append(('bar token', bar_token))
+        events.append(('remove_bar token', self.dbg.AddDestroyCallback(remove_bar)))
         # Destroy
         self.dbg.Destroy(self.dbg)
 
-        self.assertEqual(events, {
+        self.assertEqual(events, [
             # Setup
-            'add_foo token': 0, # add_foo should be added
-            'bar token': 1, # bar should be added
-            'remove_bar token': 2, # remove_bar should be added
+            ('add_foo token', 0), # add_foo should be added
+            ('bar token', 1), # bar should be added
+            ('remove_bar token', 2), # remove_bar should be added
             # Destroy
-            'add_foo called': original_dbg_id, # add_foo should be called
-            'foo token': 3, # foo should be added
-            # bar may or may not be called
-            'remove_bar called': original_dbg_id, # remove_bar should be called
-            'remove bar ret': True, # remove_bar should succeed
-            'foo called': original_dbg_id, # foo should be called
-        })
+            ('add_foo called', original_dbg_id), # add_foo should be called
+            ('foo token', 3), # foo should be added
+            ('bar called', original_dbg_id), # bar should be called
+            ('remove_bar called', original_dbg_id), # remove_bar should be called
+            ('remove bar ret', False), # remove_bar should fail, because it's already invoked and removed
+            ('foo called', original_dbg_id), # foo should be called
+        ])

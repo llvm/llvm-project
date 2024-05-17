@@ -743,28 +743,21 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 }
 
 void Debugger::HandleDestroyCallback() {
-  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   const lldb::user_id_t user_id = GetID();
-  // This loop handles the case where callbacks are added/removed by existing
-  // callbacks during the loop, as the following:
-  // - Added callbacks will always be invoked.
-  // - Removed callbacks will never be invoked. That is *unless* the loop
-  //   happens to invoke the said callbacks first, before they get removed.
-  //   In this case, the callbacks gets invoked, and the removal return false.
-  //
-  // In the removal case, because the order of the container is random, it's
-  // wise to not depend on the order and instead implement logic inside the
-  // callbacks to decide if their work should be skipped.
-  while (m_destroy_callback_and_baton.size()) {
-    auto iter = m_destroy_callback_and_baton.begin();
-    const lldb::destroy_callback_token_t &token = iter->first;
-    const lldb_private::DebuggerDestroyCallback &callback = iter->second.first;
-    void *const &baton = iter->second.second;
-    callback(user_id, baton);
-    // Using `token` to erase, because elements may have been added/removed, and
-    // that will cause error "invalid iterator access!" if `iter` is used
-    // instead.
-    m_destroy_callback_and_baton.erase(token);
+  // Invoke and remove all the callbacks in an FIFO order. Callbacks which are added during this loop will be appended, invoked and then removed last.
+  // Callbacks which are removed during this loop will not be invoked.
+  while (true) {
+    DebuggerDestroyCallbackTuple callback;
+    {
+      std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+      if (m_destroy_callbacks.empty())
+        break;
+      // Pop the first item in the list
+      callback = m_destroy_callbacks.front();
+      m_destroy_callbacks.erase(m_destroy_callbacks.begin());
+    }
+    // Call the destroy callback with user id and baton
+    std::get<1>(callback)(user_id, std::get<2>(callback));
   }
 }
 
@@ -1446,23 +1439,30 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 
 void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
-  m_destroy_callback_and_baton.clear();
-  AddDestroyCallback(destroy_callback, baton);
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  m_destroy_callbacks.clear();
+  const lldb::destroy_callback_token_t token = m_destroy_callback_next_token++;
+  m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
 }
 
 lldb::destroy_callback_token_t Debugger::AddDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
   const lldb::destroy_callback_token_t token = m_destroy_callback_next_token++;
-  m_destroy_callback_and_baton.try_emplace(
-      token, std::forward_as_tuple(destroy_callback, baton));
+  m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
   return token;
 }
 
 bool Debugger::RemoveDestroyCallback(lldb::destroy_callback_token_t token) {
-  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
-  return m_destroy_callback_and_baton.erase(token);
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  for (auto it = m_destroy_callbacks.begin(); it != m_destroy_callbacks.end();
+       ++it) {
+    if (std::get<0>(*it) == token) {
+      m_destroy_callbacks.erase(it);
+      return true;
+    }
+  }
+  return false;
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
