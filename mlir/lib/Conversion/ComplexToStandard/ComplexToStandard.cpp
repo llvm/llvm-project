@@ -978,7 +978,7 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
         elementType, b.getFloatAttr(elementType, -1.0));
 
     if constexpr (std::is_same_v<Op, complex::TanOp>) {
-       // tan(x+yi) = -i*tanh(-y + xi)
+      // tan(x+yi) = -i*tanh(-y + xi)
       std::swap(real, imag);
       real = b.create<arith::MulFOp>(real, negOne, fmf);
     }
@@ -1046,7 +1046,7 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     }
 
     if constexpr (std::is_same_v<Op, complex::TanOp>) {
-       // tan(x+yi) = -i*tanh(-y + xi)
+      // tan(x+yi) = -i*tanh(-y + xi)
       std::swap(resultReal, resultImag);
       resultImag = b.create<arith::MulFOp>(resultImag, negOne, fmf);
     }
