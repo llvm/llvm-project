@@ -1,3 +1,5 @@
+add_subdirectory(CUF)
+
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
 # is not the case for FIR.
