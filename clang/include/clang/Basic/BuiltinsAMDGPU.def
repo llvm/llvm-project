@@ -668,11 +668,11 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk8_fp4_bf16, "UiV8yUif", "nc", 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sat_pk_i4_i8, "UsUi", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sat_pk_u4_u8, "UsUi", "nc", "gfx12-10-insts")
 
-TARGET_BUILTIN(__builtin_amdgcn_permlane_bcast, "iiiii", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_permlane_up, "iiiii", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_permlane_down, "iiiii", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_permlane_xor, "iiiii", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_permlane_idx_gen, "iiii", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlane_bcast, "iiii", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlane_up, "iiii", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlane_down, "iiii", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlane_xor, "iiii", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlane_idx_gen, "iii", "nc", "gfx12-10-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b4_u4, "V2UiUiUiV2Ui", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b6_u4, "V3UiUiULiV2Ui", "nc", "gfx12-10-insts")
