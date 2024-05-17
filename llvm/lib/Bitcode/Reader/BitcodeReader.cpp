@@ -835,10 +835,10 @@ private:
   }
 
   Expected<ConstantRange> readConstantRange(ArrayRef<uint64_t> Record,
-                                            unsigned &OpNum) {
-    if (Record.size() - OpNum < 3)
+                                            unsigned &OpNum,
+                                            unsigned BitWidth) {
+    if (Record.size() - OpNum < 2)
       return error("Too few records for range");
-    unsigned BitWidth = Record[OpNum++];
     if (BitWidth > 64) {
       unsigned LowerActiveWords = Record[OpNum];
       unsigned UpperActiveWords = Record[OpNum++] >> 32;
@@ -856,6 +856,14 @@ private:
       int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
       return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
     }
+  }
+
+  Expected<ConstantRange>
+  readBitWidthAndConstantRange(ArrayRef<uint64_t> Record, unsigned &OpNum) {
+    if (Record.size() - OpNum < 3)
+      return error("Too few records for range");
+    unsigned BitWidth = Record[OpNum++];
+    return readConstantRange(Record, OpNum, BitWidth);
   }
 
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
@@ -2329,7 +2337,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (!Attribute::isConstantRangeAttrKind(Kind))
             return error("Not a ConstantRange attribute");
 
-          Expected<ConstantRange> MaybeCR = readConstantRange(Record, i);
+          Expected<ConstantRange> MaybeCR =
+              readBitWidthAndConstantRange(Record, i);
           if (!MaybeCR)
             return MaybeCR.takeError();
           i--;
@@ -2348,10 +2357,13 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (i + 2 * RangeSize >= e)
             return error("Incomplete constant range list");
           for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
-            int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
-            int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
-            Val.push_back(ConstantRange(APInt(BitWidth, Start, true),
-                                        APInt(BitWidth, End, true)));
+            i++;
+            Expected<ConstantRange> MaybeCR =
+                readConstantRange(Record, i, BitWidth);
+            if (!MaybeCR)
+              return MaybeCR.takeError();
+            i--;
+            Val.push_back(MaybeCR.get());
           }
           B.addConstantRangeListAttr(Kind, Val);
         } else {
@@ -3367,7 +3379,8 @@ Error BitcodeReader::parseConstants() {
       } else if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE) {
         uint64_t Op = Record[OpNum++];
         InBounds = Op & 1;
-        Expected<ConstantRange> MaybeInRange = readConstantRange(Record, OpNum);
+        Expected<ConstantRange> MaybeInRange =
+            readBitWidthAndConstantRange(Record, OpNum);
         if (!MaybeInRange)
           return MaybeInRange.takeError();
         InRange = MaybeInRange.get();
