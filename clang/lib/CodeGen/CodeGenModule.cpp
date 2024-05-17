@@ -2506,6 +2506,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
+  if (D->hasAttr<UnnamedAddrAttr>()) {
+    F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  }
+
   F->addFnAttrs(B);
 
   unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
