@@ -70,6 +70,7 @@ int PrintKernelTrace = 0;
 
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
+namespace llvm::omp::target::plugin {
 struct RecordReplayTy {
 
   // Describes the state of the record replay mechanism.
@@ -389,8 +390,7 @@ public:
     }
   }
 };
-
-static RecordReplayTy RecordReplay;
+} // namespace llvm::omp::target::plugin
 
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
@@ -525,7 +525,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
-  if (RecordReplay.isReplaying() ||
+  if (GenericDevice.Plugin.getRecordReplay().isReplaying() ||
       Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
@@ -627,6 +627,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   // Record the kernel description after we modified the argument count and num
   // blocks/threads.
+  RecordReplayTy &RecordReplay = GenericDevice.Plugin.getRecordReplay();
   if (RecordReplay.isRecording()) {
     RecordReplay.saveImage(getName(), getImage());
     RecordReplay.saveKernelInput(getName(), getImage());
@@ -884,6 +885,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     delete MemoryManager;
   MemoryManager = nullptr;
 
+  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
@@ -939,7 +941,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return std::move(Err);
 
   // Setup the global device memory pool if needed.
-  if (!RecordReplay.isReplaying() && shouldSetupDeviceMemoryPool()) {
+  if (!Plugin.getRecordReplay().isReplaying() &&
+      shouldSetupDeviceMemoryPool()) {
     uint64_t HeapSize;
     auto SizeOrErr = getDeviceHeapSize(HeapSize);
     if (SizeOrErr) {
@@ -1370,8 +1373,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
   void *Alloc = nullptr;
 
-  if (RecordReplay.isRecordingOrReplaying())
-    return RecordReplay.alloc(Size);
+  if (Plugin.getRecordReplay().isRecordingOrReplaying())
+    return Plugin.getRecordReplay().alloc(Size);
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
@@ -1407,7 +1410,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   // Free is a noop when recording or replaying.
-  if (RecordReplay.isRecordingOrReplaying())
+  if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
 
   int Res;
@@ -1474,7 +1477,8 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     KernelArgsTy &KernelArgs,
                                     __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(
-      *this, RecordReplay.isRecordingOrReplaying() ? nullptr : AsyncInfo);
+      *this,
+      Plugin.getRecordReplay().isRecordingOrReplaying() ? nullptr : AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -1485,6 +1489,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   // 'finalize' here to guarantee next record-replay actions are in-sync
   AsyncInfoWrapper.finalize(Err);
 
+  RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying() &&
       RecordReplay.isSaveOutputEnabled())
     RecordReplay.saveKernelOutputInfo(GenericKernel.getName());
@@ -1615,6 +1620,9 @@ Error GenericPluginTy::init() {
   RPCServer = new RPCServerTy(*this);
   assert(RPCServer && "Invalid RPC server");
 
+  RecordReplay = new RecordReplayTy();
+  assert(RecordReplay && "Invalid RR interface");
+
   return Plugin::success();
 }
 
@@ -1636,6 +1644,10 @@ Error GenericPluginTy::deinit() {
   if (RPCServer)
     delete RPCServer;
 #endif
+
+  if (RecordReplay)
+    delete RecordReplay;
+
   // Perform last deinitializations on the plugin.
   return deinitImpl();
 }
@@ -1797,16 +1809,6 @@ bool GenericPluginTy::is_system_supporting_managed_memory(int32_t DeviceId) {
   return R;
 }
 
-int64_t GenericPluginTy::init_requires(int64_t RequiresFlags) {
-  auto T = logger::log<int64_t>(__func__, RequiresFlags);
-  auto R = [&]() {
-    setRequiresFlag(RequiresFlags);
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
 int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
                                              int32_t DstDeviceId) {
   auto T = logger::log<int32_t>(__func__, SrcDeviceId, DstDeviceId);
@@ -1828,12 +1830,12 @@ int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
         isRecord ? RecordReplayTy::RRStatusTy::RRRecording
                  : RecordReplayTy::RRStatusTy::RRReplaying;
 
-    if (auto Err = RecordReplay.init(&Device, MemorySize, VAddr, Status,
-                                     SaveOutput, ReqPtrArgOffset)) {
-      REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
-             "(Error: %s)\n",
-             MemorySize, toString(std::move(Err)).data());
-      RecordReplay.setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
+  if (auto Err = RecordReplay->init(&Device, MemorySize, VAddr, Status,
+                                    SaveOutput, ReqPtrArgOffset)) {
+    REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
+           "(Error: %s)\n",
+           MemorySize, toString(std::move(Err)).data());
+    RecordReplay->setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
 
       if (!isRecord) {
         return OFFLOAD_FAIL;
@@ -2392,9 +2394,10 @@ int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
     *DevicePtr = DeviceGlobal.getPtr();
     assert(DevicePtr && "Invalid device global's address");
 
-    // Save the loaded globals if we are recording.
-    if (RecordReplay.isRecording())
-      RecordReplay.addEntry(Name, Size, *DevicePtr);
+  // Save the loaded globals if we are recording.
+  RecordReplayTy &RecordReplay = Device.Plugin.getRecordReplay();
+  if (RecordReplay.isRecording())
+    RecordReplay.addEntry(Name, Size, *DevicePtr);
 
     return OFFLOAD_SUCCESS;
   }();
