@@ -1,14 +1,5 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build offloading library and related plugins.
-#
-##===----------------------------------------------------------------------===##
+# See for https://openmp.llvm.org/SupportAndFAQ.html for instructions on how
+# to build offload with CMake.
 
 cmake_minimum_required(VERSION 3.20.0)
 
