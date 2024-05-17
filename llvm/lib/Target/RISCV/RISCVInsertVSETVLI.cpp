@@ -215,7 +215,11 @@ struct DemandedFields {
                 // than 64.
     SEWNone = 0 // We don't need to preserve SEW at all.
   } SEW = SEWNone;
-  bool LMUL = false;
+  enum : uint8_t {
+    LMULEqual = 2, // The exact value of LMUL needs to be preserved.
+    LMULLessThanOrEqualToM1 = 1, // We can use any LMUL <= M1.
+    LMULNone = 0                 // We don't need to preserve LMUL at all.
+  } LMUL = LMULNone;
   bool SEWLMULRatio = false;
   bool TailPolicy = false;
   bool MaskPolicy = false;
@@ -233,7 +237,7 @@ struct DemandedFields {
   // Mark all VTYPE subfields and properties as demanded
   void demandVTYPE() {
     SEW = SEWEqual;
-    LMUL = true;
+    LMUL = LMULEqual;
     SEWLMULRatio = true;
     TailPolicy = true;
     MaskPolicy = true;
@@ -250,7 +254,7 @@ struct DemandedFields {
     VLAny |= B.VLAny;
     VLZeroness |= B.VLZeroness;
     SEW = std::max(SEW, B.SEW);
-    LMUL |= B.LMUL;
+    LMUL = std::max(LMUL, B.LMUL);
     SEWLMULRatio |= B.SEWLMULRatio;
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
@@ -284,7 +288,19 @@ struct DemandedFields {
       break;
     };
     OS << ", ";
-    OS << "LMUL=" << LMUL << ", ";
+    OS << "LMUL=";
+    switch (LMUL) {
+    case LMULEqual:
+      OS << "LMULEqual";
+      break;
+    case LMULLessThanOrEqualToM1:
+      OS << "LMULLessThanOrEqualToM1";
+      break;
+    case LMULNone:
+      OS << "LMULNone";
+      break;
+    };
+    OS << ", ";
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
     OS << "MaskPolicy=" << MaskPolicy;
@@ -300,6 +316,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
   return OS;
 }
 #endif
+
+static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
+  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(LMUL);
+  return Fractional || LMul == 1;
+}
 
 /// Return true if moving from CurVType to NewVType is
 /// indistinguishable from the perspective of an instruction (or set
@@ -324,9 +345,18 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
     break;
   }
 
-  if (Used.LMUL &&
-      RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
-    return false;
+  switch (Used.LMUL) {
+  case DemandedFields::LMULNone:
+    break;
+  case DemandedFields::LMULEqual:
+    if (RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
+      return false;
+    break;
+  case DemandedFields::LMULLessThanOrEqualToM1:
+    if (!isLMUL1OrSmaller(RISCVVType::getVLMUL(NewVType)))
+      return false;
+    break;
+  }
 
   if (Used.SEWLMULRatio) {
     auto Ratio1 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(CurVType),
@@ -382,7 +412,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // in the opcode.  This is asserted when constructing the VSETVLIInfo.
   if (getEEWForLoadStore(MI)) {
     Res.SEW = DemandedFields::SEWNone;
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
   }
 
   // Store instructions don't use the policy fields.
@@ -397,12 +427,12 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // * The policy bits can probably be ignored..
   if (isMaskRegOp(MI)) {
     Res.SEW = DemandedFields::SEWNone;
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
   }
 
   // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
   if (isScalarInsertInstr(MI)) {
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
     // For vmv.s.x and vfmv.s.f, if the merge operand is *undefined*, we don't
@@ -423,7 +453,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
   if (isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.TailPolicy = false;
     Res.MaskPolicy = false;
@@ -1107,11 +1137,6 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       LIS->getMBBStartIdx(&MBB), LIS->getInstructionIndex(*MI).getRegSlot());
 }
 
-static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
-  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(LMUL);
-  return Fractional || LMul == 1;
-}
-
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
 /// before MI.
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
@@ -1133,10 +1158,10 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // * The LMUL1 restriction is for machines whose latency may depend on VL.
   // * As above, this is only legal for tail "undefined" not "agnostic".
   if (isVSlideInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
-      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI)) {
+      hasUndefinedMergeOp(MI)) {
     Used.VLAny = false;
     Used.VLZeroness = true;
-    Used.LMUL = false;
+    Used.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
     Used.TailPolicy = false;
   }
 
@@ -1146,9 +1171,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // Since a splat is non-constant time in LMUL, we do need to be careful to not
   // increase the number of active vector registers (unlike for vmv.s.x.)
   if (isScalarSplatInstr(MI) && Require.hasAVLImm() &&
-      Require.getAVLImm() == 1 && isLMUL1OrSmaller(CurInfo.getVLMUL()) &&
-      hasUndefinedMergeOp(MI)) {
-    Used.LMUL = false;
+      Require.getAVLImm() == 1 && hasUndefinedMergeOp(MI)) {
+    Used.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
     if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
@@ -1189,7 +1213,7 @@ static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
       Info.setVLMul(*NewVLMul);
-    Demanded.LMUL = true;
+    Demanded.LMUL = DemandedFields::LMULEqual;
   }
 
   return Info;
