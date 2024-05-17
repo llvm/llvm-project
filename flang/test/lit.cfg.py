@@ -204,7 +204,7 @@ if result:
 if config.have_openmp_rtl:
     config.available_features.add("openmp_runtime")
     # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
-    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was build as a
+    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
     # project or runtime.
     if config.openmp_module_dir:
         config.substitutions.append(
