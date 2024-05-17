@@ -446,6 +446,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       fracDigits = sizeof buffer_ - 2; // sign & NUL
     }
   }
+  bool emitTrailingZeroes{!(flags & decimal::Minimize)};
   // Multiple conversions may be needed to get the right number of
   // effective rounded fractional digits.
   bool canIncrease{true};
@@ -526,11 +527,18 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     }
     int digitsBeforePoint{std::max(0, std::min(expo, convertedDigits))};
     int zeroesBeforePoint{std::max(0, expo - digitsBeforePoint)};
+    if (zeroesBeforePoint > 0 && (flags & decimal::Minimize)) {
+      // If a minimized result looks like an integer, emit all of
+      // its digits rather than clipping some to zeroes.
+      // This can happen with HUGE(0._2) == 65504._2.
+      flags &= ~decimal::Minimize;
+      continue;
+    }
     int zeroesAfterPoint{std::min(fracDigits, std::max(0, -expo))};
     int digitsAfterPoint{convertedDigits - digitsBeforePoint};
-    int trailingZeroes{flags & decimal::Minimize
-            ? 0
-            : std::max(0, fracDigits - (zeroesAfterPoint + digitsAfterPoint))};
+    int trailingZeroes{emitTrailingZeroes
+            ? std::max(0, fracDigits - (zeroesAfterPoint + digitsAfterPoint))
+            : 0};
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
@@ -751,43 +759,50 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
 
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
-  switch (edit.descriptor) {
+  const DataEdit *editPtr{&edit};
+  DataEdit newEdit;
+  if (editPtr->descriptor == 'G') {
+    // Avoid recursive call as in Edit(EditForGOutput(edit)).
+    newEdit = EditForGOutput(*editPtr);
+    editPtr = &newEdit;
+    RUNTIME_CHECK(io_.GetIoErrorHandler(), editPtr->descriptor != 'G');
+  }
+  switch (editPtr->descriptor) {
   case 'D':
-    return EditEorDOutput(edit);
+    return EditEorDOutput(*editPtr);
   case 'E':
-    if (edit.variation == 'X') {
-      return EditEXOutput(edit);
+    if (editPtr->variation == 'X') {
+      return EditEXOutput(*editPtr);
     } else {
-      return EditEorDOutput(edit);
+      return EditEorDOutput(*editPtr);
     }
   case 'F':
-    return EditFOutput(edit);
+    return EditFOutput(*editPtr);
   case 'B':
-    return EditBOZOutput<1>(io_, edit,
+    return EditBOZOutput<1>(io_, *editPtr,
         reinterpret_cast<const unsigned char *>(&x_),
         common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'O':
-    return EditBOZOutput<3>(io_, edit,
+    return EditBOZOutput<3>(io_, *editPtr,
         reinterpret_cast<const unsigned char *>(&x_),
         common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'Z':
-    return EditBOZOutput<4>(io_, edit,
+    return EditBOZOutput<4>(io_, *editPtr,
         reinterpret_cast<const unsigned char *>(&x_),
         common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
-  case 'G':
-    return Edit(EditForGOutput(edit));
   case 'L':
-    return EditLogicalOutput(io_, edit, *reinterpret_cast<const char *>(&x_));
+    return EditLogicalOutput(
+        io_, *editPtr, *reinterpret_cast<const char *>(&x_));
   case 'A': // legacy extension
     return EditCharacterOutput(
-        io_, edit, reinterpret_cast<char *>(&x_), sizeof x_);
+        io_, *editPtr, reinterpret_cast<char *>(&x_), sizeof x_);
   default:
-    if (edit.IsListDirected()) {
-      return EditListDirectedOutput(edit);
+    if (editPtr->IsListDirected()) {
+      return EditListDirectedOutput(*editPtr);
     }
     io_.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a REAL data item",
-        edit.descriptor);
+        editPtr->descriptor);
     return false;
   }
   return false;
@@ -815,6 +830,11 @@ RT_API_ATTRS bool EditLogicalOutput(
   case 'Z':
     return EditBOZOutput<4>(io, edit,
         reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
+  case 'A': { // legacy extension
+    int truthBits{truth};
+    return EditCharacterOutput(
+        io, edit, reinterpret_cast<char *>(&truthBits), sizeof truthBits);
+  }
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a LOGICAL data item",

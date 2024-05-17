@@ -2213,18 +2213,6 @@ TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
   EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
 }
 
-TEST_P(
-    ASTMatchersTest,
-    TemplateSpecializationTypeLocTest_BindsToTemplateSpecializationExplicitInstantiation) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(
-      matches("template <typename T> class C {}; template class C<int>;",
-              classTemplateSpecializationDecl(
-                  hasName("C"), hasTypeLoc(templateSpecializationTypeLoc()))));
-}
-
 TEST_P(ASTMatchersTest,
        TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
   if (!GetParam().isCXX()) {
@@ -2321,6 +2309,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
       matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
   EXPECT_TRUE(
       matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "void f(int a) { int cc[a]; auto f = [&](){ return cc;}; }", matcher));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureWithInitializer) {

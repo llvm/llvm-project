@@ -17,11 +17,17 @@
 #ifndef LLVM_CLANG_EXTRACTAPI_SERIALIZATION_SYMBOLGRAPHSERIALIZER_H
 #define LLVM_CLANG_EXTRACTAPI_SERIALIZATION_SYMBOLGRAPHSERIALIZER_H
 
+#include "clang/Basic/Module.h"
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/APIIgnoresList.h"
-#include "clang/ExtractAPI/Serialization/SerializerBase.h"
+#include "clang/ExtractAPI/Serialization/APISetVisitor.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,7 +41,30 @@ using namespace llvm::json;
 /// Common options to customize the visitor output.
 struct SymbolGraphSerializerOption {
   /// Do not include unnecessary whitespaces to save space.
-  bool Compact;
+  bool Compact = true;
+  bool EmitSymbolLabelsForTesting = false;
+};
+
+/// A representation of the contents of a given module symbol graph
+struct ExtendedModule {
+  ExtendedModule() = default;
+  ExtendedModule(ExtendedModule &&EM) = default;
+  ExtendedModule &operator=(ExtendedModule &&EM) = default;
+  // Copies are expensive so disable them.
+  ExtendedModule(const ExtendedModule &EM) = delete;
+  ExtendedModule &operator=(const ExtendedModule &EM) = delete;
+
+  /// Add a symbol to the module, do not store the resulting pointer or use it
+  /// across insertions.
+  Object *addSymbol(Object &&Symbol);
+
+  void addRelationship(Object &&Relationship);
+
+  /// A JSON array of formatted symbols from an \c APISet.
+  Array Symbols;
+
+  /// A JSON array of formatted symbol relationships from an \c APISet.
+  Array Relationships;
 };
 
 /// The visitor that organizes API information in the Symbol Graph format.
@@ -44,28 +73,54 @@ struct SymbolGraphSerializerOption {
 /// models an API set as a directed graph, where nodes are symbol declarations,
 /// and edges are relationships between the connected symbols.
 class SymbolGraphSerializer : public APISetVisitor<SymbolGraphSerializer> {
-  /// A JSON array of formatted symbols in \c APISet.
-  Array Symbols;
+private:
+  using Base = APISetVisitor<SymbolGraphSerializer>;
+  /// The main symbol graph that contains symbols that are either top-level or a
+  /// are related to symbols defined in this product/module.
+  ExtendedModule MainModule;
 
-  /// A JSON array of formatted symbol relationships in \c APISet.
-  Array Relationships;
+  /// Additional symbol graphs that contain symbols that are related to symbols
+  /// defined in another product/module. The key of this map is the module name
+  /// of the extended module.
+  llvm::StringMap<ExtendedModule> ExtendedModules;
 
   /// The Symbol Graph format version used by this serializer.
   static const VersionTuple FormatVersion;
 
-  /// Indicates whether child symbols should be visited. This is mainly
+  /// Indicates whether to take into account the extended module. This is only
   /// useful for \c serializeSingleSymbolSGF.
-  bool ShouldRecurse;
+  bool ForceEmitToMainModule;
+
+  // Stores the references required to construct path components for the
+  // currently visited APIRecord.
+  llvm::SmallVector<SymbolReference, 8> Hierarchy;
+
+  /// The list of symbols to ignore.
+  ///
+  /// Note: This should be consulted before emitting a symbol.
+  const APIIgnoresList &IgnoresList;
+
+  const bool EmitSymbolLabelsForTesting = false;
+
+  /// The object instantiated by the last call to serializeAPIRecord.
+  Object *CurrentSymbol = nullptr;
+
+  /// The module to which \p CurrentSymbol belongs too.
+  ExtendedModule *ModuleForCurrentSymbol = nullptr;
 
 public:
-  /// Serialize the APIs in \c APISet in the Symbol Graph format.
-  ///
-  /// \returns a JSON object that contains the root of the formatted
-  /// Symbol Graph.
-  Object serialize();
+  static void
+  serializeMainSymbolGraph(raw_ostream &OS, const APISet &API,
+                           const APIIgnoresList &IgnoresList,
+                           SymbolGraphSerializerOption Options = {});
 
-  ///  Wrap serialize(void) and write out the serialized JSON object to \p os.
-  void serialize(raw_ostream &os);
+  static void serializeWithExtensionGraphs(
+      raw_ostream &MainOutput, const APISet &API,
+      const APIIgnoresList &IgnoresList,
+      llvm::function_ref<
+          std::unique_ptr<llvm::raw_pwrite_stream>(llvm::Twine BaseFileName)>
+          CreateOutputStream,
+      SymbolGraphSerializerOption Options = {});
 
   /// Serialize a single symbol SGF. This is primarily used for libclang.
   ///
@@ -75,6 +130,7 @@ public:
   static std::optional<Object> serializeSingleSymbolSGF(StringRef USR,
                                                         const APISet &API);
 
+private:
   /// The kind of a relationship between two symbols.
   enum RelationshipKind {
     /// The source symbol is a member of the target symbol.
@@ -94,16 +150,32 @@ public:
     ExtensionTo,
   };
 
+  /// Serialize a single record.
+  void serializeSingleRecord(const APIRecord *Record);
+
   /// Get the string representation of the relationship kind.
   static StringRef getRelationshipString(RelationshipKind Kind);
+
+  void serializeRelationship(RelationshipKind Kind,
+                             const SymbolReference &Source,
+                             const SymbolReference &Target,
+                             ExtendedModule &Into);
 
   enum ConstraintKind { Conformance, ConditionalConformance };
 
   static StringRef getConstraintString(ConstraintKind Kind);
 
-private:
-  /// Just serialize the currently recorded objects in Symbol Graph format.
-  Object serializeCurrentGraph();
+  /// Serialize the APIs in \c ExtendedModule.
+  ///
+  /// \returns a JSON object that contains the root of the formatted
+  /// Symbol Graph.
+  Object serializeGraph(StringRef ModuleName, ExtendedModule &&EM);
+
+  /// Serialize the APIs in \c ExtendedModule in the Symbol Graph format and
+  /// write them to the provide stream.
+  void serializeGraphToStream(raw_ostream &OS,
+                              SymbolGraphSerializerOption Options,
+                              StringRef ModuleName, ExtendedModule &&EM);
 
   /// Synthesize the metadata section of the Symbol Graph format.
   ///
@@ -117,124 +189,92 @@ private:
   /// by the given API set.
   /// Note that "module" here is not to be confused with the Clang/C++ module
   /// concept.
-  Object serializeModule() const;
+  Object serializeModuleObject(StringRef ModuleName) const;
+
+  Array serializePathComponents(const APIRecord *Record) const;
 
   /// Determine if the given \p Record should be skipped during serialization.
-  bool shouldSkip(const APIRecord &Record) const;
+  bool shouldSkip(const APIRecord *Record) const;
+
+  ExtendedModule &getModuleForCurrentSymbol();
 
   /// Format the common API information for \p Record.
   ///
   /// This handles the shared information of all kinds of API records,
-  /// for example identifier and source location. The resulting object is then
-  /// augmented with kind-specific symbol information by the caller.
-  /// This method also checks if the given \p Record should be skipped during
-  /// serialization.
+  /// for example identifier, source location and path components. The resulting
+  /// object is then augmented with kind-specific symbol information in
+  /// subsequent visit* methods by accessing the \p State member variable. This
+  /// method also checks if the given \p Record should be skipped during
+  /// serialization. This should be called only once per concrete APIRecord
+  /// instance and the first visit* method to be called is responsible for
+  /// calling this. This is normally visitAPIRecord unless a walkUpFromFoo
+  /// method is implemented along the inheritance hierarchy in which case the
+  /// visitFoo method needs to call this.
   ///
-  /// \returns \c std::nullopt if this \p Record should be skipped, or a JSON
-  /// object containing common symbol information of \p Record.
-  template <typename RecordTy>
-  std::optional<Object> serializeAPIRecord(const RecordTy &Record) const;
-
-  /// Helper method to serialize second-level member records of \p Record and
-  /// the member-of relationships.
-  template <typename MemberTy>
-  void serializeMembers(const APIRecord &Record,
-                        const SmallVector<std::unique_ptr<MemberTy>> &Members);
-
-  /// Serialize the \p Kind relationship between \p Source and \p Target.
-  ///
-  /// Record the relationship between the two symbols in
-  /// SymbolGraphSerializer::Relationships.
-  void serializeRelationship(RelationshipKind Kind, SymbolReference Source,
-                             SymbolReference Target);
-
-protected:
-  /// The list of symbols to ignore.
-  ///
-  /// Note: This should be consulted before emitting a symbol.
-  const APIIgnoresList &IgnoresList;
-
-  SymbolGraphSerializerOption Options;
-
-  llvm::StringSet<> visitedCategories;
+  /// \returns \c nullptr if this \p Record should be skipped, or a pointer to
+  /// JSON object containing common symbol information of \p Record. Do not
+  /// store the returned pointer only use it to augment the object with record
+  /// specific information as it directly points to the object in the
+  /// \p ExtendedModule, the pointer won't be valid as soon as another object is
+  /// inserted into the module.
+  void serializeAPIRecord(const APIRecord *Record);
 
 public:
-  void visitNamespaceRecord(const NamespaceRecord &Record);
+  // Handle if records should be skipped at this level of the traversal to
+  // ensure that children of skipped records aren't serialized.
+  bool traverseAPIRecord(const APIRecord *Record);
+
+  bool visitAPIRecord(const APIRecord *Record);
 
   /// Visit a global function record.
-  void visitGlobalFunctionRecord(const GlobalFunctionRecord &Record);
+  bool visitGlobalFunctionRecord(const GlobalFunctionRecord *Record);
 
-  /// Visit a global variable record.
-  void visitGlobalVariableRecord(const GlobalVariableRecord &Record);
+  bool visitCXXClassRecord(const CXXClassRecord *Record);
 
-  /// Visit an enum record.
-  void visitEnumRecord(const EnumRecord &Record);
+  bool visitClassTemplateRecord(const ClassTemplateRecord *Record);
 
-  /// Visit a record record.
-  void visitRecordRecord(const RecordRecord &Record);
+  bool visitClassTemplatePartialSpecializationRecord(
+      const ClassTemplatePartialSpecializationRecord *Record);
 
-  void visitStaticFieldRecord(const StaticFieldRecord &Record);
+  bool visitCXXMethodRecord(const CXXMethodRecord *Record);
 
-  void visitCXXClassRecord(const CXXClassRecord &Record);
+  bool visitCXXMethodTemplateRecord(const CXXMethodTemplateRecord *Record);
 
-  void visitClassTemplateRecord(const ClassTemplateRecord &Record);
+  bool visitCXXFieldTemplateRecord(const CXXFieldTemplateRecord *Record);
 
-  void visitClassTemplateSpecializationRecord(
-      const ClassTemplateSpecializationRecord &Record);
+  bool visitConceptRecord(const ConceptRecord *Record);
 
-  void visitClassTemplatePartialSpecializationRecord(
-      const ClassTemplatePartialSpecializationRecord &Record);
+  bool
+  visitGlobalVariableTemplateRecord(const GlobalVariableTemplateRecord *Record);
 
-  void visitCXXInstanceMethodRecord(const CXXInstanceMethodRecord &Record);
+  bool visitGlobalVariableTemplatePartialSpecializationRecord(
+      const GlobalVariableTemplatePartialSpecializationRecord *Record);
 
-  void visitCXXStaticMethodRecord(const CXXStaticMethodRecord &Record);
+  bool
+  visitGlobalFunctionTemplateRecord(const GlobalFunctionTemplateRecord *Record);
 
-  void visitMethodTemplateRecord(const CXXMethodTemplateRecord &Record);
+  bool visitObjCContainerRecord(const ObjCContainerRecord *Record);
 
-  void visitMethodTemplateSpecializationRecord(
-      const CXXMethodTemplateSpecializationRecord &Record);
+  bool visitObjCInterfaceRecord(const ObjCInterfaceRecord *Record);
 
-  void visitCXXFieldRecord(const CXXFieldRecord &Record);
+  bool traverseObjCCategoryRecord(const ObjCCategoryRecord *Record);
+  bool walkUpFromObjCCategoryRecord(const ObjCCategoryRecord *Record);
+  bool visitObjCCategoryRecord(const ObjCCategoryRecord *Record);
 
-  void visitCXXFieldTemplateRecord(const CXXFieldTemplateRecord &Record);
+  bool visitObjCMethodRecord(const ObjCMethodRecord *Record);
 
-  void visitConceptRecord(const ConceptRecord &Record);
+  bool
+  visitObjCInstanceVariableRecord(const ObjCInstanceVariableRecord *Record);
 
-  void
-  visitGlobalVariableTemplateRecord(const GlobalVariableTemplateRecord &Record);
-
-  void visitGlobalVariableTemplateSpecializationRecord(
-      const GlobalVariableTemplateSpecializationRecord &Record);
-
-  void visitGlobalVariableTemplatePartialSpecializationRecord(
-      const GlobalVariableTemplatePartialSpecializationRecord &Record);
-
-  void
-  visitGlobalFunctionTemplateRecord(const GlobalFunctionTemplateRecord &Record);
-
-  void visitGlobalFunctionTemplateSpecializationRecord(
-      const GlobalFunctionTemplateSpecializationRecord &Record);
-
-  /// Visit an Objective-C container record.
-  void visitObjCContainerRecord(const ObjCContainerRecord &Record);
-
-  /// Visit an Objective-C category record.
-  void visitObjCCategoryRecord(const ObjCCategoryRecord &Record);
-
-  /// Visit a macro definition record.
-  void visitMacroDefinitionRecord(const MacroDefinitionRecord &Record);
-
-  /// Visit a typedef record.
-  void visitTypedefRecord(const TypedefRecord &Record);
-
-  /// Serialize a single record.
-  void serializeSingleRecord(const APIRecord *Record);
+  bool walkUpFromTypedefRecord(const TypedefRecord *Record);
+  bool visitTypedefRecord(const TypedefRecord *Record);
 
   SymbolGraphSerializer(const APISet &API, const APIIgnoresList &IgnoresList,
-                        SymbolGraphSerializerOption Options = {},
-                        bool ShouldRecurse = true)
-      : APISetVisitor(API), ShouldRecurse(ShouldRecurse),
-        IgnoresList(IgnoresList), Options(Options) {}
+                        bool EmitSymbolLabelsForTesting = false,
+                        bool ForceEmitToMainModule = false)
+      : Base(API), ForceEmitToMainModule(ForceEmitToMainModule),
+        IgnoresList(IgnoresList),
+        EmitSymbolLabelsForTesting(EmitSymbolLabelsForTesting) {}
 };
 
 } // namespace extractapi

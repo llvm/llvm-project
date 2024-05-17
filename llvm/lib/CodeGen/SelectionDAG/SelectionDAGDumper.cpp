@@ -299,6 +299,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SETCCCARRY:                 return "setcccarry";
   case ISD::STRICT_FSETCC:              return "strict_fsetcc";
   case ISD::STRICT_FSETCCS:             return "strict_fsetccs";
+  case ISD::FPTRUNC_ROUND:              return "fptrunc_round";
   case ISD::SELECT:                     return "select";
   case ISD::VSELECT:                    return "vselect";
   case ISD::SELECT_CC:                  return "select_cc";
@@ -456,6 +457,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CONVERGENCECTRL_ANCHOR:     return "convergencectrl_anchor";
   case ISD::CONVERGENCECTRL_ENTRY:      return "convergencectrl_entry";
   case ISD::CONVERGENCECTRL_LOOP:       return "convergencectrl_loop";
+  case ISD::CONVERGENCECTRL_GLUE:       return "convergencectrl_glue";
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";
@@ -526,6 +528,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "stackmap";
   case ISD::PATCHPOINT:
     return "patchpoint";
+
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
+    return "histogram";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
@@ -902,6 +907,13 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     if (const auto *MD = G ? G->getPCSections(this) : nullptr) {
       OS << " [pcsections ";
       MD->printAsOperand(OS, G->getMachineFunction().getFunction().getParent());
+      OS << ']';
+    }
+
+    if (MDNode *MMRA = G ? G->getMMRAMetadata(this) : nullptr) {
+      OS << " [mmra ";
+      MMRA->printAsOperand(OS,
+                           G->getMachineFunction().getFunction().getParent());
       OS << ']';
     }
   }

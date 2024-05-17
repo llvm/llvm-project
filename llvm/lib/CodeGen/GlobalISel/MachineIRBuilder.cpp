@@ -28,6 +28,7 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   State.TII = MF.getSubtarget().getInstrInfo();
   State.DL = DebugLoc();
   State.PCSections = nullptr;
+  State.MMRA = nullptr;
   State.II = MachineBasicBlock::iterator();
   State.Observer = nullptr;
 }
@@ -37,7 +38,8 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
-  return BuildMI(getMF(), {getDL(), getPCSections()}, getTII().get(Opcode));
+  return BuildMI(getMF(), {getDL(), getPCSections(), getMMRAMetadata()},
+                 getTII().get(Opcode));
 }
 
 MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
@@ -488,8 +490,9 @@ MachineInstrBuilder MachineIRBuilder::buildSExt(const DstOp &Res,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildZExt(const DstOp &Res,
-                                                const SrcOp &Op) {
-  return buildInstr(TargetOpcode::G_ZEXT, Res, Op);
+                                                const SrcOp &Op,
+                                                std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_ZEXT, Res, Op, Flags);
 }
 
 unsigned MachineIRBuilder::getBoolExtOp(bool IsVec, bool IsFP) const {
@@ -867,9 +870,10 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
   return buildIntrinsic(ID, Results, HasSideEffects, isConvergent);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,
-                                                 const SrcOp &Op) {
-  return buildInstr(TargetOpcode::G_TRUNC, Res, Op);
+MachineInstrBuilder
+MachineIRBuilder::buildTrunc(const DstOp &Res, const SrcOp &Op,
+                             std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_TRUNC, Res, Op, Flags);
 }
 
 MachineInstrBuilder
@@ -1278,7 +1282,7 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
         return DstTy.isScalar();
       else
         return DstTy.isVector() &&
-               DstTy.getNumElements() == Op0Ty.getNumElements();
+               DstTy.getElementCount() == Op0Ty.getElementCount();
     }() && "Type Mismatch");
     break;
   }

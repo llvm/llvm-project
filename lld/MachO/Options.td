@@ -1413,3 +1413,9 @@ def debug_variant : Flag<["-"], "debug_variant">,
     HelpText<"Do not warn about issues that are only problems for binaries shipping to customers.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
+
+// NOTE: This flag should be respected if -warn_duplicate_libraries is ever implemented.
+def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
+    HelpText<"Do not warn if the input contains duplicate library options.">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;

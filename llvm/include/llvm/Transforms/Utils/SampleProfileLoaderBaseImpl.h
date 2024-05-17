@@ -86,12 +86,9 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
-  const ThinOrFullLTOPhase LTOPhase;
 
 public:
-  PseudoProbeManager(const Module &M,
-                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
-      : LTOPhase(LTOPhase) {
+  PseudoProbeManager(const Module &M) {
     if (NamedMDNode *FuncInfo =
             M.getNamedMetadata(PseudoProbeDescMetadataName)) {
       for (const auto *Operand : FuncInfo->operands()) {
@@ -129,22 +126,34 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !Desc ||
-            profileIsHashMismatched(*Desc, Samples) ==
-                F.hasFnAttribute("profile-checksum-mismatch")) &&
-           "In post-link, profile checksum matching state doesn't match "
-           "function 'profile-checksum-mismatch' attribute.");
-    (void)LTOPhase;
-    // The desc for import function is unavailable. Check the function attribute
-    // for mismatch.
-    return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
-           (Desc && !profileIsHashMismatched(*Desc, Samples));
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
+    // Always check the function attribute to determine checksum mismatch for
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
+    if (IsAvailableExternallyLinkage || !Desc)
+      return !F.hasFnAttribute("profile-checksum-mismatch");
+
+    return Desc && !profileIsHashMismatched(*Desc, Samples);
   }
 };
 
 
 
 extern cl::opt<bool> SampleProfileUseProfi;
+
+static inline bool skipProfileForFunction(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
 
 template <typename FT> class SampleProfileLoaderBaseImpl {
 public:

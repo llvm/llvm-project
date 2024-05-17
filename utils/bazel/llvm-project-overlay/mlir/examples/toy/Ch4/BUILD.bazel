@@ -101,6 +101,7 @@ cc_binary(
         "//mlir:CastInterfaces",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
+        "//mlir:InliningUtils",
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:SideEffectInterfaces",

@@ -88,19 +88,24 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
                              MachineRegisterInfo *MRI, SPIRVGlobalRegistry &GR,
                              MachineInstr &I, unsigned OpIdx,
                              SPIRVType *ResType, const Type *ResTy = nullptr) {
+  // Get operand type
+  MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
   SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
-  SPIRVType *OpType = GR.getSPIRVTypeForVReg(
+  Register OpTypeReg =
       TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
           ? TypeInst->getOperand(1).getReg()
-          : OpReg);
+          : OpReg;
+  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!ResType || !OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
-  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  // Get operand's pointee type
+  Register ElemTypeReg = OpType->getOperand(2).getReg();
+  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(ElemTypeReg, MF);
   if (!ElemType)
     return;
-  bool IsSameMF =
-      ElemType->getParent()->getParent() == ResType->getParent()->getParent();
+  // Check if we need a bitcast to make a statement valid
+  bool IsSameMF = MF == ResType->getParent()->getParent();
   bool IsEqualTypes = IsSameMF ? ElemType == ResType
                                : GR.getTypeForSPIRVType(ElemType) == ResTy;
   if (IsEqualTypes)
@@ -156,16 +161,20 @@ void validateFunCallMachineDef(const SPIRVSubtarget &STI,
     SPIRVType *DefPtrType = DefMRI->getVRegDef(FunDef->getOperand(1).getReg());
     SPIRVType *DefElemType =
         DefPtrType && DefPtrType->getOpcode() == SPIRV::OpTypePointer
-            ? GR.getSPIRVTypeForVReg(DefPtrType->getOperand(2).getReg())
+            ? GR.getSPIRVTypeForVReg(DefPtrType->getOperand(2).getReg(),
+                                     DefPtrType->getParent()->getParent())
             : nullptr;
     if (DefElemType) {
       const Type *DefElemTy = GR.getTypeForSPIRVType(DefElemType);
-      // Switch GR context to the call site instead of the (default) definition
-      // side
-      GR.setCurrentFunc(*FunCall.getParent()->getParent());
+      // validatePtrTypes() works in the context if the call site
+      // When we process historical records about forward calls
+      // we need to switch context to the (forward) call site and
+      // then restore it back to the current machine function.
+      MachineFunction *CurMF =
+          GR.setCurrentFunc(*FunCall.getParent()->getParent());
       validatePtrTypes(STI, CallMRI, GR, FunCall, OpIdx, DefElemType,
                        DefElemTy);
-      GR.setCurrentFunc(*FunDef->getParent()->getParent());
+      GR.setCurrentFunc(*CurMF);
     }
   }
 }
@@ -174,7 +183,7 @@ void validateFunCallMachineDef(const SPIRVSubtarget &STI,
 // with a processed definition. Return Function pointer if it's a forward
 // call (ahead of definition), and nullptr otherwise.
 const Function *validateFunCall(const SPIRVSubtarget &STI,
-                                MachineRegisterInfo *MRI,
+                                MachineRegisterInfo *CallMRI,
                                 SPIRVGlobalRegistry &GR,
                                 MachineInstr &FunCall) {
   const GlobalValue *GV = FunCall.getOperand(2).getGlobal();
@@ -183,7 +192,8 @@ const Function *validateFunCall(const SPIRVSubtarget &STI,
       const_cast<MachineInstr *>(GR.getFunctionDefinition(F));
   if (!FunDef)
     return F;
-  validateFunCallMachineDef(STI, MRI, MRI, GR, FunCall, FunDef);
+  MachineRegisterInfo *DefMRI = &FunDef->getParent()->getParent()->getRegInfo();
+  validateFunCallMachineDef(STI, DefMRI, CallMRI, GR, FunCall, FunDef);
   return nullptr;
 }
 
@@ -193,7 +203,7 @@ void validateForwardCalls(const SPIRVSubtarget &STI,
                           MachineRegisterInfo *DefMRI, SPIRVGlobalRegistry &GR,
                           MachineInstr &FunDef) {
   const Function *F = GR.getFunctionByDefinition(&FunDef);
-  if (SmallVector<MachineInstr *> *FwdCalls = GR.getForwardCalls(F))
+  if (SmallPtrSet<MachineInstr *, 8> *FwdCalls = GR.getForwardCalls(F))
     for (MachineInstr *FunCall : *FwdCalls) {
       MachineRegisterInfo *CallMRI =
           &FunCall->getParent()->getParent()->getRegInfo();
@@ -201,9 +211,25 @@ void validateForwardCalls(const SPIRVSubtarget &STI,
     }
 }
 
+// Validation of an access chain.
+void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+                         SPIRVGlobalRegistry &GR, MachineInstr &I) {
+  SPIRVType *BaseTypeInst = GR.getSPIRVTypeForVReg(I.getOperand(0).getReg());
+  if (BaseTypeInst && BaseTypeInst->getOpcode() == SPIRV::OpTypePointer) {
+    SPIRVType *BaseElemType =
+        GR.getSPIRVTypeForVReg(BaseTypeInst->getOperand(2).getReg());
+    validatePtrTypes(STI, MRI, GR, I, 2, BaseElemType);
+  }
+}
+
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
+  // We'd like to avoid the needless second processing pass.
+  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+    return;
+
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   GR.setCurrentFunc(MF);
@@ -213,15 +239,46 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
       switch (MI.getOpcode()) {
+      case SPIRV::OpAtomicLoad:
+      case SPIRV::OpAtomicExchange:
+      case SPIRV::OpAtomicCompareExchange:
+      case SPIRV::OpAtomicCompareExchangeWeak:
+      case SPIRV::OpAtomicIIncrement:
+      case SPIRV::OpAtomicIDecrement:
+      case SPIRV::OpAtomicIAdd:
+      case SPIRV::OpAtomicISub:
+      case SPIRV::OpAtomicSMin:
+      case SPIRV::OpAtomicUMin:
+      case SPIRV::OpAtomicSMax:
+      case SPIRV::OpAtomicUMax:
+      case SPIRV::OpAtomicAnd:
+      case SPIRV::OpAtomicOr:
+      case SPIRV::OpAtomicXor:
+        // for the above listed instructions
+        // OpAtomicXXX <ResType>, ptr %Op, ...
+        // implies that %Op is a pointer to <ResType>
       case SPIRV::OpLoad:
         // OpLoad <ResType>, ptr %Op implies that %Op is a pointer to <ResType>
         validatePtrTypes(STI, MRI, GR, MI, 2,
                          GR.getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
         break;
+      case SPIRV::OpAtomicStore:
+        // OpAtomicStore ptr %Op, <Scope>, <Mem>, <Obj>
+        // implies that %Op points to the <Obj>'s type
+        validatePtrTypes(STI, MRI, GR, MI, 0,
+                         GR.getSPIRVTypeForVReg(MI.getOperand(3).getReg()));
+        break;
       case SPIRV::OpStore:
         // OpStore ptr %Op, <Obj> implies that %Op points to the <Obj>'s type
         validatePtrTypes(STI, MRI, GR, MI, 0,
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()));
+        break;
+      case SPIRV::OpPtrCastToGeneric:
+        validateAccessChain(STI, MRI, GR, MI);
+        break;
+      case SPIRV::OpInBoundsPtrAccessChain:
+        if (MI.getNumOperands() == 4)
+          validateAccessChain(STI, MRI, GR, MI);
         break;
 
       case SPIRV::OpFunctionCall:
@@ -257,8 +314,19 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      case SPIRV::OpConstantI: {
+        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        if (Type->getOpcode() != SPIRV::OpTypeInt && MI.getOperand(2).isImm() &&
+            MI.getOperand(2).getImm() == 0) {
+          // Validate the null constant of a target extension type
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
+          for (unsigned i = MI.getNumOperands() - 1; i > 1; --i)
+            MI.removeOperand(i);
+        }
+      } break;
       }
     }
   }
+  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }

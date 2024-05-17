@@ -9,12 +9,12 @@
 #ifndef FORTRAN_RUNTIME_TOOLS_H_
 #define FORTRAN_RUNTIME_TOOLS_H_
 
-#include "freestanding-tools.h"
 #include "stat.h"
 #include "terminator.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/memory.h"
 #include <cstring>
 #include <functional>
@@ -96,6 +96,15 @@ template <int KIND> struct StoreIntegerAt {
       std::size_t at, std::int64_t value) const {
     *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
         Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
+  }
+};
+
+// Helper to store floating value in result[at].
+template <int KIND> struct StoreFloatingPointAt {
+  RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
+      std::size_t at, std::double_t value) const {
+    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
+        Fortran::common::TypeCategory::Real, KIND>>(at) = value;
   }
 };
 

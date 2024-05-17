@@ -50,6 +50,21 @@
 # RUN: not ld.lld -T chain2.t a.o 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 # ERR-COUNT-3: error: chain2.t:1: symbol not found: undef
 
+## _start in a lazy object file references PROVIDE symbols. We extract _start
+## earlier to avoid spurious "symbol not found" errors.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 undef.s -o undef.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 start.s -o start.o
+# RUN: ld.lld -T chain2.t undef.o --start-lib start.o --end-lib -o lazy
+# RUN: llvm-nm lazy | FileCheck %s --check-prefix=LAZY
+# RUN: ld.lld -e 0 -T chain2.t --undefined-glob '_start*' undef.o --start-lib start.o --end-lib -o lazy
+# RUN: llvm-nm lazy | FileCheck %s --check-prefix=LAZY
+
+# LAZY:      T _start
+# LAZY-NEXT: t f1
+# LAZY-NEXT: T f2
+# LAZY-NEXT: T newsym
+# LAZY-NEXT: T unde
+
 #--- a.s
 .global _start
 _start:
@@ -89,3 +104,13 @@ PROVIDE(newsym = f1);
 PROVIDE(f2 = undef);
 PROVIDE_HIDDEN(f1 = f2);
 PROVIDE(newsym = f1);
+
+#--- undef.s
+.globl undef
+undef: ret
+
+#--- start.s
+.globl _start
+_start: ret
+.data
+.quad newsym

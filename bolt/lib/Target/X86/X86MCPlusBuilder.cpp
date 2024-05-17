@@ -211,13 +211,6 @@ public:
     return false;
   }
 
-  // FIXME: For compatibility with old LLVM only!
-  bool isTerminator(const MCInst &Inst) const override {
-    unsigned Opcode = Inst.getOpcode();
-    return Info->get(Opcode).isTerminator() || X86::isUD1(Opcode) ||
-           X86::isUD2(Opcode);
-  }
-
   bool isIndirectCall(const MCInst &Inst) const override {
     return isCall(Inst) &&
            ((getMemoryOperandNo(Inst) != -1) || Inst.getOperand(0).isReg());
@@ -335,19 +328,19 @@ public:
     return false;
   }
 
-  bool isUnsupportedBranch(const MCInst &Inst) const override {
+  bool isReversibleBranch(const MCInst &Inst) const override {
     if (isDynamicBranch(Inst))
-      return true;
+      return false;
 
     switch (Inst.getOpcode()) {
     default:
-      return false;
+      return true;
     case X86::LOOP:
     case X86::LOOPE:
     case X86::LOOPNE:
     case X86::JECXZ:
     case X86::JRCXZ:
-      return true;
+      return false;
     }
   }
 
@@ -1881,7 +1874,7 @@ public:
       }
 
       // Handle conditional branches and ignore indirect branches
-      if (!isUnsupportedBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
+      if (isReversibleBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
         // Indirect branch
         return false;
       }

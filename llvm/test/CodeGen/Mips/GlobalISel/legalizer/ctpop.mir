@@ -29,8 +29,8 @@ body:             |
     ; MIPS32-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 252645135
     ; MIPS32-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C5]]
     ; MIPS32-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 16843009
-    ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND3]], [[C6]]
     ; MIPS32-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND3]], [[C6]]
     ; MIPS32-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C7]](s32)
     ; MIPS32-NEXT: $v0 = COPY [[LSHR3]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0
@@ -70,8 +70,8 @@ body:             |
     ; MIPS32-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 252645135
     ; MIPS32-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C5]]
     ; MIPS32-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 16843009
-    ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND3]], [[C6]]
     ; MIPS32-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND3]], [[C6]]
     ; MIPS32-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C7]](s32)
     ; MIPS32-NEXT: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C]](s32)
     ; MIPS32-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[LSHR4]], [[C1]]

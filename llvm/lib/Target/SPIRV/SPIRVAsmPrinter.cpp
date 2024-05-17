@@ -43,6 +43,8 @@ using namespace llvm;
 
 namespace {
 class SPIRVAsmPrinter : public AsmPrinter {
+  unsigned NLabels = 0;
+
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
@@ -106,13 +108,12 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   }
 
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
-  uint32_t DecSPIRVVersion = ST->getSPIRVVersion();
-  uint32_t Major = DecSPIRVVersion / 10;
-  uint32_t Minor = DecSPIRVVersion - Major * 10;
-  // TODO: calculate Bound more carefully from maximum used register number,
-  // accounting for generated OpLabels and other related instructions if
-  // needed.
-  unsigned Bound = 2 * (ST->getBound() + 1);
+  VersionTuple SPIRVVersion = ST->getSPIRVVersion();
+  uint32_t Major = SPIRVVersion.getMajor();
+  uint32_t Minor = SPIRVVersion.getMinor().value_or(0);
+  // Bound is an approximation that accounts for the maximum used register
+  // number and number of generated OpLabels
+  unsigned Bound = 2 * (ST->getBound() + 1) + NLabels;
   bool FlagToRestore = OutStreamer->getUseAssemblerInfoForParsing();
   OutStreamer->setUseAssemblerInfoForParsing(true);
   if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
@@ -158,6 +159,7 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
   LabelInst.setOpcode(SPIRV::OpLabel);
   LabelInst.addOperand(MCOperand::createReg(MAI->getOrCreateMBBRegister(MBB)));
   outputMCInst(LabelInst);
+  ++NLabels;
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
@@ -319,8 +321,8 @@ void SPIRVAsmPrinter::outputEntryPoints() {
     // the Input and Output storage classes. Starting with version 1.4,
     // the interface's storage classes are all storage classes used in
     // declaring all global variables referenced by the entry point call tree.
-    if (ST->getSPIRVVersion() >= 14 || SC == SPIRV::StorageClass::Input ||
-        SC == SPIRV::StorageClass::Output) {
+    if (ST->isAtLeastSPIRVVer(VersionTuple(1, 4)) ||
+        SC == SPIRV::StorageClass::Input || SC == SPIRV::StorageClass::Output) {
       MachineFunction *MF = MI->getMF();
       Register Reg = MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
       InterfaceIDs.insert(Reg);

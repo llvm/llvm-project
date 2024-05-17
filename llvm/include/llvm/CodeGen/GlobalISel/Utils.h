@@ -315,6 +315,10 @@ std::optional<SmallVector<unsigned>>
 ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
                        std::function<unsigned(APInt)> CB);
 
+std::optional<SmallVector<APInt>>
+ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 const MachineRegisterInfo &MRI);
+
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set.
@@ -550,6 +554,36 @@ void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.
 void salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI);
+
+/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
+/// having only floating-point operands.
+bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
+
+/// Returns true if \p Reg can create undef or poison from non-undef &
+/// non-poison operands. \p ConsiderFlagsAndMetadata controls whether poison
+/// producing flags and metadata on the instruction are considered. This can be
+/// used to see if the instruction could still introduce undef or poison even
+/// without poison generating flags and metadata which might be on the
+/// instruction.
+bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                            bool ConsiderFlagsAndMetadata = true);
+
+/// Returns true if \p Reg can create poison from non-poison operands.
+bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
+                     bool ConsiderFlagsAndMetadata = true);
+
+/// Returns true if \p Reg cannot be poison and undef.
+bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0);
+
+/// Returns true if \p Reg cannot be poison, but may be undef.
+bool isGuaranteedNotToBePoison(Register Reg, const MachineRegisterInfo &MRI,
+                               unsigned Depth = 0);
+
+/// Returns true if \p Reg cannot be undef, but may be poison.
+bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
+                              unsigned Depth = 0);
 
 } // End namespace llvm.
 #endif

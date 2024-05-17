@@ -132,17 +132,17 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
 /// Performs the destructuring of a destructible slot given associated
 /// destructuring information. The provided slot will be destructured in
 /// subslots as specified by its allocator.
-static void destructureSlot(DestructurableMemorySlot &slot,
-                            DestructurableAllocationOpInterface allocator,
-                            RewriterBase &rewriter,
-                            const DataLayout &dataLayout,
-                            MemorySlotDestructuringInfo &info,
-                            const SROAStatistics &statistics) {
-  RewriterBase::InsertionGuard guard(rewriter);
+static void destructureSlot(
+    DestructurableMemorySlot &slot,
+    DestructurableAllocationOpInterface allocator, OpBuilder &builder,
+    const DataLayout &dataLayout, MemorySlotDestructuringInfo &info,
+    SmallVectorImpl<DestructurableAllocationOpInterface> &newAllocators,
+    const SROAStatistics &statistics) {
+  OpBuilder::InsertionGuard guard(builder);
 
-  rewriter.setInsertionPointToStart(slot.ptr.getParentBlock());
+  builder.setInsertionPointToStart(slot.ptr.getParentBlock());
   DenseMap<Attribute, MemorySlot> subslots =
-      allocator.destructure(slot, info.usedIndices, rewriter);
+      allocator.destructure(slot, info.usedIndices, builder, newAllocators);
 
   if (statistics.slotsWithMemoryBenefit &&
       slot.elementPtrs.size() != info.usedIndices.size())
@@ -160,9 +160,9 @@ static void destructureSlot(DestructurableMemorySlot &slot,
 
   llvm::SmallVector<Operation *> toErase;
   for (Operation *toRewire : llvm::reverse(usersToRewire)) {
-    rewriter.setInsertionPointAfter(toRewire);
+    builder.setInsertionPointAfter(toRewire);
     if (auto accessor = dyn_cast<DestructurableAccessorOpInterface>(toRewire)) {
-      if (accessor.rewire(slot, subslots, rewriter, dataLayout) ==
+      if (accessor.rewire(slot, subslots, builder, dataLayout) ==
           DeletionKind::Delete)
         toErase.push_back(accessor);
       continue;
@@ -170,12 +170,12 @@ static void destructureSlot(DestructurableMemorySlot &slot,
 
     auto promotable = cast<PromotableOpInterface>(toRewire);
     if (promotable.removeBlockingUses(info.userToBlockingUses[promotable],
-                                      rewriter) == DeletionKind::Delete)
+                                      builder) == DeletionKind::Delete)
       toErase.push_back(promotable);
   }
 
   for (Operation *toEraseOp : toErase)
-    rewriter.eraseOp(toEraseOp);
+    toEraseOp->erase();
 
   assert(slot.ptr.use_empty() && "after destructuring, the original slot "
                                  "pointer should no longer be used");
@@ -186,25 +186,57 @@ static void destructureSlot(DestructurableMemorySlot &slot,
   if (statistics.destructuredAmount)
     (*statistics.destructuredAmount)++;
 
-  allocator.handleDestructuringComplete(slot, rewriter);
+  std::optional<DestructurableAllocationOpInterface> newAllocator =
+      allocator.handleDestructuringComplete(slot, builder);
+  // Add newly created allocators to the worklist for further processing.
+  if (newAllocator)
+    newAllocators.push_back(*newAllocator);
 }
 
 LogicalResult mlir::tryToDestructureMemorySlots(
     ArrayRef<DestructurableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, const DataLayout &dataLayout,
+    OpBuilder &builder, const DataLayout &dataLayout,
     SROAStatistics statistics) {
   bool destructuredAny = false;
 
-  for (DestructurableAllocationOpInterface allocator : allocators) {
-    for (DestructurableMemorySlot slot : allocator.getDestructurableSlots()) {
-      std::optional<MemorySlotDestructuringInfo> info =
-          computeDestructuringInfo(slot, dataLayout);
-      if (!info)
-        continue;
+  SmallVector<DestructurableAllocationOpInterface> workList(allocators.begin(),
+                                                            allocators.end());
+  SmallVector<DestructurableAllocationOpInterface> newWorkList;
+  newWorkList.reserve(allocators.size());
+  // Destructuring a slot can allow for further destructuring of other
+  // slots, destructuring is tried until no destructuring succeeds.
+  while (true) {
+    bool changesInThisRound = false;
 
-      destructureSlot(slot, allocator, rewriter, dataLayout, *info, statistics);
-      destructuredAny = true;
+    for (DestructurableAllocationOpInterface allocator : workList) {
+      bool destructuredAnySlot = false;
+      for (DestructurableMemorySlot slot : allocator.getDestructurableSlots()) {
+        std::optional<MemorySlotDestructuringInfo> info =
+            computeDestructuringInfo(slot, dataLayout);
+        if (!info)
+          continue;
+
+        destructureSlot(slot, allocator, builder, dataLayout, *info,
+                        newWorkList, statistics);
+        destructuredAnySlot = true;
+
+        // A break is required, since destructuring a slot may invalidate the
+        // remaning slots of an allocator.
+        break;
+      }
+      if (!destructuredAnySlot)
+        newWorkList.push_back(allocator);
+      changesInThisRound |= destructuredAnySlot;
     }
+
+    if (!changesInThisRound)
+      break;
+    destructuredAny |= changesInThisRound;
+
+    // Swap the vector's backing memory and clear the entries in newWorkList
+    // afterwards. This ensures that additional heap allocations can be avoided.
+    workList.swap(newWorkList);
+    newWorkList.clear();
   }
 
   return success(destructuredAny);
@@ -230,25 +262,17 @@ struct SROA : public impl::SROABase<SROA> {
         continue;
 
       OpBuilder builder(&region.front(), region.front().begin());
-      IRRewriter rewriter(builder);
 
-      // Destructuring a slot can allow for further destructuring of other
-      // slots, destructuring is tried until no destructuring succeeds.
-      while (true) {
-        SmallVector<DestructurableAllocationOpInterface> allocators;
-        // Build a list of allocators to attempt to destructure the slots of.
-        // TODO: Update list on the fly to avoid repeated visiting of the same
-        // allocators.
-        region.walk([&](DestructurableAllocationOpInterface allocator) {
-          allocators.emplace_back(allocator);
-        });
+      SmallVector<DestructurableAllocationOpInterface> allocators;
+      // Build a list of allocators to attempt to destructure the slots of.
+      region.walk([&](DestructurableAllocationOpInterface allocator) {
+        allocators.emplace_back(allocator);
+      });
 
-        if (failed(tryToDestructureMemorySlots(allocators, rewriter, dataLayout,
-                                               statistics)))
-          break;
-
+      // Attempt to destructure as many slots as possible.
+      if (succeeded(tryToDestructureMemorySlots(allocators, builder, dataLayout,
+                                                statistics)))
         changed = true;
-      }
     }
     if (!changed)
       markAllAnalysesPreserved();
