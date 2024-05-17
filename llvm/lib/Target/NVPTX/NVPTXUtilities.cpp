@@ -300,9 +300,9 @@ bool isKernelFunction(const Function &F) {
 
 MaybeAlign getAlign(const Function &F, unsigned Index) {
   // First check the alignstack metadata
-  if (MaybeAlign AlignStack =
+  if (MaybeAlign StackAlign =
           F.getAttributes().getAttributes(Index).getStackAlignment())
-    return AlignStack;
+    return StackAlign;
 
   // If that is missing, check the legacy nvvm metadata
   std::vector<unsigned> Vs;
@@ -318,9 +318,9 @@ MaybeAlign getAlign(const Function &F, unsigned Index) {
 
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {
   // First check the alignstack metadata
-  if (MaybeAlign AlignStack =
+  if (MaybeAlign StackAlign =
           I.getAttributes().getAttributes(Index).getStackAlignment())
-    return AlignStack;
+    return StackAlign;
 
   // If that is missing, check the legacy nvvm metadata
   if (MDNode *alignNode = I.getMetadata("callalign")) {
