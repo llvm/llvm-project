@@ -7508,10 +7508,6 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMCOMPRESS(llvm::MachineInstr &MI) {
   auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy] = MI.getFirst3RegLLTs();
 
-  if (VecTy.isScalableVector())
-    report_fatal_error(
-        "Lowering masked_compress for scalable vectors is undefined.");
-
   MachinePointerInfo PtrInfo;
   Register StackPtr =
       createStackTemporary(TypeSize::getFixed(VecTy.getSizeInBytes()),
@@ -7546,8 +7542,6 @@ LegalizerHelper::lowerMCOMPRESS(llvm::MachineInstr &MI) {
   MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo, VecAlign);
 
   MI.eraseFromParent();
-  // TODO: This is not true! We don't know if the input vector type is legal.
-  //       Find out how to assert this!
   return Legalized;
 }
 
