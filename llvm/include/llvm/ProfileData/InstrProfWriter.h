@@ -205,7 +205,7 @@ private:
 
   Error writeImpl(ProfOStream &OS);
 
-  // Writes known header fields and preserves space for fields whose value are
+  // Writes known header fields and reserves space for fields whose value are
   // known only after payloads are written. Returns the number of bytes written
   // and records the start offset for back patching in `BackPatchStartOffset`.
   uint64_t writeHeader(const IndexedInstrProf::Header &header,
