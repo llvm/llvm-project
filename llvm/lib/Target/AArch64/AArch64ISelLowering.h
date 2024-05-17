@@ -653,13 +653,9 @@ public:
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitTileMovaz(unsigned Opc, unsigned BaseReg,
-                                   MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
-                                 MachineInstr &MI, MachineBasicBlock *BB,
-                                 bool HasTile, bool HasZPROut) const;
+                                 MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;

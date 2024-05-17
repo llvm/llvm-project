@@ -2942,23 +2942,6 @@ AArch64TargetLowering::EmitTileLoad(unsigned Opc, unsigned BaseReg,
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitTileMovaz(unsigned Opc, unsigned BaseReg,
-                                     MachineInstr &MI,
-                                     MachineBasicBlock *BB) const {
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
-
-  MIB.add(MI.getOperand(0)); // ZReg
-  MIB.addReg(BaseReg + MI.getOperand(1).getImm(),
-             RegState::Define);                    // add as output
-  MIB.addReg(BaseReg + MI.getOperand(1).getImm()); // add as input
-  MIB.add(MI.getOperand(2));                       // slice index register
-  MIB.add(MI.getOperand(3));                       // slice index offset
-  MI.eraseFromParent();                            // The pseudo is gone now.
-  return BB;
-}
-
-MachineBasicBlock *
 AArch64TargetLowering::EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB =
@@ -2992,20 +2975,20 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
 
 MachineBasicBlock *
 AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
-                                   MachineInstr &MI, MachineBasicBlock *BB,
-                                   bool HasTile, bool HasZPROut) const {
+                                   MachineInstr &MI,
+                                   MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
   unsigned StartIdx = 0;
 
+  bool HasTile = BaseReg != AArch64::ZA;
+  bool HasZPROut = HasTile && MI.getOperand(0).isReg();
   if (HasZPROut) {
-    if (HasTile) {
-      MIB.add(MI.getOperand(0)); // Output ZPR
-      MIB.addReg(BaseReg + MI.getOperand(1).getImm(),
-                 RegState::Define);                    // Output ZA Tile
-      MIB.addReg(BaseReg + MI.getOperand(1).getImm()); // Input Za Tile
-      StartIdx = 2;
-    }
+    MIB.add(MI.getOperand(0)); // Output ZPR
+    MIB.addReg(BaseReg + MI.getOperand(1).getImm(),
+               RegState::Define);                    // Output ZA Tile
+    MIB.addReg(BaseReg + MI.getOperand(1).getImm()); // Input Za Tile
+    StartIdx = 2;
   } else {
     if (HasTile) {
       MIB.addReg(BaseReg + MI.getOperand(0).getImm(), RegState::Define);
@@ -3122,59 +3105,18 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
         TII->get(MI.getOpcode()).TSFlags & AArch64::SMEMatrixTypeMask;
     switch (SMEMatrixType) {
     case (AArch64::SMEMatrixArray):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB, /*HasTile*/ false,
-                         /*HasZPROut*/ false);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB);
     case (AArch64::SMEMatrixTileB):
-      switch (MI.getOpcode()) {
-      case AArch64::MOVAZ_2ZMI_H_B_PSEUDO:
-      case AArch64::MOVAZ_2ZMI_V_B_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_H_B_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_V_B_PSEUDO:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ true);
-      default:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ false);
-      }
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB);
     case (AArch64::SMEMatrixTileH):
-      switch (MI.getOpcode()) {
-      case AArch64::MOVAZ_2ZMI_H_H_PSEUDO:
-      case AArch64::MOVAZ_2ZMI_V_H_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_H_H_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_V_H_PSEUDO:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ true);
-      default:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ false);
-      }
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB);
+      ///*HasTile*/ true, /*HasZPROut*/ false);
     case (AArch64::SMEMatrixTileS):
-      switch (MI.getOpcode()) {
-      case AArch64::MOVAZ_2ZMI_H_S_PSEUDO:
-      case AArch64::MOVAZ_2ZMI_V_S_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_H_S_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_V_S_PSEUDO:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ true);
-      default:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ false);
-      }
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB);
     case (AArch64::SMEMatrixTileD):
-      switch (MI.getOpcode()) {
-      case AArch64::MOVAZ_2ZMI_H_D_PSEUDO:
-      case AArch64::MOVAZ_2ZMI_V_D_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_H_D_PSEUDO:
-      case AArch64::MOVAZ_4ZMI_V_D_PSEUDO:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ true);
-      default:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB,
-                           /*HasTile*/ true, /*HasZPROut*/ false);
-      }
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB);
     case (AArch64::SMEMatrixTileQ):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB, /*HasTile*/ true,
-                         /*HasZPROut*/ false);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB);
     }
   }
 
