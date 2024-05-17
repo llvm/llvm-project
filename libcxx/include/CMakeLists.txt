@@ -446,6 +446,7 @@ set(files
   __ios/fpos.h
   __iterator/access.h
   __iterator/advance.h
+  __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
   __iterator/common_iterator.h

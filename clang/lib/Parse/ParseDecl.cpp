@@ -28,6 +28,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -2844,10 +2845,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
     AccessSpecifier AS, DeclSpecContext DSC) {
+  ParsedTemplateInfo TemplateInfo;
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS, DSC, nullptr,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
                              AllowImplicitTypename);
 
   // Validate declspec for type-name.
@@ -2926,7 +2928,7 @@ static bool isValidAfterIdentifierInDeclarator(const Token &T) {
 /// other pieces of declspec after it, it returns true.
 ///
 bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
-                              const ParsedTemplateInfo &TemplateInfo,
+                              ParsedTemplateInfo &TemplateInfo,
                               AccessSpecifier AS, DeclSpecContext DSC,
                               ParsedAttributes &Attrs) {
   assert(Tok.is(tok::identifier) && "should have identifier");
@@ -3488,7 +3490,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 ///       'friend': [C++ dcl.friend]
 ///       'constexpr': [C++0x dcl.constexpr]
 void Parser::ParseDeclarationSpecifiers(
-    DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+    DeclSpec &DS, ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
     DeclSpecContext DSContext, LateParsedAttrList *LateAttrs,
     ImplicitTypenameContext AllowImplicitTypename) {
   if (DS.getSourceRange().isInvalid()) {
@@ -3889,7 +3891,7 @@ void Parser::ParseDeclarationSpecifiers(
       // parse errors if this really is a __declspec attribute. Attempt to
       // recognize that scenario and recover gracefully.
       if (!getLangOpts().DeclSpecKeyword && Tok.is(tok::identifier) &&
-          Tok.getIdentifierInfo()->getName().equals("__declspec")) {
+          Tok.getIdentifierInfo()->getName() == "__declspec") {
         Diag(Loc, diag::err_ms_attributes_not_enabled);
 
         // The next token should be an open paren. If it is, eat the entire
@@ -3945,7 +3947,7 @@ void Parser::ParseDeclarationSpecifiers(
 
       if (DSContext == DeclSpecContext::DSC_objc_method_result &&
           isObjCInstancetype()) {
-        ParsedType TypeRep = Actions.ActOnObjCInstanceType(Loc);
+        ParsedType TypeRep = Actions.ObjC().ActOnObjCInstanceType(Loc);
         assert(TypeRep);
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
                                        DiagID, TypeRep, Policy);
@@ -5002,8 +5004,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
         continue;
       }
       SmallVector<Decl *, 16> Fields;
-      Actions.ActOnDefs(getCurScope(), TagDecl, Tok.getLocation(),
-                        Tok.getIdentifierInfo(), Fields);
+      Actions.ObjC().ActOnDefs(getCurScope(), TagDecl, Tok.getLocation(),
+                               Tok.getIdentifierInfo(), Fields);
       ConsumeToken();
       ExpectAndConsume(tok::r_paren);
     }
@@ -7735,8 +7737,9 @@ void Parser::ParseParameterDeclarationClause(
         Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
     }
 
-    ParseDeclarationSpecifiers(DS, /*TemplateInfo=*/ParsedTemplateInfo(),
-                               AS_none, DeclSpecContext::DSC_normal,
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
+                               DeclSpecContext::DSC_normal,
                                /*LateAttrs=*/nullptr, AllowImplicitTypename);
 
     DS.takeAttributesFrom(ArgDeclSpecAttrs);

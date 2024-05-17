@@ -534,11 +534,8 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 ; CHECK-i64-LABEL: lrint_v2f32:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    frintx v0.2s, v0.2s
-; CHECK-i64-NEXT:    mov s1, v0.s[1]
-; CHECK-i64-NEXT:    fcvtzs x8, s0
-; CHECK-i64-NEXT:    fcvtzs x9, s1
-; CHECK-i64-NEXT:    fmov d0, x8
-; CHECK-i64-NEXT:    mov v0.d[1], x9
+; CHECK-i64-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-i64-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-i64-NEXT:    ret
   %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2f32(<2 x float> %x)
   ret <2 x iXLen> %a

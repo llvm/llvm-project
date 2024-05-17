@@ -1661,7 +1661,7 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
 ///         'union'
 void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                  SourceLocation StartLoc, DeclSpec &DS,
-                                 const ParsedTemplateInfo &TemplateInfo,
+                                 ParsedTemplateInfo &TemplateInfo,
                                  AccessSpecifier AS, bool EnteringContext,
                                  DeclSpecContext DSC,
                                  ParsedAttributes &Attributes) {
@@ -1861,18 +1861,14 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         TemplateParams->pop_back();
       } else {
         TemplateParams = nullptr;
-        const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
-            ParsedTemplateInfo::NonTemplate;
+        TemplateInfo.Kind = ParsedTemplateInfo::NonTemplate;
       }
     } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
       // Pretend this is just a forward declaration.
       TemplateParams = nullptr;
-      const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
-          ParsedTemplateInfo::NonTemplate;
-      const_cast<ParsedTemplateInfo &>(TemplateInfo).TemplateLoc =
-          SourceLocation();
-      const_cast<ParsedTemplateInfo &>(TemplateInfo).ExternLoc =
-          SourceLocation();
+      TemplateInfo.Kind = ParsedTemplateInfo::NonTemplate;
+      TemplateInfo.TemplateLoc = SourceLocation();
+      TemplateInfo.ExternLoc = SourceLocation();
     }
   };
 
@@ -1883,6 +1879,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
+    DS.SetRangeEnd(NameLoc);
 
     if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
       // The name was supposed to refer to a template, but didn't.
@@ -2803,11 +2800,9 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
 ///       constant-initializer:
 ///         '=' constant-expression
 ///
-Parser::DeclGroupPtrTy
-Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
-                                       ParsedAttributes &AccessAttrs,
-                                       const ParsedTemplateInfo &TemplateInfo,
-                                       ParsingDeclRAIIObject *TemplateDiags) {
+Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
+    AccessSpecifier AS, ParsedAttributes &AccessAttrs,
+    ParsedTemplateInfo &TemplateInfo, ParsingDeclRAIIObject *TemplateDiags) {
   assert(getLangOpts().CPlusPlus &&
          "ParseCXXClassMemberDeclaration should only be called in C++ mode");
   if (Tok.is(tok::at)) {
@@ -3524,8 +3519,10 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
   case tok::kw_private:
     // FIXME: We don't accept GNU attributes on access specifiers in OpenCL mode
     // yet.
-    if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
-      return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
+    if (getLangOpts().OpenCL && !NextToken().is(tok::colon)) {
+      ParsedTemplateInfo TemplateInfo;
+      return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo);
+    }
     [[fallthrough]];
   case tok::kw_public:
   case tok::kw_protected: {
@@ -3581,7 +3578,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
       ConsumeAnnotationToken();
       return nullptr;
     }
-    return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
+    ParsedTemplateInfo TemplateInfo;
+    return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo);
   }
 }
 
@@ -4548,9 +4546,9 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   case ParsedAttr::AT_Unlikely:
     return true;
   case ParsedAttr::AT_WarnUnusedResult:
-    return !ScopeName && AttrName->getName().equals("nodiscard");
+    return !ScopeName && AttrName->getName() == "nodiscard";
   case ParsedAttr::AT_Unused:
-    return !ScopeName && AttrName->getName().equals("maybe_unused");
+    return !ScopeName && AttrName->getName() == "maybe_unused";
   default:
     return false;
   }
@@ -5166,8 +5164,9 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
       continue;
     }
 
+    ParsedTemplateInfo TemplateInfo;
     // Parse all the comma separated declarators.
-    ParseCXXClassMemberDeclaration(CurAS, AccessAttrs);
+    ParseCXXClassMemberDeclaration(CurAS, AccessAttrs, TemplateInfo);
   }
 
   Braces.consumeClose();

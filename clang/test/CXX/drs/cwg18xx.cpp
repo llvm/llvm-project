@@ -56,7 +56,7 @@ namespace cwg1804 { // cwg1804: 2.7
 template <typename, typename>
 struct A {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -73,7 +73,7 @@ struct A {
 template <typename U>
 struct A<int, U> {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -97,7 +97,7 @@ class D {
 template <typename U>
 struct A<double, U> {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -209,7 +209,7 @@ namespace cwg1814 { // cwg1814: yes
 namespace cwg1815 { // cwg1815: no
 #if __cplusplus >= 201402L
   // FIXME: needs codegen test
-  struct A { int &&r = 0; }; // #cwg1815-A 
+  struct A { int &&r = 0; }; // #cwg1815-A
   A a = {};
   // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
   //   since-cxx14-note@#cwg1815-A {{initializing field 'r' with default member initializer}}
@@ -221,6 +221,53 @@ namespace cwg1815 { // cwg1815: no
   B b; // #cwg1815-b
 #endif
 }
+
+namespace cwg1820 { // cwg1820: 3.5
+typedef int A;
+typedef int cwg1820::A;
+// expected-warning@-1 {{extra qualification on member 'A'}}
+// expected-error@-2 {{typedef declarator cannot be qualified}}
+
+namespace B {
+typedef int cwg1820::A;
+// expected-error@-1 {{cannot define or redeclare 'A' here because namespace 'B' does not enclose namespace 'cwg1820'}}
+// expected-error@-2 {{typedef declarator cannot be qualified}}
+}
+
+class C1 {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{non-friend class member 'A' cannot have a qualified name}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+};
+
+template <typename>
+class C2 {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{non-friend class member 'A' cannot have a qualified name}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+};
+
+void d1() {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+}
+
+template<typename>
+void d2() {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+}
+
+#if __cplusplus >= 201103L
+auto e = [] {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+};
+#endif
+} // namespace cwg1820
 
 namespace cwg1821 { // cwg1821: 2.9
 struct A {
@@ -246,6 +293,32 @@ namespace cwg1822 { // cwg1822: yes
   };
 #endif
 }
+
+namespace cwg1824 { // cwg1824: 2.7
+template<typename T>
+struct A {
+  T t;
+};
+
+struct S {
+  A<S> f() { return A<S>(); }
+};
+} // namespace cwg1824
+
+namespace cwg1832 { // cwg1832: 3.0
+enum E { // #cwg1832-E
+  a = static_cast<int>(static_cast<E>(0))
+  // expected-error@-1 {{'E' is an incomplete type}}
+  //   expected-note@#cwg1832-E {{definition of 'cwg1832::E' is not complete until the closing '}'}}
+};
+
+#if __cplusplus >= 201103L
+enum E2: decltype(static_cast<E2>(0), 0) {};
+// expected-error@-1 {{unknown type name 'E2'}}
+enum class E3: decltype(static_cast<E3>(0), 0) {};
+// expected-error@-1 {{unknown type name 'E3'}}
+#endif
+} // namespace cwg1832
 
 namespace cwg1837 { // cwg1837: 3.3
 #if __cplusplus >= 201103L
