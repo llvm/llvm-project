@@ -151,7 +151,7 @@ bool SBCommandInterpreter::WasInterrupted() const {
 
 bool SBCommandInterpreter::InterruptCommand() {
   LLDB_INSTRUMENT_VA(this);
-
+  
   return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 

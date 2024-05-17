@@ -242,7 +242,7 @@ public:
     eCommandTypesAllThem = 0xFFFF  //< all commands
   };
 
-  // The CommandAlias and CommandInterpreter both have a hand in
+  // The CommandAlias and CommandInterpreter both have a hand in 
   // substituting for alias commands.  They work by writing special tokens
   // in the template form of the Alias command, and then detecting them when the
   // command is executed.  These are the special tokens:
@@ -580,7 +580,7 @@ public:
   void SetEchoCommentCommands(bool enable);
 
   bool GetRepeatPreviousCommand() const;
-
+  
   bool GetRequireCommandOverwrite() const;
 
   const CommandObject::CommandMap &GetUserCommands() const {
