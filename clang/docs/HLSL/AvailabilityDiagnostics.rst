@@ -58,81 +58,76 @@ As a result, availability based on specific shader stage will only be diagnosed 
 Examples
 ========
 
-.. note::
-   ``WaveActiveCountBits`` function became available in shader model 6.0.
-
-   ``WaveMultiPrefixSum``  function became available in shader model 6.5.
+**Note** 
+For the example below, the ``WaveActiveCountBits`` API function became available in shader model 6.0 and ``WaveMultiPrefixSum`` in shader model 6.5.
    
-   The availability of ``ddx`` function depends on a shader stage. It is available for pixel shaders in shader model 2.1 and higher, for compute, mesh and amplification shaders in shader model 6.6 and higher. For any other shader stages it is not available.
+The availability of ``ddx`` function depends on a shader stage. It is available for pixel shaders in shader model 2.1 and higher, for compute, mesh and amplification shaders in shader model 6.6 and higher. For any other shader stages it is not available.
 
 Compute shader example
 ----------------------
 
 .. code-block:: c++
+   float unusedFunction(float f) {
+     return ddx(f);
+   }
 
-  float unusedFunction(float f) {
-    return ddx(f);
-  }
-
-  [numthreads(4, 4, 1)]
-  void main(uint3 threadId : SV_DispatchThreadId) {
-    float f1 = ddx(threadId.x);
-    float f2 = WaveActiveCountBits(threadId.y == 1.0);
-  }
+   [numthreads(4, 4, 1)]
+   void main(uint3 threadId : SV_DispatchThreadId) {
+     float f1 = ddx(threadId.x);
+     float f2 = WaveActiveCountBits(threadId.y == 1.0);
+   }
 
 When compiled as compute shader version 5.0, clang will emit the following error by default:
 
-.. code-block: none
-  <>:7:13: error: 'ddx' is only available in compute shader environment on Shader Model 6.6 or newer
-  <>:8:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
+.. code-block:: console
+   <>:7:13: error: 'ddx' is only available in compute shader environment on Shader Model 6.6 or newer
+   <>:8:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
 
 With relaxed diagnostic mode this errors will become warnings.
 
-With strict deagnostic mode, in addition to the 2 errors above clang will also emit error for the ``ddx`` call in ``unusedFunction``.:
+With strict diagnostic mode, in addition to the 2 errors above clang will also emit error for the ``ddx`` call in ``unusedFunction``.:
 
-.. code-block: none
-  <>:2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
-  <>:7:13: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
-  <>:7:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
+.. code-block:: console
+   <>:2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
+   <>:7:13: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
+   <>:7:13: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
 
 Shader library example
 ----------------------
 
 .. code-block:: c++
-  float myFunction(float f) {
-    return ddx(f);
-  }
+   float myFunction(float f) {
+     return ddx(f);
+   }
 
-  float unusedFunction(float f) {
-    return WaveMultiPrefixSum(f, 1.0);
-  }
+   float unusedFunction(float f) {
+     return WaveMultiPrefixSum(f, 1.0);
+   }
 
-  [shader("compute")]
-  [numthreads(4, 4, 1)]
-  void main(uint3 threadId : SV_DispatchThreadId) {
-    float f = 3;
-    float e = myFunction(f);
-  }
+   [shader("compute")]
+   [numthreads(4, 4, 1)]
+   void main(uint3 threadId : SV_DispatchThreadId) {
+      float f = 3;
+      float e = myFunction(f);
+   }
 
-  [shader("pixel")]
-  void main() {
-    float f = 3;
-    float e = myFunction(f);
-  }
+   [shader("pixel")]
+   void main() {
+      float f = 3;
+      float e = myFunction(f);
+   }
 
 When compiled as shader library version 6.4, clang will emit the following error by default:
 
-.. code-block: none
-  <>:2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
+.. code-block:: console
+   <>:2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.5 or newer
 
 With relaxed diagnostic mode this errors will become warnings.
 
 With strict diagnostic mode clang will also emit errors for availability issues in code that is not used by any of the entry points:
 
-.. code-block: none
-
-  <>2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.6 or newer
-
-  <>:6:9: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
+.. code-block:: console
+   <>2:9: error: 'ddx' is only available in compute shader environment on Shader Model 6.6 or newer
+   <>:6:9: error: 'WaveActiveCountBits' is only available on Shader Model 6.5 or newer
 
 Note that ``myFunction`` is reachable from both pixel and compute shader entry points is therefore scanned twice - once for each context. The diagnostic is emitted only for the compute shader context.
