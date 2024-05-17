@@ -985,6 +985,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     EmitKernelMetadata(FD, Fn);
   }
 
+  if (FD && FD->hasAttr<ClspvLibclcBuiltinAttr>()) {
+    Fn->setMetadata("clspv_libclc_builtin",
+                    llvm::MDNode::get(getLLVMContext(), {}));
+  }
+
   // If we are checking function types, emit a function type signature as
   // prologue data.
   if (FD && SanOpts.has(SanitizerKind::Function)) {
