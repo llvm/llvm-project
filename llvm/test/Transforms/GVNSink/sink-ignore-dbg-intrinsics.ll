@@ -4,6 +4,13 @@
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @fun(i32 noundef %a, i32 noundef %b) #0 !dbg !10 {
+; CHECK-LABEL: define dso_local i32 @fun(
+; CHECK-SAME:    i32 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+; CHECK:       if.end:
+; CHECK:         [[B_SINK:%.*]] = phi i32 [ [[B]], %if.else ], [ [[A]], %if.then ]
+; CHECK:         [[ADD1:%.*]] = add nsw i32 [[B_SINK]], 1
+; CHECK:         [[XOR2:%.*]] = xor i32 [[ADD1]], 1
+;
 entry:
   tail call void @llvm.dbg.value(metadata i32 %a, metadata !15, metadata !DIExpression()), !dbg !16
   tail call void @llvm.dbg.value(metadata i32 %b, metadata !17, metadata !DIExpression()), !dbg !16
@@ -26,10 +33,6 @@ if.else:                                          ; preds = %entry
   tail call void @llvm.dbg.value(metadata i32 %xor2, metadata !27, metadata !DIExpression()), !dbg !16
   br label %if.end
 
-; CHECK-LABEL: if.end:
-; CHECK: [[SINK:%.*sink]] = phi i32 [ {{.*}} ], [ {{.*}} ]
-; CHECK: [[ADD:%.*]] = add nsw i32 [[SINK]], 1
-; CHECK: [[XOR:%.*]] = xor i32 [[ADD]], 1
 if.end:                                           ; preds = %if.else, %if.then
   %ret.0 = phi i32 [ %xor, %if.then ], [ %xor2, %if.else ], !dbg !35
   tail call void @llvm.dbg.value(metadata i32 %ret.0, metadata !27, metadata !DIExpression()), !dbg !16
