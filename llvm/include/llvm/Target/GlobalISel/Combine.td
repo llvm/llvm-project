@@ -735,18 +735,20 @@ def redundant_sext_inreg: GICombineRule <
 // the destination type.
 def anyext_trunc_fold: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ANYEXT):$root,
-         [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (match (G_TRUNC $input, $x),
+         (G_ANYEXT $root, $input):$mi,
+         [{ return Helper.matchCombineAnyExtTrunc(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 
 // Fold (zext (trunc x)) -> x if the source type is same as the destination type
 // and truncated bits are known to be zero.
 def zext_trunc_fold: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ZEXT):$root,
-         [{ return Helper.matchCombineZextTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (match (G_TRUNC $input, $x),
+         (G_ZEXT $root, $input):$mi,
+         [{ return Helper.matchCombineZextTrunc(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 
 // Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
