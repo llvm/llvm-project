@@ -51,8 +51,8 @@ template <typename Class> struct bind_ty {
 };
 
 /// Match a specified integer value or vector of all elements of that
-/// value. \p BitWidth optionally specifies the bitwidth to match. If it is 0,
-/// the matched constant can have any bitwidth.
+/// value. \p BitWidth optionally specifies the bitwidth the matched constant
+/// must have. If it is 0, the matched constant can have any bitwidth.
 template <unsigned BitWidth = 0> struct specific_intval {
   APInt Val;
 
@@ -69,6 +69,7 @@ template <unsigned BitWidth = 0> struct specific_intval {
             C->getSplatValue(/*AllowPoison=*/false));
     if (!CI)
       return false;
+
     assert((BitWidth == 0 || CI->getBitWidth() == BitWidth) &&
            "Trying the match constant with unexpected bitwidth.");
     return APInt::isSameValue(CI->getValue(), Val);
@@ -156,7 +157,7 @@ using AllUnaryRecipe_match =
     UnaryRecipe_match<Op0_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
                       VPWidenCastRecipe, VPInstruction>;
 
-template <typename Op0_t, typename Op1_t, unsigned Opcode, bool Commutative,
+template <typename Op0_t, typename Op1_t, unsigned Opcode,
           typename... RecipeTys>
 struct BinaryRecipe_match {
   Op0_t Op0;
@@ -178,23 +179,18 @@ struct BinaryRecipe_match {
       return false;
     assert(R->getNumOperands() == 2 &&
            "recipe with matched opcode does not have 2 operands");
-    if (Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1)))
-      return true;
-    return Commutative && Op0.match(R->getOperand(1)) &&
-           Op1.match(R->getOperand(0));
+    return Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1));
   }
 };
 
-template <typename Op0_t, typename Op1_t, unsigned Opcode,
-          bool Commutative = false>
+template <typename Op0_t, typename Op1_t, unsigned Opcode>
 using BinaryVPInstruction_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPInstruction>;
+    BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPInstruction>;
 
-template <typename Op0_t, typename Op1_t, unsigned Opcode,
-          bool Commutative = false>
+template <typename Op0_t, typename Op1_t, unsigned Opcode>
 using AllBinaryRecipe_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
-                       VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
+    BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
+                       VPWidenCastRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
@@ -202,11 +198,10 @@ m_VPInstruction(const Op0_t &Op0) {
   return UnaryVPInstruction_match<Op0_t, Opcode>(Op0);
 }
 
-template <unsigned Opcode, typename Op0_t, typename Op1_t,
-          bool Commutative = false>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode, Commutative>
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>
 m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
-  return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
+  return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
 }
 
 template <typename Op0_t>
@@ -261,11 +256,10 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
-template <unsigned Opcode, typename Op0_t, typename Op1_t,
-          bool Commutative = false>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>
-m_Binary(const Op0_t &Op0, const Op1_t &Op1) {
-  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode> m_Binary(const Op0_t &Op0,
+                                                            const Op1_t &Op1) {
+  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -274,50 +268,16 @@ m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
 }
 
-template <typename Op0_t, typename Op1_t, bool Commutative = false>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or, Commutative>
+template <typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or>
 m_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Binary<Instruction::Or, Op0_t, Op1_t, Commutative>(Op0, Op1);
+  return m_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
-                             /*Commutative*/ true>
-m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
-}
-
-template <typename Op0_t, typename Op1_t, bool Commutative = false>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And, Commutative>
-m_BinaryAnd(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Binary<Instruction::And, Op0_t, Op1_t, Commutative>(Op0, Op1);
-}
-
-template <typename Op0_t, typename Op1_t, bool Commutative = false>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd,
-                                 Commutative>
+inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>
 m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t, Commutative>(
-      Op0, Op1);
-}
-
-template <typename Op0_t, typename Op1_t, bool Commutative = false>
-inline match_combine_or<
-    AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And, Commutative>,
-    BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd,
-                              Commutative>>
-m_And(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_CombineOr(m_BinaryAnd<Op0_t, Op1_t, Commutative>(Op0, Op1),
-                     m_LogicalAnd<Op0_t, Op1_t, Commutative>(Op0, Op1));
-}
-
-template <typename Op0_t, typename Op1_t>
-inline match_combine_or<
-    AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And, /*Commutative*/ true>,
-    BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd,
-                              /*Commutative*/ true>>
-m_c_And(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_And<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
+  return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1);
 }
 } // namespace VPlanPatternMatch
 } // namespace llvm
