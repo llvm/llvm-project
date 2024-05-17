@@ -276,3 +276,9 @@ private:
 
 class RecursiveDerivedClass : public RecursiveBaseClass { };
 // expected-warning@-1{{Class 'RecursiveBaseClass' is used as a base of class 'RecursiveDerivedClass' but doesn't have virtual destructor}}
+
+class DerivedClass14 : public WTF::RefCounted<DerivedClass14> {
+public:
+  virtual ~DerivedClass14() { }
+};
+class DerivedClass15 : public DerivedClass14 { };

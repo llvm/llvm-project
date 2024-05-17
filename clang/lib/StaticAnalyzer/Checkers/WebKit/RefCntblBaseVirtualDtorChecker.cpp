@@ -172,80 +172,65 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
-    CXXBasePaths Paths;
-    Paths.setOrigin(RD);
+    for (auto& Base : RD->bases()) {
+      const auto AccSpec = Base.getAccessSpecifier();
+      if (AccSpec == AS_protected || AccSpec == AS_private ||
+          (AccSpec == AS_none && RD->isClass()))
+        continue;
 
-    const CXXBaseSpecifier *ProblematicBaseSpecifier = nullptr;
-    const CXXRecordDecl *ProblematicBaseClass = nullptr;
+      auto hasRefInBase = clang::hasPublicMethodInBase(&Base, "ref");
+      auto hasDerefInBase = clang::hasPublicMethodInBase(&Base, "deref");
 
-    const auto IsPublicBaseRefCntblWOVirtualDtor =
-        [RD, &ProblematicBaseSpecifier,
-         &ProblematicBaseClass](const CXXBaseSpecifier *Base, CXXBasePath &) {
-          const auto AccSpec = Base->getAccessSpecifier();
-          if (AccSpec == AS_protected || AccSpec == AS_private ||
-              (AccSpec == AS_none && RD->isClass()))
-            return false;
+      bool hasRef = hasRefInBase && *hasRefInBase != nullptr;
+      bool hasDeref = hasDerefInBase && *hasDerefInBase != nullptr;
 
-          auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
-          auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+      QualType T = Base.getType();
+      if (T.isNull())
+        continue;
 
-          bool hasRef = hasRefInBase && *hasRefInBase != nullptr;
-          bool hasDeref = hasDerefInBase && *hasDerefInBase != nullptr;
+      const CXXRecordDecl *C = T->getAsCXXRecordDecl();
+      if (!C)
+        continue;
 
-          QualType T = Base->getType();
-          if (T.isNull())
-            return false;
-
-          const CXXRecordDecl *C = T->getAsCXXRecordDecl();
-          if (!C)
-            return false;
-
-          bool AnyInconclusiveBase = false;
-          const auto hasPublicRefInBase =
-              [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
-                                     CXXBasePath &) {
-                auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
-                if (!hasRefInBase) {
-                  AnyInconclusiveBase = true;
-                  return false;
-                }
-                return (*hasRefInBase) != nullptr;
-              };
-          const auto hasPublicDerefInBase = [&AnyInconclusiveBase](
-                                                const CXXBaseSpecifier *Base,
-                                                CXXBasePath &) {
-            auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
-            if (!hasDerefInBase) {
+      bool AnyInconclusiveBase = false;
+      const auto hasPublicRefInBase =
+          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
+                                 CXXBasePath &) {
+            auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
+            if (!hasRefInBase) {
               AnyInconclusiveBase = true;
               return false;
             }
-            return (*hasDerefInBase) != nullptr;
+            return (*hasRefInBase) != nullptr;
           };
-          CXXBasePaths Paths;
-          Paths.setOrigin(C);
-          hasRef = hasRef || C->lookupInBases(hasPublicRefInBase, Paths,
-                                              /*LookupInDependent =*/true);
-          hasDeref = hasDeref || C->lookupInBases(hasPublicDerefInBase, Paths,
-                                                  /*LookupInDependent =*/true);
-          if (AnyInconclusiveBase || !hasRef || !hasDeref)
-            return false;
-
-          if (isClassWithSpecializedDelete(C, RD))
-            return false;
-
-          const auto *Dtor = C->getDestructor();
-          if (!Dtor || !Dtor->isVirtual()) {
-            ProblematicBaseSpecifier = Base;
-            ProblematicBaseClass = C;
-            return true;
-          }
-
+      const auto hasPublicDerefInBase = [&AnyInconclusiveBase](
+                                            const CXXBaseSpecifier *Base,
+                                            CXXBasePath &) {
+        auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+        if (!hasDerefInBase) {
+          AnyInconclusiveBase = true;
           return false;
-        };
+        }
+        return (*hasDerefInBase) != nullptr;
+      };
+      CXXBasePaths Paths;
+      Paths.setOrigin(C);
+      hasRef = hasRef || C->lookupInBases(hasPublicRefInBase, Paths,
+                                          /*LookupInDependent =*/true);
+      hasDeref = hasDeref || C->lookupInBases(hasPublicDerefInBase, Paths,
+                                              /*LookupInDependent =*/true);
+      if (AnyInconclusiveBase || !hasRef || !hasDeref)
+        continue;
 
-    if (RD->lookupInBases(IsPublicBaseRefCntblWOVirtualDtor, Paths,
-                          /*LookupInDependent =*/true)) {
-      reportBug(RD, ProblematicBaseSpecifier, ProblematicBaseClass);
+      if (isClassWithSpecializedDelete(C, RD))
+        continue;
+
+      const auto *Dtor = C->getDestructor();
+      if (!Dtor || !Dtor->isVirtual()) {
+        auto* ProblematicBaseSpecifier = &Base;
+        auto* ProblematicBaseClass = C;
+        reportBug(RD, ProblematicBaseSpecifier, ProblematicBaseClass);
+      }
     }
   }
 
