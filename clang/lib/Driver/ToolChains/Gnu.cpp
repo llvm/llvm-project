@@ -937,7 +937,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     // Always pass an -march option, since our default of z10 is later
     // than the GNU assembler's default.
     std::string CPUName =
-        systemz::getSystemZTargetCPU(D, Args, getToolChain().getTriple());
+        systemz::getSystemZTargetCPU(Args, getToolChain().getTriple());
     CmdArgs.push_back(Args.MakeArgString("-march=" + CPUName));
     break;
   }

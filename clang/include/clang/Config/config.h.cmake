@@ -32,9 +32,6 @@
 /* Default architecture for SystemZ. */
 #define CLANG_SYSTEMZ_DEFAULT_ARCH "${CLANG_SYSTEMZ_DEFAULT_ARCH}"
 
-/* Default architecture for SystemZ for z/OS. */
-#define CLANG_SYSTEMZ_ZOS_DEFAULT_ARCH "${CLANG_SYSTEMZ_ZOS_DEFAULT_ARCH}"
-
 /* Multilib basename for libdir. */
 #define CLANG_INSTALL_LIBDIR_BASENAME "${CLANG_INSTALL_LIBDIR_BASENAME}"
 

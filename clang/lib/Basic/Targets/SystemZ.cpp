@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Config/config.h"
+
 #include "SystemZ.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"

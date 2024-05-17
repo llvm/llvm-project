@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Config/config.h"
+
 #include "Targets.h"
 
 #include "Targets/AArch64.h"

@@ -274,8 +274,6 @@ set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING
 
 set(CLANG_SYSTEMZ_DEFAULT_ARCH "z10" CACHE STRING "SystemZ Default Arch")
 
-set(CLANG_SYSTEMZ_ZOS_DEFAULT_ARCH "zEC12" CACHE STRING "SystemZ z/OS Default Arch")
-
 set(CLANG_VENDOR ${PACKAGE_VENDOR} CACHE STRING
   "Vendor-specific text for showing with version information.")
 
