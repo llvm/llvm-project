@@ -112,7 +112,7 @@ static cl::opt<unsigned> PHICSENumPHISmallSize(
         "perform a (faster!) exhaustive search instead of set-driven one."));
 
 static cl::opt<unsigned> DeduplicatePhisMaxDepth("deduplicate-phi-max-depth",
-                                                 cl::Hidden, cl::init(8));
+                                                 cl::Hidden, cl::init(4));
 
 // Max recursion depth for collectBitParts used when detecting bswap and
 // bitreverse idioms.
