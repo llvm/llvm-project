@@ -3645,7 +3645,7 @@ bool Sema::checkTargetClonesAttrString(
         llvm::sort(CurFeatures);
         SmallString<64> Res;
         for (auto &CurFeat : CurFeatures) {
-          if (!Res.equals(""))
+          if (!Res.empty())
             Res.append("+");
           Res.append(CurFeat);
         }
