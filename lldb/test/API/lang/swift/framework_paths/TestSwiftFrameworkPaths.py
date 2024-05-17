@@ -2,16 +2,14 @@ import lldb
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
-import os
 import unittest2
 
 
-class TestSwiftSystemFramework(lldbtest.TestBase):
-
-    NO_DEBUG_INFO_TESTCASE = True
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
+class TestSwiftFrameworkPaths(lldbtest.TestBase):
 
     @swiftTest
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipIf(oslist=no_match(["macosx"]))
     def test_system_framework(self):
         """Test the discovery of framework search paths from framework dependencies."""
@@ -20,13 +18,27 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
         log = self.getBuildArtifact("types.log")
-        self.runCmd('log enable lldb types -f "%s"' % log)
+        self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression -- 0")
-        pos = 0
-        import io
-        with open(log, "r", encoding='utf-8') as logfile:
-            for line in logfile:
-                if "SwiftASTContextForExpressions::LogConfiguration()" in line and \
-                   "/secret_path" in line:
-                    pos += 1
-        self.assertEqual(pos, 1, "framework search path discovery is broken")
+        self.filecheck('platform shell cat "%s"' % log, __file__,
+                       '--check-prefix=CHECK_SYS')
+        # CHECK_SYS: SwiftASTContextForExpressions::LogConfiguration(){{.*}}/secret_path
+
+    @swiftTest
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(oslist=no_match(["macosx"]))
+    def test_module_context_framework_path(self):
+        """Test the discovery of framework search paths from framework dependencies."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
+
+        self.expect('settings set symbols.swift-validate-typesystem false')
+        self.expect('settings set symbols.use-swift-typeref-typesystem false')
+        log = self.getBuildArtifact("types.log")
+        self.expect('log enable lldb types -f "%s"' % log)
+        self.expect("expression -- d", substrs=["member"])
+        self.filecheck('platform shell cat "%s"' % log, __file__,
+                       '--check-prefix=CHECK_MOD')
+        # CHECK_MOD: SwiftASTContextForModule("a.out")::LogConfiguration(){{.*}}other_secret_path

@@ -329,9 +329,9 @@ public:
   /// Collect Swift modules in the .swift_ast section of \p module.
   void RegisterSectionModules(Module &module,
                               std::vector<std::string> &module_names);
-
-  void ValidateSectionModules(Module &module, // this is used to print errors
-                              const std::vector<std::string> &module_names);
+  /// Import Swift modules in the .swift_ast section of \p module.
+  void ImportSectionModules(Module &module,
+                            const std::vector<std::string> &module_names);
 
   // Swift modules that are backed by dylibs (libFoo.dylib) rather than
   // frameworks don't actually record the library dependencies in the module.

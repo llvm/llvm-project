@@ -1991,6 +1991,156 @@ static bool IsSerializedAST(const swift::ModuleDecl &module) {
   });
 }
 
+/// Scan a newly added lldb::Module for Swift modules and report any errors in
+/// its module SwiftASTContext to Target.
+static void
+ProcessModule(Module &module, std::string m_description,
+              bool discover_implicit_search_paths, bool use_all_compiler_flags,
+              bool is_main_executable, StringRef module_filter,
+              llvm::Triple triple,
+              std::vector<swift::PluginSearchOption> &plugin_search_options,
+              std::vector<std::string> &module_search_paths,
+              std::vector<std::pair<std::string, bool>> &framework_search_paths,
+              std::vector<std::string> &extra_clang_args) {
+  {
+    llvm::raw_string_ostream ss(m_description);
+    ss << "::ProcessModule(" << '"';
+    module.GetDescription(ss, eDescriptionLevelBrief);
+    ss << '"' << ')';
+  }
+
+  const FileSpec &module_file = module.GetFileSpec();
+  std::string module_path = module_file.GetPath();
+
+  // Add the containing framework to the framework search path.
+  // Don't do that if this is the executable module, since it
+  // might be buried in some framework that we don't care about.
+  if (use_all_compiler_flags && !is_main_executable) {
+    size_t framework_offset = module_path.rfind(".framework/");
+
+    if (framework_offset != std::string::npos) {
+      // Sometimes the version of the framework that got loaded has been
+      // stripped and in that case, adding it to the framework search
+      // path will just short-cut a clang search that might otherwise
+      // find the needed headers. So don't add these paths.
+      std::string framework_path = module_path.substr(0, framework_offset);
+      framework_path.append(".framework");
+      FileSpec path_spec(framework_path);
+      FileSystem::Instance().Resolve(path_spec);
+      FileSpec headers_spec = path_spec.CopyByAppendingPathComponent("Headers");
+      bool add_it = false;
+      if (FileSystem::Instance().Exists(headers_spec))
+        add_it = true;
+      if (!add_it) {
+        FileSpec module_spec =
+            path_spec.CopyByAppendingPathComponent("Modules");
+        if (FileSystem::Instance().Exists(module_spec))
+          add_it = true;
+      }
+
+      if (!add_it) {
+        LOG_PRINTF(GetLog(LLDBLog::Types),
+                   "rejecting framework path \"%s\" as it has no \"Headers\" "
+                   "or \"Modules\" subdirectories.",
+                   framework_path.c_str());
+      }
+
+      if (add_it) {
+        while (framework_offset && (module_path[framework_offset] != '/'))
+          framework_offset--;
+
+        if (module_path[framework_offset] == '/') {
+          // framework_offset now points to the '/';
+
+          std::string parent_path = module_path.substr(0, framework_offset);
+          StringRef p(parent_path);
+
+          // Never add framework paths pointing into the system. These
+          // modules must be imported from the SDK instead.
+          if (!p.startswith("/System/Library") && !IsDeviceSupport(p) &&
+              !p.startswith(
+                  "/Library/Apple/System/Library/PrivateFrameworks") &&
+              !p.startswith("/System/iOSSupport/System/Library/Frameworks")) {
+            LOG_PRINTF(GetLog(LLDBLog::Types),
+                       "adding framework path \"%s\"/.. .",
+                       framework_path.c_str());
+            framework_search_paths.push_back(
+                {std::move(parent_path), /*system*/ false});
+          }
+        }
+      }
+    }
+  }
+
+  // Skip images without a serialized Swift AST.
+  if (!HasSwiftModules(module))
+    return;
+
+  // Load search path options from the module.
+  if (!use_all_compiler_flags && !is_main_executable)
+    return;
+
+  // Add Swift interfaces in the .dSYM at the end of the search paths.
+  // .swiftmodules win over .swiftinterfaces, when they are loaded
+  // directly from the .swift_ast section.
+  //
+  // FIXME: Since these paths end up in the scratch context, we would
+  //        need a mechanism to ensure that and newer versions (in the
+  //        library evolution sense, not the date on disk) win over
+  //        older versions of the same .swiftinterface.
+  if (auto dsym = GetDSYMBundle(module)) {
+    llvm::SmallString<256> path(*dsym);
+    StringRef arch = llvm::Triple::getArchTypeName(triple.getArch());
+    llvm::sys::path::append(path, "Contents", "Resources", "Swift", arch);
+    bool exists = false;
+    llvm::sys::fs::is_directory(path, exists);
+    if (exists)
+      module_search_paths.push_back(std::string(path));
+  }
+
+  // Create a one-off CompilerInvocation as a place to load the
+  // deserialized search path options into.
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
+    return;
+  bool found_swift_modules = false;
+  bool got_serialized_options = false;
+  llvm::SmallString<0> error;
+  llvm::raw_svector_ostream errs(error);
+  swift::CompilerInvocation invocation;
+  auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
+  std::string module_name = module.GetSpecificationDescription();
+  std::vector<llvm::StringRef> buffers =
+      GetASTBuffersFromModule(m_description, ast_file_datas, module_name);
+
+  // If no N_AST symbols exist, this is not an error.
+  if (!buffers.empty())
+    if (DeserializeAllCompilerFlags(
+            invocation, module_name, module_filter, buffers,
+            module.GetSourceMappingList(), discover_implicit_search_paths,
+            m_description, errs, got_serialized_options, found_swift_modules)) {
+      // TODO: After removing DeserializeAllCompilerFlags from
+      //       CreateInstance(per-Module), errs will need to be
+      //       collected here and surfaced.
+    }
+
+  // Copy the interesting deserialized flags to the out parameters.
+  const auto &opts = invocation.getSearchPathOptions();
+  plugin_search_options.insert(plugin_search_options.end(),
+                               opts.PluginSearchOpts.begin(),
+                               opts.PluginSearchOpts.end());
+  module_search_paths.insert(module_search_paths.end(),
+                             opts.getImportSearchPaths().begin(),
+                             opts.getImportSearchPaths().end());
+  for (auto path : opts.getFrameworkSearchPaths())
+    framework_search_paths.push_back({path.Path, path.IsSystem});
+  auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
+  for (const std::string &arg : clang_opts) {
+    extra_clang_args.push_back(arg);
+    LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "adding Clang argument \"%s\".",
+                       arg.c_str());
+  }
+}
 
 lldb::TypeSystemSP
 SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
@@ -2171,11 +2321,23 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   swift_ast_sp->SetCompilerInvocationLLDBOverrides();
 
-  // Apply the working directory to all relative paths.
-  std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
+  // Collect search paths before importing modules.
+  const bool discover_implicit_search_paths = false;
+  const bool use_all_compiler_flags = false;
+  const bool is_target_module = true;
+
+  StringRef module_filter;
+  std::vector<swift::PluginSearchOption> plugin_search_options;
+  std::vector<std::string> extra_clang_args = swift_ast_sp->GetClangArguments();
   swift_ast_sp->GetClangImporterOptions().ExtraArgs.clear();
+
+  ProcessModule(module, m_description, discover_implicit_search_paths,
+                use_all_compiler_flags, is_target_module, module_filter, triple,
+                plugin_search_options, module_search_paths,
+                framework_search_paths, extra_clang_args);
+  // Apply the working directory to all relative paths.
   StringRef overrideOpts = target ? target->GetSwiftClangOverrideOptions() : "";
-  swift_ast_sp->AddExtraClangArgs(DeserializedArgs, overrideOpts);
+  swift_ast_sp->AddExtraClangArgs(extra_clang_args, overrideOpts);
   if (target)
     swift_ast_sp->AddUserClangArgs(*target);
   else
@@ -2185,20 +2347,6 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
   swift_ast_sp->FilterClangImporterOptions(
       swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
-
-  // Add Swift interfaces in the .dSYM at the end of the search paths.
-  // .swiftmodules win over .swiftinterfaces, when they are loaded
-  // directly from the .swift_ast section.
-  if (auto dsym = GetDSYMBundle(module)) {
-    llvm::SmallString<256> path(*dsym);
-    llvm::Triple triple(swift_ast_sp->GetTriple());
-    StringRef arch = llvm::Triple::getArchTypeName(triple.getArch());
-    llvm::sys::path::append(path, "Contents", "Resources", "Swift", arch);
-    bool exists = false;
-    llvm::sys::fs::is_directory(path, exists);
-    if (exists)
-      module_search_paths.push_back(std::string(path));
-  }
 
   swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
                                             framework_search_paths);
@@ -2243,13 +2391,14 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     }
   }
 
+  // Import serialized modules.
   std::vector<std::string> module_names;
   swift_ast_sp->RegisterSectionModules(module, module_names);
   if (!module_names.size()) {
     // This dylib has no Swift contents; logging the configuration is pointless.
     suppress_config_log = true;
   } else {
-    swift_ast_sp->ValidateSectionModules(module, module_names);
+    swift_ast_sp->ImportSectionModules(module, module_names);
     if (GetLog(LLDBLog::Types)) {
       std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
       LOG_PRINTF(GetLog(LLDBLog::Types), "((Module*)%p, \"%s\") = %p",
@@ -2353,157 +2502,6 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   }
 
   return ModuleSP();
-}
-
-/// Scan a newly added lldb::Module for Swift modules and report any errors in
-/// its module SwiftASTContext to Target.
-static void
-ProcessModule(ModuleSP module_sp, std::string m_description,
-              bool discover_implicit_search_paths, bool use_all_compiler_flags,
-              StringRef module_filter, Target &target, llvm::Triple triple,
-              std::vector<swift::PluginSearchOption> &plugin_search_options,
-              std::vector<std::string> &module_search_paths,
-              std::vector<std::pair<std::string, bool>> &framework_search_paths,
-              std::vector<std::string> &extra_clang_args) {
-  {
-    llvm::raw_string_ostream ss(m_description);
-    ss << "::ProcessModule(" << '"';
-    module_sp->GetDescription(ss, eDescriptionLevelBrief);
-    ss << '"' << ')';
-  }
-
-  const FileSpec &module_file = module_sp->GetFileSpec();
-  std::string module_path = module_file.GetPath();
-
-  // Add the containing framework to the framework search path.
-  // Don't do that if this is the executable module, since it
-  // might be buried in some framework that we don't care about.
-  if (use_all_compiler_flags &&
-      target.GetExecutableModulePointer() != module_sp.get()) {
-    size_t framework_offset = module_path.rfind(".framework/");
-
-    if (framework_offset != std::string::npos) {
-      // Sometimes the version of the framework that got loaded has been
-      // stripped and in that case, adding it to the framework search
-      // path will just short-cut a clang search that might otherwise
-      // find the needed headers. So don't add these paths.
-      std::string framework_path = module_path.substr(0, framework_offset);
-      framework_path.append(".framework");
-      FileSpec path_spec(framework_path);
-      FileSystem::Instance().Resolve(path_spec);
-      FileSpec headers_spec = path_spec.CopyByAppendingPathComponent("Headers");
-      bool add_it = false;
-      if (FileSystem::Instance().Exists(headers_spec))
-        add_it = true;
-      if (!add_it) {
-        FileSpec module_spec =
-            path_spec.CopyByAppendingPathComponent("Modules");
-        if (FileSystem::Instance().Exists(module_spec))
-          add_it = true;
-      }
-
-      if (!add_it) {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "rejecting framework path \"%s\" as it has no \"Headers\" "
-                   "or \"Modules\" subdirectories.",
-                   framework_path.c_str());
-      }
-
-      if (add_it) {
-        while (framework_offset && (module_path[framework_offset] != '/'))
-          framework_offset--;
-
-        if (module_path[framework_offset] == '/') {
-          // framework_offset now points to the '/';
-
-          std::string parent_path = module_path.substr(0, framework_offset);
-          StringRef p(parent_path);
-
-          // Never add framework paths pointing into the system. These
-          // modules must be imported from the SDK instead.
-          if (!p.startswith("/System/Library") && !IsDeviceSupport(p) &&
-              !p.startswith(
-                  "/Library/Apple/System/Library/PrivateFrameworks") &&
-              !p.startswith("/System/iOSSupport/System/Library/Frameworks")) {
-            LOG_PRINTF(GetLog(LLDBLog::Types), "adding framework path \"%s\"/.. .",
-                       framework_path.c_str());
-            framework_search_paths.push_back(
-                {std::move(parent_path), /*system*/ false});
-          }
-        }
-      }
-    }
-  }
-
-  // Skip images without a serialized Swift AST.
-  if (!HasSwiftModules(*module_sp))
-    return;
-
-  // Load search path options from the module.
-  if (!use_all_compiler_flags &&
-      target.GetExecutableModulePointer() != module_sp.get())
-    return;
-
-  // Add Swift interfaces in the .dSYM at the end of the search paths.
-  // .swiftmodules win over .swiftinterfaces, when they are loaded
-  // directly from the .swift_ast section.
-  //
-  // FIXME: Since these paths end up in the scratch context, we would
-  //        need a mechanism to ensure that and newer versions (in the
-  //        library evolution sense, not the date on disk) win over
-  //        older versions of the same .swiftinterface.
-  if (auto dsym = GetDSYMBundle(*module_sp)) {
-    llvm::SmallString<256> path(*dsym);
-    StringRef arch = llvm::Triple::getArchTypeName(triple.getArch());
-    llvm::sys::path::append(path, "Contents", "Resources", "Swift", arch);
-    bool exists = false;
-    llvm::sys::fs::is_directory(path, exists);
-    if (exists)
-      module_search_paths.push_back(std::string(path));
-  }
-
-  // Create a one-off CompilerInvocation as a place to load the
-  // deserialized search path options into.
-  SymbolFile *sym_file = module_sp->GetSymbolFile();
-  if (!sym_file)
-    return;
-  bool found_swift_modules = false;
-  bool got_serialized_options = false;
-  llvm::SmallString<0> error;
-  llvm::raw_svector_ostream errs(error);
-  swift::CompilerInvocation invocation;
-  auto ast_file_datas = module_sp->GetASTData(eLanguageTypeSwift);
-  std::string module_name = module_sp->GetSpecificationDescription();
-  std::vector<llvm::StringRef> buffers =
-      GetASTBuffersFromModule(m_description, ast_file_datas, module_name);
-
-  // If no N_AST symbols exist, this is not an error.
-  if (!buffers.empty())
-    if (DeserializeAllCompilerFlags(
-            invocation, module_name, module_filter, buffers,
-            module_sp->GetSourceMappingList(), discover_implicit_search_paths,
-            m_description, errs, got_serialized_options, found_swift_modules)) {
-      // TODO: After removing DeserializeAllCompilerFlags from
-      //       CreateInstance(per-Module), errs will need to be
-      //       collected here and surfaced.
-    }
-
-  // Copy the interesting deserialized flags to the out parameters.
-  const auto &opts = invocation.getSearchPathOptions();
-  plugin_search_options.insert(plugin_search_options.end(),
-                               opts.PluginSearchOpts.begin(),
-                               opts.PluginSearchOpts.end());
-  module_search_paths.insert(module_search_paths.end(),
-                             opts.getImportSearchPaths().begin(),
-                             opts.getImportSearchPaths().end());
-  for (auto path:opts.getFrameworkSearchPaths())
-    framework_search_paths.push_back({path.Path, path.IsSystem});
-  auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
-  for (const std::string &arg : clang_opts) {
-    extra_clang_args.push_back(arg);
-    LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "adding Clang argument \"%s\".",
-                       arg.c_str());
-  }
 }
 
 lldb::TypeSystemSP SwiftASTContext::CreateInstance(
@@ -2694,10 +2692,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     if (module_sp) {
       StringRef module_filter;
       std::vector<std::string> extra_clang_args;
-      ProcessModule(module_sp, m_description, discover_implicit_search_paths,
-                    use_all_compiler_flags, module_filter, target, triple,
-                    plugin_search_options, module_search_paths,
-                    framework_search_paths, extra_clang_args);
+      ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
+                    use_all_compiler_flags,
+                    target.GetExecutableModulePointer() == module_sp.get(),
+                    module_filter, triple, plugin_search_options,
+                    module_search_paths, framework_search_paths,
+                    extra_clang_args);
       swift_ast_sp->AddExtraClangArgs(extra_clang_args,
                                       target.GetSwiftClangOverrideOptions());
     }
@@ -3007,10 +3007,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   if (module_sp) {
     StringRef module_filter = swift_module_name;
     std::vector<std::string> extra_clang_args;
-    ProcessModule(module_sp, m_description, discover_implicit_search_paths,
-                  use_all_compiler_flags, module_filter, target, triple,
-                  plugin_search_options, module_search_paths,
-                  framework_search_paths, extra_clang_args);
+    ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
+                  use_all_compiler_flags,
+                  target.GetExecutableModulePointer() == module_sp.get(),
+                  module_filter, triple, plugin_search_options,
+                  module_search_paths, framework_search_paths,
+                  extra_clang_args);
     swift_ast_sp->AddExtraClangArgs(extra_clang_args,
                                     target.GetSwiftClangOverrideOptions());
   }
@@ -4534,7 +4536,7 @@ void SwiftASTContext::RegisterSectionModules(
   }
 }
 
-void SwiftASTContext::ValidateSectionModules(
+void SwiftASTContext::ImportSectionModules(
     Module &module, const std::vector<std::string> &module_names) {
   VALID_OR_RETURN();
   LLDB_SCOPED_TIMER();
@@ -5467,11 +5469,15 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     std::vector<std::pair<std::string, bool>> framework_search_paths;
     std::vector<std::string> extra_clang_args;
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
+    if (!module_sp)
+      continue;
     StringRef module_filter;
-    ProcessModule(module_sp, m_description, discover_implicit_search_paths,
-                  use_all_compiler_flags, module_filter, *target_sp,
-                  GetTriple(), plugin_search_options, module_search_paths,
-                  framework_search_paths, extra_clang_args);
+    ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
+                  use_all_compiler_flags,
+                  target_sp->GetExecutableModulePointer() == module_sp.get(),
+                  module_filter, GetTriple(), plugin_search_options,
+                  module_search_paths, framework_search_paths,
+                  extra_clang_args);
     // If the use-all-compiler-flags setting is enabled, the
     // expression context is supposed to merge all search paths
     // from all dylibs.
