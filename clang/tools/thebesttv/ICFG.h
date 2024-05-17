@@ -20,6 +20,8 @@ struct ICFG {
         int target;
     };
     std::vector<std::vector<Edge>> G;
+    // 反图（不重新弄一个ICFG了，开销太大）
+    std::vector<std::vector<Edge>> G_reverse;
     // 过程内的边 id 默认为 0，call edge 和 return edge 的 id 从 1 开始，
     // 也就是调用点的 id。
     int callSiteId = 0;

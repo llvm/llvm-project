@@ -17,6 +17,7 @@ void ICFG::addEdge(int u, Edge::Type type, int callSiteId, int v) {
     else
         requireTrue(callSiteId > 0);
     G[u].emplace_back(type, callSiteId, v);
+    G_reverse[v].emplace_back(type, callSiteId, u);
 }
 
 void ICFG::addNormalEdge(int fid, int uBid, int vBid) {
@@ -87,6 +88,7 @@ void ICFG::addFunction(int fid, const CFG &cfg) {
 
     n += cfg.size();
     G.resize(n);
+    G_reverse.resize(n);
 
     entryExitOfFunction[fid] = {cfg.getEntry().getBlockID(),
                                 cfg.getExit().getBlockID()};
