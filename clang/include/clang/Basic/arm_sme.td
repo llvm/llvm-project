@@ -298,6 +298,16 @@ multiclass ZAAddSub<string n_suffix> {
     def NAME # _ZA64_VG1X2_F64 : Inst<"sv" # n_suffix # "_za64[_{d}]_vg1x2", "vm2", "d", MergeNone, "aarch64_sme_" # n_suffix # "_za64_vg1x2", [IsStreaming, IsInOutZA], []>;
     def NAME # _ZA64_VG1X4_F64 : Inst<"sv" # n_suffix # "_za64[_{d}]_vg1x4", "vm4", "d", MergeNone, "aarch64_sme_" # n_suffix # "_za64_vg1x4", [IsStreaming, IsInOutZA], []>;
   }
+
+  let TargetGuard = "sme-f16f16|sme-f8f16" in {
+    def NAME # _ZA16_VG1X2_F16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x2", "vm2", "h", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x2", [IsStreaming, IsInOutZA], []>;
+    def NAME # _ZA16_VG1X4_F16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x4", "vm4", "h", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x4", [IsStreaming, IsInOutZA], []>;
+  }
+
+  let TargetGuard = "sme2,b16b16" in {
+    def NAME # _ZA16_VG1X2_BF16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x2", "vm2", "b", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x2", [IsStreaming, IsInOutZA], []>;
+    def NAME # _ZA16_VG1X4_BF16 : Inst<"sv" # n_suffix # "_za16[_{d}]_vg1x4", "vm4", "b", MergeNone, "aarch64_sme_" # n_suffix # "_za16_vg1x4", [IsStreaming, IsInOutZA], []>;
+  }
 }
 
 defm SVADD : ZAAddSub<"add">;
