@@ -49,13 +49,9 @@ class DerefAnalysisVisitor
 public:
   DerefAnalysisVisitor(const TemplateArgumentList &ArgList,
                        const CXXRecordDecl *ClassDecl)
-    : ArgList(&ArgList)
-    , ClassDecl(ClassDecl)
-  { }
+      : ArgList(&ArgList) , ClassDecl(ClassDecl) {}
 
-  DerefAnalysisVisitor(const CXXRecordDecl *ClassDecl)
-    : ClassDecl(ClassDecl)
-  { }
+  DerefAnalysisVisitor(const CXXRecordDecl *ClassDecl) : ClassDecl(ClassDecl) {}
 
   bool HasSpecializedDelete(CXXMethodDecl *Decl) {
     if (auto *Tmpl = Decl->getTemplateInstantiationPattern())
@@ -128,8 +124,8 @@ public:
   bool VisitLambdaExpr(const LambdaExpr *) { return false; }
 
 private:
-  const TemplateArgumentList* ArgList { nullptr };
-  const CXXRecordDecl* ClassDecl;
+  const TemplateArgumentList *ArgList{nullptr};
+  const CXXRecordDecl *ClassDecl;
   llvm::DenseSet<const Stmt *> VisitedBody;
 };
 
@@ -309,11 +305,11 @@ public:
       return false;
     }
     for (auto *MethodDecl : C->methods()) {
-        if (safeGetName(MethodDecl) == "deref") {
-          DerefAnalysisVisitor DerefAnalysis(DerivedClass);
-          if (DerefAnalysis.HasSpecializedDelete(MethodDecl))
-            return true;
-        }
+      if (safeGetName(MethodDecl) == "deref") {
+        DerefAnalysisVisitor DerefAnalysis(DerivedClass);
+        if (DerefAnalysis.HasSpecializedDelete(MethodDecl))
+          return true;
+      }
     }
     return false;
   }
