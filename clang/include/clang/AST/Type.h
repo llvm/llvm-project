@@ -132,6 +132,7 @@ class TemplateArgument;
 class TemplateArgumentListInfo;
 class TemplateArgumentLoc;
 class TemplateTypeParmDecl;
+template <typename> struct TreeTransform;
 class TypedefNameDecl;
 class UnresolvedUsingTypenameDecl;
 class UsingShadowDecl;
@@ -4709,7 +4710,7 @@ public:
              FE_ExcludeObjCMessageSend | FE_ExcludeStaticLocalVars |
              FE_ExcludeThreadLocalVars;
     case Kind::NonAllocating:
-      // Same as NonBlocking, except without FE_ExcludeStaticLocalVars
+      // Same as NonBlocking, except without FE_ExcludeStaticLocalVars.
       return FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
              FE_ExcludeObjCMessageSend | FE_ExcludeThreadLocalVars;
     case Kind::Blocking:
@@ -4752,11 +4753,11 @@ public:
 /// Wrap a function effect's condition expression in another struct so
 /// that FunctionProtoType's TrailingObjects can treat it separately.
 class FunctionEffectCondition {
-  Expr *Cond = nullptr; // if null, unconditional
+  Expr *Cond = nullptr; // if null, unconditional.
 
 public:
   FunctionEffectCondition() = default;
-  FunctionEffectCondition(Expr *E) : Cond(E) {} // implicit OK
+  FunctionEffectCondition(Expr *E) : Cond(E) {} // non-explicit is OK.
 
   Expr *getCondition() const { return Cond; }
 
@@ -4799,7 +4800,6 @@ public:
     return Idx != Other.Idx;
   }
 
-  // prefix increment
   FunctionEffectIterator operator++() {
     ++Idx;
     return *this;
@@ -4892,6 +4892,9 @@ public:
 ///
 /// Has the same invariants as FunctionEffectsRef.
 class FunctionEffectSet {
+  // TreeTransform is the only user of replaceItem.
+  template <typename> friend struct TreeTransform;
+
   SmallVector<FunctionEffect> Effects;
   SmallVector<FunctionEffectCondition> Conditions;
 
@@ -4908,13 +4911,6 @@ public:
   friend iterator;
   iterator begin() const { return iterator(*this, 0); }
   iterator end() const { return iterator(*this, size()); }
-
-  const FunctionEffectWithCondition operator[](size_t Idx) {
-    // Returns a const struct because storing into it would not accomplish
-    // anything; see replaceItem().
-    assert(Idx < size() && "FunctionEffectSet index out of bounds");
-    return *iterator(*this, Idx);
-  }
 
   operator FunctionEffectsRef() const { return {Effects, Conditions}; }
 
@@ -4938,13 +4934,16 @@ public:
   // Returns true for success (obviating a check of Errs.empty()).
   bool insert(const FunctionEffectsRef &Set, Conflicts &Errs);
 
-  void replaceItem(unsigned Idx, const FunctionEffectWithCondition &Item);
-
   // Set operations
+
   static FunctionEffectSet getUnion(FunctionEffectsRef LHS,
                                     FunctionEffectsRef RHS, Conflicts &Errs);
   static FunctionEffectSet getIntersection(FunctionEffectsRef LHS,
                                            FunctionEffectsRef RHS);
+
+private:
+  // For the use of TreeTransform.
+  void replaceItem(unsigned Idx, const FunctionEffectWithCondition &Item);
 };
 
 /// Represents a prototype with parameter type info, e.g.

@@ -2786,7 +2786,7 @@ FunctionEffectDifferences::FunctionEffectDifferences(
       else {
         cmp = 0;
         if (Old.Cond.getCondition() != New.Cond.getCondition()) {
-          // TODO: Cases where the expressions are equivalent but
+          // FIXME: Cases where the expressions are equivalent but
           // don't have the same identity.
           push_back(FunctionEffectDiff{
               Old.Effect.kind(), FunctionEffectDiff::Kind::ConditionMismatch,

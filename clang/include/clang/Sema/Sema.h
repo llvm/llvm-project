@@ -454,10 +454,10 @@ enum class CheckedConversionKind {
 
 /// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
 enum class FunctionEffectMode : uint8_t {
-  None,     // effect is not present
-  False,    // effect(false)
-  True,     // effect(true)
-  Dependent // effect(expr) where expr is dependent
+  None,     // effect is not present.
+  False,    // effect(false).
+  True,     // effect(true).
+  Dependent // effect(expr) where expr is dependent.
 };
 
 struct FunctionEffectDiff {
@@ -465,8 +465,8 @@ struct FunctionEffectDiff {
 
   FunctionEffect::Kind EffectKind;
   Kind DiffKind;
-  FunctionEffectWithCondition Old; // invalid when Added
-  FunctionEffectWithCondition New; // invalid when Removed
+  FunctionEffectWithCondition Old; // invalid when Added.
+  FunctionEffectWithCondition New; // invalid when Removed.
 
   StringRef effectName() const {
     if (Old.Effect.kind() != FunctionEffect::Kind::None)
@@ -479,7 +479,7 @@ struct FunctionEffectDiff {
   enum class OverrideResult {
     NoAction,
     Warn,
-    Merge // Merge missing effect from base to derived
+    Merge // Merge missing effect from base to derived.
   };
 
   /// Return true if adding or removing the effect as part of a type conversion

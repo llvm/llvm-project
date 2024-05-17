@@ -5105,10 +5105,10 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
     else
       return false;
     for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
-      // nonblocking/nonallocating cannot call allocating
+      // nonblocking/nonallocating cannot call allocating.
       if (CalleeEC.Effect.kind() == Kind::Allocating)
         return false;
-      // nonblocking cannot call blocking
+      // nonblocking cannot call blocking.
       if (kind() == Kind::NonBlocking &&
           CalleeEC.Effect.kind() == Kind::Blocking)
         return false;

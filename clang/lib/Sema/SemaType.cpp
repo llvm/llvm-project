@@ -8024,7 +8024,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
       return true;
     }
 
-    // Parse the condition, if any
+    // Parse the condition, if any.
     if (PAttr.getNumArgs() == 1) {
       CondExpr = PAttr.getArgAsExpr(0);
       std::optional<FunctionEffectMode> MaybeMode =
@@ -8062,7 +8062,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << ("'" + NewEC.description() + "'")
         << ("'" + PrevEC.description() + "'") << false;
-    // we don't necessarily have the location of the previous attribute,
+    // We don't necessarily have the location of the previous attribute,
     // so no note.
     PAttr.setInvalid();
     return true;
@@ -8091,18 +8091,18 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   }
 
   if (IsNonBlocking) {
-    // new nonblocking(true) is incompatible with previous allocating
+    // A new nonblocking(true) is incompatible with a previous allocating.
     if (NewMode == FunctionEffectMode::True && PrevNonAllocating &&
         PrevNonAllocating->Effect.kind() == FunctionEffect::Kind::Allocating)
       return Incompatible(*PrevNonAllocating);
   } else {
-    // new allocating is incompatible with previous nonblocking(true)
+    // A new allocating is incompatible with a previous nonblocking(true).
     if (NewMode == FunctionEffectMode::False && PrevNonBlocking &&
         PrevNonBlocking->Effect.kind() == FunctionEffect::Kind::NonBlocking)
       return Incompatible(*PrevNonBlocking);
   }
 
-  // Add the effect to the FunctionProtoType
+  // Add the effect to the FunctionProtoType.
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
   FunctionEffectSet::Conflicts Errs;
