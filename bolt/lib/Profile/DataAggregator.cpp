@@ -1464,7 +1464,7 @@ uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     uint64_t To = getBinaryFunctionContainingAddress(LBR.To) ? LBR.To : 0;
     if (!From && !To)
       continue;
-    BranchInfo &Info = BranchLBRs[Trace(From, To)];
+    TakenBranchInfo &Info = BranchLBRs[Trace(From, To)];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
@@ -1609,7 +1609,7 @@ void DataAggregator::processBranchEvents() {
 
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
-    const BranchInfo &Info = AggrLBR.second;
+    const TakenBranchInfo &Info = AggrLBR.second;
     doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
   }
 }
@@ -2253,13 +2253,13 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   } else {
     for (const auto &KV : NamesToBranches) {
       const FuncBranchData &FBD = KV.second;
-      for (const llvm::bolt::BranchInfo &BI : FBD.Data) {
+      for (const BranchInfo &BI : FBD.Data) {
         writeLocation(BI.From);
         writeLocation(BI.To);
         OutFile << BI.Mispreds << " " << BI.Branches << "\n";
         ++BranchValues;
       }
-      for (const llvm::bolt::BranchInfo &BI : FBD.EntryData) {
+      for (const BranchInfo &BI : FBD.EntryData) {
         // Do not output if source is a known symbol, since this was already
         // accounted for in the source function
         if (BI.From.IsSymbol)
@@ -2366,7 +2366,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
       };
 
-      for (const llvm::bolt::BranchInfo &BI : Branches.Data) {
+      for (const BranchInfo &BI : Branches.Data) {
         using namespace yaml::bolt;
         const auto &[BlockOffset, BlockIndex] = getBlock(BI.From.Offset);
         BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
@@ -2388,7 +2388,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         }
       }
       // Set entry counts, similar to DataReader::readProfile.
-      for (const llvm::bolt::BranchInfo &BI : Branches.EntryData) {
+      for (const BranchInfo &BI : Branches.EntryData) {
         if (!BlockMap.isInputBlock(BI.To.Offset)) {
           if (opts::Verbosity >= 1)
             errs() << "BOLT-WARNING: Unexpected EntryData in " << FuncName
