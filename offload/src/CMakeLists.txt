@@ -1,4 +1,4 @@
-libomptarget_say("Building offloading runtime library libomptarget.")
+message(STATUS "Building offloading runtime library libomptarget.")
 
 if(LIBOMP_STANDALONE)
   set(LIBOMP ${LIBOMP_STANDALONE})
