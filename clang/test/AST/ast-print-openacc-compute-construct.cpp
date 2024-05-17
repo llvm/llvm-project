@@ -111,23 +111,23 @@ void foo() {
   bool SomeB;
   struct SomeStruct{} SomeStructImpl;
 
-//#pragma acc parallel dtype(SomeB)
+//CHECK: #pragma acc parallel dtype(SomeB)
 #pragma acc parallel dtype(SomeB)
   while(true);
 
-//#pragma acc parallel device_type(SomeStruct)
+//CHECK: #pragma acc parallel device_type(SomeStruct)
 #pragma acc parallel device_type(SomeStruct)
   while(true);
 
-//#pragma acc parallel device_type(int)
+//CHECK: #pragma acc parallel device_type(int)
 #pragma acc parallel device_type(int)
   while(true);
 
-//#pragma acc parallel dtype(bool)
+//CHECK: #pragma acc parallel dtype(bool)
 #pragma acc parallel dtype(bool)
   while(true);
 
-//#pragma acc parallel device_type (SomeStructImpl)
+//CHECK: #pragma acc parallel device_type(SomeStructImpl)
 #pragma acc parallel device_type (SomeStructImpl)
   while(true);
 }

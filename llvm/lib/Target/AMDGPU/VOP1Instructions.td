@@ -153,19 +153,25 @@ multiclass VOP1Inst <string opName, VOPProfile P,
     def : LetDummies, AMDGPUMnemonicAlias<opName#"_dpp", opName, AMDGPUAsmVariants.DPP>;
 }
 
-multiclass VOP1Inst_t16<string opName,
+multiclass VOP1Inst_t16_with_profiles<string opName,
                         VOPProfile P,
+                        VOPProfile P_t16,
+                        VOPProfile P_fake16,
                         SDPatternOperator node = null_frag> {
   let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
     defm NAME : VOP1Inst<opName, P, node>;
   }
   let OtherPredicates = [UseRealTrue16Insts] in {
-    defm _t16 : VOP1Inst<opName#"_t16", VOPProfile_True16<P>, node>;
+    defm _t16 : VOP1Inst<opName#"_t16", P_t16, node>;
   }
   let OtherPredicates = [UseFakeTrue16Insts] in {
-    defm _fake16 : VOP1Inst<opName#"_fake16", VOPProfile_Fake16<P>, node>;
+    defm _fake16 : VOP1Inst<opName#"_fake16", P_fake16, node>;
   }
 }
+
+multiclass VOP1Inst_t16<string opName, VOPProfile P,
+                        SDPatternOperator node = null_frag> :
+  VOP1Inst_t16_with_profiles<opName, P, VOPProfile_True16<P>, VOPProfile_Fake16<P>, node>;
 
 // Special profile for instructions which have clamp
 // and output modifiers (but have no input modifiers)

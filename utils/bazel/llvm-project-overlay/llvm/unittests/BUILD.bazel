@@ -617,6 +617,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:BitstreamReader",
         "//llvm:Core",
         "//llvm:Coverage",
         "//llvm:DebugInfo",
