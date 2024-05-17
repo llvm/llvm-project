@@ -2433,7 +2433,9 @@ def err_auto_not_allowed : Error<
   "|in template parameter|in friend declaration|in function prototype that is "
   "not a function declaration|in requires expression parameter"
   "|in array declaration"
-  "|in declaration of conversion function template}1">;
+  "|in declaration of conversion function template"
+  "|in lambda parameter before C++14}1">;
+
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -3003,6 +3005,8 @@ def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
   "%select{and|because}0 %1 does not satisfy %2">;
 def note_atomic_constraint_evaluated_to_false_elaborated : Note<
   "%select{and|because}0 '%1' (%2 %3 %4) evaluated to false">;
+def note_is_deducible_constraint_evaluated_to_false : Note<
+  "cannot deduce template arguments for %0 from %1">;
 def err_constrained_virtual_method : Error<
   "virtual function cannot have a requires clause">;
 def err_trailing_requires_clause_on_deduction_guide : Error<
@@ -3371,6 +3375,8 @@ def err_field_with_address_space : Error<
   "field may not be qualified with an address space">;
 def err_compound_literal_with_address_space : Error<
   "compound literal in function scope may not be qualified with an address space">;
+def err_compound_literal_with_vla_type : Error<
+  "compound literal cannot be of variable-length array type">;
 def err_address_space_mismatch_templ_inst : Error<
   "conflicting address space qualifiers are provided between types %0 and %1">;
 def err_attr_objc_ownership_redundant : Error<
@@ -10035,6 +10041,12 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
+def warn_unsupported_lifetime_extension : Warning<
+  "lifetime extension of "
+  "%select{temporary|backing array of initializer list}0 created "
+  "by aggregate initialization using a default member initializer "
+  "is not yet supported; lifetime of %select{temporary|backing array}0 "
+  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12344,4 +12356,8 @@ def warn_acc_deprecated_alias_name
 def err_acc_var_not_pointer_type
     : Error<"expected pointer in '%0' clause, type is %1">;
 def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
+def err_acc_clause_after_device_type
+    : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
+            "compute construct">;
+
 } // end of sema component.

@@ -92,6 +92,10 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
     OS << "  ";
     OS << "{\"" << Rec->getValueAsString("MArchName") << "\"";
+    if (auto Alias = Rec->getValueAsString("MArchAlias"); Alias.empty())
+      OS << ", {}";
+    else
+      OS << ", \"" << Alias << "\"";
     OS << ", AArch64::" << AEK;
     if (AEK == "AEK_NONE") {
       // HACK: don't emit posfeat/negfeat strings for FMVOnlyExtensions.
@@ -105,7 +109,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     OS << ", " << (uint64_t)Rec->getValueAsInt("FMVPriority");
     OS << "},\n";
   };
-  OS << "  {\"none\", AArch64::AEK_NONE, {}, {}, FEAT_INIT, \"\", "
+  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, FEAT_INIT, \"\", "
         "ExtensionInfo::MaxFMVPriority},\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
