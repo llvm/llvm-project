@@ -350,7 +350,7 @@ namespace rdar12629723 {
 
     struct B;
 
-    struct A : public B {  // expected-note{{'A' declared here}}
+    struct A : public B {
       virtual void foo() { }
     };
 
@@ -359,7 +359,7 @@ namespace rdar12629723 {
   };
 
   template<class T>
-  struct X<T>::B : public A {  // expected-error{{circular inheritance between 'A' and 'rdar12629723::X::B'}}
+  struct X<T>::B : public A {
     virtual void foo() { }
   };
 }

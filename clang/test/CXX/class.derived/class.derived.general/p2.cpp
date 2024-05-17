@@ -81,4 +81,36 @@ namespace CurrentInstantiation {
   template<typename T>
   template<typename U>
   struct A0<T*>::B3 : A0 { };
-}
+} // namespace CurrentInstantiation
+
+namespace MemberOfCurrentInstantiation {
+  template<typename T>
+  struct A0 {
+    struct B : B { }; // expected-error {{base class has incomplete type}}
+                      // expected-note@-1 {{definition of 'MemberOfCurrentInstantiation::A0::B' is not complete until the closing '}'}}
+
+    template<typename U>
+    struct C : C<U> { }; // expected-error {{base class has incomplete type}}
+                         // expected-note@-1 {{definition of 'C<U>' is not complete until the closing '}'}}
+  };
+
+  template<typename T>
+  struct A1 {
+    struct B; // expected-note {{definition of 'MemberOfCurrentInstantiation::A1<long>::B' is not complete until the closing '}'}}
+
+    struct C : B { }; // expected-error {{base class has incomplete type}}
+
+    struct B : C { }; // expected-note {{in instantiation of member class 'MemberOfCurrentInstantiation::A1<long>::C' requested here}}
+  };
+
+  template struct A1<long>; // expected-note {{in instantiation of member class 'MemberOfCurrentInstantiation::A1<long>::B' requested here}}
+
+  template<>
+  struct A1<short>::B {
+    static constexpr bool f() {
+      return true;
+    }
+  };
+
+  static_assert(A1<short>::C::f());
+} // namespace MemberOfCurrentInstantiation

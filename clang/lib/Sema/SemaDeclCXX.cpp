@@ -2656,38 +2656,6 @@ bool Sema::isCurrentClassNameTypo(IdentifierInfo *&II, const CXXScopeSpec *SS) {
   return false;
 }
 
-/// Determine whether the given class is a base class of the given
-/// class, including looking at dependent bases.
-static bool findCircularInheritance(const CXXRecordDecl *Class,
-                                    const CXXRecordDecl *Current) {
-  SmallVector<const CXXRecordDecl*, 8> Queue;
-
-  Class = Class->getCanonicalDecl();
-  while (true) {
-    for (const auto &I : Current->bases()) {
-      CXXRecordDecl *Base = I.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-
-      Base = Base->getDefinition();
-      if (!Base)
-        continue;
-
-      if (Base->getCanonicalDecl() == Class)
-        return true;
-
-      Queue.push_back(Base);
-    }
-
-    if (Queue.empty())
-      return false;
-
-    Current = Queue.pop_back_val();
-  }
-
-  return false;
-}
-
 /// Check the validity of a C++ base class specifier.
 ///
 /// \returns a new CXXBaseSpecifier if well-formed, emits diagnostics
@@ -2748,23 +2716,6 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       return nullptr;
     }
   } else if (BaseType->isDependentType()) {
-    // Make sure that we don't have circular inheritance among our dependent
-    // bases. For non-dependent bases, the check for completeness below handles
-    // this.
-    if (CXXRecordDecl *BaseDecl = BaseType->getAsCXXRecordDecl()) {
-      if (BaseDecl->getCanonicalDecl() == Class->getCanonicalDecl() ||
-          ((BaseDecl = BaseDecl->getDefinition()) &&
-           findCircularInheritance(Class, BaseDecl))) {
-        Diag(BaseLoc, diag::err_circular_inheritance)
-          << BaseType << Context.getTypeDeclType(Class);
-
-        if (BaseDecl->getCanonicalDecl() != Class->getCanonicalDecl())
-          Diag(BaseDecl->getLocation(), diag::note_previous_decl)
-            << BaseType;
-
-        return nullptr;
-      }
-    }
     // Make sure that we don't make an ill-formed AST where the type of the
     // Class is non-dependent and its attached base class specifier is an
     // dependent type, which violates invariants in many clang code paths (e.g.
