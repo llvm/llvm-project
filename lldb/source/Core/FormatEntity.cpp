@@ -1921,7 +1921,7 @@ static Status ParseEntry(const llvm::StringRef &format_str,
   const size_t n = parent->num_children;
   for (size_t i = 0; i < n; ++i) {
     const Definition *entry_def = parent->children + i;
-    if (key.equals(entry_def->name) || entry_def->name[0] == '*') {
+    if (key == entry_def->name || entry_def->name[0] == '*') {
       llvm::StringRef value;
       if (sep_char)
         value =
@@ -2002,7 +2002,7 @@ static const Definition *FindEntry(const llvm::StringRef &format_str,
   const size_t n = parent->num_children;
   for (size_t i = 0; i < n; ++i) {
     const Definition *entry_def = parent->children + i;
-    if (p.first.equals(entry_def->name) || entry_def->name[0] == '*') {
+    if (p.first == entry_def->name || entry_def->name[0] == '*') {
       if (p.second.empty()) {
         if (format_str.back() == '.')
           remainder = format_str.drop_front(format_str.size() - 1);
@@ -2351,13 +2351,13 @@ Status FormatEntity::ExtractVariableInfo(llvm::StringRef &format_str,
 bool FormatEntity::FormatFileSpec(const FileSpec &file_spec, Stream &s,
                                   llvm::StringRef variable_name,
                                   llvm::StringRef variable_format) {
-  if (variable_name.empty() || variable_name.equals(".fullpath")) {
+  if (variable_name.empty() || variable_name == ".fullpath") {
     file_spec.Dump(s.AsRawOstream());
     return true;
-  } else if (variable_name.equals(".basename")) {
+  } else if (variable_name == ".basename") {
     s.PutCString(file_spec.GetFilename().GetStringRef());
     return true;
-  } else if (variable_name.equals(".dirname")) {
+  } else if (variable_name == ".dirname") {
     s.PutCString(file_spec.GetFilename().GetStringRef());
     return true;
   }
@@ -2440,7 +2440,7 @@ void FormatEntity::AutoComplete(CompletionRequest &request) {
       // "${thread.id" <TAB>
       request.AddCompletion(MakeMatch(str, "}"));
     }
-  } else if (remainder.equals(".")) {
+  } else if (remainder == ".") {
     // "${thread." <TAB>
     StringList new_matches;
     AddMatches(entry_def, str, llvm::StringRef(), new_matches);
