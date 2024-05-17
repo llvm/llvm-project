@@ -3672,34 +3672,34 @@ def int_amdgcn_cvt_sat_pk_i4_i8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_i4_i
 def int_amdgcn_cvt_sat_pk_u4_u8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_u4_u8">,
   DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-// llvm.amdgcn.permlane.bcast <old> <src0> <src1> <src2>
+// llvm.amdgcn.permlane.bcast <src0> <src1> <src2>
 def int_amdgcn_permlane_bcast : ClangBuiltin<"__builtin_amdgcn_permlane_bcast">,
   Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// llvm.amdgcn.permlane.up <old> <src0> <src1> <src2>
+// llvm.amdgcn.permlane.up <src0> <src1> <src2>
 def int_amdgcn_permlane_up : ClangBuiltin<"__builtin_amdgcn_permlane_up">,
   Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// llvm.amdgcn.permlane.down <old> <src0> <src1> <src2>
+// llvm.amdgcn.permlane.down <src0> <src1> <src2>
 def int_amdgcn_permlane_down : ClangBuiltin<"__builtin_amdgcn_permlane_down">,
   Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// llvm.amdgcn.permlane.xor <old> <src0> <src1> <src2>
+// llvm.amdgcn.permlane.xor <src0> <src1> <src2>
 def int_amdgcn_permlane_xor : ClangBuiltin<"__builtin_amdgcn_permlane_xor">,
   Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// llvm.amdgcn.permlane.idx.gen <old> <src0> <src1>
+// llvm.amdgcn.permlane.idx.gen <src0> <src1>
 def int_amdgcn_permlane_idx_gen : ClangBuiltin<"__builtin_amdgcn_permlane_idx_gen">,
   Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_perm_pk16_b4_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b4_u4">,

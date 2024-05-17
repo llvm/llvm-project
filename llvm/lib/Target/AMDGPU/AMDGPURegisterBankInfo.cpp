@@ -3144,20 +3144,22 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16:
-    case Intrinsic::amdgcn_permlane_bcast:
-    case Intrinsic::amdgcn_permlane_up:
-    case Intrinsic::amdgcn_permlane_down:
-    case Intrinsic::amdgcn_permlane_xor: {
       // Doing a waterfall loop over these wouldn't make any sense.
       substituteSimpleCopyRegs(OpdMapper, 2);
       substituteSimpleCopyRegs(OpdMapper, 3);
       constrainOpWithReadfirstlane(B, MI, 4);
       constrainOpWithReadfirstlane(B, MI, 5);
       return;
-    }
-    case Intrinsic::amdgcn_permlane_idx_gen: {
-      substituteSimpleCopyRegs(OpdMapper, 2);
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_up:
+    case Intrinsic::amdgcn_permlane_down:
+    case Intrinsic::amdgcn_permlane_xor:
+      // Doing a waterfall loop over these wouldn't make any sense.
+      constrainOpWithReadfirstlane(B, MI, 3);
       constrainOpWithReadfirstlane(B, MI, 4);
+      return;
+    case Intrinsic::amdgcn_permlane_idx_gen: {
+      constrainOpWithReadfirstlane(B, MI, 3);
       return;
     }
     case Intrinsic::amdgcn_sbfe:
@@ -4822,11 +4824,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_permlane16:
-    case Intrinsic::amdgcn_permlanex16:
-    case Intrinsic::amdgcn_permlane_bcast:
-    case Intrinsic::amdgcn_permlane_up:
-    case Intrinsic::amdgcn_permlane_down:
-    case Intrinsic::amdgcn_permlane_xor: {
+    case Intrinsic::amdgcn_permlanex16: {
       unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
@@ -4835,12 +4833,22 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[5] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
       break;
     }
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_up:
+    case Intrinsic::amdgcn_permlane_down:
+    case Intrinsic::amdgcn_permlane_xor: {
+      unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+      break;
+    }
     case Intrinsic::amdgcn_permlane_idx_gen: {
       unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_permlane16_var:

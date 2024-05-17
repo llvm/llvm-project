@@ -1456,6 +1456,10 @@ public:
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return GFX13Insts; }
 
+  // \returns true if the target supports signed immediate offset for SMRD
+  // instructions.
+  bool hasSignedSMRDImmOffset() const { return getGeneration() >= GFX9; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

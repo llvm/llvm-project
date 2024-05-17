@@ -766,37 +766,37 @@ define i32 @v_permlane16_swap_b32_vv(i32 %old, i32 %src0) {
   ret i32 %result
 }
 
-; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src1, i32 %src2)
 define amdgpu_kernel void @v_permlane_bcast_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  %result= call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+  %result= call i32 @llvm.amdgcn.permlane.bcast(i32 %src0, i32 %src1, i32 %src2)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %src1, i32 %src2)
 define amdgpu_kernel void @v_permlane_up_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  %result= call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+  %result= call i32 @llvm.amdgcn.permlane.up(i32 %src0, i32 %src1, i32 %src2)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.down(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.down(i32 %src0, i32 %src1, i32 %src2)
 define amdgpu_kernel void @v_permlane_down_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  %result= call i32 @llvm.amdgcn.permlane.down(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+  %result= call i32 @llvm.amdgcn.permlane.down(i32 %src0, i32 %src1, i32 %src2)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src1, i32 %src2)
 define amdgpu_kernel void @v_permlane_xor_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  %result= call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src0, i32 %src1, i32 %src2)
+  %result= call i32 @llvm.amdgcn.permlane.xor(i32 %src0, i32 %src1, i32 %src2)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.idx.gen(i32 %src0, i32 %src0, i32 %src1)
+; CHECK: DIVERGENT:  %result = call i32 @llvm.amdgcn.permlane.idx.gen(i32 %src0, i32 %src1)
 define amdgpu_kernel void @v_permlane_idx_gen_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
-  %result= call i32 @llvm.amdgcn.permlane.idx.gen(i32 %src0, i32 %src0, i32 %src1)
+  %result= call i32 @llvm.amdgcn.permlane.idx.gen(i32 %src0, i32 %src1)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
@@ -878,11 +878,6 @@ declare <3 x i32> @llvm.amdgcn.ds.load.tr6.b96.v3i32(ptr addrspace(3))
 declare <8 x i16> @llvm.amdgcn.ds.load.tr16.b128.v8i16(ptr addrspace(3))
 
 declare i32 @llvm.amdgcn.permlane16.swap(i32, i32, i1 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.permlane.bcast(i32, i32, i32, i32)
-declare i32 @llvm.amdgcn.permlane.up(i32, i32, i32, i32)
-declare i32 @llvm.amdgcn.permlane.down(i32, i32, i32, i32)
-declare i32 @llvm.amdgcn.permlane.xor(i32, i32, i32, i32)
-declare i32 @llvm.amdgcn.permlane.idx.gen(i32, i32, i32)
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }
