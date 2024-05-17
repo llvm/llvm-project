@@ -1093,34 +1093,28 @@ public:
   const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
     return Visit(E->getSubExpr());
   }
-  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
-    return Visit(E->getSubExpr());
-  }
 };
 
 } // end anonymous namespace
 
 /// getLastDecl - Return the last FieldDecl in the struct.
 static const FieldDecl *getLastDecl(const RecordDecl *RD) {
-  const Decl *LastDecl = nullptr;
-  for (const Decl *D : RD->decls())
-    if (isa<FieldDecl>(D) || isa<RecordDecl>(D))
-      LastDecl = D;
+  const FieldDecl *LastFieldDecl = nullptr;
+  for (const FieldDecl *FD : RD->fields())
+    LastFieldDecl = FD;
 
-  if (const auto *LastRD = dyn_cast<RecordDecl>(LastDecl)) {
-    LastDecl = getLastDecl(LastRD);
-  } else if (const auto *LastFD = dyn_cast<FieldDecl>(LastDecl)) {
-    QualType Ty = LastFD->getType();
+  if (LastFieldDecl) {
+    QualType Ty = LastFieldDecl->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
 
     if (const RecordDecl *Rec = Ty->getAsRecordDecl())
       // The last FieldDecl is a structure. Look into that struct to find its
       // last FieldDecl.
-      LastDecl = getLastDecl(Rec);
+      LastFieldDecl = getLastDecl(Rec);
   }
 
-  return dyn_cast_if_present<FieldDecl>(LastDecl);
+  return LastFieldDecl;
 }
 
 /// tryToCalculateSubObjectSize - It may be possible to calculate the
@@ -1177,11 +1171,11 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
           getLangOpts().getStrictFlexArraysLevel();
       const RecordDecl *OuterRD =
           FD->getParent()->getOuterLexicalRecordContext();
-      const FieldDecl *LastFD = getLastDecl(OuterRD);
 
-      if (LastFD == FD && Decl::isFlexibleArrayMemberLike(
-                              Ctx, FD, FD->getType(), StrictFlexArraysLevel,
-                              /*IgnoreTemplateOrMacroSubstitution=*/true))
+      if (getLastDecl(OuterRD) == FD &&
+          Decl::isFlexibleArrayMemberLike(
+              Ctx, FD, FD->getType(), StrictFlexArraysLevel,
+              /*IgnoreTemplateOrMacroSubstitution=*/true))
         return ConstantInt::get(ResType, -1, /*isSigned=*/true);
     }
   }
