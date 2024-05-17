@@ -14,8 +14,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 
-#include <cstdint>
-
 namespace llvm {
 template <typename T> class ArrayRef;
 class Constant;
