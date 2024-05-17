@@ -333,7 +333,7 @@ DenseMap<Operation *, unsigned>
 generateOperationNumbering(FunctionOpInterface function) {
   unsigned index = 0;
   SetVector<Block *> blocks =
-      getTopologicallySortedBlocks(function.getFunctionBody());
+      getBlocksSortedByDominance(function.getFunctionBody());
   DenseMap<Operation *, unsigned> operationToIndexMap;
   for (Block *block : blocks) {
     index++; // We want block args to have their own number.
