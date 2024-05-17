@@ -782,6 +782,13 @@ def FeatureDot12Insts : SubtargetFeature<"dot12-insts",
   "Has v_dot2_f32_bf16 instructions"
 >;
 
+def FeatureDot13Insts : SubtargetFeature<"dot13-insts",
+  "HasDot13Insts",
+  "true",
+  "Has v_dot2c_f32_bf16 instructions"
+>;
+
+
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
@@ -1575,7 +1582,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
    FeatureFP6BF6ConversionScaleInsts,
-   FeatureDot12Insts
+   FeatureDot12Insts,
+   FeatureDot13Insts
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -2470,6 +2478,9 @@ def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
 
 def HasDot12Insts : Predicate<"Subtarget->hasDot12Insts()">,
   AssemblerPredicate<(all_of FeatureDot12Insts)>;
+
+def HasDot13Insts : Predicate<"Subtarget->hasDot13Insts()">,
+  AssemblerPredicate<(all_of FeatureDot13Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
