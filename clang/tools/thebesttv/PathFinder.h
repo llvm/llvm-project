@@ -9,10 +9,63 @@ struct ICFGPathFinder {
 
     std::set<std::vector<int>> results;
 
-    virtual void search(int source, int target,
-                        const std::vector<int> &pointsToPass,
-                        const std::set<int> &pointsToAvoid,
-                        int maxCallDepth) = 0;
+    void search(int source, int target, const std::vector<int> &pointsToPass,
+                const std::set<int> &pointsToAvoid, int maxCallDepth) {
+        if (pointsToAvoid.count(source)) {
+            logger.warn("Source is in pointsToAvoid!");
+            return;
+        }
+        if (pointsToAvoid.count(target)) {
+            logger.warn("Target is in pointsToAvoid!");
+            return;
+        }
+        for (int x : pointsToPass) {
+            if (pointsToAvoid.count(x)) {
+                logger.warn("Point to pass ({}) is in pointsToAvoid!", x);
+                return;
+            }
+        }
+
+        if (source == target) {
+            logger.info("Source the same as target, skip searching");
+            results.insert({source});
+            return;
+        }
+
+        std::vector<int> ptp;
+        ptp.push_back(source);
+        for (int x : pointsToPass) {
+            ptp.push_back(x);
+        }
+        ptp.push_back(target);
+
+        logger.info("=== ICFGPathFinder ===");
+        logger.info("Original path to search: {}", fmt::join(ptp, " "));
+
+        removeConsecutiveDuplicates(ptp);
+
+        logger.info("Deduplicated path: {}", fmt::join(ptp, " "));
+
+        _search(ptp, pointsToAvoid, maxCallDepth);
+    }
+
+  private:
+    virtual void _search(const std::vector<int> &pointsToPass,
+                         const std::set<int> &pointsToAvoid,
+                         int maxCallDepth) = 0;
+
+    static void removeConsecutiveDuplicates(std::vector<int> &v) {
+        if (v.size() <= 1)
+            return;
+        std::vector<int> res;
+        res.push_back(v[0]);
+        for (int i = 1; i < v.size(); i++) {
+            if (v[i] != v[i - 1]) {
+                res.push_back(v[i]);
+            }
+        }
+        v = res;
+    }
 };
 
 struct DfsPathFinder : public ICFGPathFinder {
@@ -27,13 +80,15 @@ struct DfsPathFinder : public ICFGPathFinder {
     std::stack<int> callStack; // 部分平衡的括号匹配
     std::set<int> callSites;
 
+  private:
     /**
      * TODO: 目前 pointsToAvoid 还没处理
      */
-    void search(int source, int target, const std::vector<int> &pointsToPass,
-                const std::set<int> &pointsToAvoid, int maxCallDepth) override {
-        this->source = source;
-        this->target = target;
+    void _search(const std::vector<int> &pointsToPass,
+                 const std::set<int> &pointsToAvoid,
+                 int maxCallDepth) override {
+        this->source = pointsToPass.front();
+        this->target = pointsToPass.back();
         this->maxCallDepth = maxCallDepth;
 
         logger.info("=== DfsPathFinder ===");
@@ -154,6 +209,7 @@ struct DijPathFinder : public ICFGPathFinder {
     DijPathFinder(const ICFG &icfg)
         : ICFGPathFinder(icfg), d(icfg.n), fa(icfg.n) {}
 
+  private:
     struct Node {
         int u, d, fa;
         bool operator<(const Node &b) const { return d > b.d; }
@@ -204,55 +260,10 @@ struct DijPathFinder : public ICFGPathFinder {
         return path;
     }
 
-    void removeConsecutiveDuplicates(std::vector<int> &v) {
-        if (v.size() <= 1)
-            return;
-        std::vector<int> res;
-        res.push_back(v[0]);
-        for (int i = 1; i < v.size(); i++) {
-            if (v[i] != v[i - 1]) {
-                res.push_back(v[i]);
-            }
-        }
-        v = res;
-    }
-
-    void search(int source, int target, const std::vector<int> &pointsToPass,
-                const std::set<int> &pointsToAvoid, int maxCallDepth) override {
-        if (pointsToAvoid.count(source)) {
-            logger.warn("Source is in pointsToAvoid!");
-            return;
-        }
-        if (pointsToAvoid.count(target)) {
-            logger.warn("Target is in pointsToAvoid!");
-            return;
-        }
-        for (int x : pointsToPass) {
-            if (pointsToAvoid.count(x)) {
-                logger.warn("Point to pass is in pointsToAvoid!");
-                return;
-            }
-        }
-
-        if (source == target) {
-            logger.info("Source the same as target, skip searching");
-            results.insert({source});
-            return;
-        }
-
-        std::vector<int> ptp;
-        ptp.push_back(source);
-        for (int x : pointsToPass) {
-            ptp.push_back(x);
-        }
-        ptp.push_back(target);
-
-        logger.info("=== DijPathFinder ===");
-        logger.info("Original path to search: {}", fmt::join(ptp, " "));
-
-        removeConsecutiveDuplicates(ptp);
-
-        logger.info("Deduplicated path: {}", fmt::join(ptp, " "));
+    void _search(const std::vector<int> &ptp,
+                 const std::set<int> &pointsToAvoid,
+                 int maxCallDepth) override {
+        int target = ptp.back();
 
         std::vector<int> path;
         for (int i = 0; i < ptp.size() - 1; i++) {
