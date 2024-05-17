@@ -19501,7 +19501,8 @@ static SDValue performBuildVectorCombine(SDNode *N,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
-  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+      (VT == MVT::v4f16 || VT == MVT::v4bf16)) {
     SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
             Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
     if (Elt0->getOpcode() == ISD::FP_ROUND &&

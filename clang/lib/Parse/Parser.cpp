@@ -1562,7 +1562,8 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
     // Parse the common declaration-specifiers piece.
     DeclSpec DS(AttrFactory);
-    ParseDeclarationSpecifiers(DS);
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo);
 
     // C99 6.9.1p6: 'each declaration in the declaration list shall have at
     // least one declarator'.
