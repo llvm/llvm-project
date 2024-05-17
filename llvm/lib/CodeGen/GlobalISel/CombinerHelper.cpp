@@ -6772,46 +6772,62 @@ bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
   if (CmpInst::isEquality(Pred))
     return false;
 
-  [[maybe_unused]] Register CmpLHS = Cmp->getLHSReg();
-  [[maybe_unused]] Register CmpRHS = Cmp->getRHSReg();
+  Register CmpLHS = Cmp->getLHSReg();
+  Register CmpRHS = Cmp->getRHSReg();
+
+  // We can swap CmpLHS and CmpRHS for higher hitrate.
+  if (True == CmpRHS && False == CmpLHS) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
 
   // (icmp X, Y) ? X : Y -> integer minmax.
   // see matchSelectPattern in ValueTracking.
   // Legality between G_SELECT and integer minmax can differ.
-  assert(True == CmpLHS && False == CmpRHS && "unexpected MIR pattern");
+  if (True == CmpLHS && False == CmpRHS) {
+    switch (Pred) {
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_UGE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMAX, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUMax(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_SGE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMAX, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSMax(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_ULE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMIN, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUMin(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_SLE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMIN, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSMin(DstReg, True, False);
+      };
+      return true;
+    }
+    default:
+      return false;
+    }
+  }
 
-  switch (Pred) {
-  case ICmpInst::ICMP_UGT:
-  case ICmpInst::ICMP_UGE: {
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMAX, DstTy}))
-      return false;
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUMax(DstReg, True, False); };
-    return true;
-  }
-  case ICmpInst::ICMP_SGT:
-  case ICmpInst::ICMP_SGE: {
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMAX, DstTy}))
-      return false;
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildSMax(DstReg, True, False); };
-    return true;
-  }
-  case ICmpInst::ICMP_ULT:
-  case ICmpInst::ICMP_ULE: {
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMIN, DstTy}))
-      return false;
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUMin(DstReg, True, False); };
-    return true;
-  }
-  case ICmpInst::ICMP_SLT:
-  case ICmpInst::ICMP_SLE: {
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMIN, DstTy}))
-      return false;
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildSMin(DstReg, True, False); };
-    return true;
-  }
-  default:
-    return false;
-  }
+  return false;
 }
 
 bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
