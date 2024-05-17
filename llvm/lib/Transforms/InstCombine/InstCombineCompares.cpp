@@ -8088,11 +8088,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_OLE:
         // Skip optimization: fsub x, y unless guaranteed !isinf(x) ||
         // !isinf(y).
-        if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
+        if (!LHSI->hasOneUse() || (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
             !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
                                   getSimplifyQuery().getWithInstruction(&I)) &&
             !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
-                                  getSimplifyQuery().getWithInstruction(&I)))
+                                  getSimplifyQuery().getWithInstruction(&I))))
           break;
 
         [[fallthrough]];

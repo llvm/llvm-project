@@ -1721,16 +1721,31 @@ define <2 x i1> @fcmp_une_sel_x_negx_with_any_fpzero_nnan_vec(<2 x i1> %cond, <2
 
 ; negative test - extra use
 
-define i1 @fcmp_ueq_fsub_const_extra_use(float %x, float %y) {
-; CHECK-LABEL: @fcmp_ueq_fsub_const_extra_use(
-; CHECK-NEXT:    [[FS:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
+define i1 @fcmp_ueq_fsub_nnan_const_extra_use(float %x, float %y) {
+; CHECK-LABEL: @fcmp_ueq_fsub_nnan_const_extra_use(
+; CHECK-NEXT:    [[FS:%.*]] = fsub nnan float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[FS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[FS]], 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ueq float [[FS]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %fs = fsub float %x, %y
+  %fs = fsub nnan float %x, %y
   call void @use(float %fs)
-  %cmp = fcmp ueq float %fs, 0.000000e+00
+  %cmp = fcmp nnan ueq float %fs, 0.000000e+00
+  ret i1 %cmp
+}
+
+; negative test - extra use
+
+define i1 @fcmp_oeq_fsub_ninf_const_extra_use(float %x, float %y) {
+; CHECK-LABEL: @fcmp_oeq_fsub_ninf_const_extra_use(
+; CHECK-NEXT:    [[FS:%.*]] = fsub ninf float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[FS]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf oeq float [[FS]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fs = fsub ninf float %x, %y
+  call void @use(float %fs)
+  %cmp = fcmp ninf oeq float %fs, 0.000000e+00
   ret i1 %cmp
 }
 
