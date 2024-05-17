@@ -17389,19 +17389,17 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
       DAG.isKnownToBeAPowerOfTwoFP(N1)) {
     bool NeedsCopySign =
         !Flags.hasNoSignedZeros() && !DAG.cannotBeOrderedNegativeFP(N0);
-    if (!NeedsCopySign || TLI.isOperationLegalOrCustom(ISD::FCOPYSIGN, VT)) {
-      SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
-      SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
-      SDValue MLA;
-      if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
-        MLA = DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, Rnd),
-                          N1, N0);
-      } else {
-        SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
-        MLA = DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
-      }
-      return NeedsCopySign ? DAG.getNode(ISD::FCOPYSIGN, DL, VT, MLA, N0) : MLA;
+    SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
+    SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
+    SDValue MLA;
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+      MLA = DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, Rnd),
+                        N1, N0);
+    } else {
+      SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
+      MLA = DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
     }
+    return NeedsCopySign ? DAG.getNode(ISD::FCOPYSIGN, DL, VT, MLA, N0) : MLA;
   }
 
   return SDValue();
