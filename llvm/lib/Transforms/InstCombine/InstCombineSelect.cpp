@@ -3986,6 +3986,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   // select Cond, !X, X -> xor Cond, X
+  // Note: We don't fold select Cond, Y, X -> X (iff X->Y & !X->!Y) here as
+  // it indicates that these two patterns should be canonicalized.
   if (CondVal->getType() == SI.getType() && impliesPoison(FalseVal, TrueVal) &&
       isImpliedCondition(FalseVal, TrueVal, DL, /*LHSIsTrue=*/true) == false &&
       isImpliedCondition(FalseVal, TrueVal, DL, /*LHSIsTrue=*/false) == true)
