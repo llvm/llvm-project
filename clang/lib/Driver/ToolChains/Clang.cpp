@@ -585,13 +585,20 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
                            ArgStringList &CmdArgs) {
   const Driver &D = TC.getDriver();
-  auto *ProfileClangArg = Args.getLastArg(options::OPT_fprofile_generate_gpu,
-                                          options::OPT_fno_profile_generate);
-  auto *ProfileLLVMArg =
+  auto *ProfileClangArg =
       Args.getLastArg(options::OPT_fprofile_instr_generate_gpu,
                       options::OPT_fno_profile_generate);
+  auto *ProfileLLVMArg = Args.getLastArg(options::OPT_fprofile_generate_gpu,
+                                         options::OPT_fno_profile_generate);
   auto *ProfileUseArg = Args.getLastArg(options::OPT_fprofile_use_gpu_EQ,
                                         options::OPT_fno_profile_instr_use);
+
+  auto *HostLLVMArg = Args.getLastArgNoClaim(options::OPT_fprofile_generate,
+                                             options::OPT_fprofile_generate_EQ);
+  auto *HostClangArg =
+      Args.getLastArgNoClaim(options::OPT_fprofile_instr_generate,
+                             options::OPT_fprofile_instr_generate_EQ);
+
   if (ProfileClangArg &&
       ProfileClangArg->getOption().matches(options::OPT_fno_profile_generate))
     ProfileClangArg = nullptr;
@@ -619,6 +626,18 @@ static void addPGOFlagsGPU(const ToolChain &TC, const ArgList &Args,
   if (ProfileUseArg && ProfileLLVMArg) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << ProfileLLVMArg->getSpelling() << ProfileUseArg->getSpelling();
+    return;
+  }
+
+  if (HostLLVMArg && ProfileClangArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << HostLLVMArg->getSpelling() << ProfileClangArg->getSpelling();
+    return;
+  }
+
+  if (HostClangArg && ProfileLLVMArg) {
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << HostClangArg->getSpelling() << ProfileLLVMArg->getSpelling();
     return;
   }
 
