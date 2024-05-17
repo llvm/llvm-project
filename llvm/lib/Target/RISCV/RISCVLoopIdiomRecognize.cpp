@@ -40,7 +40,6 @@ static cl::opt<bool> DisableByteCmp(
 // -> LMUL 4, 3 -> LMUL 8, etc.
 static cl::opt<unsigned>
     CustomLoopIdiomLMUL("riscv-loop-idiom-lmul", cl::Hidden, cl::init(1),
-                        cl::Optional,
                         cl::desc("Customize LMUL for vector loop."));
 
 namespace {
@@ -147,25 +146,6 @@ bool RISCVLoopIdiomRecognize::run(Loop *L) {
   return recognizeAndTransformByteCompare();
 }
 
-/// Match loop-invariant value.
-template <typename SubPattern_t> struct match_LoopInvariant {
-  SubPattern_t SubPattern;
-  const Loop *L;
-
-  match_LoopInvariant(const SubPattern_t &SP, const Loop *L)
-      : SubPattern(SP), L(L) {}
-
-  template <typename ITy> bool match(ITy *V) {
-    return L->isLoopInvariant(V) && SubPattern.match(V);
-  }
-};
-
-/// Matches if the value is loop-invariant.
-template <typename Ty>
-inline match_LoopInvariant<Ty> m_LoopInvariant(const Ty &M, const Loop *L) {
-  return match_LoopInvariant<Ty>(M, L);
-}
-
 bool RISCVLoopIdiomRecognize::recognizeAndTransformByteCompare() {
   if (DisableByteCmp)
     return false;
@@ -239,7 +219,7 @@ bool RISCVLoopIdiomRecognize::recognizeAndTransformByteCompare() {
     for (Instruction &I : *BB)
       if (&I != PN && &I != Index)
         for (User *U : I.users()) {
-          auto UI = dyn_cast<Instruction>(U);
+          auto *UI = dyn_cast<Instruction>(U);
           if (!CurLoop->contains(UI))
             return false;
         }
@@ -488,19 +468,19 @@ Value *RISCVLoopIdiomRecognize::expandFindMismatch(
   Value *LhsStartPage = Builder.CreateLShr(
       Builder.CreatePtrToInt(Builder.CreateGEP(LoadType, PtrA, ExtStart),
                              I64Type),
-      uint64_t(12));
+      12U);
   Value *LhsEndPage = Builder.CreateLShr(
       Builder.CreatePtrToInt(Builder.CreateGEP(LoadType, PtrA, ExtEnd),
                              I64Type),
-      uint64_t(12));
+      12U);
   Value *RhsStartPage = Builder.CreateLShr(
       Builder.CreatePtrToInt(Builder.CreateGEP(LoadType, PtrB, ExtStart),
                              I64Type),
-      uint64_t(12));
+      12U);
   Value *RhsEndPage = Builder.CreateLShr(
       Builder.CreatePtrToInt(Builder.CreateGEP(LoadType, PtrB, ExtEnd),
                              I64Type),
-      uint64_t(12));
+      12U);
   Value *LhsPageCmp = Builder.CreateICmpNE(LhsStartPage, LhsEndPage);
   Value *RhsPageCmp = Builder.CreateICmpNE(RhsStartPage, RhsEndPage);
 
@@ -573,7 +553,7 @@ Value *RISCVLoopIdiomRecognize::expandFindMismatch(
   Value *CTZ = Builder.CreateIntrinsic(
       Intrinsic::vp_cttz_elts, {ResType, RVVMatchCmp->getType()},
       {RVVMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true), AllTrueMask, RVL});
-  // RISC-V refines/lowers the poison returned by cttz.elts to -1.
+  // RISC-V refines/lowers the poison returned by vp.cttz.elts to -1.
   Value *MismatchFound =
       Builder.CreateICmpSGE(CTZ, ConstantInt::get(ResType, 0));
   auto *RVVEarlyExit =
