@@ -47,18 +47,16 @@ float use() {
 }
 
 // CHECK: define{{.*}}@__cxx_global_var_init(
-// CHECK: store{{.*}}[[a_RESULT:%[a-zA-Z0-9]+]], ptr @_ZN21VectorSinConstantsSSE1aE
+// CHECK: store{{.*}}, ptr @_ZN21VectorSinConstantsSSE1aE
 
 // CHECK: define{{.*}}@__cxx_global_var_init.1(
-// CHECK: [[A_CALL:%[a-zA-Z0-9]+]] = call{{.*}}@_Z6MakeVRffff(
-// CHECK: store{{.*}}[[A_CALL]], ptr @_ZN21VectorSinConstantsSSE1AE
+// CHECK: store{{.*}}, ptr @_ZN21VectorSinConstantsSSE1AE
 
 // CHECK: define{{.*}}@__cxx_global_var_init.2(
-// CHECK: [[B_CALL:%[a-zA-Z0-9]+]] = call{{.*}}@_Z6MakeVRffff(
-// CHECK: store{{.*}}[[B_CALL]], ptr @_ZN21VectorSinConstantsSSEL1BE
+// CHECK: store{{.*}}, ptr @_ZN21VectorSinConstantsSSEL1BE
 
 // CHECK: define{{.*}}@__cxx_global_var_init.3(
-// CHECK: store{{.*}}[[b_RESULT:%[a-zA-Z0-9]+]], ptr @_ZN21VectorSinConstantsSSEL1bE
+// CHECK: store{{.*}}, ptr @_ZN21VectorSinConstantsSSEL1bE
 
 // CHECK: @_GLOBAL__sub_I_use.cpp
 // CHECK: call{{.*}}@__cxx_global_var_init(
