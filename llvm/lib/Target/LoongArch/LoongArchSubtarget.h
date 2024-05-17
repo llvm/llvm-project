@@ -91,6 +91,10 @@ public:
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }
+  bool isSoftFPABI() const {
+    return TargetABI == LoongArchABI::ABI_LP64S ||
+           TargetABI == LoongArchABI::ABI_ILP32S;
+  }
   bool isXRaySupported() const override { return is64Bit(); }
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }

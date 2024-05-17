@@ -6,7 +6,7 @@ define signext i32 @convert_float_to_i32(i32 %tmp, float %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bstrpick.d $a0, $a1, 31, 0
+; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    bl %plt(__fixsfsi)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
