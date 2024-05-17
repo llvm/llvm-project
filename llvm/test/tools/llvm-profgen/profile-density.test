@@ -4,10 +4,10 @@
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density-cs.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t3 --show-density -hot-function-density-threshold=1 &> %t4
 ; RUN: FileCheck %s --input-file %t4 --check-prefix=CHECK-DENSITY-CS
 
-;CHECK-DENSITY: Sample PGO is estimated to optimize better with 3.1x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
-;CHECK-DENSITY: Minimum profile density for hot functions with top 99.00% total samples: 3.2
+;CHECK-DENSITY: Sample PGO is estimated to optimize better with 2.9x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
+;CHECK-DENSITY: Functions with density >= 3.5 account for 99.00% total sample counts.
 
-;CHECK-DENSITY-CS: Minimum profile density for hot functions with top 99.00% total samples: 619.0
+;CHECK-DENSITY-CS: Functions with density >= 800.1 account for 99.00% total sample counts.
 
 ; original code:
 ; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out

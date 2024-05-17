@@ -76,17 +76,16 @@ static cl::opt<int, true> CSProfMaxContextDepth(
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth));
 
 static cl::opt<double> HotFunctionDensityThreshold(
-    "hot-function-density-threshold", llvm::cl::init(1000),
-    llvm::cl::desc(
-        "specify density threshold for hot functions (default: 1000)"),
+    "hot-function-density-threshold", llvm::cl::init(20),
+    llvm::cl::desc("specify density threshold for hot functions (default: 20)"),
     llvm::cl::Optional);
 static cl::opt<bool> ShowDensity("show-density", llvm::cl::init(false),
                                  llvm::cl::desc("show profile density details"),
                                  llvm::cl::Optional);
-static cl::opt<int> ProfileDensityHotFuncCutOff(
-    "profile-density-hot-func-cutoff", llvm::cl::init(990000),
-    llvm::cl::desc("Total sample cutoff for hot functions used to calculate "
-                   "the profile density."));
+static cl::opt<int> ProfileDensityCutOffHot(
+    "profile-density-cutoff-hot", llvm::cl::init(990000),
+    llvm::cl::desc("Total samples cutoff for functions used to calculate "
+                   "profile density."));
 
 static cl::opt<bool> UpdateTotalSamples(
     "update-total-samples", llvm::cl::init(false),
@@ -181,10 +180,9 @@ void ProfileGeneratorBase::write() {
   write(std::move(WriterOrErr.get()), ProfileMap);
 }
 
-void ProfileGeneratorBase::showDensitySuggestion(double Density,
-                                                 int DensityCutoffHot) {
+void ProfileGeneratorBase::showDensitySuggestion(double Density) {
   if (Density == 0.0)
-    WithColor::warning() << "The --profile-summary-cutoff-hot option may be "
+    WithColor::warning() << "The --profile-density-cutoff-hot option may be "
                             "set too low. Please check your command.\n";
   else if (Density < HotFunctionDensityThreshold)
     WithColor::warning()
@@ -194,9 +192,11 @@ void ProfileGeneratorBase::showDensitySuggestion(double Density,
            "profiling for longer duration to get more samples.\n";
 
   if (ShowDensity)
-    outs() << "Minimum profile density for hot functions with top "
-           << format("%.2f", static_cast<double>(DensityCutoffHot) / 10000)
-           << "% total samples: " << format("%.1f", Density) << "\n";
+    outs() << "Functions with density >= " << format("%.1f", Density)
+           << " account for "
+           << format("%.2f",
+                     static_cast<double>(ProfileDensityCutOffHot) / 10000)
+           << "% total sample counts.\n";
 }
 
 bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
@@ -239,32 +239,6 @@ void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
     if (filterAmbiguousProfile(FS->second))
       ProfileMap.erase(FS);
   }
-}
-
-double ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles,
-                                              uint64_t HotCntThreshold) {
-  double Density = DBL_MAX;
-  std::vector<const FunctionSamples *> HotFuncs;
-  for (auto &I : Profiles) {
-    auto &FuncSamples = I.second;
-    if (FuncSamples.getTotalSamples() < HotCntThreshold)
-      continue;
-    HotFuncs.emplace_back(&FuncSamples);
-  }
-
-  for (auto *FuncSamples : HotFuncs) {
-    auto *Func = Binary->getBinaryFunction(FuncSamples->getFunction());
-    if (!Func)
-      continue;
-    uint64_t FuncSize = Func->getFuncSize();
-    if (FuncSize == 0)
-      continue;
-    Density =
-        std::min(Density, static_cast<double>(FuncSamples->getTotalSamples()) /
-                              FuncSize);
-  }
-
-  return Density == DBL_MAX ? 0.0 : Density;
 }
 
 void ProfileGeneratorBase::findDisjointRanges(RangeSample &DisjointRanges,
@@ -771,10 +745,78 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
   }
 }
 
+void ProfileGeneratorBase::calculateDensity(
+    const FunctionSamples &FSamples,
+    std::vector<std::pair<double, uint64_t>> &DensityList,
+    uint64_t &TotalProfileSamples) {
+  uint64_t TotalBodySamples = 0;
+  uint64_t FuncBodySize = 0;
+  for (const auto &I : FSamples.getBodySamples()) {
+    TotalBodySamples += I.second.getSamples();
+    FuncBodySize++;
+  }
+
+  // The whole function could be inlined and optimized out, use the callsite
+  // head samples instead to estimate the body count.
+  if (FuncBodySize == 0) {
+    for (const auto &CallsiteSamples : FSamples.getCallsiteSamples()) {
+      FuncBodySize++;
+      for (const auto &Callee : CallsiteSamples.second)
+        TotalBodySamples += Callee.second.getHeadSamplesEstimate();
+    }
+  }
+
+  if (FuncBodySize == 0)
+    return;
+
+  double FuncDensity = static_cast<double>(TotalBodySamples) / FuncBodySize;
+  TotalProfileSamples += TotalBodySamples;
+  DensityList.emplace_back(FuncDensity, TotalBodySamples);
+}
+
+// Calculate Profile-density:
+// Calculate the density for each function and sort them in descending order,
+// iterate them once their accumulated total samples exceeds the
+// percentage_threshold(cut-off) of total profile samples, the profile-density
+// is the last(minimum) function-density of the processed functions, which means
+// all the functions hot to perf are on good density if the profile-density is
+// good. The percentage_threshold(--profile-density-cutoff-hot) is configurable
+// depending on how much regression the system want to tolerate.
+double
+ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles) {
+  double ProfileDensity = 0.0;
+
+  uint64_t TotalProfileSamples = 0;
+  // A list of the function profile density and its total samples.
+  std::vector<std::pair<double, uint64_t>> FuncDensityList;
+  for (const auto &I : Profiles)
+    calculateDensity(I.second, FuncDensityList, TotalProfileSamples);
+
+  // Sorted by the density in descending order.
+  llvm::stable_sort(FuncDensityList, [&](const std::pair<double, uint64_t> &A,
+                                         const std::pair<double, uint64_t> &B) {
+    if (A.first != B.first)
+      return A.first > B.first;
+    return A.second < B.second;
+  });
+
+  uint64_t AccumulatedSamples = 0;
+  for (const auto &P : FuncDensityList) {
+    AccumulatedSamples += P.second;
+    ProfileDensity = P.first;
+    if (AccumulatedSamples >= TotalProfileSamples *
+                                  static_cast<float>(ProfileDensityCutOffHot) /
+                                  1000000)
+      break;
+  }
+
+  return ProfileDensity;
+}
+
 void ProfileGeneratorBase::calculateAndShowDensity(
     const SampleProfileMap &Profiles) {
-  double Density = calculateDensity(Profiles, HotCountThreshold);
-  showDensitySuggestion(Density, ProfileSummaryCutoffHot);
+  double Density = calculateDensity(Profiles);
+  showDensitySuggestion(Density);
 }
 
 FunctionSamples *
@@ -1035,78 +1077,6 @@ void CSProfileGenerator::convertToProfileMap() {
   IsProfileValidOnTrie = false;
 }
 
-void CSProfileGenerator::calculateAndShowDensity(
-    SampleContextTracker &CTracker) {
-  double Density = calculateDensity(CTracker);
-  showDensitySuggestion(Density, ProfileDensityHotFuncCutOff);
-}
-
-// Calculate Profile-density:
-// Sort the list of function-density in descending order and iterate them once
-// their accumulated total samples exceeds the percentage_threshold of total
-// profile samples, the profile-density is the last(minimum) function-density of
-// the processed functions, which means all the functions significant to perf
-// are on good density if the profile-density is good, or in other words, if the
-// profile-density is bad, the accumulated samples for all the bad density
-// profile exceeds the (100% - percentage_threshold).
-// The percentage_threshold(--profile-density-hot-func-cutoff) is configurable
-// depending on how much regression the system want to tolerate.
-double CSProfileGenerator::calculateDensity(SampleContextTracker &CTracker) {
-  double ProfileDensity = 0.0;
-
-  uint64_t TotalProfileSamples = 0;
-  // A list of the function profile density and total samples.
-  std::vector<std::pair<double, uint64_t>> DensityList;
-  for (const auto *Node : CTracker) {
-    const auto *FSamples = Node->getFunctionSamples();
-    if (!FSamples)
-      continue;
-
-    uint64_t TotalBodySamples = 0;
-    uint64_t FuncBodySize = 0;
-    for (const auto &I : FSamples->getBodySamples()) {
-      TotalBodySamples += I.second.getSamples();
-      FuncBodySize++;
-    }
-    // The whole function could be inlined and optimized out, use the callsite
-    // head samples instead to estimate the body count.
-    if (FuncBodySize == 0) {
-      for (const auto &CallsiteSamples : FSamples->getCallsiteSamples()) {
-        FuncBodySize++;
-        for (const auto &Callee : CallsiteSamples.second)
-          TotalBodySamples += Callee.second.getHeadSamplesEstimate();
-      }
-    }
-
-    if (FuncBodySize == 0)
-      continue;
-
-    double FuncDensity = static_cast<double>(TotalBodySamples) / FuncBodySize;
-    TotalProfileSamples += TotalBodySamples;
-    DensityList.emplace_back(FuncDensity, TotalBodySamples);
-  }
-
-  // Sorted by the density in descending order.
-  llvm::stable_sort(DensityList, [&](const std::pair<double, uint64_t> &A,
-                                     const std::pair<double, uint64_t> &B) {
-    if (A.first != B.first)
-      return A.first > B.first;
-    return A.second < B.second;
-  });
-
-  uint64_t AccumulatedSamples = 0;
-  for (const auto &P : DensityList) {
-    AccumulatedSamples += P.second;
-    ProfileDensity = P.first;
-    if (AccumulatedSamples >=
-        TotalProfileSamples * static_cast<float>(ProfileDensityHotFuncCutOff) /
-            1000000)
-      break;
-  }
-
-  return ProfileDensity;
-}
-
 void CSProfileGenerator::postProcessProfiles() {
   // Compute hot/cold threshold based on profile. This will be used for cold
   // context profile merging/trimming.
@@ -1116,7 +1086,6 @@ void CSProfileGenerator::postProcessProfiles() {
   // inline decisions.
   if (EnableCSPreInliner) {
     ContextTracker.populateFuncToCtxtMap();
-    calculateAndShowDensity(ContextTracker);
     CSPreInliner(ContextTracker, *Binary, Summary.get()).run();
     // Turn off the profile merger by default unless it is explicitly enabled.
     if (!CSProfMergeColdContext.getNumOccurrences())
@@ -1133,19 +1102,13 @@ void CSProfileGenerator::postProcessProfiles() {
             CSProfMaxColdContextDepth, EnableCSPreInliner);
   }
 
-  // Merge function samples of CS profile to calculate profile density.
-  sampleprof::SampleProfileMap ContextLessProfiles;
-  ProfileConverter::flattenProfile(ProfileMap, ContextLessProfiles, true);
-
-  if (!EnableCSPreInliner)
-    ProfileGeneratorBase::calculateAndShowDensity(ContextLessProfiles);
-
   if (GenCSNestedProfile) {
     ProfileConverter CSConverter(ProfileMap);
     CSConverter.convertCSProfiles();
     FunctionSamples::ProfileIsCS = false;
   }
   filterAmbiguousProfile(ProfileMap);
+  ProfileGeneratorBase::calculateAndShowDensity(ProfileMap);
 }
 
 void ProfileGeneratorBase::computeSummaryAndThreshold(
