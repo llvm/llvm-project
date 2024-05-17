@@ -17,7 +17,10 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
             # Use a shim to ensure that the process is ready to be attached from
             # the get-go.
             self._exe_to_run = "shim"
-            self._run_args = [self.getBuildArtifact(self._exe_to_attach)]
+            self._exe_to_attach = lldbutil.install_to_target(
+                self, self.getBuildArtifact(self._exe_to_attach)
+            )
+            self._run_args = [self._exe_to_attach]
             self.build(dictionary={"EXE": self._exe_to_run, "CXX_SOURCES": "shim.cpp"})
         else:
             self._exe_to_run = self._exe_to_attach
@@ -51,9 +54,6 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.set_inferior_startup_attach_manually()
         server = self.connect_to_debug_monitor()
         self.do_handshake()
-
-        if self._run_args:
-            self._run_args[0] = lldbutil.install_to_target(self, self._run_args[0])
 
         # Launch the first inferior (we shouldn't attach to this one).
         self._launch_and_wait_for_init()
@@ -104,9 +104,6 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         server = self.connect_to_debug_monitor()
         self.do_handshake()
 
-        if self._run_args:
-            self._run_args[0] = lldbutil.install_to_target(self, self._run_args[0])
-
         inferior = self._launch_and_wait_for_init()
 
         # Add attach packets.
@@ -146,9 +143,6 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.set_inferior_startup_attach_manually()
         server = self.connect_to_debug_monitor()
         self.do_handshake()
-
-        if self._run_args:
-            self._run_args[0] = lldbutil.install_to_target(self, self._run_args[0])
 
         self.test_sequence.add_log_lines([self._attach_packet("vAttachOrWait")], True)
         # Run the stream until attachWait.
