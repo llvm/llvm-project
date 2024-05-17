@@ -108,15 +108,17 @@ class CommandLineCompletionTestCase(TestBase):
         )
         err = lldb.SBError()
         local_spec = lldb.SBFileSpec(self.getBuildArtifact("libshared.so"))
-        remote_spec = (
-            lldb.SBFileSpec(
-                lldbutil.append_to_process_working_directory(self, "libshared.so"),
-                False,
+        if lldb.remote_platform:
+            self.process().LoadImage(
+                local_spec,
+                lldb.SBFileSpec(
+                    lldbutil.append_to_process_working_directory(self, "libshared.so"),
+                    False,
+                ),
+                err,
             )
-            if lldb.remote_platform
-            else lldb.SBFileSpec()
-        )
-        self.process().LoadImage(local_spec, remote_spec, err)
+        else:
+            self.process().LoadImage(local_spec, err)
         self.assertSuccess(err)
 
         self.complete_from_to("process unload ", "process unload 0")
