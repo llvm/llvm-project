@@ -3649,3 +3649,6 @@ def int_aarch64_sve_pmov_to_pred_lane_zero : SVE2_1VectorArg_Pred_Intrinsic;
 def int_aarch64_sve_pmov_to_vector_lane_merging : SVE2_Pred_1VectorArgIndexed_Intrinsic;
    
 def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;
+
+def int_aarch64_sme_mopa_nonwide : SME_OuterProduct_Intrinsic;
+def int_aarch64_sme_mops_nonwide : SME_OuterProduct_Intrinsic;

@@ -946,14 +946,14 @@ bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
 
   // Packed operations do not have a fabs modifier.
   return VT == MVT::f32 || VT == MVT::f64 ||
-         (Subtarget->has16BitInsts() && VT == MVT::f16);
+         (Subtarget->has16BitInsts() && (VT == MVT::f16 || VT == MVT::bf16));
 }
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
   assert(VT.isFloatingPoint());
   // Report this based on the end legalized type.
   VT = VT.getScalarType();
-  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16;
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16 || VT == MVT::bf16;
 }
 
 bool AMDGPUTargetLowering:: storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,

@@ -1193,6 +1193,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).

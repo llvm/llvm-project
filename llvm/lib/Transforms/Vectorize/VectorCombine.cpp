@@ -1729,7 +1729,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       return false;
 
     // Look for an identity value.
-    if (Item[0].second == 0 && Item[0].first->getType() == Ty &&
+    if (Item[0].second == 0 &&
+        cast<FixedVectorType>(Item[0].first->getType())->getNumElements() ==
+            Ty->getNumElements() &&
         all_of(drop_begin(enumerate(Item)), [&](const auto &E) {
           return !E.value().first || (E.value().first == Item[0].first &&
                                       E.value().second == (int)E.index());
@@ -1773,6 +1775,20 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, 1));
     } else if (isa<UnaryOperator>(Item[0].first)) {
       Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, 0));
+    } else if (auto *II = dyn_cast<IntrinsicInst>(Item[0].first);
+               II && isTriviallyVectorizable(II->getIntrinsicID())) {
+      for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {
+        if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Op)) {
+          if (!all_of(drop_begin(Item), [&](InstLane &IL) {
+                return !IL.first ||
+                       (cast<Instruction>(IL.first)->getOperand(Op) ==
+                        cast<Instruction>(Item[0].first)->getOperand(Op));
+              }))
+            return false;
+          continue;
+        }
+        Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, Op));
+      }
     } else {
       return false;
     }
@@ -1799,13 +1815,24 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     }
 
     auto *I = cast<Instruction>(Item[0].first);
-    SmallVector<Value *> Ops(I->getNumOperands());
-    for (unsigned Idx = 0, E = I->getNumOperands(); Idx < E; Idx++)
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    unsigned NumOps = I->getNumOperands() - (II ? 1 : 0);
+    SmallVector<Value *> Ops(NumOps);
+    for (unsigned Idx = 0; Idx < NumOps; Idx++) {
+      if (II && isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Idx)) {
+        Ops[Idx] = II->getOperand(Idx);
+        continue;
+      }
       Ops[Idx] = Generate(GenerateInstLaneVectorFromOperand(Item, Idx));
+    }
     Builder.SetInsertPoint(I);
+    Type *DstTy = FixedVectorType::get(I->getType()->getScalarType(),
+                                       Ty->getNumElements());
     if (auto BI = dyn_cast<BinaryOperator>(I))
       return Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
                                  Ops[0], Ops[1]);
+    if (II)
+      return Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
     assert(isa<UnaryInstruction>(I) &&
            "Unexpected instruction type in Generate");
     return Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);

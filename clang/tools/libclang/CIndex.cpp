@@ -743,14 +743,10 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   }
 
   // Visit the template arguments used in the specialization.
-  if (TypeSourceInfo *SpecType = D->getTypeAsWritten()) {
-    TypeLoc TL = SpecType->getTypeLoc();
-    if (TemplateSpecializationTypeLoc TSTLoc =
-            TL.getAs<TemplateSpecializationTypeLoc>()) {
-      for (unsigned I = 0, N = TSTLoc.getNumArgs(); I != N; ++I)
-        if (VisitTemplateArgumentLoc(TSTLoc.getArgLoc(I)))
-          return true;
-    }
+  if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {
+    for (const TemplateArgumentLoc &Arg : ArgsWritten->arguments())
+      if (VisitTemplateArgumentLoc(Arg))
+        return true;
   }
 
   return ShouldVisitBody && VisitCXXRecordDecl(D);
@@ -2857,6 +2853,8 @@ void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
   for (Expr *QE : C.getQueueIdExprs())
     Visitor.AddStmt(QE);
 }
+void OpenACCClauseEnqueue::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
@@ -5665,16 +5663,19 @@ CXString clang_getCursorDisplayName(CXCursor C) {
 
   if (const ClassTemplateSpecializationDecl *ClassSpec =
           dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    // If the type was explicitly written, use that.
-    if (TypeSourceInfo *TSInfo = ClassSpec->getTypeAsWritten())
-      return cxstring::createDup(TSInfo->getType().getAsString(Policy));
-
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    printTemplateArgumentList(
-        OS, ClassSpec->getTemplateArgs().asArray(), Policy,
-        ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    // If the template arguments were written explicitly, use them..
+    if (const auto *ArgsWritten = ClassSpec->getTemplateArgsAsWritten()) {
+      printTemplateArgumentList(
+          OS, ArgsWritten->arguments(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    } else {
+      printTemplateArgumentList(
+          OS, ClassSpec->getTemplateArgs().asArray(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    }
     return cxstring::createDup(OS.str());
   }
 

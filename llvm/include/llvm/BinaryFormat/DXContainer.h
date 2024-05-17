@@ -103,8 +103,8 @@ struct PartHeader {
 
 struct BitcodeHeader {
   uint8_t Magic[4];     // ACSII "DXIL".
-  uint8_t MajorVersion; // DXIL version.
   uint8_t MinorVersion; // DXIL version.
+  uint8_t MajorVersion; // DXIL version.
   uint16_t Unused;
   uint32_t Offset; // Offset to LLVM bitcode (from start of header).
   uint32_t Size;   // Size of LLVM bitcode (in bytes).
@@ -119,8 +119,7 @@ struct BitcodeHeader {
 };
 
 struct ProgramHeader {
-  uint8_t MinorVersion : 4;
-  uint8_t MajorVersion : 4;
+  uint8_t Version;
   uint8_t Unused;
   uint16_t ShaderKind;
   uint32_t Size; // Size in uint32_t words including this header.
@@ -130,6 +129,11 @@ struct ProgramHeader {
     sys::swapByteOrder(ShaderKind);
     sys::swapByteOrder(Size);
     Bitcode.swapBytes();
+  }
+  uint8_t getMajorVersion() { return Version >> 4; }
+  uint8_t getMinorVersion() { return Version & 0xF; }
+  static uint8_t getVersion(uint8_t Major, uint8_t Minor) {
+    return (Major << 4) | Minor;
   }
 };
 

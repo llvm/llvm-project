@@ -39,6 +39,10 @@ struct RISCVSupportedExtension {
 struct RISCVProfile {
   StringLiteral Name;
   StringLiteral MArch;
+
+  bool operator<(const RISCVProfile &RHS) const {
+    return StringRef(Name) < StringRef(RHS.Name);
+  }
 };
 
 } // end anonymous namespace
@@ -61,6 +65,10 @@ static void verifyTables() {
            "Extensions are not sorted by name");
     assert(llvm::is_sorted(SupportedExperimentalExtensions) &&
            "Experimental extensions are not sorted by name");
+    assert(llvm::is_sorted(SupportedProfiles) &&
+           "Profiles are not sorted by name");
+    assert(llvm::is_sorted(SupportedExperimentalProfiles) &&
+           "Experimental profiles are not sorted by name");
     TableChecked.store(true, std::memory_order_relaxed);
   }
 #endif
@@ -100,6 +108,10 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
 
   outs() << "\nSupported Profiles\n";
   for (const auto &P : SupportedProfiles)
+    outs().indent(4) << P.Name << "\n";
+
+  outs() << "\nExperimental Profiles\n";
+  for (const auto &P : SupportedExperimentalProfiles)
     outs().indent(4) << P.Name << "\n";
 
   outs() << "\nUse -march to specify the target's extension.\n"
@@ -451,9 +463,18 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   // Each extension is of the form ${name}${major_version}p${minor_version}
   // and separated by _. Split by _ and then extract the name and version
   // information for each extension.
-  SmallVector<StringRef, 8> Split;
-  Arch.split(Split, '_');
-  for (StringRef Ext : Split) {
+  while (!Arch.empty()) {
+    if (Arch[0] == '_') {
+      if (Arch.size() == 1 || Arch[1] == '_')
+        return createStringError(errc::invalid_argument,
+                                 "extension name missing after separator '_'");
+      Arch = Arch.drop_front();
+    }
+
+    size_t Idx = Arch.find('_');
+    StringRef Ext = Arch.slice(0, Idx);
+    Arch = Arch.slice(Idx, StringRef::npos);
+
     StringRef Prefix, MinorVersionStr;
     std::tie(Prefix, MinorVersionStr) = Ext.rsplit('p');
     if (MinorVersionStr.empty())
@@ -599,12 +620,25 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     XLen = 64;
   } else {
     // Try parsing as a profile.
-    auto I = llvm::upper_bound(SupportedProfiles, Arch,
-                               [](StringRef Arch, const RISCVProfile &Profile) {
-                                 return Arch < Profile.Name;
-                               });
-
-    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
+    auto ProfileCmp = [](StringRef Arch, const RISCVProfile &Profile) {
+      return Arch < Profile.Name;
+    };
+    auto I = llvm::upper_bound(SupportedProfiles, Arch, ProfileCmp);
+    bool FoundProfile = I != std::begin(SupportedProfiles) &&
+                        Arch.starts_with(std::prev(I)->Name);
+    if (!FoundProfile) {
+      I = llvm::upper_bound(SupportedExperimentalProfiles, Arch, ProfileCmp);
+      FoundProfile = (I != std::begin(SupportedExperimentalProfiles) &&
+                      Arch.starts_with(std::prev(I)->Name));
+      if (FoundProfile && !EnableExperimentalExtension) {
+        return createStringError(errc::invalid_argument,
+                                 "requires '-menable-experimental-extensions' "
+                                 "for profile '" +
+                                     std::prev(I)->Name + "'");
+      }
+    }
+    if (FoundProfile) {
+      --I;
       std::string NewArch = I->MArch.str();
       StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
@@ -651,10 +685,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   }
 
-  if (Arch.back() == '_')
-    return createStringError(errc::invalid_argument,
-                             "extension name missing after separator '_'");
-
   // Skip baseline.
   StringRef Exts = Arch.drop_front(1);
 
@@ -694,18 +724,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // Consume the base ISA version number and any '_' between rvxxx and the
   // first extension
   Exts = Exts.drop_front(ConsumeLength);
-  Exts.consume_front("_");
 
-  SmallVector<StringRef, 8> SplitExts;
-  // Only split if the string is not empty. Otherwise the split will push an
-  // empty string into the vector.
-  if (!Exts.empty())
-    Exts.split(SplitExts, '_');
+  while (!Exts.empty()) {
+    if (Exts.front() == '_') {
+      if (Exts.size() == 1 || Exts[1] == '_')
+        return createStringError(errc::invalid_argument,
+                                 "extension name missing after separator '_'");
+      Exts = Exts.drop_front();
+    }
 
-  for (auto Ext : SplitExts) {
-    if (Ext.empty())
-      return createStringError(errc::invalid_argument,
-                               "extension name missing after separator '_'");
+    size_t Idx = Exts.find('_');
+    StringRef Ext = Exts.slice(0, Idx);
+    Exts = Exts.slice(Idx, StringRef::npos);
 
     do {
       if (RISCVISAUtils::AllStdExts.contains(Ext.front())) {
@@ -753,12 +783,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 }
 
 Error RISCVISAInfo::checkDependency() {
+  bool HasE = Exts.count("e") != 0;
+  bool HasI = Exts.count("i") != 0;
   bool HasC = Exts.count("c") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
+
+  if (HasI && HasE)
+    return createStringError(errc::invalid_argument,
+                             "'I' and 'E' extensions are incompatible");
 
   if (HasF && HasZfinx)
     return createStringError(errc::invalid_argument,
@@ -847,6 +883,9 @@ void RISCVISAInfo::updateImplication() {
     addExtension("i", Version.value());
   }
 
+  if (HasE && HasI)
+    Exts.erase("i");
+
   assert(llvm::is_sorted(ImpliedExts) && "Table not sorted by Name");
 
   // This loop may execute over 1 iteration since implication can be layered
@@ -890,7 +929,7 @@ void RISCVISAInfo::updateCombination() {
   do {
     MadeChange = false;
     for (StringRef CombineExt : CombineIntoExts) {
-      if (hasExtension(CombineExt))
+      if (Exts.count(CombineExt.str()))
         continue;
 
       // Look up the extension in the ImpliesExt table to find everything it
@@ -899,7 +938,7 @@ void RISCVISAInfo::updateCombination() {
                                     std::end(ImpliedExts), CombineExt);
       bool HasAllRequiredFeatures = std::all_of(
           Range.first, Range.second, [&](const ImpliedExtsEntry &Implied) {
-            return hasExtension(Implied.ImpliedExt);
+            return Exts.count(Implied.ImpliedExt);
           });
       if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
@@ -989,19 +1028,19 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
   if (XLen == 32) {
-    if (hasExtension("e"))
+    if (Exts.count("e"))
       return "ilp32e";
-    if (hasExtension("d"))
+    if (Exts.count("d"))
       return "ilp32d";
-    if (hasExtension("f"))
+    if (Exts.count("f"))
       return "ilp32f";
     return "ilp32";
   } else if (XLen == 64) {
-    if (hasExtension("e"))
+    if (Exts.count("e"))
       return "lp64e";
-    if (hasExtension("d"))
+    if (Exts.count("d"))
       return "lp64d";
-    if (hasExtension("f"))
+    if (Exts.count("f"))
       return "lp64f";
     return "lp64";
   }

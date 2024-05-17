@@ -48,37 +48,41 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#undef GET_SUPPORTED_EXTENSIONS\n\n";
 
   std::vector<Record *> Extensions =
-      Records.getAllDerivedDefinitions("RISCVExtension");
+      Records.getAllDerivedDefinitionsIfDefined("RISCVExtension");
   llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
     return getExtensionName(Rec1) < getExtensionName(Rec2);
   });
 
-  printExtensionTable(OS, Extensions, /*Experimental=*/false);
-  printExtensionTable(OS, Extensions, /*Experimental=*/true);
+  if (!Extensions.empty()) {
+    printExtensionTable(OS, Extensions, /*Experimental=*/false);
+    printExtensionTable(OS, Extensions, /*Experimental=*/true);
+  }
 
   OS << "#endif // GET_SUPPORTED_EXTENSIONS\n\n";
 
   OS << "#ifdef GET_IMPLIED_EXTENSIONS\n";
   OS << "#undef GET_IMPLIED_EXTENSIONS\n\n";
 
-  OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
-  for (Record *Ext : Extensions) {
-    auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
-    if (ImpliesList.empty())
-      continue;
-
-    StringRef Name = getExtensionName(Ext);
-
-    for (auto *ImpliedExt : ImpliesList) {
-      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
+  if (!Extensions.empty()) {
+    OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
+    for (Record *Ext : Extensions) {
+      auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
+      if (ImpliesList.empty())
         continue;
 
-      OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
-         << "\"},\n";
-    }
-  }
+      StringRef Name = getExtensionName(Ext);
 
-  OS << "};\n\n";
+      for (auto *ImpliedExt : ImpliesList) {
+        if (!ImpliedExt->isSubClassOf("RISCVExtension"))
+          continue;
+
+        OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
+           << "\"},\n";
+      }
+    }
+
+    OS << "};\n\n";
+  }
 
   OS << "#endif // GET_IMPLIED_EXTENSIONS\n\n";
 }
@@ -118,22 +122,42 @@ static void printMArch(raw_ostream &OS, const std::vector<Record *> &Features) {
     OS << LS << Ext.first << Ext.second.Major << 'p' << Ext.second.Minor;
 }
 
-static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
-  OS << "#ifdef GET_SUPPORTED_PROFILES\n";
-  OS << "#undef GET_SUPPORTED_PROFILES\n\n";
-
-  OS << "static constexpr RISCVProfile SupportedProfiles[] = {\n";
-
-  auto Profiles = Records.getAllDerivedDefinitions("RISCVProfile");
-  llvm::sort(Profiles, LessRecordFieldName());
+static void printProfileTable(raw_ostream &OS,
+                              const std::vector<Record *> &Profiles,
+                              bool Experimental) {
+  OS << "static constexpr RISCVProfile Supported";
+  if (Experimental)
+    OS << "Experimental";
+  OS << "Profiles[] = {\n";
 
   for (const Record *Rec : Profiles) {
-    OS.indent(4) << "{\"" << Rec->getValueAsString("Name") << "\",\"";
+    if (Rec->getValueAsBit("Experimental") != Experimental)
+      continue;
+
+    StringRef Name = Rec->getValueAsString("Name");
+    Name.consume_front("experimental-");
+    OS.indent(4) << "{\"" << Name << "\",\"";
     printMArch(OS, Rec->getValueAsListOfDefs("Implies"));
     OS << "\"},\n";
   }
 
   OS << "};\n\n";
+}
+
+static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef GET_SUPPORTED_PROFILES\n";
+  OS << "#undef GET_SUPPORTED_PROFILES\n\n";
+
+  auto Profiles = Records.getAllDerivedDefinitionsIfDefined("RISCVProfile");
+
+  if (!Profiles.empty()) {
+    printProfileTable(OS, Profiles, /*Experimental=*/false);
+    bool HasExperimentalProfiles = any_of(Profiles, [&](auto &Rec) {
+      return Rec->getValueAsBit("Experimental");
+    });
+    if (HasExperimentalProfiles)
+      printProfileTable(OS, Profiles, /*Experimental=*/true);
+  }
 
   OS << "#endif // GET_SUPPORTED_PROFILES\n\n";
 }
@@ -144,7 +168,8 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
      << "#endif\n\n";
 
   // Iterate on all definition records.
-  for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
+  for (const Record *Rec :
+       RK.getAllDerivedDefinitionsIfDefined("RISCVProcessorModel")) {
     const std::vector<Record *> &Features =
         Rec->getValueAsListOfDefs("Features");
     bool FastScalarUnalignedAccess = any_of(Features, [&](auto &Feature) {
@@ -177,7 +202,7 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
      << "#endif\n\n";
 
   for (const Record *Rec :
-       RK.getAllDerivedDefinitions("RISCVTuneProcessorModel")) {
+       RK.getAllDerivedDefinitionsIfDefined("RISCVTuneProcessorModel")) {
     OS << "TUNE_PROC(" << Rec->getName() << ", "
        << "\"" << Rec->getValueAsString("Name") << "\")\n";
   }
