@@ -357,17 +357,14 @@ namespace N0 {
       a->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       a->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      // FIXME: An overloaded unary 'operator*' is built for these
-      // even though the operand is a pointer (to a dependent type).
-      // Type::isOverloadableType should return false for such cases.
-      (*this).x4;
-      (*this).B::x4;
-      (*this).A::x4;
-      (*this).B::A::x4;
-      (*this).f4();
-      (*this).B::f4();
-      (*this).A::f4();
-      (*this).B::A::f4();
+      (*this).x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      (*this).B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      (*this).A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      (*this).B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      (*this).f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      (*this).B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      (*this).A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      (*this).B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
       b.x4; // expected-error{{no member named 'x4' in 'B<T>'}}
       b.B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
@@ -399,15 +396,13 @@ namespace N1 {
       f<0>();
       this->f<0>();
       a->f<0>();
-      // FIXME: This should not require 'template'!
-      (*this).f<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f'}}
+      (*this).f<0>();
       b.f<0>();
 
       x.f<0>();
       this->x.f<0>();
       a->x.f<0>();
-      // FIXME: This should not require 'template'!
-      (*this).x.f<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f'}}
+      (*this).x.f<0>();
       b.x.f<0>();
 
       // FIXME: None of these should require 'template'!
@@ -439,7 +434,7 @@ namespace N2 {
       a->B::C::x;
     }
   };
-}
+} // namespace N2
 
 namespace N3 {
   struct A { };
@@ -453,4 +448,129 @@ namespace N3 {
       this->A::operator=(*this);
     }
   };
-}
+
+  template<typename T>
+  struct C {
+    template<typename U>
+    void operator=(int);
+
+    void not_instantiated() {
+      operator=<int>(0);
+      C::operator=<int>(0);
+      this->operator=<int>(0);
+      this->C::operator=<int>(0);
+
+      operator=(*this);
+      C::operator=(*this);
+      this->operator=(*this);
+      this->C::operator=(*this);
+    }
+  };
+
+  template<typename T>
+  struct D {
+    auto not_instantiated() -> decltype(operator=(0)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template<typename T>
+  struct E {
+    auto instantiated(E& e) -> decltype(operator=(e)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
+} // namespace N3
+
+namespace N4 {
+  template<typename T>
+  struct A {
+    void not_instantiated(A a, A<T> b, T c) {
+      a->x;
+      b->x;
+      c->x;
+    }
+
+    void instantiated(A a, A<T> b, T c) {
+      a->x; // expected-error {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
+            // expected-error@-1 {{no member named 'x' in 'N4::A<int>'}}
+      b->x; // expected-error {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
+            // expected-error@-1 {{no member named 'x' in 'N4::A<int>'}}
+      c->x; // expected-error {{member reference type 'int' is not a pointer}}
+    }
+  };
+
+  template void A<int>::instantiated(A<int>, A<int>, int); // expected-note {{in instantiation of}}
+
+  struct B {
+    int x;
+
+    void f();
+  };
+
+  template<typename T>
+  struct C {
+    B *operator->();
+
+    void not_instantiated(C a, C<T> b, T c) {
+      a->x;
+      b->x;
+      c->x;
+    }
+
+    void instantiated(C a, C<T> b, T c) {
+      a->x;
+      b->x;
+      c->x; // expected-error {{member reference type 'int' is not a pointer}}
+    }
+  };
+
+  template void C<int>::instantiated(C, C, int); // expected-note {{in instantiation of}}
+
+  template<typename T>
+  struct D {
+    T *operator->();
+
+    void not_instantiated(D a) {
+      a->x;
+      a->y;
+      a->f();
+      a->g();
+
+      a->T::x;
+      a->T::y;
+      a->T::f();
+      a->T::g();
+
+      // FIXME: 'U' should be a dependent name, and its lookup context should be 'a.operator->()'!
+      a->U::x; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::y; // expected-error {{use of undeclared identifier 'U'}}
+      a->U::f(); // expected-error {{use of undeclared identifier 'U'}}
+      a->U::g(); // expected-error {{use of undeclared identifier 'U'}}
+    }
+
+    void instantiated(D a) {
+      a->x;
+      a->y; // expected-error {{no member named 'y' in 'N4::B'}}
+      a->f();
+      a->g(); // expected-error {{no member named 'g' in 'N4::B'}}
+
+      a->T::x;
+      a->T::y; // expected-error {{no member named 'y' in 'N4::B'}}
+      a->T::f();
+      a->T::g(); // expected-error {{no member named 'g' in 'N4::B'}}
+    }
+  };
+
+  template void D<B>::instantiated(D); // expected-note {{in instantiation of}}
+
+  template<typename T>
+  struct Typo {
+    T *operator->();
+
+    void not_instantiated(Typo a) {
+      a->Not_instantiated;
+      a->typo;
+      a->T::Not_instantiated;
+      a->T::typo;
+    }
+  };
+} // namespace N4

@@ -3570,7 +3570,7 @@ bool X86InstrInfo::canMakeTailCallConditional(
     if (Target.isSymbol()) {
       StringRef Symbol(Target.getSymbolName());
       // this is currently only relevant to r11/kernel indirect thunk.
-      if (Symbol.equals("__x86_indirect_thunk_r11"))
+      if (Symbol == "__x86_indirect_thunk_r11")
         return false;
     }
   }

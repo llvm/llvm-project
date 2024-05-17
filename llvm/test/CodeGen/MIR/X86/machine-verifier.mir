@@ -1,5 +1,5 @@
 # RUN: not --crash llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
-# This test ensures that the MIR parser runs the machine verifier after parsing.
+# This test ensures that the VerifyInstrumentation works for machine function.
 
 --- |
 

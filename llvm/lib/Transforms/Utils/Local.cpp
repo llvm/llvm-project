@@ -3685,6 +3685,30 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   return nullptr;
 }
 
+void llvm::remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst) {
+  auto RemapDebugOperands = [&Mapping](auto *DV, auto Set) {
+    for (auto *Op : Set) {
+      auto I = Mapping.find(Op);
+      if (I != Mapping.end())
+        DV->replaceVariableLocationOp(Op, I->second, /*AllowEmpty=*/true);
+    }
+  };
+  auto RemapAssignAddress = [&Mapping](auto *DA) {
+    auto I = Mapping.find(DA->getAddress());
+    if (I != Mapping.end())
+      DA->setAddress(I->second);
+  };
+  if (auto DVI = dyn_cast<DbgVariableIntrinsic>(Inst))
+    RemapDebugOperands(DVI, DVI->location_ops());
+  if (auto DAI = dyn_cast<DbgAssignIntrinsic>(Inst))
+    RemapAssignAddress(DAI);
+  for (DbgVariableRecord &DVR : filterDbgVars(Inst->getDbgRecordRange())) {
+    RemapDebugOperands(&DVR, DVR.location_ops());
+    if (DVR.isDbgAssign())
+      RemapAssignAddress(&DVR);
+  }
+}
+
 namespace {
 
 /// A potential constituent of a bitreverse or bswap expression. See

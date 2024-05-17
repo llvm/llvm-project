@@ -1,6 +1,6 @@
 // Multiple inheritance.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 // VTable for C contains 2 sub-vtables (represented as 2 structs). The first contains the components for B and the second contains the components for C. The RTTI ptr in both arrays still point to the RTTI struct for C.
 // The component for bar() instead points to a thunk which redirects to C::bar() which overrides B::bar().

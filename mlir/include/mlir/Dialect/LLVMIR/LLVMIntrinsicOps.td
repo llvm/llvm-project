@@ -1060,8 +1060,8 @@ def LLVM_vector_extract
   }];
 }
 
-def LLVM_experimental_vector_interleave2
-    : LLVM_OneResultIntrOp<"experimental.vector.interleave2",
+def LLVM_vector_interleave2
+    : LLVM_OneResultIntrOp<"vector.interleave2",
         /*overloadedResults=*/[0], /*overloadedOperands=*/[],
         /*traits=*/[
           Pure, AllTypesMatch<["vec1", "vec2"]>,
@@ -1073,6 +1073,12 @@ def LLVM_experimental_vector_interleave2
                        "getVectorElementType($res.getType())">]>>,
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
+
+def LLVM_vector_deinterleave2
+    : LLVM_OneResultIntrOp<"vector.deinterleave2",
+        /*overloadedResults=*/[], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure]>,
+        Arguments<(ins LLVM_AnyVector:$vec)>;
 
 //
 // LLVM Vector Predication operations.

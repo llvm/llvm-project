@@ -16,7 +16,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux --position-independent %s -o %t-pic.o
 # RUN: llvm-readobj -r %t-pic.o | FileCheck %s --check-prefixes=RELOCS,PIC64-RELOCS
 # RUN: ld.lld -shared %t-pic.o -o %t-pic.so
-# RUN: llvm-dwarfdump --eh-frame %t-pic.so | FileCheck %s --check-prefix=PIC-EH-FRAME
+# RUN: llvm-dwarfdump --eh-frame %t-pic.so | FileCheck %s --check-prefix=PIC64-EH-FRAME
 
 ## Also check MIPS32:
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-nopic32.o
@@ -31,7 +31,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux --position-independent %s -o %t-pic32.o
 # RUN: llvm-readobj -r %t-pic32.o | FileCheck %s --check-prefixes=RELOCS,PIC32-RELOCS
 # RUN: ld.lld -shared %t-pic32.o -o %t-pic32.so
-# RUN: llvm-dwarfdump --eh-frame %t-pic32.so | FileCheck %s --check-prefix=PIC-EH-FRAME
+# RUN: llvm-dwarfdump --eh-frame %t-pic32.so | FileCheck %s --check-prefix=PIC32-EH-FRAME
 
 # RELOCS:            .rel{{a?}}.eh_frame {
 # ABS32-RELOCS-NEXT:   0x1C R_MIPS_32 .text
@@ -44,7 +44,9 @@
 ##                                   ^^ fde pointer encoding: DW_EH_PE_sdata8
 # ABS32-EH-FRAME: Augmentation data: 0B
 ##                                   ^^ fde pointer encoding: DW_EH_PE_sdata4
-# PIC-EH-FRAME: Augmentation data: 1B
+# PIC32-EH-FRAME: Augmentation data: 1B
+##                                 ^^ fde pointer encoding: DW_EH_PE_pcrel | DW_EH_PE_sdata4
+# PIC64-EH-FRAME: Augmentation data: 1B
 ##                                 ^^ fde pointer encoding: DW_EH_PE_pcrel | DW_EH_PE_sdata4
 ## Note: ld.bfd converts the R_MIPS_64 relocs to DW_EH_PE_pcrel | DW_EH_PE_sdata8
 ## for N64 ABI (and DW_EH_PE_pcrel | DW_EH_PE_sdata4 for MIPS32)

@@ -14,14 +14,14 @@
 --- |
   target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
   target triple = "i686-pc-windows-msvc18.0.31101"
-  
+
   %struct.incomplete_struct = type { i32 }
-  
+
   @"\01?multi_dim_arr@@3PAY146DA" = global [2 x [5 x [7 x i8]]] zeroinitializer, align 1, !dbg !0
   @"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global ptr null, align 4, !dbg !6
   @"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A" = global [3 x %struct.incomplete_struct] zeroinitializer, align 4, !dbg !16
   @"\01?typedef_arr@@3SDHD" = constant [4 x i32] zeroinitializer, align 4, !dbg !18
-  
+
   define void @"\01?foo@@YAXH@Z"(i32 %x) !dbg !35 {
   entry:
     %x.addr = alloca i32, align 4
@@ -39,20 +39,20 @@
     call void @llvm.stackrestore(ptr %2), !dbg !49
     ret void, !dbg !49
   }
-  
+
   ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata)
-  
+
   ; Function Attrs: nofree nosync nounwind willreturn
   declare ptr @llvm.stacksave()
-  
+
   ; Function Attrs: nofree nosync nounwind willreturn
   declare void @llvm.stackrestore(ptr)
-  
+
   !llvm.dbg.cu = !{!2}
   !llvm.module.flags = !{!32, !33}
   !llvm.ident = !{!34}
-  
+
   !0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
   !1 = !DIGlobalVariable(name: "multi_dim_arr", linkageName: "\01?multi_dim_arr@@3PAY146DA", scope: !2, file: !3, line: 1, type: !26, isLocal: false, isDefinition: true)
   !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 273874)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
@@ -119,7 +119,7 @@ frameInfo:
   maxCallFrameSize: 0
 fixedStack:
   - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4 }
-  - { id: 1, size: 4, alignment: 4, debug-info-variable: '!38', debug-info-expression: '!DIExpression()', 
+  - { id: 1, size: 4, alignment: 4, debug-info-variable: '!38', debug-info-expression: '!DIExpression()',
       debug-info-location: '!39' }
 stack:
   - { id: 1, name: saved_stack, offset: -12, size: 4, alignment: 4 }
