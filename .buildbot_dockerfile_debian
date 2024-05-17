@@ -1,16 +1,20 @@
-FROM debian:bookworm
-ARG CI_UID
-RUN useradd -m -u ${CI_UID} ci
-RUN apt-get update && \
-    apt-get -y install clang-15 make curl cmake python3-distutils git \
-    ninja-build
+FROM debian:latest
 WORKDIR /ci
-RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang-15 999
-RUN update-alternatives --set cc /usr/bin/clang-15
-RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-15 999
-RUN update-alternatives --set c++ /usr/bin/clang++-15
-RUN ln -sf /usr/bin/clang-15 /usr/bin/clang
-RUN ln -sf /usr/bin/clang++-15 /usr/bin/clang++
-RUN chown ${CI_UID}:${CI_UID} .
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+  rm -f /etc/apt/apt.conf.d/docker-clean && \
+  apt-get update && \
+  apt-get -y install clang-15 make curl cmake python3-distutils git \
+    ninja-build && \
+  update-alternatives --install /usr/bin/cc cc /usr/bin/clang-15 999 && \
+  update-alternatives --set cc /usr/bin/clang-15 && \
+  update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-15 999 && \
+  update-alternatives --set c++ /usr/bin/clang++-15 && \
+  ln -sf /usr/bin/clang-15 /usr/bin/clang && \
+  ln -sf /usr/bin/clang++-15 /usr/bin/clang++
+ARG CI_UID
+RUN useradd -m -u ${CI_UID} ci && chown ${CI_UID}:${CI_UID} .
+ARG CI_RUNNER
+ENV CI_RUNNER=${CI_RUNNER}
 COPY --chown=${CI_UID}:${CI_UID} . .
 CMD sh -x .buildbot.sh
