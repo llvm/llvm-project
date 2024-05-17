@@ -3395,6 +3395,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
   switch (E->getOpcode()) {
   case UO_PostInc: { // x++
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -3413,6 +3416,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
   }
   case UO_PostDec: { // x--
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -3431,6 +3437,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
   }
   case UO_PreInc: { // ++x
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -3475,6 +3484,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return E->isGLValue() || this->emitLoadPop(*T, E);
   }
   case UO_PreDec: { // --x
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
