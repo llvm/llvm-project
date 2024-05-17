@@ -1,4 +1,4 @@
-libomptarget_say("Building the llvm-omp-device-info tool")
+message(STATUS "Building the llvm-omp-device-info tool")
 
 add_openmp_tool(llvm-omp-device-info llvm-omp-device-info.cpp)
 
