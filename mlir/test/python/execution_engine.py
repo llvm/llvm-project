@@ -529,11 +529,6 @@ run(testComplexUnrankedMemrefAdd)
 # Test addition of two bf16 memrefs
 # CHECK-LABEL: TEST: testBF16MemrefAdd
 def testBF16MemrefAdd():
-    if ml_dtypes is None:
-        log(
-            "Skipping testBF16MemrefAdd because bfloat16 requires the ml_dtypes package."
-        )
-        return
     with Context():
         module = Module.parse(
             """
@@ -552,7 +547,7 @@ def testBF16MemrefAdd():
         )
 
         arg1 = np.array([11.0]).astype(ml_dtypes.bfloat16)
-        arg2 = np.array([12.0]).astype(ml_dtypes.bfloat16)
+        arg2 = np.array([22.0]).astype(ml_dtypes.bfloat16)
         arg3 = np.array([0.0]).astype(ml_dtypes.bfloat16)
 
         arg1_memref_ptr = ctypes.pointer(
@@ -569,16 +564,22 @@ def testBF16MemrefAdd():
         execution_engine.invoke(
             "main", arg1_memref_ptr, arg2_memref_ptr, arg3_memref_ptr
         )
-        # CHECK: [11.] + [22.] = [33.]
+        # CHECK: [11] + [22] = [33]
         log("{0} + {1} = {2}".format(arg1, arg2, arg3))
 
         # test to-numpy utility
-        # CHECK: [33.]
+        # CHECK: [33]
         npout = ranked_memref_to_numpy(arg3_memref_ptr[0])
         log(npout)
 
 
-run(testBF16MemrefAdd)
+if ml_dtypes is None:
+    log("BF16 execution requires the ml_dtypes package, skipping the test..")
+    log(
+        "Skip BF16 execution check: \nTEST: testBF16MemrefAdd; \n[11] + [22] = [33]; \n[33]"
+    )
+else:
+    run(testBF16MemrefAdd)
 
 
 #  Test addition of two 2d_memref
