@@ -72,7 +72,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n#undef ARM_ARCHITECTURE\n\n";
 
   // Currently only AArch64 (not ARM) is handled beyond this point.
-  if(!RK.getClass("Architecture64"))
+  if (!RK.getClass("Architecture64"))
     return;
 
   // Emit the ArchExtKind enum
