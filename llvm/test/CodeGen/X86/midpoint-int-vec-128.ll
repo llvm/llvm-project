@@ -1991,14 +1991,14 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ;
 ; AVX512VL-FALLBACK-LABEL: vec128_i16_unsigned_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
-; AVX512VL-FALLBACK-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminuw %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm1, %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm1, %xmm2, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2784,14 +2784,14 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ;
 ; AVX512VL-FALLBACK-LABEL: vec128_i8_unsigned_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
-; AVX512VL-FALLBACK-NEXT:    vpmaxub %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminub %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxub %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;

@@ -165,7 +165,7 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*File=*/nullptr, /*Line=*/0,
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
-      /*DWARFAddressSpace=*/std::nullopt, llvm::dwarf::DW_MSPACE_LLVM_none, /*PtrAuthData=*/std::nullopt,
+      attr.getDwarfAddressSpace(), llvm::dwarf::DW_MSPACE_LLVM_none, /*PtrAuthData=*/std::nullopt,
       /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
 }
 
