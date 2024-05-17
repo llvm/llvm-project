@@ -1277,8 +1277,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // (OurException instance).
   //
   // Note: ourBaseFromUnwindOffset is usually negative
-  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(unwindException,
-                                                      ourBaseFromUnwindOffset));
+  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(builder.getPtrTy(), unwindException,
+                                                           ourBaseFromUnwindOffset);
 
   // Retrieve thrown exception type info type
   //
@@ -1289,10 +1289,9 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   llvm::Value *typeInfoThrownType =
       builder.CreateStructGEP(ourTypeInfoType, typeInfoThrown, 0);
 
-  llvm::Value *ti8 =
-      builder.CreateLoad(builder.getInt8Ty(), typeInfoThrownType);
-  generateIntegerPrint(context, module, builder, *toPrint32Int,
-                       builder.CreateZExt(ti8, builder.getInt32Ty()),
+  llvm::Value *ti32 =
+      builder.CreateLoad(builder.getInt32Ty(), typeInfoThrownType);
+  generateIntegerPrint(context, module, builder, *toPrint32Int, ti32,
                        "Gen: Exception type <%d> received (stack unwound) "
                        " in " +
                            ourId + ".\n",
