@@ -357,48 +357,27 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f128, &AArch64::FPR128RegClass);
   }
 
-  if (Subtarget->isNeonAvailable()) {
-    addRegisterClass(MVT::v16i8, &AArch64::FPR8RegClass);
-    addRegisterClass(MVT::v8i16, &AArch64::FPR16RegClass);
-    // Someone set us up the NEON.
-    addDRTypeForNEON(MVT::v2f32);
-    addDRTypeForNEON(MVT::v8i8);
-    addDRTypeForNEON(MVT::v4i16);
-    addDRTypeForNEON(MVT::v2i32);
-    addDRTypeForNEON(MVT::v1i64);
-    addDRTypeForNEON(MVT::v1f64);
-    addDRTypeForNEON(MVT::v4f16);
-    addDRTypeForNEON(MVT::v4bf16);
-
-    addQRTypeForNEON(MVT::v4f32);
-    addQRTypeForNEON(MVT::v2f64);
-    addQRTypeForNEON(MVT::v16i8);
-    addQRTypeForNEON(MVT::v8i16);
-    addQRTypeForNEON(MVT::v4i32);
-    addQRTypeForNEON(MVT::v2i64);
-    addQRTypeForNEON(MVT::v8f16);
-    addQRTypeForNEON(MVT::v8bf16);
-  } else if (Subtarget->hasNEON() || Subtarget->useSVEForFixedLengthVectors()) {
+  if (Subtarget->hasNEON()) {
     addRegisterClass(MVT::v16i8, &AArch64::FPR8RegClass);
     addRegisterClass(MVT::v8i16, &AArch64::FPR16RegClass);
 
-    addRegisterClass(MVT::v2f32, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v8i8, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v4i16, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v2i32, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v1i64, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v1f64, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v4f16, &AArch64::FPR64RegClass);
-    addRegisterClass(MVT::v4bf16, &AArch64::FPR64RegClass);
+    addDRType(MVT::v2f32);
+    addDRType(MVT::v8i8);
+    addDRType(MVT::v4i16);
+    addDRType(MVT::v2i32);
+    addDRType(MVT::v1i64);
+    addDRType(MVT::v1f64);
+    addDRType(MVT::v4f16);
+    addDRType(MVT::v4bf16);
 
-    addRegisterClass(MVT::v4f32, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v2f64, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v16i8, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v8i16, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v4i32, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v2i64, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v8f16, &AArch64::FPR128RegClass);
-    addRegisterClass(MVT::v8bf16, &AArch64::FPR128RegClass);
+    addQRType(MVT::v4f32);
+    addQRType(MVT::v2f64);
+    addQRType(MVT::v16i8);
+    addQRType(MVT::v8i16);
+    addQRType(MVT::v4i32);
+    addQRType(MVT::v2i64);
+    addQRType(MVT::v8f16);
+    addQRType(MVT::v8bf16);
   }
 
   if (Subtarget->hasSVEorSME()) {
@@ -1358,7 +1337,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // FADDP custom lowering
     for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
-  } else {
+  } else /* !isNeonAvailable */ {
     for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
         setOperationAction(Op, VT, Expand);
@@ -2059,14 +2038,16 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::ZERO_EXTEND, VT, Default);
 }
 
-void AArch64TargetLowering::addDRTypeForNEON(MVT VT) {
+void AArch64TargetLowering::addDRType(MVT VT) {
   addRegisterClass(VT, &AArch64::FPR64RegClass);
-  addTypeForNEON(VT);
+  if (Subtarget->isNeonAvailable())
+    addTypeForNEON(VT);
 }
 
-void AArch64TargetLowering::addQRTypeForNEON(MVT VT) {
+void AArch64TargetLowering::addQRType(MVT VT) {
   addRegisterClass(VT, &AArch64::FPR128RegClass);
-  addTypeForNEON(VT);
+  if (Subtarget->isNeonAvailable())
+    addTypeForNEON(VT);
 }
 
 EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &,
