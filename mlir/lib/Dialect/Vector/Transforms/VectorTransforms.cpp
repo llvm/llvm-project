@@ -1382,7 +1382,8 @@ class DropInnerMostUnitDimsTransferWrite
 
     auto resultTargetVecType =
         VectorType::get(targetType.getShape().drop_back(dimsToDrop),
-                        targetType.getElementType());
+                        targetType.getElementType(),
+                        targetType.getScalableDims().drop_back(dimsToDrop));
 
     Location loc = writeOp.getLoc();
     SmallVector<OpFoldResult> sizes =
