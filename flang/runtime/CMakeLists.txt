@@ -136,6 +136,7 @@ set(sources
   inquiry.cpp
   internal-unit.cpp
   io-api.cpp
+  io-api-minimal.cpp
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
