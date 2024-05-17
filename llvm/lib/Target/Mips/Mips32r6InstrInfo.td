@@ -153,15 +153,15 @@ class SELNEZ_ENC : SPECIAL_3R_FM<0b00000, 0b110111>;
 
 class LWPC_ENC   : PCREL19_FM<OPCODE2_LWPC>;
 
-class MAX_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
-class MAX_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
+class MAX_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
+class MAX_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
 class MIN_S_ENC : COP1_3R_FM<0b011100, FIELD_FMT_S>;
 class MIN_D_ENC : COP1_3R_FM<0b011100, FIELD_FMT_D>;
 
 class MAXA_S_ENC : COP1_3R_FM<0b011111, FIELD_FMT_S>;
 class MAXA_D_ENC : COP1_3R_FM<0b011111, FIELD_FMT_D>;
-class MINA_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
-class MINA_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
+class MINA_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
+class MINA_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
 
 class SELEQZ_S_ENC : COP1_3R_FM<0b010100, FIELD_FMT_S>;
 class SELEQZ_D_ENC : COP1_3R_FM<0b010100, FIELD_FMT_D>;
@@ -1115,6 +1115,22 @@ def : MipsPat<(select i32:$cond, i32:$t, immz),
 def : MipsPat<(select i32:$cond, immz, i32:$f),
               (SELEQZ i32:$f, i32:$cond)>,
               ISA_MIPS32R6;
+}
+
+// llvm.fmin/fmax operations.
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(fmaxnum f32:$lhs, f32:$rhs),
+                (MAX_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum f64:$lhs, f64:$rhs),
+                (MAX_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f32:$lhs, f32:$rhs),
+                (MIN_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum f64:$lhs, f64:$rhs),
+                (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
 }
 
 // Pseudo instructions

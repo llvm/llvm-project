@@ -597,13 +597,13 @@ define void @ushl_sat_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
 }
 
 ; CHECK-LABEL: llvm.func @va_intrinsics_test
-define void @va_intrinsics_test(ptr %0, ptr %1) {
+define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
 ; CHECK: llvm.intr.vastart %{{.*}}
-  call void @llvm.va_start(ptr %0)
+  call void @llvm.va_start.p0(ptr %0)
 ; CHECK: llvm.intr.vacopy %{{.*}} to %{{.*}}
-  call void @llvm.va_copy(ptr %1, ptr %0)
+  call void @llvm.va_copy.p0(ptr %1, ptr %0)
 ; CHECK: llvm.intr.vaend %{{.*}}
-  call void @llvm.va_end(ptr %0)
+  call void @llvm.va_end.p0(ptr %0)
   ret void
 }
 
@@ -641,10 +641,12 @@ define void @expect_with_probability(i16 %0) {
   ret void
 }
 
+@tls_var = dso_local thread_local global i32 0, align 4
+
 ; CHECK-LABEL: llvm.func @threadlocal_test
-define void @threadlocal_test(ptr %0) {
+define void @threadlocal_test() {
   ; CHECK: "llvm.intr.threadlocal.address"(%{{.*}}) : (!llvm.ptr) -> !llvm.ptr
-  %local = call ptr @llvm.threadlocal.address.p0(ptr %0)
+  %local = call ptr @llvm.threadlocal.address.p0(ptr @tls_var)
   ret void
 }
 
@@ -784,6 +786,15 @@ define void @vector_extract(<vscale x 4 x float> %0) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @vector_deinterleave2
+define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<4xf64>) -> !llvm.struct<(vector<2xf64>, vector<2xf64>)>
+  %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (!llvm.vec<? x 8 x i32>) -> !llvm.struct<(vec<? x 4 x i32>, vec<? x 4 x i32>)>
+  %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @vector_predication_intrinsics
 define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x float> %2, <8 x float> %3, <8 x i64> %4, <8 x double> %5, <8 x ptr> %6, i32 %7, float %8, ptr %9, ptr %10, <8 x i1> %11, i32 %12) {
   ; CHECK: "llvm.intr.vp.add"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
@@ -892,6 +903,23 @@ define float @ssa_copy(float %0) {
   ; CHECK: %{{.*}} = llvm.intr.ssa.copy %{{.*}} : f32
   %2 = call float @llvm.ssa.copy.f32(float %0)
   ret float %2
+}
+
+; CHECK-LABEL: experimental_constrained_fptrunc
+define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
+  %1 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearest maytrap : f64 to f32
+  %2 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} upward strict : f64 to f32
+  %3 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.upward", metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} downward ignore : f64 to f32
+  %4 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.downward", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearestaway ignore : f64 to f32
+  %5 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %s, metadata !"round.tonearestaway", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} tonearestaway ignore : vector<4xf64> to vector<4xf16>
+  %6 = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double> %v, metadata !"round.tonearestaway", metadata !"fpexcept.ignore")
+  ret void
 }
 
 declare float @llvm.fmuladd.f32(float, float, float)
@@ -1059,9 +1087,9 @@ declare ptr @llvm.stacksave.p0()
 declare ptr addrspace(1) @llvm.stacksave.p1()
 declare void @llvm.stackrestore.p0(ptr)
 declare void @llvm.stackrestore.p1(ptr addrspace(1))
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_copy(ptr, ptr)
-declare void @llvm.va_end(ptr)
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_copy.p0(ptr, ptr)
+declare void @llvm.va_end.p0(ptr)
 declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -1120,3 +1148,5 @@ declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)

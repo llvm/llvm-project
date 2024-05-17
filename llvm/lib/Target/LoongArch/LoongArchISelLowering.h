@@ -238,6 +238,9 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
     return false;
   }
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
+  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldExtendTypeInLibCall(EVT Type) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -262,6 +265,8 @@ private:
                            unsigned Opc, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                             unsigned Opc, bool Large = false) const;
+  SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                         unsigned Opc, bool Large = false) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;

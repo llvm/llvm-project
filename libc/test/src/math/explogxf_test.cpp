@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "in_float_range_test_helper.h"
-#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/fabs.h"
 #include "src/math/fabsf.h"

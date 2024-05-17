@@ -521,16 +521,32 @@ The return value of (FMAXNUM 0.0, -0.0) could be either 0.0 or -0.0.
 G_FMINNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point minimum on two values, following the IEEE-754 2008
-definition. This differs from FMINNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point minimum on two values, following IEEE-754
+definitions. This differs from FMINNUM in the handling of signaling
+NaNs.
+
+If one input is a signaling NaN, returns a quiet NaN. This matches
+IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from
+2019).
+
+These treat -0 as ordered less than +0, matching the behavior of
+IEEE-754 2019's minimumNumber/maximumNumber (which was unspecified in
+2008).
 
 G_FMAXNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point maximum on two values, following the IEEE-754 2008
-definition. This differs from FMAXNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point maximum on two values, following IEEE-754
+definitions. This differs from FMAXNUM in the handling of signaling
+NaNs.
+
+If one input is a signaling NaN, returns a quiet NaN. This matches
+IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from
+2019).
+
+These treat -0 as ordered less than +0, matching the behavior of
+IEEE-754 2019's minimumNumber/maximumNumber (which was unspecified in
+2008).
 
 G_FMINIMUM
 ^^^^^^^^^^
@@ -576,8 +592,8 @@ G_FLOG, G_FLOG2, G_FLOG10
 
 Calculate the base-e, base-2, or base-10 respectively.
 
-G_FCEIL, G_FCOS, G_FSIN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCEIL, G_FCOS, G_FSIN, G_FTAN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C functions of the same name.
 
@@ -628,7 +644,7 @@ source vector should be inserted into.
 The index must be a constant multiple of the second source vector's minimum
 vector length. If the vectors are scalable, then the index is first scaled by
 the runtime scaling factor. The indices inserted in the source vector must be
-valid indicies of that vector. If this condition cannot be determined statically
+valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
 .. code-block:: none
@@ -645,7 +661,7 @@ the source vector.
 The index must be a constant multiple of the source vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
-vector must be valid indicies of that vector. If this condition cannot be
+vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
@@ -689,6 +705,10 @@ G_SPLAT_VECTOR
 ^^^^^^^^^^^^^^^^
 
 Create a vector where all elements are the scalar from the source operand.
+
+The type of the operand must be equal to or larger than the vector element
+type. If the operand is larger than the vector element type, the scalar is
+implicitly truncated to the vector element type.
 
 Vector Reduction Operations
 ---------------------------
@@ -938,6 +958,25 @@ The _CONVERGENT variant corresponds to an LLVM IR intrinsic marked `convergent`.
 
   Unlike SelectionDAG, there is no _VOID variant. Both of these are permitted
   to have zero, one, or multiple results.
+
+G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+trap instructions.
+
+.. code-block:: none
+
+  G_TRAP
+
+.. code-block:: none
+
+  G_DEBUGTRAP
+
+.. code-block:: none
+
+  G_UBSANTRAP 12
 
 Variadic Arguments
 ------------------

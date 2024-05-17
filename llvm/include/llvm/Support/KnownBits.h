@@ -394,7 +394,7 @@ public:
   static KnownBits abdu(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits for abds(LHS, RHS).
-  static KnownBits abds(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits abds(KnownBits LHS, KnownBits RHS);
 
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.

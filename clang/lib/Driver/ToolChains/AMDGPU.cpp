@@ -617,8 +617,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-
-  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  std::string Linker = getToolChain().GetLinkerPath();
   ArgStringList CmdArgs;
   CmdArgs.push_back("--no-undefined");
   CmdArgs.push_back("-shared");
@@ -669,6 +668,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   if (Args.hasFlag(options::OPT_mwavefrontsize64,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
+
+  if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
+                   options::OPT_mno_amdgpu_precise_memory_op, false))
+    Features.push_back("+precise-memory");
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
@@ -729,7 +732,7 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   checkTargetID(*DAL);
 
-  if (!Args.getLastArgValue(options::OPT_x).equals("cl"))
+  if (Args.getLastArgValue(options::OPT_x) != "cl")
     return DAL;
 
   // Phase 1 (.cl -> .bc)

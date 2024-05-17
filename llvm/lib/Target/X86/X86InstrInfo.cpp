@@ -1168,7 +1168,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     RC = Opc != X86::LEA32r ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass;
   }
   Register SrcReg = Src.getReg();
-  isKill = MI.killsRegister(SrcReg);
+  isKill = MI.killsRegister(SrcReg, /*TRI=*/nullptr);
 
   // For both LEA64 and LEA32 the register already has essentially the right
   // type (32-bit or 64-bit) we may just need to forbid SP.
@@ -3570,7 +3570,7 @@ bool X86InstrInfo::canMakeTailCallConditional(
     if (Target.isSymbol()) {
       StringRef Symbol(Target.getSymbolName());
       // this is currently only relevant to r11/kernel indirect thunk.
-      if (Symbol.equals("__x86_indirect_thunk_r11"))
+      if (Symbol == "__x86_indirect_thunk_r11")
         return false;
     }
   }
@@ -3727,7 +3727,7 @@ bool X86InstrInfo::analyzeBranchImpl(
 
     // In practice we should never have an undef eflags operand, if we do
     // abort here as we are not prepared to preserve the flag.
-    if (I->findRegisterUseOperand(X86::EFLAGS)->isUndef())
+    if (I->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->isUndef())
       return true;
 
     // Working from the bottom, handle the first conditional branch.
@@ -5472,7 +5472,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
-  MachineOperand *FlagDef = Sub->findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *FlagDef =
+      Sub->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   assert(FlagDef && "Unable to locate a def EFLAGS operand");
   FlagDef->setIsDead(false);
 
@@ -5595,9 +5596,13 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
   case X86::FROM:                                                              \
     return X86::TO;
     FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(CCMP64rr, CCMP64ri32)
     FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CTEST32rr, CTEST32ri)
     FROM_TO(CMP32rr, CMP32ri)
+    FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   }
 }
@@ -5625,7 +5630,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       return false;
   }
 
-  if (UseMI.findRegisterUseOperand(Reg)->getSubReg())
+  if (UseMI.findRegisterUseOperand(Reg, /*TRI=*/nullptr)->getSubReg())
     return false;
   // Immediate has larger code size than register. So avoid folding the
   // immediate if it has more than 1 use and we are optimizing for size.
@@ -5672,7 +5677,8 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
         if (!MakeChange)
           return true;
         UseMI.setDesc(get(X86::MOV32r0));
-        UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
+        UseMI.removeOperand(
+            UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
         UseMI.addOperand(MachineOperand::CreateReg(X86::EFLAGS, /*isDef=*/true,
                                                    /*isImp=*/true,
                                                    /*isKill=*/false,
@@ -5694,17 +5700,18 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
        NewOpc == X86::SBB64ri32 || NewOpc == X86::SBB32ri ||
        NewOpc == X86::SUB64ri32_ND || NewOpc == X86::SUB32ri_ND ||
        NewOpc == X86::SBB64ri32_ND || NewOpc == X86::SBB32ri_ND) &&
-      UseMI.findRegisterUseOperandIdx(Reg) != 2)
+      UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
-  if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
-      UseMI.findRegisterUseOperandIdx(Reg) != 1)
+  if (((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) ||
+       (NewOpc == X86::CCMP64ri32 || NewOpc == X86::CCMP32ri)) &&
+      UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != 1)
     return false;
 
   using namespace X86;
   if (isSHL(Opc) || isSHR(Opc) || isSAR(Opc) || isROL(Opc) || isROR(Opc) ||
       isRCL(Opc) || isRCR(Opc)) {
-    unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg);
+    unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr);
     if (RegIdx < 2)
       return false;
     if (!isInt<8>(ImmVal))
@@ -5728,13 +5735,15 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
   if (!Modified) {
     // Modify the instruction.
     if (ImmVal == 0 && canConvert2Copy(NewOpc) &&
-        UseMI.registerDefIsDead(X86::EFLAGS)) {
+        UseMI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr)) {
       //          %100 = add %101, 0
       //    ==>
       //          %100 = COPY %101
       UseMI.setDesc(get(TargetOpcode::COPY));
-      UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
-      UseMI.removeOperand(UseMI.findRegisterDefOperandIdx(X86::EFLAGS));
+      UseMI.removeOperand(
+          UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
+      UseMI.removeOperand(
+          UseMI.findRegisterDefOperandIdx(X86::EFLAGS, /*TRI=*/nullptr));
       UseMI.untieRegOperand(0);
       UseMI.clearFlag(MachineInstr::MIFlag::NoSWrap);
       UseMI.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -5742,7 +5751,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       unsigned Op1 = 1, Op2 = CommuteAnyOperandIndex;
       unsigned ImmOpNum = 2;
       if (!UseMI.getOperand(0).isDef()) {
-        Op1 = 0; // TEST, CMP
+        Op1 = 0; // TEST, CMP, CTEST, CCMP
         ImmOpNum = 1;
       }
       if (Opc == TargetOpcode::COPY)
@@ -6271,10 +6280,10 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::RCPSSm:
   case X86::RCPSSr_Int:
   case X86::RCPSSm_Int:
-  case X86::ROUNDSDr:
-  case X86::ROUNDSDm:
-  case X86::ROUNDSSr:
-  case X86::ROUNDSSm:
+  case X86::ROUNDSDri:
+  case X86::ROUNDSDmi:
+  case X86::ROUNDSSri:
+  case X86::ROUNDSSmi:
   case X86::RSQRTSSr:
   case X86::RSQRTSSm:
   case X86::RSQRTSSr_Int:
@@ -6773,14 +6782,14 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VRCPSSr_Int:
   case X86::VRCPSSm:
   case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
+  case X86::VROUNDSDri:
+  case X86::VROUNDSDmi:
+  case X86::VROUNDSDri_Int:
+  case X86::VROUNDSDmi_Int:
+  case X86::VROUNDSSri:
+  case X86::VROUNDSSmi:
+  case X86::VROUNDSSri_Int:
+  case X86::VROUNDSSmi_Int:
   case X86::VRSQRTSSr:
   case X86::VRSQRTSSr_Int:
   case X86::VRSQRTSSm:
@@ -7511,8 +7520,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VRCPSSr_Int:
     case X86::RSQRTSSr_Int:
     case X86::VRSQRTSSr_Int:
-    case X86::ROUNDSSr_Int:
-    case X86::VROUNDSSr_Int:
+    case X86::ROUNDSSri_Int:
+    case X86::VROUNDSSri_Int:
     case X86::COMISSrr_Int:
     case X86::VCOMISSrr_Int:
     case X86::VCOMISSZrr_Int:
@@ -7680,8 +7689,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VCVTSD2USI64Zrr_Int:
     case X86::VCVTTSD2USIZrr_Int:
     case X86::VCVTTSD2USI64Zrr_Int:
-    case X86::ROUNDSDr_Int:
-    case X86::VROUNDSDr_Int:
+    case X86::ROUNDSDri_Int:
+    case X86::VROUNDSDri_Int:
     case X86::COMISDrr_Int:
     case X86::VCOMISDrr_Int:
     case X86::VCOMISDZrr_Int:
@@ -9533,7 +9542,8 @@ bool X86InstrInfo::hasReassociableOperands(const MachineInstr &Inst,
   // not change anything because rearranging the operands could affect other
   // instructions that depend on the exact status flags (zero, sign, etc.)
   // that are set by using these particular operands with this operation.
-  const MachineOperand *FlagDef = Inst.findRegisterDefOperand(X86::EFLAGS);
+  const MachineOperand *FlagDef =
+      Inst.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   assert((Inst.getNumDefs() == 1 || FlagDef) && "Implicit def isn't flags?");
   if (FlagDef && !FlagDef->isDead())
     return false;
@@ -10055,8 +10065,10 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &NewMI1,
                                          MachineInstr &NewMI2) const {
   // Integer instructions may define an implicit EFLAGS dest register operand.
-  MachineOperand *OldFlagDef1 = OldMI1.findRegisterDefOperand(X86::EFLAGS);
-  MachineOperand *OldFlagDef2 = OldMI2.findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *OldFlagDef1 =
+      OldMI1.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+  MachineOperand *OldFlagDef2 =
+      OldMI2.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
 
   assert(!OldFlagDef1 == !OldFlagDef2 &&
          "Unexpected instruction type for reassociation");
@@ -10067,8 +10079,10 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
   assert(OldFlagDef1->isDead() && OldFlagDef2->isDead() &&
          "Must have dead EFLAGS operand in reassociable instruction");
 
-  MachineOperand *NewFlagDef1 = NewMI1.findRegisterDefOperand(X86::EFLAGS);
-  MachineOperand *NewFlagDef2 = NewMI2.findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *NewFlagDef1 =
+      NewMI1.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+  MachineOperand *NewFlagDef2 =
+      NewMI2.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
 
   assert(NewFlagDef1 && NewFlagDef2 &&
          "Unexpected operand in reassociable instruction");
@@ -10573,7 +10587,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 }
 
 bool X86InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
@@ -10582,7 +10596,7 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
     if (!Subtarget.hasFastDPWSSD()) {
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+      Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
       return true;
     }
     break;
@@ -10594,8 +10608,8 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
    if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
-      return true;
+     Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+     return true;
     }
     break;
   }
@@ -10695,7 +10709,7 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
 }
 
 void X86InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
@@ -10705,7 +10719,7 @@ void X86InstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::DPWSSD:
+  case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;

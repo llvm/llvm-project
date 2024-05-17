@@ -190,13 +190,13 @@ static StructType *getHandleType(LLVMContext &Ctx) {
 static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
   auto &Ctx = OverloadTy->getContext();
   switch (Kind) {
-  case ParameterKind::VOID:
+  case ParameterKind::Void:
     return Type::getVoidTy(Ctx);
-  case ParameterKind::HALF:
+  case ParameterKind::Half:
     return Type::getHalfTy(Ctx);
-  case ParameterKind::FLOAT:
+  case ParameterKind::Float:
     return Type::getFloatTy(Ctx);
-  case ParameterKind::DOUBLE:
+  case ParameterKind::Double:
     return Type::getDoubleTy(Ctx);
   case ParameterKind::I1:
     return Type::getInt1Ty(Ctx);
@@ -208,11 +208,11 @@ static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {
     return Type::getInt32Ty(Ctx);
   case ParameterKind::I64:
     return Type::getInt64Ty(Ctx);
-  case ParameterKind::OVERLOAD:
+  case ParameterKind::Overload:
     return OverloadTy;
-  case ParameterKind::RESOURCE_RET:
+  case ParameterKind::ResourceRet:
     return getResRetType(OverloadTy, Ctx);
-  case ParameterKind::DXIL_HANDLE:
+  case ParameterKind::DXILHandle:
     return getHandleType(Ctx);
   default:
     break;
@@ -254,7 +254,7 @@ namespace dxil {
 
 CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                                           Type *OverloadTy,
-                                          llvm::iterator_range<Use *> Args) {
+                                          SmallVector<Value *> Args) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
 
   OverloadKind Kind = getOverloadKind(OverloadTy);
@@ -272,10 +272,8 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
     FunctionType *DXILOpFT = getDXILOpFunctionType(Prop, ReturnTy, OverloadTy);
     DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
   }
-  SmallVector<Value *> FullArgs;
-  FullArgs.emplace_back(B.getInt32((int32_t)OpCode));
-  FullArgs.append(Args.begin(), Args.end());
-  return B.CreateCall(DXILFn, FullArgs);
+
+  return B.CreateCall(DXILFn, Args);
 }
 
 Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
@@ -320,8 +318,8 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
   auto ParamKinds = getOpCodeParameterKind(*Prop);
   auto Kind = ParamKinds[Prop->OverloadParamIndex];
   // For ResRet and CBufferRet, OverloadTy is in field of StructType.
-  if (Kind == ParameterKind::CBUFFER_RET ||
-      Kind == ParameterKind::RESOURCE_RET) {
+  if (Kind == ParameterKind::CBufferRet ||
+      Kind == ParameterKind::ResourceRet) {
     auto *ST = cast<StructType>(OverloadType);
     OverloadType = ST->getElementType(0);
   }

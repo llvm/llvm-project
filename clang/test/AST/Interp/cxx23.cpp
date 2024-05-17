@@ -1,3 +1,4 @@
+// UNSUPPORTED:  target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref20,all,all20 %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref23,all %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
@@ -5,23 +6,18 @@
 
 /// FIXME: The new interpreter is missing all the 'control flows through...' diagnostics.
 
-constexpr int f(int n) {  // ref20-error {{constexpr function never produces a constant expression}} \
-                          // expected20-error {{constexpr function never produces a constant expression}}
+constexpr int f(int n) {  // ref20-error {{constexpr function never produces a constant expression}}
   static const int m = n; // ref20-note {{control flows through the definition of a static variable}} \
                           // ref20-warning {{is a C++23 extension}} \
-                          // expected20-warning {{is a C++23 extension}} \
-                          // expected20-note {{declared here}} \
+                          // expected20-warning {{is a C++23 extension}}
 
-  return m; // expected20-note {{initializer of 'm' is not a constant expression}}
+  return m;
 }
-constexpr int g(int n) {        // ref20-error {{constexpr function never produces a constant expression}} \
-                                // expected20-error {{constexpr function never produces a constant expression}}
+constexpr int g(int n) {        // ref20-error {{constexpr function never produces a constant expression}}
   thread_local const int m = n; // ref20-note {{control flows through the definition of a thread_local variable}} \
                                 // ref20-warning {{is a C++23 extension}} \
-                                // expected20-warning {{is a C++23 extension}} \
-                                // expected20-note {{declared here}}
-  return m; // expected20-note {{initializer of 'm' is not a constant expression}}
-
+                                // expected20-warning {{is a C++23 extension}}
+  return m;
 }
 
 constexpr int c_thread_local(int n) { // ref20-error {{constexpr function never produces a constant expression}} \
@@ -146,3 +142,39 @@ struct check_ice {
     };
 };
 static_assert(check_ice<42>::x == 42);
+
+
+namespace VirtualBases {
+  namespace One {
+    struct U { int n; };
+    struct V : U { int n; };
+    struct A : virtual V { int n; };
+    struct Aa { int n; };
+    struct B : virtual A, Aa {};
+    struct C : virtual A, Aa {};
+    struct D : B, C {};
+
+    /// Calls the constructor of D.
+    D d;
+  }
+}
+
+namespace LabelGoto {
+  constexpr int foo() { // all20-error {{never produces a constant expression}}
+    a: // all20-warning {{use of this statement in a constexpr function is a C++23 extension}}
+    goto a; // all20-note 2{{subexpression not valid in a constant expression}} \
+            // ref23-note {{subexpression not valid in a constant expression}} \
+            // expected23-note {{subexpression not valid in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo() == 1, ""); // all-error {{not an integral constant expression}} \
+                                 // all-note {{in call to}}
+}
+
+namespace ExplicitLambdaThis {
+  constexpr auto f = [x = 3]<typename Self>(this Self self) { // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+      return x;
+  };
+  static_assert(f());
+}

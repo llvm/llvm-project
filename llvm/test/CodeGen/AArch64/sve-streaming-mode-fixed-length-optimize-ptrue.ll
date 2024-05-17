@@ -70,21 +70,11 @@ define void @add_v32i8(ptr %a, ptr %b) {
 define void @add_v2i16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: add_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0, #2]
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    str w8, [sp, #4]
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    str w8, [sp]
-; CHECK-NEXT:    ldrh w8, [x1, #2]
-; CHECK-NEXT:    str w8, [sp, #12]
-; CHECK-NEXT:    ldrh w8, [x1]
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    ldp d0, d1, [sp]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i16>, ptr %a
   %op2 = load <2 x i16>, ptr %b
@@ -170,8 +160,8 @@ define void @abs_v4i32(ptr %a) {
 define void @abs_v8i32(ptr %a) {
 ; CHECK-LABEL: abs_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    abs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    abs z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -199,8 +189,8 @@ define void @abs_v2i64(ptr %a) {
 define void @abs_v4i64(ptr %a) {
 ; CHECK-LABEL: abs_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    abs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    abs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -263,8 +253,8 @@ define void @fadd_v8f16(ptr %a, ptr %b) {
 define void @fadd_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fadd_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -313,8 +303,8 @@ define void @fadd_v4f32(ptr %a, ptr %b) {
 define void @fadd_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fadd_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -347,8 +337,8 @@ define void @fadd_v2f64(ptr %a, ptr %b) {
 define void @fadd_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fadd_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2

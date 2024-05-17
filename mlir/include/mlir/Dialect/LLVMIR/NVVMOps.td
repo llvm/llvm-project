@@ -429,7 +429,7 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive">
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       std::string ptx = "bar.arrive ";
-      if (getBarrierId()) { ptx += "%0, %1'"; } 
+      if (getBarrierId()) { ptx += "%0, %1"; } 
       else { ptx += "0, %0;"; }
       return ptx;
     }
@@ -619,20 +619,33 @@ def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync">,
   Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins I32:$dst,
+  Arguments<(ins I32:$thread_mask,
                  LLVM_Type:$val,
                  I32:$offset,
                  I32:$mask_and_clamp,
                  ShflKindAttr:$kind,
                  OptionalAttr<UnitAttr>:$return_value_and_is_valid)> {
+  let summary = "NVVM Dialect Op for shfl.sync";
+  let description = [{
+    The `shfl.sync` Op implements data shuffle within threads of a warp.
+    The `thread_mask` denotes the threads participating in the Op where
+    the bit position corresponds to a particular thread’s laneid.
+    The `offset` specifies a source lane or source lane offset
+    (depending on `kind`). The `val` is the input value to be copied from
+    the source. The `mask_and_clamp` contains two packed values specifying
+    a mask for logically splitting warps into sub-segments and an upper bound
+    for clamping the source lane index.
+    [For more information, refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
+  }];
   string llvmBuilder = [{
       auto intId = getShflIntrinsicId(
           $_resultType, $kind, static_cast<bool>($return_value_and_is_valid));
       $res = createIntrinsicCall(builder,
-          intId, {$dst, $val, $offset, $mask_and_clamp});
+          intId, {$thread_mask, $val, $offset, $mask_and_clamp});
   }];
   let assemblyFormat = [{
-    $kind $dst `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
+    $kind $thread_mask `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
      `:` type($val) `->` type($res)
    }];
    let hasVerifier = 1;

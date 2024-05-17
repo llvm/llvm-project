@@ -32,22 +32,21 @@ namespace ento {
 class CallDescription {
 public:
   enum class Mode {
-    /// Match calls to functions from the C standard library. On some platforms
-    /// some functions may be implemented as macros that expand to calls to
-    /// built-in variants of the given functions, so in this mode we use some
-    /// heuristics to recognize these implementation-defined variants:
-    ///  - We also accept calls where the name is derived from the specified
-    ///    name by adding "__builtin" or similar prefixes/suffixes.
-    ///  - We also accept calls where the number of arguments or parameters is
-    ///    greater than the specified value.
+    /// Match calls to functions from the C standard library. This also
+    /// recognizes builtin variants whose name is derived by adding
+    /// "__builtin", "__inline" or similar prefixes or suffixes; but only
+    /// matches functions than are externally visible and are declared either
+    /// directly within a TU or in the namespace 'std'.
     /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
-    /// Note that functions whose declaration context is not a TU (e.g.
-    /// methods, functions in namespaces) are not accepted as C library
-    /// functions.
-    /// FIXME: If I understand it correctly, this discards calls where C++ code
-    /// refers a C library function through the namespace `std::` via headers
-    /// like <cstdlib>.
     CLibrary,
+
+    /// An extended version of the `CLibrary` mode that also matches the
+    /// hardened variants like __FOO_chk() and __builtin__FOO_chk() that take
+    /// additional arguments compared to the "regular" function FOO().
+    /// This is not the default behavior of `CLibrary` because in this case the
+    /// checker code must be prepared to handle the different parametrization.
+    /// For the exact heuristics, see CheckerContext::isHardenedVariantOf().
+    CLibraryMaybeHardened,
 
     /// Matches "simple" functions that are not methods. (Static methods are
     /// methods.)
@@ -57,9 +56,10 @@ public:
     /// overloaded operator, a constructor or a destructor).
     CXXMethod,
 
-    /// Match any CallEvent that is not an ObjCMethodCall.
-    /// FIXME: Previously this was the default behavior of CallDescription, but
-    /// its use should be replaced by a more specific mode almost everywhere.
+    /// Match any CallEvent that is not an ObjCMethodCall. This should not be
+    /// used when the checker looks for a concrete function (and knows whether
+    /// it is a method); but GenericTaintChecker uses this mode to match
+    /// functions whose name was configured by the user.
     Unspecified,
 
     /// FIXME: Add support for ObjCMethodCall events (I'm not adding it because
@@ -100,13 +100,6 @@ public:
   CallDescription(Mode MatchAs, ArrayRef<StringRef> QualifiedName,
                   MaybeCount RequiredArgs = std::nullopt,
                   MaybeCount RequiredParams = std::nullopt);
-
-  /// Construct a CallDescription with default flags.
-  CallDescription(ArrayRef<StringRef> QualifiedName,
-                  MaybeCount RequiredArgs = std::nullopt,
-                  MaybeCount RequiredParams = std::nullopt);
-
-  CallDescription(std::nullptr_t) = delete;
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
@@ -191,6 +184,9 @@ public:
 private:
   bool matchesImpl(const FunctionDecl *Callee, size_t ArgCount,
                    size_t ParamCount) const;
+
+  bool matchNameOnly(const NamedDecl *ND) const;
+  bool matchQualifiedNameParts(const Decl *D) const;
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified

@@ -18,7 +18,6 @@ add_header_library(
     .limits
     .type_traits
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.__support.macros.sanitizer
 )
 
@@ -50,6 +49,12 @@ add_header_library(
     .type_traits
     libc.include.llvm-libc-macros.limits_macros
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  mutex
+  HDRS
+    mutex.h
 )
 
 add_header_library(
@@ -157,7 +162,6 @@ add_header_library(
   DEPENDS
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
 

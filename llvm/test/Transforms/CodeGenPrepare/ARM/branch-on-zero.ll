@@ -211,6 +211,29 @@ else:
   ret i32 %l
 }
 
+define i32 @sub10_else_drop_nuw(i32 %a) {
+; CHECK-LABEL: @sub10_else_drop_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L:%.*]] = sub i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       else:
+; CHECK-NEXT:    ret i32 [[L]]
+;
+entry:
+  %c = icmp eq i32 %a, 10
+  br i1 %c, label %then, label %else
+
+then:
+  ret i32 0
+
+else:
+  %l = sub nuw i32 %a, 10
+  ret i32 %l
+}
+
 define i32 @subm10_then(i32 %a) {
 ; CHECK-LABEL: @subm10_then(
 ; CHECK-NEXT:  entry:

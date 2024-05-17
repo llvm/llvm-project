@@ -35,11 +35,13 @@ static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
   case Intrinsic::exp:
+  case Intrinsic::log:
+  case Intrinsic::log10:
+  case Intrinsic::pow:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
-  case Intrinsic::dx_rcp:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return true;
@@ -75,8 +77,8 @@ static bool expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
                                    : Intrinsic::dx_umad;
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
-  Type *ATy = A->getType();
-  Type *BTy = B->getType();
+  [[maybe_unused]] Type *ATy = A->getType();
+  [[maybe_unused]] Type *BTy = B->getType();
   assert(ATy->isVectorTy() && BTy->isVectorTy());
 
   IRBuilder<> Builder(Orig->getParent());
@@ -108,8 +110,8 @@ static bool expandExpIntrinsic(CallInst *Orig) {
       Ty->isVectorTy() ? ConstantVector::getSplat(
                              ElementCount::getFixed(
                                  cast<FixedVectorType>(Ty)->getNumElements()),
-                             ConstantFP::get(EltTy, numbers::log2e))
-                       : ConstantFP::get(EltTy, numbers::log2e);
+                             ConstantFP::get(EltTy, numbers::log2ef))
+                       : ConstantFP::get(EltTy, numbers::log2ef);
   Value *NewX = Builder.CreateFMul(Log2eConst, X);
   auto *Exp2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
@@ -169,21 +171,48 @@ static bool expandLerpIntrinsic(CallInst *Orig) {
   return true;
 }
 
-static bool expandRcpIntrinsic(CallInst *Orig) {
+static bool expandLogIntrinsic(CallInst *Orig,
+                               float LogConstVal = numbers::ln2f) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig->getParent());
   Builder.SetInsertPoint(Orig);
   Type *Ty = X->getType();
   Type *EltTy = Ty->getScalarType();
-  Constant *One =
-      Ty->isVectorTy()
-          ? ConstantVector::getSplat(
-                ElementCount::getFixed(
-                    dyn_cast<FixedVectorType>(Ty)->getNumElements()),
-                ConstantFP::get(EltTy, 1.0))
-          : ConstantFP::get(EltTy, 1.0);
-  auto *Result = Builder.CreateFDiv(One, X, "dx.rcp");
+  Constant *Ln2Const =
+      Ty->isVectorTy() ? ConstantVector::getSplat(
+                             ElementCount::getFixed(
+                                 cast<FixedVectorType>(Ty)->getNumElements()),
+                             ConstantFP::get(EltTy, LogConstVal))
+                       : ConstantFP::get(EltTy, LogConstVal);
+  auto *Log2Call =
+      Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
+  Log2Call->setTailCall(Orig->isTailCall());
+  Log2Call->setAttributes(Orig->getAttributes());
+  auto *Result = Builder.CreateFMul(Ln2Const, Log2Call);
   Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
+}
+static bool expandLog10Intrinsic(CallInst *Orig) {
+  return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
+}
+
+static bool expandPowIntrinsic(CallInst *Orig) {
+
+  Value *X = Orig->getOperand(0);
+  Value *Y = Orig->getOperand(1);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+
+  auto *Log2Call =
+      Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
+  auto *Mul = Builder.CreateFMul(Log2Call, Y);
+  auto *Exp2Call =
+      Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
+  Exp2Call->setTailCall(Orig->isTailCall());
+  Exp2Call->setAttributes(Orig->getAttributes());
+  Orig->replaceAllUsesWith(Exp2Call);
   Orig->eraseFromParent();
   return true;
 }
@@ -238,6 +267,12 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandAbs(Orig);
   case Intrinsic::exp:
     return expandExpIntrinsic(Orig);
+  case Intrinsic::log:
+    return expandLogIntrinsic(Orig);
+  case Intrinsic::log10:
+    return expandLog10Intrinsic(Orig);
+  case Intrinsic::pow:
+    return expandPowIntrinsic(Orig);
   case Intrinsic::dx_any:
     return expandAnyIntrinsic(Orig);
   case Intrinsic::dx_uclamp:
@@ -245,8 +280,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandClampIntrinsic(Orig, F.getIntrinsicID());
   case Intrinsic::dx_lerp:
     return expandLerpIntrinsic(Orig);
-  case Intrinsic::dx_rcp:
-    return expandRcpIntrinsic(Orig);
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return expandIntegerDot(Orig, F.getIntrinsicID());

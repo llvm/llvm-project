@@ -486,31 +486,46 @@ foreach mx = SchedMxList in {
 }
 
 // 13. Vector Floating-Point Instructions
+foreach mx = SchedMxListF in {
+  foreach sew = SchedSEWSet<mx, isF=1>.val in {
+    defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
+    defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxListF, isF=1>.c;
+    let Latency = 6, ReleaseAtCycles = [LMulLat] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+    }
+    let Latency = 2, ReleaseAtCycles = [LMulLat] in
+    defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+    let Latency = 3, ReleaseAtCycles = [LMulLat] in
+    defm "" : LMULSEWWriteResMXSEW<"WriteVFCvtIToFV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+  }
+}
+foreach mx = SchedMxListF in {
+  foreach sew = SchedSEWSet<mx, isF=1>.val in {
+    defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
+    defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxList, isF=1>.c;
+    let Latency = 1, ReleaseAtCycles = [LMulLat] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV",   [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjF",   [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+    }
+  }
+}
 foreach mx = SchedMxList in {
   defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = 6, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFALUV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFALUF",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFMulV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFMulF",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFMulAddV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFMulAddF", [SiFiveP600VectorArith], mx, IsWorstCase>;
-  }
-  let Latency = 3, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFCvtIToFV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFCvtFToIV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-  }
+  let Latency = 3, ReleaseAtCycles = [LMulLat] in
+  defm "" : LMULWriteResMX<"WriteVFCvtFToIV", [SiFiveP600VectorArith], mx, IsWorstCase>;
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVFCmpV",  [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFCmpF",  [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFRecpV", [SiFiveP600VectorArith], mx, IsWorstCase>;
   }
   let Latency = 1, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFSgnjV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFSgnjF",   [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFMinMaxV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFMinMaxF", [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFClassV",  [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMergeV",  [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMovV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
@@ -519,30 +534,32 @@ foreach mx = SchedMxList in {
 
 // Widening
 foreach mx = SchedMxListW in {
-  defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
-  defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxListW>.c;
-  let Latency = 3, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFWCvtIToFV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+  foreach sew = SchedSEWSet<mx, isF=0, isWidening=1>.val in {
+    defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
+    defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxListW>.c;
+    let Latency = 3, ReleaseAtCycles = [LMulLat] in
+    defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtIToFV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
   }
 }
 foreach mx = SchedMxListFW in {
   defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxListFW>.c;
-  let Latency = 6, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFWCvtFToIV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFWCvtFToFV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-  }
+  let Latency = 6, ReleaseAtCycles = [LMulLat] in
+  defm "" : LMULWriteResMX<"WriteVFWCvtFToIV", [SiFiveP600VectorArith], mx, IsWorstCase>;
 }
 foreach mx = SchedMxListFW in {
-  defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
-  defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxListFW>.c;
-  let Latency = 6, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFWALUV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFWMulV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFWMulAddV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFWMulAddF", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFWMulF",    [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFWALUF",    [SiFiveP600VectorArith], mx, IsWorstCase>;
+  foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
+    defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
+    defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
+    let Latency = 6, ReleaseAtCycles = [LMulLat] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWALUF", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulAddF", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWCvtFToFV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+    }
   }
 }
 // Narrowing
@@ -554,11 +571,13 @@ foreach mx = SchedMxListW in {
   }
 }
 foreach mx = SchedMxListFW in {
-  defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
-  defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxListFW>.c;
-  let Latency = 3, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVFNCvtIToFV", [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFNCvtFToFV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+  foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
+    defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
+    defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
+    let Latency = 3, ReleaseAtCycles = [LMulLat] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtIToFV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtFToFV", [SiFiveP600VectorArith], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -726,6 +745,62 @@ foreach mx = SchedMxList in {
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 3, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SiFiveP600VEXQ1], mx, IsWorstCase>;
+  }
+}
+
+// Vector Crypto
+foreach mx = SchedMxList in {
+  defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
+  defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
+  // Zvbb
+  let Latency = 2, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVBREVV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVCLZV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVCPOPV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVCTZV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVWSLLV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVWSLLX",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVWSLLI",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+  }
+  // Zvbc
+  let Latency = 2, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVCLMULV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVCLMULX", [SiFiveP600VectorArith], mx, IsWorstCase>;
+  }
+  // Zvkb
+  // VANDN uses WriteVIALU[V|X|I]
+  let Latency = 2, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVBREV8V",  [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVREV8V",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRotV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRotX",    [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRotI",    [SiFiveP600VectorArith], mx, IsWorstCase>;
+  }
+  // Zvkg
+  let Latency = 2, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVGHSHV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVGMULV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+  }
+  // ZvknhaOrZvknhb
+  let Latency = 3, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVSHA2CHV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSHA2CLV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSHA2MSV", [SiFiveP600VectorArith], mx, IsWorstCase>;
+  }
+  // Zvkned
+  let Latency = 2, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVAESMVV",  [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAESKF1V", [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAESKF2V", [SiFiveP600VectorArith], mx, IsWorstCase>;
+  }
+  let Latency = 1, ReleaseAtCycles = [LMulLat] in
+  defm "" : LMULWriteResMX<"WriteVAESZV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+  // Zvksed
+  let Latency = 3, ReleaseAtCycles = [LMulLat] in {
+    defm "" : LMULWriteResMX<"WriteVSM4KV",   [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSM4RV",   [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSM3CV",   [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSM3MEV",  [SiFiveP600VEXQ0], mx, IsWorstCase>;
   }
 }
 
@@ -925,40 +1000,40 @@ defm "" : LMULReadAdvanceW<"ReadVNClipV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVNClipX", 0>;
 
 // 14. Vector Floating-Point Instructions
-defm "" : LMULReadAdvance<"ReadVFALUV", 0>;
-defm "" : LMULReadAdvance<"ReadVFALUF", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWALUV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWALUF", 0>;
-defm "" : LMULReadAdvance<"ReadVFMulV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMulF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFDivV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFDivF", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWMulV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWMulF", 0>;
-defm "" : LMULReadAdvance<"ReadVFMulAddV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMulAddF", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWMulAddV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWMulAddF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulAddV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulAddF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulAddV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulAddF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFSqrtV", 0>;
-defm "" : LMULReadAdvance<"ReadVFRecpV", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVFRecpV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCmpV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCmpF", 0>;
-defm "" : LMULReadAdvance<"ReadVFMinMaxV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMinMaxF", 0>;
-defm "" : LMULReadAdvance<"ReadVFSgnjV", 0>;
-defm "" : LMULReadAdvance<"ReadVFSgnjF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMinMaxV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMinMaxF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSgnjV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSgnjF", 0>;
 defm "" : LMULReadAdvance<"ReadVFClassV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMergeV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMergeF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMovF", 0>;
-defm "" : LMULReadAdvance<"ReadVFCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFCvtIToFV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
-defm "" : LMULReadAdvanceW<"ReadVFWCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceW<"ReadVFWCvtIToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
 // 15. Vector Reduction Operations
 def : ReadAdvance<ReadVIRedV, 0>;
@@ -1013,6 +1088,42 @@ foreach mx = SchedMxList in {
     def : ReadAdvance<!cast<SchedRead>("ReadVMergeOp_" # mx  # "_E" # sew), 0>;
 }
 
+// Vector Crypto Extensions
+// Zvbb
+defm "" : LMULReadAdvance<"ReadVBREVV", 0>;
+defm "" : LMULReadAdvance<"ReadVCLZV", 0>;
+defm "" : LMULReadAdvance<"ReadVCPOPV", 0>;
+defm "" : LMULReadAdvance<"ReadVCTZV", 0>;
+defm "" : LMULReadAdvance<"ReadVWSLLV", 0>;
+defm "" : LMULReadAdvance<"ReadVWSLLX", 0>;
+// Zvbc
+defm "" : LMULReadAdvance<"ReadVCLMULV", 0>;
+defm "" : LMULReadAdvance<"ReadVCLMULX", 0>;
+// Zvkb
+// VANDN uses ReadVIALU[V|X|I]
+defm "" : LMULReadAdvance<"ReadVBREV8V", 0>;
+defm "" : LMULReadAdvance<"ReadVREV8V", 0>;
+defm "" : LMULReadAdvance<"ReadVRotV", 0>;
+defm "" : LMULReadAdvance<"ReadVRotX", 0>;
+// Zvkg
+defm "" : LMULReadAdvance<"ReadVGHSHV", 0>;
+defm "" : LMULReadAdvance<"ReadVGMULV", 0>;
+// Zvknha or Zvknhb
+defm "" : LMULReadAdvance<"ReadVSHA2CHV", 0>;
+defm "" : LMULReadAdvance<"ReadVSHA2CLV", 0>;
+defm "" : LMULReadAdvance<"ReadVSHA2MSV", 0>;
+// Zvkned
+defm "" : LMULReadAdvance<"ReadVAESMVV", 0>;
+defm "" : LMULReadAdvance<"ReadVAESKF1V", 0>;
+defm "" : LMULReadAdvance<"ReadVAESKF2V", 0>;
+defm "" : LMULReadAdvance<"ReadVAESZV", 0>;
+// Zvksed
+defm "" : LMULReadAdvance<"ReadVSM4KV", 0>;
+defm "" : LMULReadAdvance<"ReadVSM4RV", 0>;
+// Zbksh
+defm "" : LMULReadAdvance<"ReadVSM3CV", 0>;
+defm "" : LMULReadAdvance<"ReadVSM3MEV", 0>;
+
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedZabha;
@@ -1021,4 +1132,5 @@ defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZfa;
+defm : UnsupportedSchedXsfvcp;
 }

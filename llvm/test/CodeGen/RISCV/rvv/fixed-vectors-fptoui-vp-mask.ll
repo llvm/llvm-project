@@ -42,7 +42,7 @@ define <4 x i1> @vfptoui_v4i1_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; ZVFHMIN-NEXT:    vfcvt.rtz.xu.f.v v8, v9
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFHMIN-NEXT:    ret
-  %v = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f16(<4 x half> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f16(<4 x half> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i1> %v
 }
 
@@ -66,7 +66,7 @@ define <4 x i1> @vfptoui_v4i1_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f32(<4 x float> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f32(<4 x float> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i1> %v
 }
 
@@ -91,6 +91,6 @@ define <4 x i1> @vfptoui_v4i1_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f64(<4 x double> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i1> @llvm.vp.fptoui.v4i1.v4f64(<4 x double> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i1> %v
 }

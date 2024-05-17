@@ -70,11 +70,11 @@ void ControlFlowDialect::initialize() {
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc"
       >();
   addInterfaces<ControlFlowInlinerInterface>();
-  declarePromisedInterface<ControlFlowDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, ControlFlowDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
                             CondBranchOp>();
-  declarePromisedInterface<CondBranchOp,
-                           bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
+                           CondBranchOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -531,8 +531,8 @@ static ParseResult parseSwitchOpCases(
         failed(parser.parseSuccessor(destination)))
       return failure();
     if (succeeded(parser.parseOptionalLParen())) {
-      if (failed(parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                         /*allowResultNumber=*/false)) ||
+      if (failed(parser.parseOperandList(operands,
+                                         OpAsmParser::Delimiter::None)) ||
           failed(parser.parseColonTypeList(operandTypes)) ||
           failed(parser.parseRParen()))
         return failure();

@@ -49,7 +49,7 @@ config("cxx_config") {
     "-Wno-covered-switch-default",
   ]
   cflags_cc = [
-    "-std=c++20",
+    "-std=c++23",
     "-nostdinc++",
   ]
   defines = [
@@ -125,6 +125,7 @@ cxx_sources = [
   "condition_variable_destructor.cpp",
   "error_category.cpp",
   "exception.cpp",
+  "expected.cpp",
   "fstream.cpp",
   "functional.cpp",
   "future.cpp",
@@ -315,7 +316,6 @@ if (libcxx_enable_experimental) {
     sources = [ "experimental/keep.cpp" ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
-        "include/tzdb/time_zone_link_private.h",
         "include/tzdb/time_zone_private.h",
         "include/tzdb/types_private.h",
         "include/tzdb/tzdb_list_private.h",

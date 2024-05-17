@@ -45,6 +45,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
 #include <cstdlib>
@@ -92,6 +93,7 @@ inline void registerAllPasses() {
   arm_sme::registerArmSMEPasses();
   arm_sve::registerArmSVEPasses();
   emitc::registerEmitCPasses();
+  xegpu::registerXeGPUPasses();
 
   // Dialect pipelines
   bufferization::registerBufferizationPipelines();

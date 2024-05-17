@@ -784,7 +784,7 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // If the successor only has a single pred, split the top of the successor
     // block.
     assert(SP == BB && "CFG broken");
-    SP = nullptr;
+    (void)SP;
     return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, BBName,
                       /*Before=*/true);
   }
@@ -1141,6 +1141,7 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt
 }
 
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
+/// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       ArrayRef<BasicBlock *> Preds,
                                       DomTreeUpdater *DTU, DominatorTree *DT,
@@ -1401,13 +1402,13 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
   if (OldLatch) {
     BasicBlock *NewLatch = L->getLoopLatch();
     if (NewLatch != OldLatch) {
-      MDNode *MD = OldLatch->getTerminator()->getMetadata("llvm.loop");
-      NewLatch->getTerminator()->setMetadata("llvm.loop", MD);
+      MDNode *MD = OldLatch->getTerminator()->getMetadata(LLVMContext::MD_loop);
+      NewLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, MD);
       // It's still possible that OldLatch is the latch of another inner loop,
       // in which case we do not remove the metadata.
       Loop *IL = LI->getLoopFor(OldLatch);
       if (IL && IL->getLoopLatch() != OldLatch)
-        OldLatch->getTerminator()->setMetadata("llvm.loop", nullptr);
+        OldLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
     }
   }
 

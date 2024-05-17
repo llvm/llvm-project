@@ -12,8 +12,8 @@ define i64 @foo(i32 %tmp7) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 4, i32 2, i32 3, i32 5, i32 poison, i32 6>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP24]], i32 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <8 x i32> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <8 x i32> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP77:%.*]] = add nsw <8 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP77]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> zeroinitializer, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <8 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP10]])

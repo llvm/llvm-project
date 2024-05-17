@@ -99,6 +99,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -116,6 +117,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -150,8 +152,8 @@ struct VerifierSupport {
   bool TreatBrokenDebugInfoAsError = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
-      : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
-        Context(M.getContext()) {}
+      : OS(OS), M(M), MST(&M), TT(Triple::normalize(M.getTargetTriple())),
+        DL(M.getDataLayout()), Context(M.getContext()) {}
 
 private:
   void Write(const Module *M) {
@@ -529,6 +531,7 @@ private:
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
+  void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
@@ -1240,7 +1243,8 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
               N.getTag() == dwarf::DW_TAG_inheritance ||
               N.getTag() == dwarf::DW_TAG_friend ||
-              N.getTag() == dwarf::DW_TAG_set_type,
+              N.getTag() == dwarf::DW_TAG_set_type ||
+              N.getTag() == dwarf::DW_TAG_template_alias,
           "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
@@ -1734,8 +1738,28 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  for (const MDNode *MDN : Flags->operands())
+  uint64_t PAuthABIPlatform = -1;
+  uint64_t PAuthABIVersion = -1;
+  for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
+    if (MDN->getNumOperands() != 3)
+      continue;
+    if (const auto *FlagName = dyn_cast_or_null<MDString>(MDN->getOperand(1))) {
+      if (FlagName->getString() == "aarch64-elf-pauthabi-platform") {
+        if (const auto *PAP =
+                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
+          PAuthABIPlatform = PAP->getZExtValue();
+      } else if (FlagName->getString() == "aarch64-elf-pauthabi-version") {
+        if (const auto *PAV =
+                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
+          PAuthABIVersion = PAV->getZExtValue();
+      }
+    }
+  }
+
+  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+    CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
+                "'aarch64-elf-pauthabi-version' module flags must be present");
 
   // Validate that the requirements in the module are valid.
   for (const MDNode *Requirement : Requirements) {
@@ -2041,7 +2065,8 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           "Invalid value for 'nofpclass' test mask", V);
   }
   if (Attrs.hasAttribute(Attribute::Range)) {
-    auto CR = Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
+    const ConstantRange &CR =
+        Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
     Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
           "Range bit width must match type bit width!", V);
   }
@@ -2355,8 +2380,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName.equals("function_entry_count") ||
-                ProfName.equals("synthetic_function_entry_count"),
+      Check(ProfName == "function_entry_count" ||
+                ProfName == "synthetic_function_entry_count",
             "first operand should be 'function_entry_count'"
             " or 'synthetic_function_entry_count'",
             MD);
@@ -4248,9 +4273,10 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFloatingPointTy(),
+    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have floating point type!",
+              " operand must have floating-point or fixed vector of floating-point "
+              "type!",
           &RMWI, ElTy);
   } else {
     Check(ElTy->isIntegerTy(),
@@ -4343,6 +4369,11 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       Check(II->getUnwindDest() == BB && II->getNormalDest() != BB,
             "EH pad must be jumped to via an unwind edge", ToPad, II);
+      auto *CalledFn =
+          dyn_cast<Function>(II->getCalledOperand()->stripPointerCasts());
+      if (CalledFn && CalledFn->isIntrinsic() && II->doesNotThrow() &&
+          !IntrinsicInst::mayLowerToFunctionCall(CalledFn->getIntrinsicID()))
+        continue;
       if (auto Bundle = II->getOperandBundle(LLVMContext::OB_funclet))
         FromPad = Bundle->Inputs[0];
       else
@@ -4755,7 +4786,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   StringRef ProfName = MDS->getString();
 
   // Check consistency of !prof branch_weights metadata.
-  if (ProfName.equals("branch_weights")) {
+  if (ProfName == "branch_weights") {
     if (isa<InvokeInst>(&I)) {
       Check(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
             "Wrong number of InvokeInst branch_weights operands", MD);
@@ -4815,6 +4846,24 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
     CheckDI(DVR->getFunction() == I.getFunction(),
             "DVRAssign not in same function as inst", DVR, &I);
   }
+}
+
+void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
+  Check(canInstructionHaveMMRAs(I),
+        "!mmra metadata attached to unexpected instruction kind", I, MD);
+
+  // MMRA Metadata should either be a tag, e.g. !{!"foo", !"bar"}, or a
+  // list of tags such as !2 in the following example:
+  //    !0 = !{!"a", !"b"}
+  //    !1 = !{!"c", !"d"}
+  //    !2 = !{!0, !1}
+  if (MMRAMetadata::isTagMD(MD))
+    return;
+
+  Check(isa<MDTuple>(MD), "!mmra expected to be a metadata tuple", I, MD);
+  for (const MDOperand &MDOp : MD->operands())
+    Check(MMRAMetadata::isTagMD(MDOp.get()),
+          "!mmra metadata tuple operand is not an MMRA tag", I, MDOp.get());
 }
 
 void Verifier::visitCallStackMetadata(MDNode *MD) {
@@ -5016,7 +5065,7 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
-                F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
+                F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
@@ -5133,6 +5182,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
     visitDIAssignIDMetadata(I, MD);
+
+  if (MDNode *MMRA = I.getMetadata(LLVMContext::MD_mmra))
+    visitMMRAMetadata(I, MMRA);
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
@@ -5332,11 +5384,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
 #include "llvm/IR/VPIntrinsics.def"
+#undef BEGIN_REGISTER_VP_INTRINSIC
     visitVPIntrinsic(cast<VPIntrinsic>(Call));
     break;
 #define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
+#undef INSTRUCTION
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
     break;
   case Intrinsic::dbg_declare: // llvm.dbg.declare
@@ -5661,6 +5715,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::experimental_patchpoint: {
+    if (Call.getCallingConv() == CallingConv::AnyReg) {
+      Check(Call.getType()->isSingleValueType(),
+            "patchpoint: invalid return type used with anyregcc", Call);
+    }
+    break;
+  }
   case Intrinsic::eh_exceptioncode:
   case Intrinsic::eh_exceptionpointer: {
     Check(isa<CatchPadInst>(Call.getArgOperand(0)),
@@ -5760,6 +5821,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "of the value computed by experimental_deoptimize");
     }
 
+    break;
+  }
+  case Intrinsic::vastart: {
+    Check(Call.getFunction()->isVarArg(),
+          "va_start called in a non-varargs function");
     break;
   }
   case Intrinsic::vector_reduce_and:
@@ -5956,7 +6022,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
-  case Intrinsic::experimental_vector_splice: {
+  case Intrinsic::vector_splice: {
     VectorType *VecTy = cast<VectorType>(Call.getType());
     int64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getSExtValue();
     int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
@@ -6163,7 +6229,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_convergence_entry:
-    LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
     break;
   case Intrinsic::experimental_convergence_loop:
@@ -6189,6 +6254,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.ptrmask intrinsic second argument bitwidth must match "
           "pointer index type size of first argument",
           &Call);
+    break;
+  }
+  case Intrinsic::threadlocal_address: {
+    const Value &Arg0 = *Call.getArgOperand(0);
+    Check(isa<GlobalValue>(Arg0),
+          "llvm.threadlocal.address first argument must be a GlobalValue");
+    Check(cast<GlobalValue>(Arg0).isThreadLocal(),
+          "llvm.threadlocal.address operand isThreadLocal() must be true");
     break;
   }
   };
@@ -6456,19 +6529,13 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
-  unsigned NumOperands;
-  bool HasRoundingMD;
-  switch (FPI.getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    NumOperands = NARG;                                                        \
-    HasRoundingMD = ROUND_MODE;                                                \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  default:
-    llvm_unreachable("Invalid constrained FP intrinsic!");
-  }
+  unsigned NumOperands = FPI.getNonMetadataArgCount();
+  bool HasRoundingMD =
+      Intrinsic::hasConstrainedFPRoundingModeOperand(FPI.getIntrinsicID());
+
+  // Add the expected number of metadata operands.
   NumOperands += (1 + HasRoundingMD);
+
   // Compare intrinsics carry an extra predicate metadata operand.
   if (isa<ConstrainedFPCmpIntrinsic>(FPI))
     NumOperands += 1;
@@ -6482,8 +6549,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Type *ResultTy = FPI.getType();
     Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
           "Intrinsic does not support vectors", &FPI);
-  }
     break;
+  }
 
   case Intrinsic::experimental_constrained_lround:
   case Intrinsic::experimental_constrained_llround: {
@@ -6522,8 +6589,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
             "Intrinsic first argument and result vector lengths must be equal",
             &FPI);
     }
-  }
     break;
+  }
 
   case Intrinsic::experimental_constrained_sitofp:
   case Intrinsic::experimental_constrained_uitofp: {
@@ -6545,7 +6612,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
             "Intrinsic first argument and result vector lengths must be equal",
             &FPI);
     }
-  } break;
+    break;
+  }
 
   case Intrinsic::experimental_constrained_fptrunc:
   case Intrinsic::experimental_constrained_fpext: {
@@ -6574,8 +6642,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
             "Intrinsic first argument's type must be smaller than result type",
             &FPI);
     }
-  }
     break;
+  }
 
   default:
     break;

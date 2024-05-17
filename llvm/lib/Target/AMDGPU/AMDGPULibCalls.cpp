@@ -577,18 +577,26 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 
 static bool isKnownIntegral(const Value *V, const DataLayout &DL,
                             FastMathFlags FMF) {
-  if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
     return true;
+  if (isa<UndefValue>(V))
+    return false;
 
   if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
     return CF->getValueAPF().isInteger();
 
-  if (const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(V)) {
-    for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
-      Constant *ConstElt = CDV->getElementAsConstant(i);
-      if (isa<UndefValue>(ConstElt))
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  const Constant *CV = dyn_cast<Constant>(V);
+  if (VFVTy && CV) {
+    unsigned NumElts = VFVTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = CV->getAggregateElement(i);
+      if (!Elt)
+        return false;
+      if (isa<PoisonValue>(Elt))
         continue;
-      const ConstantFP *CFP = dyn_cast<ConstantFP>(ConstElt);
+
+      const ConstantFP *CFP = dyn_cast<ConstantFP>(Elt);
       if (!CFP || !CFP->getValue().isInteger())
         return false;
     }
@@ -657,6 +665,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     return true;
 
   IRBuilder<> B(CI);
+  if (CI->isStrictFP())
+    B.setIsFPConstrained(true);
 
   if (FPMathOperator *FPOp = dyn_cast<FPMathOperator>(CI)) {
     // Under unsafe-math, evaluate calls if possible.
@@ -904,8 +914,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
   const APFloat *CF = nullptr;
   const APInt *CINT = nullptr;
-  if (!match(opr1, m_APFloatAllowUndef(CF)))
-    match(opr1, m_APIntAllowUndef(CINT));
+  if (!match(opr1, m_APFloatAllowPoison(CF)))
+    match(opr1, m_APIntAllowPoison(CINT));
 
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
@@ -1037,7 +1047,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   Constant *cnval = nullptr;
   if (getVecSize(FInfo) == 1) {
     CF = nullptr;
-    match(opr0, m_APFloatAllowUndef(CF));
+    match(opr0, m_APFloatAllowPoison(CF));
 
     if (CF) {
       double V = (getArgType(FInfo) == AMDGPULibFunc::F32)
