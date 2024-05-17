@@ -172,7 +172,7 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto& Base : RD->bases()) {
+    for (auto &Base : RD->bases()) {
       const auto AccSpec = Base.getAccessSpecifier();
       if (AccSpec == AS_protected || AccSpec == AS_private ||
           (AccSpec == AS_none && RD->isClass()))
@@ -194,8 +194,7 @@ public:
 
       bool AnyInconclusiveBase = false;
       const auto hasPublicRefInBase =
-          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
-                                 CXXBasePath &) {
+          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
             auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
             if (!hasRefInBase) {
               AnyInconclusiveBase = true;
@@ -203,16 +202,15 @@ public:
             }
             return (*hasRefInBase) != nullptr;
           };
-      const auto hasPublicDerefInBase = [&AnyInconclusiveBase](
-                                            const CXXBaseSpecifier *Base,
-                                            CXXBasePath &) {
-        auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
-        if (!hasDerefInBase) {
-          AnyInconclusiveBase = true;
-          return false;
-        }
-        return (*hasDerefInBase) != nullptr;
-      };
+      const auto hasPublicDerefInBase =
+          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+            auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
+            if (!hasDerefInBase) {
+              AnyInconclusiveBase = true;
+              return false;
+            }
+            return (*hasDerefInBase) != nullptr;
+          };
       CXXBasePaths Paths;
       Paths.setOrigin(C);
       hasRef = hasRef || C->lookupInBases(hasPublicRefInBase, Paths,
@@ -227,8 +225,8 @@ public:
 
       const auto *Dtor = C->getDestructor();
       if (!Dtor || !Dtor->isVirtual()) {
-        auto* ProblematicBaseSpecifier = &Base;
-        auto* ProblematicBaseClass = C;
+        auto *ProblematicBaseSpecifier = &Base;
+        auto *ProblematicBaseClass = C;
         reportBug(RD, ProblematicBaseSpecifier, ProblematicBaseClass);
       }
     }
