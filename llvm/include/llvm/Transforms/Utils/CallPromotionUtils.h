@@ -20,7 +20,6 @@ class Constant;
 class CallBase;
 class CastInst;
 class Function;
-class GlobalVariable;
 class Instruction;
 class MDNode;
 class Value;
