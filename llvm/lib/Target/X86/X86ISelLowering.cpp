@@ -56802,12 +56802,12 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
 
     assert(!IsStrict && "Strict FP doesn't support BF16");
     if (VT.getVectorElementType() == MVT::f64) {
-      MVT TmpVT = VT.getSimpleVT().changeVectorElementType(MVT::f32);
+      EVT TmpVT = VT.changeVectorElementType(MVT::f32);
       return DAG.getNode(ISD::FP_EXTEND, dl, VT,
                          DAG.getNode(ISD::FP_EXTEND, dl, TmpVT, Src));
     }
     assert(VT.getVectorElementType() == MVT::f32 && "Unexpected fpext");
-    MVT NVT = SrcVT.getSimpleVT().changeVectorElementType(MVT::i32);
+    EVT NVT = SrcVT.changeVectorElementType(MVT::i32);
     Src = DAG.getBitcast(SrcVT.changeTypeToInteger(), Src);
     Src = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Src);
     Src = DAG.getNode(ISD::SHL, dl, NVT, Src, DAG.getConstant(16, dl, NVT));
