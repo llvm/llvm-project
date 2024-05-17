@@ -26,6 +26,7 @@ void LogMessageOnPrintf(const char *str) {}
 void WriteToSyslog(const char *buffer) {}
 void Abort() { internal__exit(1); }
 bool CreateDir(const char *pathname) { return false; }
+bool ShouldTreatRuntimeSecurely() { return false; }
 #endif // !SANITIZER_WINDOWS
 
 #if !SANITIZER_WINDOWS && !SANITIZER_APPLE

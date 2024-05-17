@@ -1096,6 +1096,11 @@ inline u32 GetNumberOfCPUsCached() {
   return NumberOfCPUsCached;
 }
 
+// Returns true if the our runtime has special privileges (e.g. setuid) and
+// should be treated with caution when dealing with untrusted user input.
+// For example, when writing files or executing user-specified binaries.
+bool ShouldTreatRuntimeSecurely();
+
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::usize size,

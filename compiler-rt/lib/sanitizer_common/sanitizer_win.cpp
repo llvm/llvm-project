@@ -1199,6 +1199,8 @@ void LogFullErrorReport(const char *buffer) {
 
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
 
+bool ShouldTreatRuntimeSecurely() { return false; }
+
 }  // namespace __sanitizer
 
 #endif  // _WIN32
