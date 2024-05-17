@@ -157,7 +157,10 @@ private:
     if (failed(newOp))
       return failure();
 
-    rewriter.replaceOp(rootOp, *newOp);
+    if (rootOp->getNumResults() == 0 || *newOp == Value())
+      rewriter.eraseOp(rootOp);
+    else
+      rewriter.replaceOp(rootOp, *newOp);
     return success();
   }
 
