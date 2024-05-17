@@ -208,9 +208,8 @@ private:
   // Writes known header fields and preserves space for fields whose value are
   // known only after payloads are written. Returns the number of bytes written
   // and records the start offset for back patching in `BackPatchStartOffset`.
-  size_t writeHeader(IndexedInstrProf::Header &header,
-                     const bool WritePrevVersion, ProfOStream &OS,
-                     size_t &BackPatchStartOffset);
+  uint64_t writeHeader(const IndexedInstrProf::Header &header,
+                       const bool WritePrevVersion, ProfOStream &OS);
 };
 
 } // end namespace llvm

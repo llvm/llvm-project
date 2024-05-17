@@ -552,39 +552,27 @@ static Error writeMemProf(
               memprof::MaximumSupportedVersion));
 }
 
-size_t InstrProfWriter::writeHeader(IndexedInstrProf::Header &Header,
-                                    const bool WritePrevVersion,
-                                    ProfOStream &OS,
-                                    size_t &BackPatchStartOffset) {
+uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
+                                      const bool WritePrevVersion,
+                                      ProfOStream &OS) {
   // Records the offset before writing any fields.
   const uint64_t StartOffset = OS.tell();
   // Only write out the first four fields. We need to remember the offset of the
   // remaining fields to allow back patching later.
   for (int I = 0; I < 4; I++)
-    OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
+    OS.write(reinterpret_cast<const uint64_t *>(&Header)[I]);
 
-  BackPatchStartOffset = OS.tell();
+  auto BackPatchStartOffset = OS.tell();
 
-  // Reserve the space for HashOffset field.
-  OS.write(0);
-
-  // Reserve space for the MemProf table field to be patched later if this
-  // profile contains memory profile information.
-  OS.write(0);
-
-  // Reserve space for the BinaryIdOffset field to be patched later if this
-  // profile contains binary ids.
-  OS.write(0);
-
-  // Reserve space for temporal profile traces for back patching later.
-  OS.write(0);
-
-  // Reserve space for vtable names for back patching later.
+  // Reserve the space for back patching later.
+  OS.write(0); // HashOffset
+  OS.write(0); // MemProfOffset
+  OS.write(0); // BinaryIdOffset
+  OS.write(0); // TemporalProfTracesOffset
   if (!WritePrevVersion)
-    OS.write(0);
+    OS.write(0); // VTableNamesOffset
 
-  // Returns the number of bytes written in the header section.
-  return OS.tell() - StartOffset;
+  return BackPatchStartOffset;
 }
 
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
@@ -641,8 +629,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.TemporalProfTracesOffset = 0;
   Header.VTableNamesOffset = 0;
 
-  size_t BackPatchStartOffset = 0;
-  this->writeHeader(Header, WritePrevVersion, OS, BackPatchStartOffset);
+  const uint64_t BackPatchStartOffset =
+      writeHeader(Header, WritePrevVersion, OS);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -771,15 +759,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
-  const size_t MemProfOffset =
-      BackPatchStartOffset + sizeof(IndexedInstrProf::Header::HashOffset);
-  const size_t BinaryIdOffset =
-      MemProfOffset + sizeof(IndexedInstrProf::Header::MemProfOffset);
-  const size_t TemporalProfTracesOffset =
-      BinaryIdOffset + sizeof(IndexedInstrProf::Header::BinaryIdOffset);
-  const size_t VTableNamesOffset =
-      TemporalProfTracesOffset +
-      sizeof(IndexedInstrProf::Header::TemporalProfTracesOffset);
+  const size_t MemProfOffset = BackPatchStartOffset + sizeof(uint64_t);
+  const size_t BinaryIdOffset = MemProfOffset + sizeof(uint64_t);
+  const size_t TemporalProfTracesOffset = BinaryIdOffset + sizeof(uint64_t);
+  const size_t VTableNamesOffset = TemporalProfTracesOffset + sizeof(uint64_t);
   if (!WritePrevVersion) {
     // Now do the final patch:
     PatchItem PatchItems[] = {
