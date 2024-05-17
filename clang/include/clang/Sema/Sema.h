@@ -3309,7 +3309,7 @@ public:
   /// Subroutines of ActOnDeclarator().
   TypedefDecl *ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
                                 TypeSourceInfo *TInfo);
-  bool isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New);
+  bool isIncompatibleTypedef(const TypeDecl *Old, TypedefNameDecl *New);
 
   /// Describes the kind of merge to perform for availability
   /// attributes (including "deprecated", "unavailable", and "availability").
