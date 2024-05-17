@@ -4576,3 +4576,10 @@ def CodeAlign: StmtAttr {
     static constexpr int MaximumAlignment = 4096;
   }];
 }
+
+def ClspvLibclcBuiltin: InheritableAttr {
+  let Spellings = [Clang<"clspv_libclc_builtin">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [ClspvLibclcBuiltinDoc];
+  let SimpleHandler = 1;
+}
