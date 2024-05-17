@@ -744,7 +744,8 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 
 void Debugger::HandleDestroyCallback() {
   const lldb::user_id_t user_id = GetID();
-  // Invoke and remove all the callbacks in an FIFO order. Callbacks which are added during this loop will be appended, invoked and then removed last.
+  // Invoke and remove all the callbacks in an FIFO order. Callbacks which are
+  // added during this loop will be appended, invoked and then removed last.
   // Callbacks which are removed during this loop will not be invoked.
   while (true) {
     DebuggerDestroyCallbackTuple callback;

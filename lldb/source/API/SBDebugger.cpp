@@ -1689,9 +1689,9 @@ void SBDebugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 void SBDebugger::SetDestroyCallback(
     lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
   LLDB_INSTRUMENT_VA(this, destroy_callback, baton);
-
   if (m_opaque_sp) {
-    m_opaque_sp->SetDestroyCallback(destroy_callback, baton);
+    return m_opaque_sp->SetDestroyCallback(
+        destroy_callback, baton);
   }
 }
 

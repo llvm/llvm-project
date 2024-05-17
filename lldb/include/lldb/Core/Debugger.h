@@ -580,7 +580,7 @@ public:
 
   /// Add a callback for when the debugger is destroyed. Return a token, which
   /// can be used to remove said callback. Multiple callbacks can be added by
-  /// calling this function multiple times.
+  /// calling this function multiple times, and will be invoked in FIFO order.
   lldb::destroy_callback_token_t
   AddDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
                      void *baton);
@@ -749,7 +749,9 @@ protected:
 
   std::mutex m_destroy_callback_mutex;
   lldb::destroy_callback_token_t m_destroy_callback_next_token = 0;
-  typedef std::tuple<lldb::destroy_callback_token_t, lldb_private::DebuggerDestroyCallback, void *> DebuggerDestroyCallbackTuple;
+  typedef std::tuple<lldb::destroy_callback_token_t,
+                     lldb_private::DebuggerDestroyCallback, void *>
+      DebuggerDestroyCallbackTuple;
   llvm::SmallVector<DebuggerDestroyCallbackTuple, 2> m_destroy_callbacks;
 
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests
