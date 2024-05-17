@@ -309,8 +309,7 @@ struct TransferWriteNonPermutationLowering
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
     // In memref case, MaskableOpRewritePattern cannot replaceOp with result.
-    rewriter.eraseOp(op);
-    return failure();
+    return Value();
   }
 };
 
