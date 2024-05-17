@@ -2710,14 +2710,14 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     return nullptr;
   }
 
-  if (EllipsisLoc.isValid() &&
-      !BaseType->containsUnexpandedParameterPack()) {
+  if (EllipsisLoc.isValid() && !BaseType->containsUnexpandedParameterPack()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
       << TInfo->getTypeLoc().getSourceRange();
     EllipsisLoc = SourceLocation();
   }
 
-  auto *BaseDecl = dyn_cast_if_present<CXXRecordDecl>(computeDeclContext(BaseType));
+  auto *BaseDecl =
+      dyn_cast_if_present<CXXRecordDecl>(computeDeclContext(BaseType));
   // C++ [class.derived.general]p2:
   //   A class-or-decltype shall denote a (possibly cv-qualified) class type
   //   that is not an incompletely defined class; any cv-qualifiers are
@@ -2734,14 +2734,16 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
         Context.getTargetInfo().getTriple().isPS()) {
       if (Attr *ClassAttr = getDLLAttr(Class)) {
-        if (auto *BaseSpec = dyn_cast<ClassTemplateSpecializationDecl>(BaseDecl)) {
-          propagateDLLAttrToBaseClassTemplate(Class, ClassAttr, BaseSpec, BaseLoc);
+        if (auto *BaseSpec =
+                dyn_cast<ClassTemplateSpecializationDecl>(BaseDecl)) {
+          propagateDLLAttrToBaseClassTemplate(Class, ClassAttr, BaseSpec,
+                                              BaseLoc);
         }
       }
     }
 
-    if (RequireCompleteType(BaseLoc, BaseType,
-                            diag::err_incomplete_base_class, SpecifierRange)) {
+    if (RequireCompleteType(BaseLoc, BaseType, diag::err_incomplete_base_class,
+                            SpecifierRange)) {
       Class->setInvalidDecl();
       return nullptr;
     }
@@ -2791,7 +2793,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       (!BaseCSA || !DerivedCSA || BaseCSA->getName() != DerivedCSA->getName())) {
     Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
     Diag(BaseDecl->getLocation(), diag::note_base_class_specified_here)
-      << BaseDecl;
+        << BaseDecl;
     return nullptr;
   }
 
@@ -2803,7 +2805,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
   //     the flexible array member would index into the derived class.
   if (BaseDecl->hasFlexibleArrayMember()) {
     Diag(BaseLoc, diag::err_base_class_has_flexible_array_member)
-      << BaseDecl->getDeclName();
+        << BaseDecl->getDeclName();
     return nullptr;
   }
 
@@ -2812,8 +2814,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
   //   base-clause, the program is ill-formed.
   if (FinalAttr *FA = BaseDecl->getAttr<FinalAttr>()) {
     Diag(BaseLoc, diag::err_class_marked_final_used_as_base)
-      << BaseDecl->getDeclName()
-      << FA->isSpelledAsSealed();
+        << BaseDecl->getDeclName() << FA->isSpelledAsSealed();
     Diag(BaseDecl->getLocation(), diag::note_entity_declared_at)
         << BaseDecl->getDeclName() << FA->getRange();
     return nullptr;
