@@ -9,8 +9,8 @@
 // Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
-#ifndef FORTRAN_LOWER_CLAUASEPROCESSOR_H
-#define FORTRAN_LOWER_CLAUASEPROCESSOR_H
+#ifndef FORTRAN_LOWER_CLAUSEPROCESSOR_H
+#define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
 #include "Clauses.h"
 #include "DirectivesCommon.h"
@@ -312,4 +312,4 @@ bool ClauseProcessor::markClauseOccurrence(mlir::UnitAttr &result) const {
 } // namespace lower
 } // namespace Fortran
 
-#endif // FORTRAN_LOWER_CLAUASEPROCESSOR_H
+#endif // FORTRAN_LOWER_CLAUSEPROCESSOR_H
