@@ -104,7 +104,7 @@ set(src_files
 # vectorized accesses to the shared state. Generally, those are "good" but
 # the optimizer pipeline (esp. Attributor) does not fully support vectorized
 # instructions yet and we end up missing out on way more important constant
-# propagation. That said, we will run the vectorizer again after the runtime 
+# propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512 -mllvm -vectorize-slp=false )
 set(link_opt_flags  -O3        -openmp-opt-disable -attributor-enable=module -vectorize-slp=false )

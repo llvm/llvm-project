@@ -1,5 +1,5 @@
 ! Offloading test checking interaction of an
-! explicit derived type mapping when mapped to 
+! explicit derived type mapping when mapped to
 ! target and assigning to individual members
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
@@ -16,29 +16,29 @@ program main
     real(4) :: rx = 0.0
     complex(4) :: zx = (0,0)
     integer(4) :: array(5)
-    end type scalar 
-  
+    end type scalar
+
     type(scalar) :: out
     type(scalar) :: in
-  
+
     in%ix = 10
     in%rx = 2.0
     in%zx = (2, 10)
-  
+
     do i = 1, 5
       in%array(i) = i
-    end do 
-  
+    end do
+
   !$omp target map(from:out) map(to:in)
     out%ix = in%ix
     out%rx = in%rx
     out%zx = in%zx
-  
+
     do i = 1, 5
       out%array(i) = in%array(i)
-    end do 
+    end do
   !$omp end target
-  
+
     print*, in%ix
     print*, in%rx
     print*, in%array

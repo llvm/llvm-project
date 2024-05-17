@@ -51,7 +51,7 @@ target_compile_definitions(PluginCommon PRIVATE
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 
-target_include_directories(PluginCommon PUBLIC 
+target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
