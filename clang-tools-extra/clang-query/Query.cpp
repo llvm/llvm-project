@@ -108,7 +108,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
       return false;
     }
 
-    const ASTContext &Ctx = AST->getASTContext();
+    ASTContext &Ctx = AST->getASTContext();
     Ctx.getParentMapContext().setTraversalKind(QS.TK);
     Finder.matchAST(Ctx);
 
