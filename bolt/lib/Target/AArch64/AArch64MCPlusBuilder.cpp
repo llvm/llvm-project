@@ -1055,6 +1055,52 @@ public:
     return true;
   }
 
+  bool convertCallToIndirectCall(BinaryBasicBlock &BB,
+                                 BinaryBasicBlock::iterator &It,
+                                 const MCSymbol *TargetLocation,
+                                 MCContext *Ctx) override {
+    // Generated code:
+    // adrp	x16 <symbol>
+    // ldr	x17, [x16, #<offset>]
+    // bl <label> -> blr	x17  (or covert 'b -> br' for tail calls)
+
+    MCInst &InstCall = *It;
+    bool IsTailCall = isTailCall(InstCall);
+    assert((InstCall.getOpcode() == AArch64::BL ||
+            (InstCall.getOpcode() == AArch64::B && IsTailCall)) &&
+           "64-bit direct (tail) call instruction expected");
+
+    // Convert the call to an indicrect one by modifying the instruction.
+    InstCall.clear();
+    InstCall.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
+    InstCall.addOperand(MCOperand::createReg(AArch64::X17));
+    if (IsTailCall)
+      setTailCall(*It);
+
+    // Prepend instructions to load PLT call address from the input symbol.
+
+    MCInst InstLoad;
+    InstLoad.setOpcode(AArch64::LDRXui);
+    InstLoad.addOperand(MCOperand::createReg(AArch64::X17));
+    InstLoad.addOperand(MCOperand::createReg(AArch64::X16));
+    InstLoad.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstLoad, /* OpNum */ 2, TargetLocation,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_LD64_GOT_LO12_NC);
+    It = BB.insertInstruction(It, InstLoad);
+
+    MCInst InstAdrp;
+    InstAdrp.setOpcode(AArch64::ADRP);
+    InstAdrp.clear();
+    InstAdrp.addOperand(MCOperand::createReg(AArch64::X16));
+    InstAdrp.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstAdrp, /* OpNum */ 1, TargetLocation,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_ADR_GOT_PAGE);
+    It = BB.insertInstruction(It, InstAdrp);
+
+    It = It + 2;
+    return true;
+  }
+
   bool lowerTailCall(MCInst &Inst) override {
     removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
     if (getConditionalTailCall(Inst))

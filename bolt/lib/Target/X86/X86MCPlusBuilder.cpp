@@ -1639,8 +1639,11 @@ public:
     return true;
   }
 
-  bool convertCallToIndirectCall(MCInst &Inst, const MCSymbol *TargetLocation,
+  bool convertCallToIndirectCall(BinaryBasicBlock &BB,
+                                 BinaryBasicBlock::iterator &It,
+                                 const MCSymbol *TargetLocation,
                                  MCContext *Ctx) override {
+    MCInst &Inst = (*It);
     assert((Inst.getOpcode() == X86::CALL64pcrel32 ||
             (Inst.getOpcode() == X86::JMP_4 && isTailCall(Inst))) &&
            "64-bit direct (tail) call instruction expected");

@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1412,9 +1413,15 @@ public:
     return false;
   }
 
-  /// Modify a direct call instruction \p Inst with an indirect call taking
-  /// a destination from a memory location pointed by \p TargetLocation symbol.
-  virtual bool convertCallToIndirectCall(MCInst &Inst,
+  /// Modify a direct call instruction pointed by the iterator \p It, with an
+  /// indirect call taking a destination from a memory location pointed by \p
+  /// TargetLocation symbol. If additional instructions need to be prepended
+  /// before \p It, then the iterator must be updated to point to the indirect
+  /// call instruction.
+  ///
+  /// \return true on success
+  virtual bool convertCallToIndirectCall(BinaryBasicBlock &BB,
+                                         BinaryBasicBlock::iterator &It,
                                          const MCSymbol *TargetLocation,
                                          MCContext *Ctx) {
     llvm_unreachable("not implemented");

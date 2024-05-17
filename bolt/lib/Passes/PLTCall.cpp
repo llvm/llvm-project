@@ -61,19 +61,23 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
       if (opts::PLT == OT_HOT && !BB.getKnownExecutionCount())
         continue;
 
-      for (MCInst &Instr : BB) {
-        if (!BC.MIB->isCall(Instr))
+      for (auto It = BB.begin(); It != BB.end(); It++) {
+        if (!BC.MIB->isCall(*It))
           continue;
-        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(*It);
         if (!CallSymbol)
           continue;
         const BinaryFunction *CalleeBF = BC.getFunctionForSymbol(CallSymbol);
         if (!CalleeBF || !CalleeBF->isPLTFunction())
           continue;
-        BC.MIB->convertCallToIndirectCall(Instr, CalleeBF->getPLTSymbol(),
-                                          BC.Ctx.get());
-        BC.MIB->addAnnotation(Instr, "PLTCall", true);
-        ++NumCallsOptimized;
+        if (BC.MIB->convertCallToIndirectCall(BB, It, CalleeBF->getPLTSymbol(),
+                                              BC.Ctx.get())) {
+          assert(BC.MIB->isCall(*It) &&
+                 "Iterator must point to the optimized call");
+
+          BC.MIB->addAnnotation(*It, "PLTCall", true);
+          ++NumCallsOptimized;
+        }
       }
     }
   }
