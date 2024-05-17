@@ -1,5 +1,5 @@
 ; The goal of the test is to check that newly inserted `ptrcast` internal
-; intrinsic functions for PHI's operands is inserted at the correct
+; intrinsic functions for PHI's operands are inserted at the correct
 ; positions, and don't break rules of instruction domination and PHI nodes
 ; grouping at top of basic block.
 
