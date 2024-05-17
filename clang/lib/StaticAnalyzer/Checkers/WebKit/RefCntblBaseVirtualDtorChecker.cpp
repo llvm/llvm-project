@@ -49,7 +49,7 @@ class DerefAnalysisVisitor
 public:
   DerefAnalysisVisitor(const TemplateArgumentList &ArgList,
                        const CXXRecordDecl *ClassDecl)
-      : ArgList(&ArgList) , ClassDecl(ClassDecl) {}
+      : ArgList(&ArgList), ClassDecl(ClassDecl) {}
 
   DerefAnalysisVisitor(const CXXRecordDecl *ClassDecl) : ClassDecl(ClassDecl) {}
 
