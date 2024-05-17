@@ -358,11 +358,11 @@ struct TransposeOpToArmSMELowering
     auto loc = transposeOp.getLoc();
     Value input = transposeOp.getVector();
 
-    if (auto xferOp = input.getDefiningOp<vector::TransferReadOp>()) {
+    if (auto xferOp = input.getDefiningOp<vector::TransferReadOp>();
+        xferOp && xferOp->hasOneUse()) {
       // Fold transpose into transfer_read to enable in-flight transpose when
       // converting to arm_sme.tile_load.
       rewriter.modifyOpInPlace(xferOp, [&]() {
-        SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
         xferOp->setAttr(xferOp.getPermutationMapAttrName(),
                         AffineMapAttr::get(AffineMap::getPermutationMap(
                             permutation, transposeOp.getContext())));
