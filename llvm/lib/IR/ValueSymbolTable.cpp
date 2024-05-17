@@ -65,8 +65,10 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
     S << ++LastUnique;
 
     // Retry if MaxNameSize has been exceeded.
-    if (MaxNameSize > 0 && UniqueName.size() > (unsigned)MaxNameSize) {
-      BaseSize -= UniqueName.size() - (unsigned)MaxNameSize;
+    if (MaxNameSize > -1 && UniqueName.size() > (size_t)MaxNameSize) {
+      assert(BaseSize >= UniqueName.size() - (size_t)MaxNameSize &&
+             "Can't generate unique name: MaxNameSize is too small.");
+      BaseSize -= UniqueName.size() - (size_t)MaxNameSize;
       continue;
     }
     // Try insert the vmap entry with this suffix.
