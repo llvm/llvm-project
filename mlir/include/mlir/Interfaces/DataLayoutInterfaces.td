@@ -242,80 +242,54 @@ def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface
       /*description=*/"Returns the device ID identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getDeviceIDIdentifier",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the device type identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getDeviceTypeIdentifier",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the L1 cache size identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getMaxVectorOpWidthIdentifier",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns canonicalizer max iterations identifier.",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getCanonicalizerMaxIterationsIdentifier",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns canonicalizer max num rewrites identifier.",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getCanonicalizerMaxNumRewritesIdentifier",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the entry related to Device ID. The function"
                       "will crash if the entry is missing.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForDeviceID",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the entry related to the given identifier. "
                       "The function will crash if the entry is missing.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForDeviceType",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the entry related to the given identifier, if "
                       "present. Otherwise, return empty spec.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForMaxVectorOpWidth",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the entry related to the given identifier, if "
                       "present. Otherwise, return empty spec.",
       /*retTy=*/"::mlir::DataLayoutEntryInterface",
       /*methodName=*/"getSpecForL1CacheSizeInBytes",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the entry related to the given identifier, if "
-                      "present. Otherwise, return empty spec.",
-      /*retTy=*/"::mlir::DataLayoutEntryInterface",
-      /*methodName=*/"getSpecForCanonicalizerMaxIterations",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the entry related to the given identifier, if "
-                      "present. Otherwise, return empty spec.",
-      /*retTy=*/"::mlir::DataLayoutEntryInterface",
-      /*methodName=*/"getSpecForCanonicalizerMaxNumRewrites",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the entry related to the given identifier, if "
                       "present.",
       /*retTy=*/"uint32_t",
       /*methodName=*/"getDeviceID",
-      /*args=*/(ins "::mlir::MLIRContext *":$context)
+      /*args=*/(ins)
     >,
   ];
 
@@ -344,14 +318,14 @@ def TargetSystemDescSpecInterface : AttrInterface<"TargetSystemDescSpecInterface
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
-      /*retTy=*/"::mlir::TargetDeviceDescSpecListRef",
+      /*retTy=*/"llvm::ArrayRef<::mlir::TargetDeviceDescSpecInterface>",
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the device description spec for given device "
                       "ID",
-      /*retTy=*/"::mlir::TargetDeviceDescSpecInterface",
+      /*retTy=*/"std::optional<::mlir::TargetDeviceDescSpecInterface>",
       /*methodName=*/"getDeviceDescForDeviceID",
       /*args=*/(ins "int":$deviceID)
     >,
@@ -567,29 +541,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::detail::getL1CacheSizeInBytes(entry);
       }]
-    >,
-    StaticInterfaceMethod<
-      /*description=*/"Returns the canonicalizer max iterations, if the "
-                      "property is defined. Otherwise, it returns std::nullopt.",
-      /*retTy=*/"std::optional<int64_t>",
-      /*methodName=*/"getCanonicalizerMaxIterations",
-      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return ::mlir::detail::getCanonicalizerMaxIterations(entry);
-      }]
-    >,
-    StaticInterfaceMethod<
-      /*description=*/"Returns the canonicalizer max num rewrites, if the "
-                      "property is defined. Otherwise, it returns std::nullopt.",
-      /*retTy=*/"std::optional<int64_t>",
-      /*methodName=*/"getCanonicalizerMaxNumRewrites",
-      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return ::mlir::detail::getCanonicalizerMaxNumRewrites(entry);
-      }]
-    >,
+    >
   ];
 
   let verify = [{ return ::mlir::detail::verifyDataLayoutOp($_op); }];

@@ -315,28 +315,6 @@ mlir::detail::getL1CacheSizeInBytes(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
-// Returns the canonicalizer max iterations if specified in the given entry.
-// If the entry is empty (meaning the spec is missing), returns std::nullopt.
-std::optional<int64_t>
-mlir::detail::getCanonicalizerMaxIterations(DataLayoutEntryInterface entry) {
-  if (entry == DataLayoutEntryInterface())
-    return std::nullopt;
-
-  auto value = cast<IntegerAttr>(entry.getValue());
-  return value.getValue().getSExtValue();
-}
-
-// Returns the canonicalizer max num rewrites if specified in the given entry.
-// If the entry is empty (meaning the spec is missing), returns std::nullopt.
-std::optional<int64_t>
-mlir::detail::getCanonicalizerMaxNumRewrites(DataLayoutEntryInterface entry) {
-  if (entry == DataLayoutEntryInterface())
-    return std::nullopt;
-
-  auto value = cast<IntegerAttr>(entry.getValue());
-  return value.getValue().getSExtValue();
-}
-
 DataLayoutEntryList
 mlir::detail::filterEntriesForType(DataLayoutEntryListRef entries,
                                    TypeID typeID) {
@@ -704,10 +682,11 @@ std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
     TargetDeviceDescSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
-  if (originalTargetSystemDesc)
-    entry =
-        originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID)
-            .getSpecForMaxVectorOpWidth(originalTargetSystemDesc.getContext());
+  if (originalTargetSystemDesc) {
+    if (auto device =
+            originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID))
+      entry = device->getSpecForMaxVectorOpWidth();
+  }
   // Currently I am not caching the results because we do not return
   // default values of these properties. Instead if the property is
   // missing, we return std::nullopt so that the users can resort to
@@ -722,10 +701,11 @@ std::optional<uint32_t> mlir::DataLayout::getL1CacheSizeInBytes(
     TargetDeviceDescSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
-  if (originalTargetSystemDesc)
-    entry = originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID)
-                .getSpecForL1CacheSizeInBytes(
-                    originalTargetSystemDesc.getContext());
+  if (originalTargetSystemDesc) {
+    if (auto device =
+            originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID))
+      entry = device->getSpecForL1CacheSizeInBytes();
+  }
   // Currently I am not caching the results because we do not return
   // default values of these properties. Instead if the property is
   // missing, we return std::nullopt so that the users can resort to
@@ -734,42 +714,6 @@ std::optional<uint32_t> mlir::DataLayout::getL1CacheSizeInBytes(
     return iface.getL1CacheSizeInBytes(entry);
   else
     return detail::getL1CacheSizeInBytes(entry);
-}
-
-std::optional<int64_t> mlir::DataLayout::getCanonicalizerMaxIterations(
-    TargetDeviceDescSpecInterface::DeviceID deviceID) const {
-  checkValid();
-  DataLayoutEntryInterface entry;
-  if (originalTargetSystemDesc)
-    entry = originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID)
-                .getSpecForCanonicalizerMaxIterations(
-                    originalTargetSystemDesc.getContext());
-  // Currently I am not caching the results because we do not return
-  // default values of these properties. Instead if the property is
-  // missing, we return std::nullopt so that the users can resort to
-  // the default value however they want.
-  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    return iface.getCanonicalizerMaxIterations(entry);
-  else
-    return detail::getCanonicalizerMaxIterations(entry);
-}
-
-std::optional<int64_t> mlir::DataLayout::getCanonicalizerMaxNumRewrites(
-    TargetDeviceDescSpecInterface::DeviceID deviceID) const {
-  checkValid();
-  DataLayoutEntryInterface entry;
-  if (originalTargetSystemDesc)
-    entry = originalTargetSystemDesc.getDeviceDescForDeviceID(deviceID)
-                .getSpecForCanonicalizerMaxNumRewrites(
-                    originalTargetSystemDesc.getContext());
-  // Currently I am not caching the results because we do not return
-  // default values of these properties. Instead if the property is
-  // missing, we return std::nullopt so that the users can resort to
-  // the default value however they want.
-  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    return iface.getCanonicalizerMaxNumRewrites(entry);
-  else
-    return detail::getCanonicalizerMaxNumRewrites(entry);
 }
 
 //===----------------------------------------------------------------------===//
@@ -888,7 +832,7 @@ mlir::detail::verifyTargetSystemDescSpec(TargetSystemDescSpecInterface spec,
 
     // Check that device IDs are unique across all entries.
     MLIRContext *context = tdd_spec.getContext();
-    uint32_t device_id = tdd_spec.getDeviceID(context);
+    uint32_t device_id = tdd_spec.getDeviceID();
     if (!device_ids.insert(device_id).second) {
       return failure();
     }

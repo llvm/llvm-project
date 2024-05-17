@@ -30,8 +30,6 @@ using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 // forward declaration, and we need the typedef in the actual declaration.
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
-// using TargetDeviceDescSpecList =
-// llvm::SmallVector<TargetDeviceDescSpecInterface, 4>;
 using TargetDeviceDescSpecListRef =
     llvm::ArrayRef<TargetDeviceDescSpecInterface>;
 class DataLayoutOpInterface;
@@ -90,23 +88,13 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
-/// return max vector op width from the specified DataLayoutEntry. If the
+/// Return max vector op width from the specified DataLayoutEntry. If the
 /// property is missing from the entry, then return std::nullopt.
 std::optional<uint32_t> getMaxVectorOpWidth(DataLayoutEntryInterface entry);
 
-/// return L1 cache size in bytes from the specified DataLayoutEntry. If the
+/// Return L1 cache size in bytes from the specified DataLayoutEntry. If the
 /// property is missing from the entry, then return std::nullopt.
 std::optional<uint32_t> getL1CacheSizeInBytes(DataLayoutEntryInterface entry);
-
-/// return canonicalizer max iterations from the specified DataLayoutEntry.
-/// If the property is missing from the entry, then return std::nullopt.
-std::optional<int64_t>
-getCanonicalizerMaxIterations(DataLayoutEntryInterface entry);
-
-/// returncanonicalizer max num rewrites from the specified DataLayoutEntry.
-/// If the property is missing from the entry, then return std::nullopt.
-std::optional<int64_t>
-getCanonicalizerMaxNumRewrites(DataLayoutEntryInterface entry);
 
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
@@ -265,16 +253,6 @@ public:
   /// device ID, otherwise return std::nullopt.
   std::optional<uint32_t>
       getL1CacheSizeInBytes(TargetDeviceDescSpecInterface::DeviceID) const;
-
-  /// Returns for canonicalizer max iterations if the property is defined for
-  /// the given device ID, otherwise return std::nullopt.
-  std::optional<int64_t> getCanonicalizerMaxIterations(
-      TargetDeviceDescSpecInterface::DeviceID) const;
-
-  /// Returns for canonicalizer max rewrites if the property is defined for
-  /// the given device ID, otherwise return std::nullopt.
-  std::optional<int64_t> getCanonicalizerMaxNumRewrites(
-      TargetDeviceDescSpecInterface::DeviceID) const;
 
 private:
   /// Combined layout spec at the given scope.

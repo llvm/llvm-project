@@ -114,9 +114,10 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
       uint32_t totalBits = elemBits * dataVector.getNumElements();
       uint32_t maxVectorOpWidth = 128; // default value
-      if (std::optional<uint32_t> v =
-              DataLayout(gpuOp->template getParentOfType<mlir::ModuleOp>())
-                  .getMaxVectorOpWidth(1 /* gpu ID*/)) {
+      ModuleOp moduleOp = gpuOp->template getParentOfType<mlir::ModuleOp>();
+      std::optional<uint32_t> v = std::nullopt;
+      if (moduleOp &&
+          (v = DataLayout(moduleOp).getMaxVectorOpWidth(1 /* gpu ID*/))) {
         maxVectorOpWidth = *v;
       }
       LLVM_DEBUG(llvm::dbgs() << "[CostModel] GPU MaxVectorWidth:"
