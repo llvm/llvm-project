@@ -185,11 +185,13 @@ private:
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
-                        bool IsBuffer = false) const;
+                        bool IsBuffer = false, bool HasSOffset = false,
+                        int64_t ImmOffset = 0) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
   bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                             SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false) const;
+                            bool IsBuffer = false, bool HasSOffset = false,
+                            int64_t ImmOffset = 0) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                   SDValue *Offset, bool Imm32Only = false) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
@@ -201,6 +203,8 @@ private:
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
                                SDValue &Offset) const;
+  bool SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
+                             SDValue &Offset) const;
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
