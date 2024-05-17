@@ -3998,7 +3998,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
-  bool isStrict = N->getOperand(N->getOpcode() == ISD::STRICT_FSETCC;
+  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC;
   assert(N->getValueType(0).isVector() &&
          N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
          "Operand types must be vectors");
