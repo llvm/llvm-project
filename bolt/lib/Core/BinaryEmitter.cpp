@@ -485,7 +485,6 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // This assumes the second instruction in the macro-op pair will get
         // assigned to its own MCRelaxableFragment. Since all JCC instructions
         // are relaxable, we should be safe.
-        Streamer.emitNeverAlignCodeAtEnd(/*Alignment to avoid=*/64, *BC.STI);
       }
 
       if (!EmitCodeOnly) {

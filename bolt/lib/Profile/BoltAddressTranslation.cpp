@@ -55,7 +55,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
   // and this deleted block will both share the same output address (the same
   // key), and we need to map back. We choose here to privilege the successor by
   // allowing it to overwrite the previously inserted key in the map.
-  Map[BBOutputOffset] = BBInputOffset << 1;
+  Map.emplace(BBOutputOffset, BBInputOffset << 1);
 
   const auto &IOAddressMap =
       BB.getFunction()->getBinaryContext().getIOAddressMap();
@@ -72,8 +72,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
 
     LLVM_DEBUG(dbgs() << "  Key: " << Twine::utohexstr(OutputOffset) << " Val: "
                       << Twine::utohexstr(InputOffset) << " (branch)\n");
-    Map.insert(std::pair<uint32_t, uint32_t>(OutputOffset,
-                                             (InputOffset << 1) | BRANCHENTRY));
+    Map.emplace(OutputOffset, (InputOffset << 1) | BRANCHENTRY);
   }
 }
 
@@ -117,11 +116,9 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       std::unordered_set<uint32_t> MappedInputOffsets;
       for (const BinaryBasicBlock &BB : Function)
         MappedInputOffsets.emplace(BB.getInputOffset());
-      // Duplicate index to distinguish the entries.
-      size_t Index = 0;
       for (const auto &[InputOffset, _] : BBHashMap)
         if (!llvm::is_contained(MappedInputOffsets, InputOffset))
-          Map[EndOffset + Index++] = InputOffset << 1;
+          Map.emplace(EndOffset, InputOffset << 1);
     }
     Maps.emplace(Function.getOutputAddress(), std::move(Map));
     ReverseMap.emplace(OutputAddress, InputAddress);

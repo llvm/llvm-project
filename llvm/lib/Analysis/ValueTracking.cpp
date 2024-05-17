@@ -706,17 +706,22 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
           LHSRange = LHSRange.sub(*Offset);
         Known = Known.unionWith(LHSRange.toKnownBits());
       }
-      // X & Y u> C -> X u> C && Y u> C
-      if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) &&
-          match(LHS, m_c_And(m_V, m_Value()))) {
-        Known.One.setHighBits(
-            (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
+      if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
+        // X & Y u> C     -> X u> C && Y u> C
+        // X nuw- Y u> C  -> X u> C
+        if (match(LHS, m_c_And(m_V, m_Value())) ||
+            match(LHS, m_NUWSub(m_V, m_Value())))
+          Known.One.setHighBits(
+              (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
       }
-      // X | Y u< C -> X u< C && Y u< C
-      if ((Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) &&
-          match(LHS, m_c_Or(m_V, m_Value()))) {
-        Known.Zero.setHighBits(
-            (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
+      if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
+        // X | Y u< C    -> X u< C && Y u< C
+        // X nuw+ Y u< C -> X u< C && Y u< C
+        if (match(LHS, m_c_Or(m_V, m_Value())) ||
+            match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
+          Known.Zero.setHighBits(
+              (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
+        }
       }
     }
     break;
@@ -1115,6 +1120,45 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // (bitcast i64 %x to <2 x i32>)
         !I->getType()->isVectorTy()) {
       computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+      break;
+    }
+
+    const Value *V;
+    // Handle bitcast from floating point to integer.
+    if (match(I, m_ElementWiseBitCast(m_Value(V))) &&
+        V->getType()->isFPOrFPVectorTy()) {
+      Type *FPType = V->getType()->getScalarType();
+      KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
+      FPClassTest FPClasses = Result.KnownFPClasses;
+
+      // TODO: Treat it as zero/poison if the use of I is unreachable.
+      if (FPClasses == fcNone)
+        break;
+
+      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
+        Known.Zero.setAllBits();
+        Known.One.setAllBits();
+
+        if (FPClasses & fcInf)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
+
+        if (FPClasses & fcZero)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APInt::getZero(FPType->getScalarSizeInBits())));
+
+        Known.Zero.clearSignBit();
+        Known.One.clearSignBit();
+      }
+
+      if (Result.SignBit) {
+        if (*Result.SignBit)
+          Known.makeNegative();
+        else
+          Known.makeNonNegative();
+      }
+
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       break;
     }
 
@@ -9537,14 +9581,20 @@ void llvm::findValuesAffectedByCondition(
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
             AddAffected(X);
 
-          Value *Y;
-          // X & Y u> C -> X >u C && Y >u C
-          // X | Y u< C -> X u< C && Y u< C
-          if (ICmpInst::isUnsigned(Pred) &&
-              (match(A, m_And(m_Value(X), m_Value(Y))) ||
-               match(A, m_Or(m_Value(X), m_Value(Y))))) {
-            AddAffected(X);
-            AddAffected(Y);
+          if (ICmpInst::isUnsigned(Pred)) {
+            Value *Y;
+            // X & Y u> C    -> X >u C && Y >u C
+            // X | Y u< C    -> X u< C && Y u< C
+            // X nuw+ Y u< C -> X u< C && Y u< C
+            if (match(A, m_And(m_Value(X), m_Value(Y))) ||
+                match(A, m_Or(m_Value(X), m_Value(Y))) ||
+                match(A, m_NUWAdd(m_Value(X), m_Value(Y)))) {
+              AddAffected(X);
+              AddAffected(Y);
+            }
+            // X nuw- Y u> C -> X u> C
+            if (match(A, m_NUWSub(m_Value(X), m_Value())))
+              AddAffected(X);
           }
         }
 

@@ -1357,6 +1357,15 @@ bool CheckHelper::IsResultOkToDiffer(const FunctionResult &result) {
 
 void CheckHelper::CheckSubprogram(
     const Symbol &symbol, const SubprogramDetails &details) {
+  // Evaluate a procedure definition's characteristics to flush out
+  // any errors that analysis might expose, in case this subprogram hasn't
+  // had any calls in this compilation unit that would have validated them.
+  if (!context_.HasError(symbol) && !details.isDummy() &&
+      !details.isInterface() && !details.stmtFunction()) {
+    if (!Procedure::Characterize(symbol, foldingContext_)) {
+      context_.SetError(symbol);
+    }
+  }
   if (const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
     SubprogramMatchHelper{*this}.Check(symbol, *iface);
   }
@@ -2882,7 +2891,8 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
       } else {
         bool interoperableParent{true};
         if (parent->symbol()) {
-          auto bad{WhyNotInteroperableDerivedType(*parent->symbol(), false)};
+          auto bad{WhyNotInteroperableDerivedType(
+              *parent->symbol(), /*isError=*/false)};
           if (bad.AnyFatalError()) {
             auto &msg{msgs.Say(symbol.name(),
                 "The parent of an interoperable type is not interoperable"_err_en_US)};
@@ -2972,6 +2982,9 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
       }
     }
   }
+  if (msgs.AnyFatalError()) {
+    examinedByWhyNotInteroperableDerivedType_.erase(symbol);
+  }
   return msgs;
 }
 
@@ -3059,8 +3072,8 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
           }
           context_.SetError(symbol);
         } else if (auto bad{WhyNotInteroperableDerivedType(
-                       derived->typeSymbol(), false)};
-                   !bad.empty()) {
+                       derived->typeSymbol(), /*isError=*/false)};
+                   bad.AnyFatalError()) {
           if (auto *msg{messages_.Say(symbol.name(),
                   "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)}) {
             msg->Attach(
@@ -3068,7 +3081,9 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
             bad.AttachTo(*msg, parser::Severity::None);
           }
           context_.SetError(symbol);
-        } else {
+        } else if (context_.ShouldWarn(
+                       common::LanguageFeature::NonBindCInteroperability) &&
+            !InModuleFile()) {
           if (auto *msg{messages_.Say(symbol.name(),
                   "The derived type of an interoperable object should be BIND(C)"_warn_en_US)}) {
             msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
@@ -3142,7 +3157,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       }
     }
   } else if (symbol.has<DerivedTypeDetails>()) {
-    if (auto msgs{WhyNotInteroperableDerivedType(symbol, false)};
+    if (auto msgs{WhyNotInteroperableDerivedType(symbol, /*isError=*/false)};
         !msgs.empty()) {
       bool anyFatal{msgs.AnyFatalError()};
       if (msgs.AnyFatalError() ||

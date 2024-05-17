@@ -52,6 +52,7 @@ void TestExpandMathPass::runOnOperation() {
   populateExpandFPowIPattern(patterns);
   populateExpandRoundFPattern(patterns);
   populateExpandRoundEvenPattern(patterns);
+  populateExpandRsqrtPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 

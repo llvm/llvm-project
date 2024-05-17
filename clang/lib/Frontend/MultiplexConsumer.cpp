@@ -35,7 +35,7 @@ void MultiplexASTDeserializationListener::ReaderInitialized(
 }
 
 void MultiplexASTDeserializationListener::IdentifierRead(
-    serialization::IdentID ID, IdentifierInfo *II) {
+    serialization::IdentifierID ID, IdentifierInfo *II) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->IdentifierRead(ID, II);
 }

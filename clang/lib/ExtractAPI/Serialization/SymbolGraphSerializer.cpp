@@ -514,7 +514,7 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
 /// which is prefixed by the source language name, useful for tooling to parse
 /// the kind, and a \c displayName for rendering human-readable names.
 Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
-  return serializeSymbolKind(Record.getKind(), Lang);
+  return serializeSymbolKind(Record.KindForDisplay, Lang);
 }
 
 /// Serialize the function signature field, as specified by the
@@ -591,8 +591,8 @@ Array generateParentContexts(const SmallVectorImpl<SymbolReference> &Parents,
     Elem["usr"] = Parent.USR;
     Elem["name"] = Parent.Name;
     if (Parent.Record)
-      Elem["kind"] =
-          serializeSymbolKind(Parent.Record->getKind(), Lang)["identifier"];
+      Elem["kind"] = serializeSymbolKind(Parent.Record->KindForDisplay,
+                                         Lang)["identifier"];
     else
       Elem["kind"] =
           serializeSymbolKind(APIRecord::RK_Unknown, Lang)["identifier"];

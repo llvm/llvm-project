@@ -1235,8 +1235,6 @@ void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                       unsigned MaxBytesToEmit) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
-void MCStreamer::emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
-                                         const MCSubtargetInfo &STI) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
 void MCStreamer::emitBundleAlignMode(Align Alignment) {}
