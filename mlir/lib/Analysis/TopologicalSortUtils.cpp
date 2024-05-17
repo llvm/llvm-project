@@ -1,4 +1,4 @@
-//===- TopologicalSortUtils.h - Topological sort utilities ------*- C++ -*-===//
+//===- TopologicalSortUtils.cpp - Topological sort utilities --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/TopologicalSortUtils.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/OpDefinition.h"
 
 using namespace mlir;

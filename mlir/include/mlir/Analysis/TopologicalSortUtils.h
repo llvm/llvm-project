@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_TOPOLOGICALSORTUTILS_H
-#define MLIR_TRANSFORMS_TOPOLOGICALSORTUTILS_H
+#ifndef MLIR_ANALYSIS_TOPOLOGICALSORTUTILS_H
+#define MLIR_ANALYSIS_TOPOLOGICALSORTUTILS_H
 
 #include "mlir/IR/Block.h"
 
@@ -106,4 +106,4 @@ bool computeTopologicalSorting(
 
 } // end namespace mlir
 
-#endif // MLIR_TRANSFORMS_TOPOLOGICALSORTUTILS_H
+#endif // MLIR_ANALYSIS_TOPOLOGICALSORTUTILS_H
