@@ -3081,7 +3081,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
 
     if (RPI.isPaired() && RPI.isScalable()) {
-      const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+      [[maybe_unused]] const AArch64Subtarget &Subtarget =
+                              MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
       assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
@@ -3250,7 +3251,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (RPI.isPaired() && RPI.isScalable()) {
-      const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+      [[maybe_unused]] const AArch64Subtarget &Subtarget =
+                              MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
       assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
