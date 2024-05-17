@@ -29,7 +29,3 @@ config.name = "CtxProfile" + config.name_suffix
 config.test_source_root = os.path.dirname(__file__)
 # Default test suffixes.
 config.suffixes = [".c", ".cpp", ".test"]
-
-config.substitutions.append(
-    ("%clangxx ", " ".join([config.clang] + config.cxx_mode_flags) + " ")
-)
