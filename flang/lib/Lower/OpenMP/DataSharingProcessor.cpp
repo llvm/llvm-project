@@ -304,7 +304,16 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
           return false;
         }();
 
-        if (!isOrderedConstruct)
+        bool isCriticalConstruct = [&]() {
+          if (auto *ompConstruct =
+                  nestedEval.getIf<parser::OpenMPConstruct>()) {
+            return std::get_if<parser::OpenMPCriticalConstruct>(
+                       &ompConstruct->u) != nullptr;
+          }
+          return false;
+        }();
+
+        if (!isOrderedConstruct && !isCriticalConstruct)
           converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
                                      /*collectSymbols=*/true,
                                      /*collectHostAssociatedSymbols=*/false);
