@@ -1460,7 +1460,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
         (!PP.getHeaderSearchInfo()
               .getHeaderSearchOpts()
               .ModuleMapFileHomeIsCwd ||
-         WritingModule->Directory->getName() != StringRef("."))) {
+         WritingModule->Directory->getName() != ".")) {
       // Module directory.
       auto Abbrev = std::make_shared<BitCodeAbbrev>();
       Abbrev->Add(BitCodeAbbrevOp(MODULE_DIRECTORY));
