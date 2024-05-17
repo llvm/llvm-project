@@ -4200,14 +4200,12 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
   return nullptr;
 }
 
-void
-FunctionDecl::setFunctionTemplateSpecialization(ASTContext &C,
-                                                FunctionTemplateDecl *Template,
-                                     const TemplateArgumentList *TemplateArgs,
-                                                void *InsertPos,
-                                                TemplateSpecializationKind TSK,
-                        const TemplateArgumentListInfo *TemplateArgsAsWritten,
-                                          SourceLocation PointOfInstantiation) {
+void FunctionDecl::setFunctionTemplateSpecialization(
+    ASTContext &C, FunctionTemplateDecl *Template,
+    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateSpecializationKind TSK,
+    const TemplateArgumentListInfo *TemplateArgsAsWritten,
+    SourceLocation PointOfInstantiation) {
   assert((TemplateOrSpecialization.isNull() ||
           TemplateOrSpecialization.is<MemberSpecializationInfo *>()) &&
          "Member function is already a specialization");
