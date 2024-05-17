@@ -565,21 +565,18 @@ Defined *ObjcCategoryMerger::getClassRo(const Defined *classSym,
   if (!isec)
     return nullptr;
 
-  Defined *classRo = nullptr;
-  if (getMetaRo) {
-    Defined *metaClass = tryGetDefinedAtIsecOffset(
-        isec, classLayout.metaClassOffset + classSym->value);
+  if (!getMetaRo)
+    return tryGetDefinedAtIsecOffset(isec, classLayout.roDataOffset +
+                                               classSym->value);
 
-    classRo = metaClass ? tryGetDefinedAtIsecOffset(
-                              dyn_cast<ConcatInputSection>(metaClass->isec()),
-                              classLayout.roDataOffset)
-                        : nullptr;
-  } else {
-    classRo = tryGetDefinedAtIsecOffset(isec, classLayout.roDataOffset +
-                                                  classSym->value);
-  }
+  Defined *metaClass = tryGetDefinedAtIsecOffset(
+      isec, classLayout.metaClassOffset + classSym->value);
+  if (!metaClass)
+    return nullptr;
 
-  return classRo;
+  return tryGetDefinedAtIsecOffset(
+      dyn_cast<ConcatInputSection>(metaClass->isec()),
+      classLayout.roDataOffset);
 }
 
 // Given an ConcatInputSection or CStringInputSection and an offset, if there is
@@ -1297,14 +1294,13 @@ void ObjcCategoryMerger::removeRefsToErasedIsecs() {
 void ObjcCategoryMerger::doMerge() {
   collectAndValidateCategoriesData();
 
-  for (auto &entry : categoryMap) {
-    if (isa<Defined>(entry.first)) {
+  for (auto &[baseClass, catInfos] : categoryMap) {
+    if (auto *baseClassDef = dyn_cast<Defined>(baseClass)) {
       // Merge all categories into the base class
-      auto *baseClass = cast<Defined>(entry.first);
-      mergeCategoriesIntoBaseClass(baseClass, entry.second);
-    } else if (entry.second.size() > 1) {
+      mergeCategoriesIntoBaseClass(baseClassDef, catInfos);
+    } else if (catInfos.size() > 1) {
       // Merge all categories into a new, single category
-      mergeCategoriesIntoSingleCategory(entry.second);
+      mergeCategoriesIntoSingleCategory(catInfos);
     }
   }
 
@@ -1421,15 +1417,11 @@ void ObjcCategoryMerger::eraseSymbolAtIsecOffset(ConcatInputSection *isec,
 
   // Remove the symbol from isec->symbols
   assert(isa<Defined>(sym) && "Can only erase a Defined");
-  isec->symbols.erase(
-      std::remove(isec->symbols.begin(), isec->symbols.end(), sym),
-      isec->symbols.end());
+  llvm::erase(isec->symbols, sym);
 
   // Remove the relocs that refer to this symbol
   auto removeAtOff = [offset](Reloc const &r) { return r.offset == offset; };
-  isec->relocs.erase(
-      std::remove_if(isec->relocs.begin(), isec->relocs.end(), removeAtOff),
-      isec->relocs.end());
+  llvm::erase_if(isec->relocs, removeAtOff);
 
   // Now, if the symbol fully occupies a ConcatInputSection, we can also erase
   // the whole ConcatInputSection
