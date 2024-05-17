@@ -517,7 +517,7 @@ getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
     return it->second;
 
   DenseMap<Block *, size_t> &blockIndices = it->second;
-  SetVector<Block *> topologicalOrder = getTopologicallySortedBlocks(*region);
+  SetVector<Block *> topologicalOrder = getBlocksSortedByDominance(*region);
   for (auto [index, block] : llvm::enumerate(topologicalOrder))
     blockIndices[block] = index;
   return blockIndices;

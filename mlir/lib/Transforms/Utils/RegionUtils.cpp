@@ -837,7 +837,7 @@ LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
                  mergedIdenticalBlocks);
 }
 
-SetVector<Block *> mlir::getTopologicallySortedBlocks(Region &region) {
+SetVector<Block *> mlir::getBlocksSortedByDominance(Region &region) {
   // For each block that has not been visited yet (i.e. that has no
   // predecessors), add it to the list as well as its successors.
   SetVector<Block *> blocks;
