@@ -718,7 +718,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA13 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
                                      FeatureFP16FML, FeatureSHA3];
-  list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
+  list<SubtargetFeature> AppleA14 = [HasV8_5aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureFRInt3264,
                                      FeatureSpecRestrict, FeatureSSBS, FeatureSB,
                                      FeaturePredRes, FeatureCacheDeepPersist,
