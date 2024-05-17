@@ -2710,14 +2710,14 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     return nullptr;
   }
 
-  if (EllipsisLoc.isValid() && !BaseType->containsUnexpandedParameterPack()) {
+  if (EllipsisLoc.isValid() &&
+      !BaseType->containsUnexpandedParameterPack()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
       << TInfo->getTypeLoc().getSourceRange();
     EllipsisLoc = SourceLocation();
   }
 
-  auto *BaseDecl =
-      dyn_cast_if_present<CXXRecordDecl>(computeDeclContext(BaseType));
+  auto *BaseDecl = dyn_cast_if_present<CXXRecordDecl>(computeDeclContext(BaseType));
   // C++ [class.derived.general]p2:
   //   A class-or-decltype shall denote a (possibly cv-qualified) class type
   //   that is not an incompletely defined class; any cv-qualifiers are
@@ -2734,23 +2734,18 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
         Context.getTargetInfo().getTriple().isPS()) {
       if (Attr *ClassAttr = getDLLAttr(Class)) {
-        if (auto *BaseSpec =
-                dyn_cast<ClassTemplateSpecializationDecl>(BaseDecl)) {
-          propagateDLLAttrToBaseClassTemplate(Class, ClassAttr, BaseSpec,
-                                              BaseLoc);
+        if (auto *BaseSpec = dyn_cast<ClassTemplateSpecializationDecl>(BaseDecl)) {
+          propagateDLLAttrToBaseClassTemplate(Class, ClassAttr, BaseSpec, BaseLoc);
         }
       }
     }
 
-    if (RequireCompleteType(BaseLoc, BaseType, diag::err_incomplete_base_class,
-                            SpecifierRange)) {
+    if (RequireCompleteType(BaseLoc, BaseType,
+                            diag::err_incomplete_base_class, SpecifierRange)) {
       Class->setInvalidDecl();
       return nullptr;
     }
-  } else if (!BaseType->isDependentType()) {
-    Diag(BaseLoc, diag::err_base_must_be_class) << SpecifierRange;
-    return nullptr;
-  } else {
+  } else if (BaseType->isDependentType()) {
     // Make sure that we don't have circular inheritance among our dependent
     // bases. For non-dependent bases, the check for completeness below handles
     // this.
@@ -2768,7 +2763,6 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
         return nullptr;
       }
     }
-
     // Make sure that we don't make an ill-formed AST where the type of the
     // Class is non-dependent and its attached base class specifier is an
     // dependent type, which violates invariants in many clang code paths (e.g.
@@ -2780,10 +2774,11 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     return new (Context) CXXBaseSpecifier(
         SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
         Access, TInfo, EllipsisLoc);
+  } else {
+    Diag(BaseLoc, diag::err_base_must_be_class) << SpecifierRange;
+    return nullptr;
   }
 
-  // If the base class is polymorphic or isn't empty, the new one is/isn't, too.
-  assert(BaseDecl && "Record type has no declaration");
   BaseDecl = BaseDecl->getDefinition();
   assert(BaseDecl && "Base type is not incomplete, but has no definition");
 
@@ -2796,7 +2791,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       (!BaseCSA || !DerivedCSA || BaseCSA->getName() != DerivedCSA->getName())) {
     Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
     Diag(BaseDecl->getLocation(), diag::note_base_class_specified_here)
-        << BaseDecl;
+      << BaseDecl;
     return nullptr;
   }
 
@@ -2808,7 +2803,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
   //     the flexible array member would index into the derived class.
   if (BaseDecl->hasFlexibleArrayMember()) {
     Diag(BaseLoc, diag::err_base_class_has_flexible_array_member)
-        << BaseDecl->getDeclName();
+      << BaseDecl->getDeclName();
     return nullptr;
   }
 
@@ -2817,7 +2812,8 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
   //   base-clause, the program is ill-formed.
   if (FinalAttr *FA = BaseDecl->getAttr<FinalAttr>()) {
     Diag(BaseLoc, diag::err_class_marked_final_used_as_base)
-        << BaseDecl->getDeclName() << FA->isSpelledAsSealed();
+      << BaseDecl->getDeclName()
+      << FA->isSpelledAsSealed();
     Diag(BaseDecl->getLocation(), diag::note_entity_declared_at)
         << BaseDecl->getDeclName() << FA->getRange();
     return nullptr;
