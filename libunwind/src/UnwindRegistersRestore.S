@@ -1232,7 +1232,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind19Registers_loongarch6jumptoEv)
 
 #endif
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm) */
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
 
 NO_EXEC_STACK_DIRECTIVE
 
