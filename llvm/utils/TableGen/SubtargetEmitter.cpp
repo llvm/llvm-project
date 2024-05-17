@@ -900,8 +900,6 @@ SubtargetEmitter::FindWriteResources(const CodeGenSchedRW &SchedWrite,
   // Check this processor's list of write resources.
   Record *ResDef = nullptr;
   for (Record *WR : ProcModel.WriteResDefs) {
-    if (!WR->isSubClassOf("WriteRes"))
-      continue;
     Record *WRDef = WR->getValueAsDef("WriteType");
     if (AliasDef == WRDef || SchedWrite.TheDef == WRDef) {
       if (ResDef) {
@@ -959,8 +957,6 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
   // Check this processor's ReadAdvanceList.
   Record *ResDef = nullptr;
   for (Record *RA : ProcModel.ReadAdvanceDefs) {
-    if (!RA->isSubClassOf("ReadAdvance"))
-      continue;
     Record *RADef = RA->getValueAsDef("ReadType");
     if (AliasDef == RADef || SchedRead.TheDef == RADef) {
       if (ResDef) {

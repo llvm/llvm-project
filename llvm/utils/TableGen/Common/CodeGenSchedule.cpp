@@ -1903,23 +1903,25 @@ void CodeGenSchedModels::collectProcResources() {
   RecVec WRDefs = Records.getAllDerivedDefinitions("WriteRes");
   for (Record *WR : WRDefs) {
     Record *ModelDef = WR->getValueAsDef("SchedModel");
-    addWriteRes(WR, getProcModel(ModelDef).Index);
+    addWriteRes(WR, getProcModel(ModelDef).Index, true);
   }
   RecVec SWRDefs = Records.getAllDerivedDefinitions("SchedWriteRes");
   for (Record *SWR : SWRDefs) {
     Record *ModelDef = SWR->getValueAsDef("SchedModel");
-    addWriteRes(SWR, getProcModel(ModelDef).Index);
+    addWriteRes(SWR, getProcModel(ModelDef).Index,
+                SWR->isSubClassOf("WriteRes"));
   }
   RecVec RADefs = Records.getAllDerivedDefinitions("ReadAdvance");
   for (Record *RA : RADefs) {
     Record *ModelDef = RA->getValueAsDef("SchedModel");
-    addReadAdvance(RA, getProcModel(ModelDef).Index);
+    addReadAdvance(RA, getProcModel(ModelDef).Index, true);
   }
   RecVec SRADefs = Records.getAllDerivedDefinitions("SchedReadAdvance");
   for (Record *SRA : SRADefs) {
     if (SRA->getValueInit("SchedModel")->isComplete()) {
       Record *ModelDef = SRA->getValueAsDef("SchedModel");
-      addReadAdvance(SRA, getProcModel(ModelDef).Index);
+      addReadAdvance(SRA, getProcModel(ModelDef).Index,
+                     SRA->isSubClassOf("ReadAdvance"));
     }
   }
   // Add ProcResGroups that are defined within this processor model, which may
@@ -1948,18 +1950,11 @@ void CodeGenSchedModels::collectProcResources() {
     LLVM_DEBUG(
         PM.dump(); dbgs() << "WriteResDefs: "; for (auto WriteResDef
                                                     : PM.WriteResDefs) {
-          if (WriteResDef->isSubClassOf("WriteRes"))
-            dbgs() << WriteResDef->getValueAsDef("WriteType")->getName() << " ";
-          else
-            dbgs() << WriteResDef->getName() << " ";
+          dbgs() << WriteResDef->getValueAsDef("WriteType")->getName() << " ";
         } dbgs() << "\nReadAdvanceDefs: ";
         for (Record *ReadAdvanceDef
              : PM.ReadAdvanceDefs) {
-          if (ReadAdvanceDef->isSubClassOf("ReadAdvance"))
-            dbgs() << ReadAdvanceDef->getValueAsDef("ReadType")->getName()
-                   << " ";
-          else
-            dbgs() << ReadAdvanceDef->getName() << " ";
+          dbgs() << ReadAdvanceDef->getValueAsDef("ReadType")->getName() << " ";
         } dbgs()
         << "\nProcResourceDefs: ";
         for (Record *ProcResourceDef
@@ -2062,10 +2057,12 @@ void CodeGenSchedModels::collectRWResources(unsigned RWIdx, bool IsRead,
   if (SchedRW.TheDef) {
     if (!IsRead && SchedRW.TheDef->isSubClassOf("SchedWriteRes")) {
       for (unsigned Idx : ProcIndices)
-        addWriteRes(SchedRW.TheDef, Idx);
+        addWriteRes(SchedRW.TheDef, Idx,
+                    SchedRW.TheDef->isSubClassOf("WriteRes"));
     } else if (IsRead && SchedRW.TheDef->isSubClassOf("SchedReadAdvance")) {
       for (unsigned Idx : ProcIndices)
-        addReadAdvance(SchedRW.TheDef, Idx);
+        addReadAdvance(SchedRW.TheDef, Idx,
+                       SchedRW.TheDef->isSubClassOf("ReadAdvance"));
     }
   }
   for (auto *Alias : SchedRW.Aliases) {
@@ -2160,13 +2157,19 @@ void CodeGenSchedModels::addProcResource(Record *ProcResKind,
 }
 
 // Add resources for a SchedWrite to this processor if they don't exist.
-void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx) {
+// IsWriteRes is true if ProcWriteResDef->isSubClassOf("WriteRes").
+void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx,
+                                     bool IsWriteRes) {
   assert(PIdx && "don't add resources to an invalid Processor model");
 
-  RecVec &WRDefs = ProcModels[PIdx].WriteResDefs;
-  if (is_contained(WRDefs, ProcWriteResDef))
-    return;
-  WRDefs.push_back(ProcWriteResDef);
+  // WriteResDefs only tracks WriteRes, not SchedWriteRes, unless someone made
+  // a custom subclass that inherited ReadAdvance and SchedReadAdvance.
+  if (IsWriteRes) {
+    RecVec &WRDefs = ProcModels[PIdx].WriteResDefs;
+    if (is_contained(WRDefs, ProcWriteResDef))
+      return;
+    WRDefs.push_back(ProcWriteResDef);
+  }
 
   // Visit ProcResourceKinds referenced by the newly discovered WriteRes.
   RecVec ProcResDefs = ProcWriteResDef->getValueAsListOfDefs("ProcResources");
@@ -2176,8 +2179,9 @@ void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx) {
 }
 
 // Add resources for a ReadAdvance to this processor if they don't exist.
+// IsReadAdvance is true if ProcReadAdvanceDef->isSubClassOf("ReadAdvance").
 void CodeGenSchedModels::addReadAdvance(Record *ProcReadAdvanceDef,
-                                        unsigned PIdx) {
+                                        unsigned PIdx, bool IsReadAdvance) {
   for (const Record *ValidWrite :
        ProcReadAdvanceDef->getValueAsListOfDefs("ValidWrites"))
     if (getSchedRWIdx(ValidWrite, /*IsRead=*/false) == 0)
@@ -2187,10 +2191,15 @@ void CodeGenSchedModels::addReadAdvance(Record *ProcReadAdvanceDef,
           "any instruction (" +
               ValidWrite->getName() + ")");
 
-  RecVec &RADefs = ProcModels[PIdx].ReadAdvanceDefs;
-  if (is_contained(RADefs, ProcReadAdvanceDef))
-    return;
-  RADefs.push_back(ProcReadAdvanceDef);
+  // ReadAdvanceDefs only tracks ReadAdvance, not SchedReadAdvance, unless
+  // someone made a custom subclass that inherited ReadAdvance and
+  // SchedReadAdvance.
+  if (IsReadAdvance) {
+    RecVec &RADefs = ProcModels[PIdx].ReadAdvanceDefs;
+    if (is_contained(RADefs, ProcReadAdvanceDef))
+      return;
+    RADefs.push_back(ProcReadAdvanceDef);
+  }
 }
 
 unsigned CodeGenProcModel::getProcResourceIdx(Record *PRDef) const {
