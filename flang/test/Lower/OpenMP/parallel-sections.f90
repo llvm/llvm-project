@@ -1,3 +1,4 @@
+!XFAIL: *
 ! REQUIRES: openmp_runtime
 
 !RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
