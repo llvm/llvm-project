@@ -72,6 +72,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
@@ -370,11 +371,10 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
         << " func_retval0";
     } else if (ShouldPassAsArray(Ty)) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
-      unsigned retAlignment = 0;
-      if (!getAlign(*F, 0, retAlignment))
-        retAlignment = TLI->getFunctionParamOptimizedAlign(F, Ty, DL).value();
-      O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
-        << "]";
+      Align RetAlignment = TLI->getFunctionArgumentAlignment(
+          F, Ty, AttributeList::ReturnIndex, DL);
+      O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
+        << totalsz << "]";
     } else
       llvm_unreachable("Unknown return type");
   } else {
@@ -1558,6 +1558,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     auto getOptimalAlignForParam = [TLI, &DL, &PAL, F,
                                     paramIndex](Type *Ty) -> Align {
+      if (MaybeAlign StackAlign =
+              getAlign(*F, paramIndex + AttributeList::FirstArgIndex))
+        return StackAlign.value();
+
       Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign = PAL.getParamAlignment(paramIndex);
       return std::max(TypeAlign, ParamAlign.valueOrOne());
