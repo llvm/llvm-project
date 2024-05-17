@@ -41,8 +41,9 @@ __attribute__((noinline)) void the_root() {
 
 // Make sure the program actually ran correctly.
 // CHECK: check 1
-// CHECK: check odd
-// CHECK: check even
+// CHECK-NEXT: check odd
+// CHECK-NEXT: check even
+// CHECK-NEXT: check odd
 
 void printProfile(const ContextNode &Node, const std::string &Indent,
                   const std::string &Increment) {
@@ -70,20 +71,20 @@ void printProfile(const ContextNode &Node, const std::string &Indent,
 // path gets instrumented).
 // The second context is in the loop. We expect 2 entries and each of the
 // branches would be taken once, so the second counter is 1.
-// CHECK: Guid: 11065787667334760794
-// CHECK: Entries: 1
-// CHECK: 2 counters and 3 callsites
-// CHECK: Counter values: 1 2
-// CHECK: At Index 1:
-// CHECK:   Guid: 6759619411192316602
-// CHECK:   Entries: 1
-// CHECK:   2 counters and 2 callsites
-// CHECK:   Counter values: 1 0
-// CHECK: At Index 2:
-// CHECK:   Guid: 6759619411192316602
-// CHECK:   Entries: 2
-// CHECK:   2 counters and 2 callsites
-// CHECK:   Counter values: 2 1
+// CHECK-NEXT: Guid: 11065787667334760794
+// CHECK-NEXT: Entries: 1
+// CHECK-NEXT: 2 counters and 3 callsites
+// CHECK-NEXT: Counter values: 1 2
+// CHECK-NEXT: At Index 1:
+// CHECK-NEXT:   Guid: 6759619411192316602
+// CHECK-NEXT:   Entries: 1
+// CHECK-NEXT:   2 counters and 2 callsites
+// CHECK-NEXT:   Counter values: 1 0
+// CHECK-NEXT: At Index 2:
+// CHECK-NEXT:   Guid: 6759619411192316602
+// CHECK-NEXT:   Entries: 2
+// CHECK-NEXT:   2 counters and 2 callsites
+// CHECK-NEXT:   Counter values: 2 1
 
 bool profileWriter() {
   return __llvm_ctx_profile_fetch(
