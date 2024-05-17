@@ -529,6 +529,11 @@ run(testComplexUnrankedMemrefAdd)
 # Test addition of two bf16 memrefs
 # CHECK-LABEL: TEST: testBF16MemrefAdd
 def testBF16MemrefAdd():
+    if ml_dtypes is None:
+        log(
+            "Skipping testBF16MemrefAdd because bfloat16 requires the ml_dtypes package."
+        )
+        return
     with Context():
         module = Module.parse(
             """
@@ -573,8 +578,7 @@ def testBF16MemrefAdd():
         log(npout)
 
 
-if ml_dtypes is not None:
-    run(testBF16MemrefAdd)
+run(testBF16MemrefAdd)
 
 
 #  Test addition of two 2d_memref
