@@ -397,8 +397,8 @@ int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
         pointsToAvoid.insert(icfg.getNodeId(loc.fid, loc.bid));
     }
 
-    auto pFinder = DijPathFinder(icfg);
-    pFinder.search(u, v, pointsToPass, pointsToAvoid, 3);
+    auto pFinder = DfsPathFinder(icfg);
+    pFinder.search(u, v, pointsToPass, pointsToAvoid, 6);
 
     saveAsJson(fromLine, toLine, pFinder.results, type, jResults);
     return pFinder.results.size();
