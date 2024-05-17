@@ -961,7 +961,7 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
   using OpConversionPattern<Op>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(Op op, Op::Adaptor adaptor,
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto loc = op.getLoc();
