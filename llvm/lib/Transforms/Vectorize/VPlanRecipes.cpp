@@ -1817,7 +1817,7 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  O << " vp.reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);
