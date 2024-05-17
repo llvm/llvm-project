@@ -1533,7 +1533,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
       cStyleParamWarned = true;
     }
     DeclSpec DS(AttrFactory);
-    ParseDeclarationSpecifiers(DS);
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo);
     // Parse the declarator.
     Declarator ParmDecl(DS, ParsedAttributesView::none(),
                         DeclaratorContext::Prototype);
@@ -2588,7 +2589,8 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
                                         Scope::AtCatchScope);
         if (Tok.isNot(tok::ellipsis)) {
           DeclSpec DS(AttrFactory);
-          ParseDeclarationSpecifiers(DS);
+          ParsedTemplateInfo TemplateInfo;
+          ParseDeclarationSpecifiers(DS, TemplateInfo);
           Declarator ParmDecl(DS, ParsedAttributesView::none(),
                               DeclaratorContext::ObjCCatch);
           ParseDeclarator(ParmDecl);

@@ -2845,10 +2845,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
     AccessSpecifier AS, DeclSpecContext DSC) {
+  ParsedTemplateInfo TemplateInfo;
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS, DSC, nullptr,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
                              AllowImplicitTypename);
 
   // Validate declspec for type-name.
@@ -2927,7 +2928,7 @@ static bool isValidAfterIdentifierInDeclarator(const Token &T) {
 /// other pieces of declspec after it, it returns true.
 ///
 bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
-                              const ParsedTemplateInfo &TemplateInfo,
+                              ParsedTemplateInfo &TemplateInfo,
                               AccessSpecifier AS, DeclSpecContext DSC,
                               ParsedAttributes &Attrs) {
   assert(Tok.is(tok::identifier) && "should have identifier");
@@ -3489,7 +3490,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 ///       'friend': [C++ dcl.friend]
 ///       'constexpr': [C++0x dcl.constexpr]
 void Parser::ParseDeclarationSpecifiers(
-    DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+    DeclSpec &DS, ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
     DeclSpecContext DSContext, LateParsedAttrList *LateAttrs,
     ImplicitTypenameContext AllowImplicitTypename) {
   if (DS.getSourceRange().isInvalid()) {
@@ -7736,8 +7737,9 @@ void Parser::ParseParameterDeclarationClause(
         Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
     }
 
-    ParseDeclarationSpecifiers(DS, /*TemplateInfo=*/ParsedTemplateInfo(),
-                               AS_none, DeclSpecContext::DSC_normal,
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
+                               DeclSpecContext::DSC_normal,
                                /*LateAttrs=*/nullptr, AllowImplicitTypename);
 
     DS.takeAttributesFrom(ArgDeclSpecAttrs);

@@ -2480,24 +2480,23 @@ private:
   bool trySkippingFunctionBody();
 
   bool ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
-                        const ParsedTemplateInfo &TemplateInfo,
-                        AccessSpecifier AS, DeclSpecContext DSC,
-                        ParsedAttributes &Attrs);
+                        ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+                        DeclSpecContext DSC, ParsedAttributes &Attrs);
   DeclSpecContext
   getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context);
-  void ParseDeclarationSpecifiers(
-      DeclSpec &DS,
-      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-      LateParsedAttrList *LateAttrs = nullptr) {
+  void
+  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
+                             AccessSpecifier AS = AS_none,
+                             DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                             LateParsedAttrList *LateAttrs = nullptr) {
     return ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
                                       getImplicitTypenameContext(DSC));
   }
-  void ParseDeclarationSpecifiers(
-      DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
-      DeclSpecContext DSC, LateParsedAttrList *LateAttrs,
-      ImplicitTypenameContext AllowImplicitTypename);
+  void
+  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
+                             AccessSpecifier AS, DeclSpecContext DSC,
+                             LateParsedAttrList *LateAttrs,
+                             ImplicitTypenameContext AllowImplicitTypename);
 
   SourceLocation ParsePackIndexingType(DeclSpec &DS);
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
@@ -3308,7 +3307,7 @@ private:
   // C++ 9: classes [class] and C structs/unions.
   bool isValidAfterTypeSpecifier(bool CouldBeBitfield);
   void ParseClassSpecifier(tok::TokenKind TagTokKind, SourceLocation TagLoc,
-                           DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo,
+                           DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                            AccessSpecifier AS, bool EnteringContext,
                            DeclSpecContext DSC, ParsedAttributes &Attributes);
   void SkipCXXMemberSpecification(SourceLocation StartLoc,
@@ -3330,7 +3329,7 @@ private:
                                                                VirtSpecifiers &VS);
   DeclGroupPtrTy ParseCXXClassMemberDeclaration(
       AccessSpecifier AS, ParsedAttributes &Attr,
-      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
+      ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject *DiagsFromTParams = nullptr);
   DeclGroupPtrTy
   ParseCXXClassMemberDeclarationWithPragmas(AccessSpecifier &AS,
