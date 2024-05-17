@@ -364,14 +364,15 @@ unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
 }
 
 unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS)
+    return 512;
+
+  if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
       AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
-      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
-    return 512;
-  }
+      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER)
+    return ST->isAmdPalOS() ? 128 : 512;
 
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
