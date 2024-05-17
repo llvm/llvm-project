@@ -1489,11 +1489,25 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   auto Tokens = annotate("__asm{\n"
                          "a:\n"
-                         "};");
-  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+                         ": x\n"
+                         ":};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
   EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_InlineASMBrace);
-  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_InlineASMBrace);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_InlineASMBrace);
+
+  Tokens = annotate("__asm__ volatile (\n"
+                    "a:\n"
+                    ": x\n"
+                    ":);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
