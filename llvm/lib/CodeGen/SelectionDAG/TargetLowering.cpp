@@ -11246,7 +11246,6 @@ SDValue TargetLowering::expandMCOMPRESS(SDNode *Node, SelectionDAG &DAG) const {
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned NumElms = VecVT.getVectorNumElements();
-  // Skip element zero, as we always copy this to the output vector.
   for (unsigned I = 0; I < NumElms; I++) {
     SDValue Idx = DAG.getVectorIdxConstant(I, DL);
 

@@ -1500,6 +1500,13 @@ def G_SPLAT_VECTOR: GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic masked compress.
+def G_MCOMPRESS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$vec, type2:$mask);
+  let hasSideEffects = false;
+}
+
 //------------------------------------------------------------------------------
 // Vector reductions
 //------------------------------------------------------------------------------

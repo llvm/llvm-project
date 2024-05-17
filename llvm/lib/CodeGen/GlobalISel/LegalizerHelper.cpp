@@ -3946,6 +3946,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerExtractInsertVectorElt(MI);
   case G_SHUFFLE_VECTOR:
     return lowerShuffleVector(MI);
+  case G_MCOMPRESS:
+    return lowerMCOMPRESS(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
   case G_STACKSAVE:
@@ -7499,6 +7501,53 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   else
     MIRBuilder.buildBuildVector(DstReg, BuildVec);
   MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerMCOMPRESS(llvm::MachineInstr &MI) {
+  auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy] = MI.getFirst3RegLLTs();
+
+  if (VecTy.isScalableVector())
+    report_fatal_error(
+        "Lowering masked_compress for scalable vectors is undefined.");
+
+  MachinePointerInfo PtrInfo;
+  Register StackPtr =
+      createStackTemporary(TypeSize::getFixed(VecTy.getSizeInBytes()),
+                           getStackTemporaryAlignment(VecTy), PtrInfo)
+          .getReg(0);
+
+  LLT IdxTy = LLT::scalar(32);
+  LLT ValTy = VecTy.getElementType();
+  Align ValAlign = getStackTemporaryAlignment(ValTy);
+
+  Register OutPos = MIRBuilder.buildConstant(IdxTy, 0).getReg(0);
+
+  unsigned NumElmts = VecTy.getNumElements();
+  for (unsigned I = 0; I < NumElmts; ++I) {
+    auto Idx = MIRBuilder.buildConstant(IdxTy, I);
+    auto Val = MIRBuilder.buildExtractVectorElement(ValTy, Vec, Idx);
+    Register ElmtPtr = getVectorElementPointer(StackPtr, VecTy, OutPos);
+    MIRBuilder.buildStore(Val, ElmtPtr, PtrInfo, ValAlign);
+
+    if (I < NumElmts - 1) {
+      LLT MaskITy = MaskTy.getElementType();
+      auto MaskI = MIRBuilder.buildExtractVectorElement(MaskITy, Mask, Idx);
+      if (MaskITy.getSizeInBits() > 1)
+        MaskI = MIRBuilder.buildTrunc(LLT::scalar(1), MaskI);
+
+      MaskI = MIRBuilder.buildZExt(IdxTy, MaskI);
+      OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI).getReg(0);
+    }
+  }
+
+  Align VecAlign = getStackTemporaryAlignment(VecTy);
+  MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo, VecAlign);
+
+  MI.eraseFromParent();
+  // TODO: This is not true! We don't know if the input vector type is legal.
+  //       Find out how to assert this!
   return Legalized;
 }
 

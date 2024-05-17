@@ -1132,6 +1132,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1)
       .lower();
 
+  // TOOD: FIX ThiS!
+  // DO NOT COMMIT
+  getActionDefinitionsBuilder(G_MCOMPRESS).lower();
+
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{s32, s32}, {s32, s64}, {s64, s64}})
       .lower();
