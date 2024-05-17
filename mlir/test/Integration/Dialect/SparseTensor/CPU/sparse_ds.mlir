@@ -79,9 +79,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 8 )
     // CHECK-NEXT: lvl = ( 3, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12,  )
-    // CHECK-NEXT: crd[1] : ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5,  )
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,  )
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12 )
+    // CHECK-NEXT: crd[1] : ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %A1 : tensor<?x?xf64, #CSR>
@@ -93,9 +93,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 8 )
     // CHECK-NEXT: lvl = ( 3, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 4, 4, 8, 8, 12,
-    // CHECK-NEXT: crd[1] : ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5,  )
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,  )
+    // CHECK-NEXT: pos[1] : ( 0, 4, 4, 8, 8, 12, {{.*}} )
+    // CHECK-NEXT: crd[1] : ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %A2 : tensor<?x?xf64, #CSR_hi>
@@ -107,8 +107,8 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 8 )
     // CHECK-NEXT: lvl = ( 3, 2, 4 )
-    // CHECK-NEXT: crd[2] : ( 2, 3, 1, 3, 1, 2, 0, 3, 0, 2, 0, 1,  )
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,  )
+    // CHECK-NEXT: crd[2] : ( 2, 3, 1, 3, 1, 2, 0, 3, 0, 2, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
     // CHECK-NEXT: ----
     // CHECK-NEXT: ---- Sparse Tensor ----
     //
@@ -120,8 +120,8 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 8 )
     // CHECK-NEXT: lvl = ( 3, 1, 8 )
-    // CHECK-NEXT: crd[2] : ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5,  )
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,  )
+    // CHECK-NEXT: crd[2] : ( 2, 3, 5, 7, 1, 2, 4, 7, 0, 2, 4, 5 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %A4 : tensor<?x?xf64, #NV_58>

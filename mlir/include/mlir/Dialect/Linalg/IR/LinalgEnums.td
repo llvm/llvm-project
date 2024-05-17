@@ -49,6 +49,12 @@ def BinaryFn : I32EnumAttr<"BinaryFn", "", [
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
 }
+def TernaryFn : I32EnumAttr<"TernaryFn", "", [
+  I32EnumAttrCase<"select", 0>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
 def TypeFn : I32EnumAttr<"TypeFn", "", [
   I32EnumAttrCase<"cast_signed", 0>,
   I32EnumAttrCase<"cast_unsigned", 1>

@@ -90,6 +90,26 @@ bool validate(const ContextRoot *Root) {
   }
   return true;
 }
+
+inline ContextNode *allocContextNode(char *Place, GUID Guid,
+                                     uint32_t NrCounters, uint32_t NrCallsites,
+                                     ContextNode *Next = nullptr) {
+  assert(reinterpret_cast<uint64_t>(Place) % ExpectedAlignment == 0);
+  return new (Place) ContextNode(Guid, NrCounters, NrCallsites, Next);
+}
+
+void resetContextNode(ContextNode &Node) {
+  // FIXME(mtrofin): this is std::memset, which we can probably use if we
+  // drop/reduce the dependency on sanitizer_common.
+  for (uint32_t I = 0; I < Node.counters_size(); ++I)
+    Node.counters()[I] = 0;
+  for (uint32_t I = 0; I < Node.callsites_size(); ++I)
+    for (auto *Next = Node.subContexts()[I]; Next; Next = Next->next())
+      resetContextNode(*Next);
+}
+
+void onContextEnter(ContextNode &Node) { ++Node.counters()[0]; }
+
 } // namespace
 
 // the scratch buffer - what we give when we can't produce a real context (the
@@ -111,6 +131,10 @@ __thread ContextNode **volatile __llvm_ctx_profile_callsite[2] = {0, 0};
 
 __thread ContextRoot *volatile __llvm_ctx_profile_current_context_root =
     nullptr;
+
+Arena::Arena(uint32_t Size) : Size(Size) {
+  __sanitizer::internal_memset(start(), 0, Size);
+}
 
 // FIXME(mtrofin): use malloc / mmap instead of sanitizer common APIs to reduce
 // the dependency on the latter.
@@ -134,27 +158,9 @@ void Arena::freeArenaList(Arena *&A) {
   A = nullptr;
 }
 
-inline ContextNode *ContextNode::alloc(char *Place, GUID Guid,
-                                       uint32_t NrCounters,
-                                       uint32_t NrCallsites,
-                                       ContextNode *Next) {
-  assert(reinterpret_cast<uint64_t>(Place) % ExpectedAlignment == 0);
-  return new (Place) ContextNode(Guid, NrCounters, NrCallsites, Next);
-}
-
-void ContextNode::reset() {
-  // FIXME(mtrofin): this is std::memset, which we can probably use if we
-  // drop/reduce the dependency on sanitizer_common.
-  for (uint32_t I = 0; I < NrCounters; ++I)
-    counters()[I] = 0;
-  for (uint32_t I = 0; I < NrCallsites; ++I)
-    for (auto *Next = subContexts()[I]; Next; Next = Next->Next)
-      Next->reset();
-}
-
 // If this is the first time we hit a callsite with this (Guid) particular
 // callee, we need to allocate.
-ContextNode *getCallsiteSlow(uint64_t Guid, ContextNode **InsertionPoint,
+ContextNode *getCallsiteSlow(GUID Guid, ContextNode **InsertionPoint,
                              uint32_t NrCounters, uint32_t NrCallsites) {
   auto AllocSize = ContextNode::getAllocSize(NrCounters, NrCallsites);
   auto *Mem = __llvm_ctx_profile_current_context_root->CurrentMem;
@@ -169,8 +175,8 @@ ContextNode *getCallsiteSlow(uint64_t Guid, ContextNode **InsertionPoint,
         Mem->allocateNewArena(getArenaAllocSize(AllocSize), Mem);
     AllocPlace = Mem->tryBumpAllocate(AllocSize);
   }
-  auto *Ret = ContextNode::alloc(AllocPlace, Guid, NrCounters, NrCallsites,
-                                 *InsertionPoint);
+  auto *Ret = allocContextNode(AllocPlace, Guid, NrCounters, NrCallsites,
+                               *InsertionPoint);
   *InsertionPoint = Ret;
   return Ret;
 }
@@ -224,7 +230,7 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
                         "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
                         Ret, Guid, NrCallsites, NrCounters, Ret->guid(),
                         Ret->callsites_size(), Ret->counters_size());
-  Ret->onEntry();
+  onContextEnter(*Ret);
   return Ret;
 }
 
@@ -241,8 +247,8 @@ void setupContext(ContextRoot *Root, GUID Guid, uint32_t NrCounters,
   auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
   Root->FirstMemBlock = M;
   Root->CurrentMem = M;
-  Root->FirstNode = ContextNode::alloc(M->tryBumpAllocate(Needed), Guid,
-                                       NrCounters, NrCallsites);
+  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
+                                     NrCounters, NrCallsites);
   AllContextRoots.PushBack(Root);
 }
 
@@ -254,7 +260,7 @@ ContextNode *__llvm_ctx_profile_start_context(
   }
   if (Root->Taken.TryLock()) {
     __llvm_ctx_profile_current_context_root = Root;
-    Root->FirstNode->onEntry();
+    onContextEnter(*Root->FirstNode);
     return Root->FirstNode;
   }
   // If this thread couldn't take the lock, return scratch context.
@@ -281,13 +287,13 @@ void __llvm_ctx_profile_start_collection() {
     for (auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next())
       ++NrMemUnits;
 
-    Root->FirstNode->reset();
+    resetContextNode(*Root->FirstNode);
   }
   __sanitizer::Printf("[ctxprof] Initial NrMemUnits: %zu \n", NrMemUnits);
 }
 
-bool __llvm_ctx_profile_fetch(
-    void *Data, bool (*Writer)(void *W, const __ctx_profile::ContextNode &)) {
+bool __llvm_ctx_profile_fetch(void *Data,
+                              bool (*Writer)(void *W, const ContextNode &)) {
   assert(Writer);
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);

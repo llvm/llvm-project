@@ -351,6 +351,8 @@ def FeatureNDD : SubtargetFeature<"ndd", "HasNDD", "true",
                                   "Support non-destructive destination">;
 def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
+def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
+                                 "Support status flags update suppression">;
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 
@@ -1350,6 +1352,7 @@ def ProcessorFeatures {
                                               FeatureCMOV,
                                               FeatureX86_64];
   list<SubtargetFeature> BarcelonaTuning = [TuningFastScalarShiftMasks,
+                                            TuningSlowDivide64,
                                             TuningSlowSHLD,
                                             TuningSBBDepBreaking,
                                             TuningInsertVZEROUPPER];
@@ -1372,6 +1375,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> BtVer1Tuning = [TuningFast15ByteNOP,
                                          TuningFastScalarShiftMasks,
                                          TuningFastVectorShiftMasks,
+                                         TuningSlowDivide64,
                                          TuningSlowSHLD,
                                          TuningFastImm16,
                                          TuningSBBDepBreaking,
@@ -1396,6 +1400,7 @@ def ProcessorFeatures {
                                          TuningFastMOVBE,
                                          TuningFastImm16,
                                          TuningSBBDepBreaking,
+                                         TuningSlowDivide64,
                                          TuningSlowSHLD];
   list<SubtargetFeature> BtVer2Features =
     !listconcat(BtVer1Features, BtVer2AdditionalFeatures);
@@ -1420,6 +1425,7 @@ def ProcessorFeatures {
                                            FeatureLWP,
                                            FeatureLAHFSAHF64];
   list<SubtargetFeature> BdVer1Tuning = [TuningSlowSHLD,
+                                         TuningSlowDivide64,
                                          TuningFast11ByteNOP,
                                          TuningFastScalarShiftMasks,
                                          TuningBranchFusion,
@@ -1500,6 +1506,7 @@ def ProcessorFeatures {
                                      TuningFastVariablePerLaneShuffle,
                                      TuningFastMOVBE,
                                      TuningFastImm16,
+                                     TuningSlowDivide64,
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,

@@ -111,29 +111,29 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 4, 3, 2 )
     // CHECK-NEXT: lvl = ( 4, 3, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 5
-    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 2, 1
-    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 5, 7, 8
-    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 0, 1, 0
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 2, 1 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 5, 7, 8 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 0, 1, 0 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 16
     // CHECK-NEXT: dim = ( 4, 3, 2 )
     // CHECK-NEXT: lvl = ( 4, 3, 2 )
-    // CHECK-NEXT: pos[2] : ( 0, 2, 3, 4, 6, 6, 7, 9, 11, 13, 14, 15, 16
-    // CHECK-NEXT: crd[2] : ( 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    // CHECK-NEXT: pos[2] : ( 0, 2, 3, 4, 6, 6, 7, 9, 11, 13, 14, 15, 16 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 22
     // CHECK-NEXT: dim = ( 4, 3, 2 )
     // CHECK-NEXT: lvl = ( 4, 3, 2 )
-    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 8, 11
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 2, 0, 1, 2, 0, 1, 2
-    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 5, 6, 0, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0, 15, 0, 16
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 8, 11 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 0, 2, 0, 1, 2, 0, 1, 2 )
+    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 5, 6, 0, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0, 15, 0, 16 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %s0 : tensor<4x3x2xf32, #CCC>

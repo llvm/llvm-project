@@ -9,11 +9,17 @@
 #ifndef CTX_PROFILE_CTXINSTRPROFILING_H_
 #define CTX_PROFILE_CTXINSTRPROFILING_H_
 
+#include "CtxInstrContextNode.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include <sanitizer/common_interface_defs.h>
 
+using namespace llvm::ctx_profile;
+
+// Forward-declare for the one unittest checking Arena construction zeroes out
+// its allocatable space.
+class ArenaTest_ZeroInit_Test;
 namespace __ctx_profile {
-using GUID = uint64_t;
+
 static constexpr size_t ExpectedAlignment = 8;
 // We really depend on this, see further below. We currently support x86_64.
 // When we want to support other archs, we need to trace the places Alignment is
@@ -48,7 +54,8 @@ public:
   const char *pos() const { return start() + Pos; }
 
 private:
-  explicit Arena(uint32_t Size) : Size(Size) {}
+  friend class ::ArenaTest_ZeroInit_Test;
+  explicit Arena(uint32_t Size);
   ~Arena() = delete;
 
   char *start() { return reinterpret_cast<char *>(&this[1]); }
@@ -61,99 +68,6 @@ private:
 // The memory available for allocation follows the Arena header, and we expect
 // it to be thus aligned.
 static_assert(alignof(Arena) == ExpectedAlignment);
-
-/// The contextual profile is a directed tree where each node has one parent. A
-/// node (ContextNode) corresponds to a function activation. The root of the
-/// tree is at a function that was marked as entrypoint to the compiler. A node
-/// stores counter values for edges and a vector of subcontexts. These are the
-/// contexts of callees. The index in the subcontext vector corresponds to the
-/// index of the callsite (as was instrumented via llvm.instrprof.callsite). At
-/// that index we find a linked list, potentially empty, of ContextNodes. Direct
-/// calls will have 0 or 1 values in the linked list, but indirect callsites may
-/// have more.
-///
-/// The ContextNode has a fixed sized header describing it - the GUID of the
-/// function, the size of the counter and callsite vectors. It is also an
-/// (intrusive) linked list for the purposes of the indirect call case above.
-///
-/// Allocation is expected to happen on an Arena. The allocation lays out inline
-/// the counter and subcontexts vectors. The class offers APIs to correctly
-/// reference the latter.
-///
-/// The layout is as follows:
-///
-/// [[declared fields][counters vector][vector of ptrs to subcontexts]]
-///
-/// See also documentation on the counters and subContexts members below.
-///
-/// The structure of the ContextNode is known to LLVM, because LLVM needs to:
-///   (1) increment counts, and
-///   (2) form a GEP for the position in the subcontext list of a callsite
-/// This means changes to LLVM contextual profile lowering and changes here
-/// must be coupled.
-/// Note: the header content isn't interesting to LLVM (other than its size)
-///
-/// Part of contextual collection is the notion of "scratch contexts". These are
-/// buffers that are "large enough" to allow for memory-safe acceses during
-/// counter increments - meaning the counter increment code in LLVM doesn't need
-/// to be concerned with memory safety. Their subcontexts never get populated,
-/// though. The runtime code here produces and recognizes them.
-class ContextNode final {
-  const GUID Guid;
-  ContextNode *const Next;
-  const uint32_t NrCounters;
-  const uint32_t NrCallsites;
-
-public:
-  ContextNode(GUID Guid, uint32_t NrCounters, uint32_t NrCallsites,
-              ContextNode *Next = nullptr)
-      : Guid(Guid), Next(Next), NrCounters(NrCounters),
-        NrCallsites(NrCallsites) {}
-  static inline ContextNode *alloc(char *Place, GUID Guid, uint32_t NrCounters,
-                                   uint32_t NrCallsites,
-                                   ContextNode *Next = nullptr);
-
-  static inline size_t getAllocSize(uint32_t NrCounters, uint32_t NrCallsites) {
-    return sizeof(ContextNode) + sizeof(uint64_t) * NrCounters +
-           sizeof(ContextNode *) * NrCallsites;
-  }
-
-  // The counters vector starts right after the static header.
-  uint64_t *counters() {
-    ContextNode *addr_after = &(this[1]);
-    return reinterpret_cast<uint64_t *>(addr_after);
-  }
-
-  uint32_t counters_size() const { return NrCounters; }
-  uint32_t callsites_size() const { return NrCallsites; }
-
-  const uint64_t *counters() const {
-    return const_cast<ContextNode *>(this)->counters();
-  }
-
-  // The subcontexts vector starts right after the end of the counters vector.
-  ContextNode **subContexts() {
-    return reinterpret_cast<ContextNode **>(&(counters()[NrCounters]));
-  }
-
-  ContextNode *const *subContexts() const {
-    return const_cast<ContextNode *>(this)->subContexts();
-  }
-
-  GUID guid() const { return Guid; }
-  ContextNode *next() { return Next; }
-
-  size_t size() const { return getAllocSize(NrCounters, NrCallsites); }
-
-  void reset();
-
-  // since we go through the runtime to get a context back to LLVM, in the entry
-  // basic block, might as well handle incrementing the entry basic block
-  // counter.
-  void onEntry() { ++counters()[0]; }
-
-  uint64_t entrycount() const { return counters()[0]; }
-};
 
 // Verify maintenance to ContextNode doesn't change this invariant, which makes
 // sure the inlined vectors are appropriately aligned.
@@ -219,8 +133,7 @@ extern "C" {
 extern __thread void *volatile __llvm_ctx_profile_expected_callee[2];
 /// TLS where LLVM stores the pointer inside a caller's subcontexts vector that
 /// corresponds to the callsite being lowered.
-extern __thread __ctx_profile::ContextNode *
-    *volatile __llvm_ctx_profile_callsite[2];
+extern __thread ContextNode **volatile __llvm_ctx_profile_callsite[2];
 
 // __llvm_ctx_profile_current_context_root is exposed for unit testing,
 // othwerise it's only used internally by compiler-rt/ctx_profile.
@@ -229,10 +142,9 @@ extern __thread __ctx_profile::ContextRoot
 
 /// called by LLVM in the entry BB of a "entry point" function. The returned
 /// pointer may be "tainted" - its LSB set to 1 - to indicate it's scratch.
-__ctx_profile::ContextNode *
-__llvm_ctx_profile_start_context(__ctx_profile::ContextRoot *Root,
-                                 __ctx_profile::GUID Guid, uint32_t Counters,
-                                 uint32_t Callsites);
+ContextNode *__llvm_ctx_profile_start_context(__ctx_profile::ContextRoot *Root,
+                                              GUID Guid, uint32_t Counters,
+                                              uint32_t Callsites);
 
 /// paired with __llvm_ctx_profile_start_context, and called at the exit of the
 /// entry point function.
@@ -240,9 +152,9 @@ void __llvm_ctx_profile_release_context(__ctx_profile::ContextRoot *Root);
 
 /// called for any other function than entry points, in the entry BB of such
 /// function. Same consideration about LSB of returned value as .._start_context
-__ctx_profile::ContextNode *
-__llvm_ctx_profile_get_context(void *Callee, __ctx_profile::GUID Guid,
-                               uint32_t NrCounters, uint32_t NrCallsites);
+ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
+                                            uint32_t NrCounters,
+                                            uint32_t NrCallsites);
 
 /// Prepares for collection. Currently this resets counter values but preserves
 /// internal context tree structure.
@@ -257,7 +169,7 @@ void __llvm_ctx_profile_free();
 /// The Writer's first parameter plays the role of closure for Writer, and is
 /// what the caller of __llvm_ctx_profile_fetch passes as the Data parameter.
 /// The second parameter is the root of a context tree.
-bool __llvm_ctx_profile_fetch(
-    void *Data, bool (*Writer)(void *, const __ctx_profile::ContextNode &));
+bool __llvm_ctx_profile_fetch(void *Data,
+                              bool (*Writer)(void *, const ContextNode &));
 }
 #endif // CTX_PROFILE_CTXINSTRPROFILING_H_

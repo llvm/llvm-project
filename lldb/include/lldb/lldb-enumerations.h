@@ -1344,7 +1344,8 @@ enum DebuggerBroadcastBit {
   eBroadcastBitProgress = (1 << 0),
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
-  eBroadcastBitProgressCategory = (1 << 3),
+  eBroadcastSymbolChange = (1 << 3),
+  eBroadcastBitProgressCategory = (1 << 4),
 };
 
 /// Used for expressing severity in logs and diagnostics.
