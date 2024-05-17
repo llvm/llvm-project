@@ -253,6 +253,19 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
   insertBefore(BB, I);
 }
 
+InstructionCost VPRecipeBase::computeCost(ElementCount VF, VPCostContext &Ctx) {
+  Instruction *UI = nullptr;
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
+    if (auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue()))
+      return Ctx.getLegacyCost(UI, VF);
+
+  if (auto *IG = dyn_cast<VPInterleaveRecipe>(this))
+    return Ctx.getLegacyCost(IG->getInsertPos(), VF);
+  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
+    return Ctx.getLegacyCost(&WidenMem->getIngredient(), VF);
+  return 0;
+}
+
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -995,19 +1008,6 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) {
-  VPWidenRecipe *Cur = this;
-  // Check if the recipe is used in a reduction chain. Let the legacy cost-model
-  // handle that case for now.
-  while (Cur->getNumUsers() == 1) {
-    if (auto *Next = dyn_cast<VPWidenRecipe>(*Cur->user_begin())) {
-      Cur = Next;
-      continue;
-    }
-    if (isa<VPReductionRecipe>(*Cur->user_begin()))
-      return InstructionCost::getInvalid();
-    break;
-  }
-
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   switch (Opcode) {
   case Instruction::FNeg: {
@@ -1024,7 +1024,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::SRem:
   case Instruction::URem:
     // More complex computation, let the legacy cost-model handle this for now.
-    return InstructionCost::getInvalid();
+    return Ctx.getLegacyCost(getUnderlyingInstr(), VF);
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:

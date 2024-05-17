@@ -290,7 +290,7 @@ static cl::opt<unsigned> ForceTargetMaxVectorInterleaveFactor(
     cl::desc("A flag that overrides the target's max interleave factor for "
              "vectorized loops."));
 
-static cl::opt<unsigned> ForceTargetInstructionCost(
+cl::opt<unsigned> ForceTargetInstructionCost(
     "force-target-instruction-cost", cl::init(0), cl::Hidden,
     cl::desc("A flag that overrides the target's expected cost for "
              "an instruction to a single constant value. Mostly "
@@ -7393,91 +7393,19 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   return VF;
 }
 
-static InstructionCost
-computeCostForRecipe(VPRecipeBase *R, ElementCount VF,
-                     const SmallPtrSetImpl<Instruction *> &SkipCostComputation,
-                     LoopVectorizationCostModel &CM, VPCostContext CostCtx) {
-  Instruction *UI = nullptr;
-  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
-    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-  if (UI &&
-      (CM.VecValuesToIgnore.contains(UI) || SkipCostComputation.contains(UI)))
-    return 0;
-
-  InstructionCost RecipeCost = R->computeCost(VF, CostCtx);
-  if (!RecipeCost.isValid()) {
-    if (auto *IG = dyn_cast<VPInterleaveRecipe>(R)) {
-      RecipeCost = CM.getInstructionCost(IG->getInsertPos(), VF).first;
-    } else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R)) {
-      RecipeCost = CM.getInstructionCost(&WidenMem->getIngredient(), VF).first;
-    } else if (UI) {
-      RecipeCost = CM.getInstructionCost(UI, VF).first;
-    } else
-      return 0;
-  }
-  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-      RecipeCost.isValid())
-    RecipeCost = InstructionCost(ForceTargetInstructionCost);
-
-  LLVM_DEBUG({
-    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    R->dump();
-  });
-  return RecipeCost;
+InstructionCost VPCostContext::getLegacyCost(Instruction *UI, ElementCount VF) {
+  return CM.getInstructionCost(UI, VF).first;
 }
 
-static InstructionCost computeCostForReplicatorRegion(
-    VPRegionBlock *Region, ElementCount VF,
-    SmallPtrSetImpl<Instruction *> &SkipCostComputation,
-    LoopVectorizationCostModel &CM, LLVMContext &Ctx, VPCostContext CostCtx) {
-  using namespace llvm::VPlanPatternMatch;
-  InstructionCost RegionCost = 0;
-  assert(Region->isReplicator() &&
-         "can only compute cost for a replicator region");
-  VPBasicBlock *Then =
-      cast<VPBasicBlock>(Region->getEntry()->getSuccessors()[0]);
-  for (VPRecipeBase &R : *Then)
-    RegionCost +=
-        computeCostForRecipe(&R, VF, SkipCostComputation, CM, CostCtx);
-
-  // Note the cost estimates below closely match the current legacy cost model.
-  auto *BOM =
-      cast<VPBranchOnMaskRecipe>(&Region->getEntryBasicBlock()->front());
-  VPValue *Cond = BOM->getOperand(0);
-
-  // Check if Cond is a uniform compare or a header mask.
-  bool IsHeaderMaskOrUniformCond =
-      vputils::isUniformCompare(Cond) ||
-      match(Cond, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
-      match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) ||
-      isa<VPActiveLaneMaskPHIRecipe>(Cond);
-  if (IsHeaderMaskOrUniformCond || VF.isScalable())
-    return RegionCost;
-
-  // For the scalar case, we may not always execute the original predicated
-  // block, Thus, scale the block's cost by the probability of executing it.
-  // blockNeedsPredication from Legal is used so as to not include all blocks in
-  // tail folded loops.
-  if (VF.isScalar())
-    return RegionCost / getReciprocalPredBlockProb();
-
-  // Add the cost for branches around scalarized and predicated blocks.
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
-  return RegionCost +
-         CostCtx.TTI.getScalarizationOverhead(
-             Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()),
-             /*Insert*/ false, /*Extract*/ true, CostKind) +
-         (CostCtx.TTI.getCFInstrCost(Instruction::Br, CostKind) *
-          VF.getFixedValue());
+bool VPCostContext::skipForCostComputation(Instruction *UI) const {
+  return CM.VecValuesToIgnore.contains(UI) || SkipCostComputation.contains(UI);
 }
 
 InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
                                                       ElementCount VF) const {
   InstructionCost Cost = 0;
-  SmallPtrSet<Instruction *, 8> SkipCostComputation;
   LLVMContext &Ctx = OrigLoop->getHeader()->getContext();
-  VPCostContext CostCtx(CM.TTI, Legal->getWidestInductionType(), Ctx);
+  VPCostContext CostCtx(CM.TTI, Legal->getWidestInductionType(), Ctx, CM);
 
   // Cost modeling for inductions is inaccurate in the legacy cost model
   // compared to the recipes that are generated. To match here initially during
@@ -7496,7 +7424,7 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
       IVInc->dump();
     });
     Cost += InductionCost;
-    SkipCostComputation.insert(IVInc);
+    CostCtx.SkipCostComputation.insert(IVInc);
   }
 
   // The legacy cost model has special logic to compute the cost of in-loop
@@ -7523,7 +7451,7 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
       if (!ReductionCost)
         continue;
 
-      if (!SkipCostComputation.insert(I).second)
+      if (!CostCtx.SkipCostComputation.insert(I).second)
         continue;
       dbgs() << "Cost of " << ReductionCost << " for VF " << VF
              << ":\n in-loop reduction " << *I << "\n";
@@ -7531,19 +7459,7 @@ InstructionCost LoopVectorizationPlanner::computeCost(VPlan &Plan,
     }
   }
 
-  VPBasicBlock *Header =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getEntry());
-  for (VPBlockBase *Block : to_vector(vp_depth_first_shallow(Header))) {
-    if (auto *Region = dyn_cast<VPRegionBlock>(Block)) {
-      Cost += computeCostForReplicatorRegion(Region, VF, SkipCostComputation,
-                                             CM, Ctx, CostCtx);
-      continue;
-    }
-
-    for (VPRecipeBase &R : *cast<VPBasicBlock>(Block))
-      Cost += computeCostForRecipe(&R, VF, SkipCostComputation, CM, CostCtx);
-  }
-
+  Cost += Plan.computeCost(VF, CostCtx);
   // Add the cost for the backedge.
   Cost += 1;
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost << "\n");

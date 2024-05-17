@@ -52,6 +52,7 @@ using namespace llvm::VPlanPatternMatch;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define DEBUG_TYPE "vplan"
 
@@ -730,6 +731,79 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Instance.reset();
 }
 
+static InstructionCost computeCostForRecipe(VPRecipeBase *R, ElementCount VF,
+                                            VPCostContext &Ctx) {
+  Instruction *UI = nullptr;
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
+    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+  if (UI && Ctx.skipForCostComputation(UI))
+    return 0;
+
+  InstructionCost RecipeCost = R->computeCost(VF, Ctx);
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+      RecipeCost.isValid())
+    RecipeCost = InstructionCost(ForceTargetInstructionCost);
+
+  LLVM_DEBUG({
+    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
+    R->dump();
+  });
+  return RecipeCost;
+}
+
+InstructionCost VPBasicBlock::computeCost(ElementCount VF, VPCostContext &Ctx) {
+  InstructionCost Cost = 0;
+  for (VPRecipeBase &R : *this)
+    Cost += computeCostForRecipe(&R, VF, Ctx);
+  return Cost;
+}
+
+InstructionCost VPRegionBlock::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) {
+  InstructionCost Cost = 0;
+  if (!isReplicator()) {
+    for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
+      Cost += Block->computeCost(VF, Ctx);
+    return Cost;
+  }
+
+  using namespace llvm::VPlanPatternMatch;
+  assert(isReplicator() && "can only compute cost for a replicator region");
+  VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
+  for (VPRecipeBase &R : *Then)
+    Cost += computeCostForRecipe(&R, VF, Ctx);
+
+  // Note the cost estimates below closely match the current legacy cost model.
+  auto *BOM = cast<VPBranchOnMaskRecipe>(&getEntryBasicBlock()->front());
+  VPValue *Cond = BOM->getOperand(0);
+
+  // Check if Cond is a uniform compare or a header mask.
+  bool IsHeaderMaskOrUniformCond =
+      vputils::isUniformCompare(Cond) ||
+      match(Cond, m_ActiveLaneMask(m_VPValue(), m_VPValue())) ||
+      match(Cond, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) ||
+      isa<VPActiveLaneMaskPHIRecipe>(Cond);
+  if (IsHeaderMaskOrUniformCond || VF.isScalable())
+    return Cost;
+
+  // For the scalar case, we may not always execute the original predicated
+  // block, Thus, scale the block's cost by the probability of executing it.
+  // blockNeedsPredication from Legal is used so as to not include all blocks in
+  // tail folded loops.
+  if (VF.isScalar())
+    return Cost / 2;
+
+  // Add the cost for branches around scalarized and predicated blocks.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx.Ctx), VF);
+  return Cost +
+         Ctx.TTI.getScalarizationOverhead(
+             Vec_i1Ty, APInt::getAllOnes(VF.getFixedValue()),
+             /*Insert*/ false, /*Extract*/ true, CostKind) +
+         (Ctx.TTI.getCFInstrCost(Instruction::Br, CostKind) *
+          VF.getFixedValue());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
@@ -898,6 +972,13 @@ void VPlan::execute(VPTransformState *State) {
     updateDominatorTree(State->DT, VectorHeaderBB, VectorLatchBB,
                         State->CFG.ExitBB);
   }
+}
+
+InstructionCost VPlan::computeCost(ElementCount VF, VPCostContext &Ctx) {
+  InstructionCost Cost = 0;
+  for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
+    Cost += Block->computeCost(VF, Ctx);
+  return Cost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
