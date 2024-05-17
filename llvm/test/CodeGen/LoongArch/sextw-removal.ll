@@ -258,10 +258,9 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    addi.w $a0, $fp, 0
 ; CHECK-NEXT:    bl %plt(baz)
 ; CHECK-NEXT:    move $s0, $a0
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    bl %plt(__fixsfsi)
 ; CHECK-NEXT:    move $fp, $a0
-; CHECK-NEXT:    addi.w $a0, $s0, 0
+; CHECK-NEXT:    move $a0, $s0
 ; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    bl %plt(__nesf2)
 ; CHECK-NEXT:    bnez $a0, .LBB5_1
@@ -285,10 +284,9 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    addi.w $a0, $fp, 0
 ; NORMV-NEXT:    bl %plt(baz)
 ; NORMV-NEXT:    move $s0, $a0
-; NORMV-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; NORMV-NEXT:    bl %plt(__fixsfsi)
 ; NORMV-NEXT:    move $fp, $a0
-; NORMV-NEXT:    addi.w $a0, $s0, 0
+; NORMV-NEXT:    move $a0, $s0
 ; NORMV-NEXT:    move $a1, $zero
 ; NORMV-NEXT:    bl %plt(__nesf2)
 ; NORMV-NEXT:    bnez $a0, .LBB5_1
@@ -562,7 +560,6 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    addi.w $a0, $fp, 0
 ; CHECK-NEXT:    bl %plt(baz)
 ; CHECK-NEXT:    move $fp, $a0
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    bl %plt(__nesf2)
 ; CHECK-NEXT:    bnez $a0, .LBB9_1
@@ -584,7 +581,6 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    addi.w $a0, $fp, 0
 ; NORMV-NEXT:    bl %plt(baz)
 ; NORMV-NEXT:    move $fp, $a0
-; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    move $a1, $zero
 ; NORMV-NEXT:    bl %plt(__nesf2)
 ; NORMV-NEXT:    bnez $a0, .LBB9_1
