@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMAMDGPUDesc
   AMDGPUMCExpr.cpp
   AMDGPUMCTargetDesc.cpp
   AMDGPUTargetStreamer.cpp
-  AMDGPUMCKernelCodeT.cpp
   AMDGPUMCKernelDescriptor.cpp
   R600InstPrinter.cpp
   R600MCCodeEmitter.cpp
@@ -21,7 +20,6 @@ add_llvm_component_library(LLVMAMDGPUDesc
   CodeGenTypes
   Core
   MC
-  MCParser
   Support
   TargetParser
 

@@ -1,12 +1,16 @@
-//===--- AMDHSAKernelCodeT.cpp --------------------------------------------===//
+//===- AMDKernelCodeTUtils.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+/// \file - utility functions to parse/print AMDGPUMCKernelCodeT structure
+//
+//===----------------------------------------------------------------------===//
 
-#include "AMDGPUMCKernelCodeT.h"
+#include "AMDKernelCodeTUtils.h"
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -17,6 +21,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -48,18 +53,32 @@ using namespace llvm::AMDGPU;
         std::is_same_v<decltype(Test<AmbiguousDerived>(nullptr)),              \
                        std::true_type>;                                        \
   };                                                                           \
+  class IsMCExpr##member {                                                     \
+    template <typename U,                                                      \
+              typename std::enable_if_t<                                       \
+                  HasMember##member::RESULT &&                                 \
+                      std::is_same_v<decltype(U::member), const MCExpr *>,     \
+                  U> * = nullptr>                                              \
+    static constexpr std::true_type HasMCExprType(decltype(U::member) *);      \
+    template <typename U> static constexpr std::false_type HasMCExprType(...); \
+                                                                               \
+  public:                                                                      \
+    static constexpr bool RESULT =                                             \
+        std::is_same_v<decltype(HasMCExprType<AMDGPUMCKernelCodeT>(nullptr)),  \
+                       std::true_type>;                                        \
+  };                                                                           \
   class GetMember##member {                                                    \
   public:                                                                      \
     static const MCExpr *Phony;                                                \
-    template <typename U, typename std::enable_if_t<HasMember##member::RESULT, \
+    template <typename U, typename std::enable_if_t<IsMCExpr##member::RESULT,  \
                                                     U> * = nullptr>            \
     static const MCExpr *&Get(U &C) {                                          \
-      assert(HasMember##member::RESULT &&                                      \
+      assert(IsMCExpr##member::RESULT &&                                       \
              "Trying to retrieve member that does not exist.");                \
       return C.member;                                                         \
     }                                                                          \
-    template <typename U, typename std::enable_if_t<                           \
-                              !HasMember##member::RESULT, U> * = nullptr>      \
+    template <typename U, typename std::enable_if_t<!IsMCExpr##member::RESULT, \
+                                                    U> * = nullptr>            \
     static const MCExpr *&Get(U &C) {                                          \
       return Phony;                                                            \
     }                                                                          \
@@ -164,7 +183,7 @@ static ArrayRef<StringLiteral> get_amd_kernel_code_t_FldAltNames() {
 
 static ArrayRef<bool> hasMCExprVersionTable() {
   static bool const Table[] = {
-#define RECORD(name, altName, print, parse) (HasMember##name::RESULT)
+#define RECORD(name, altName, print, parse) (IsMCExpr##name::RESULT)
 #include "Utils/AMDKernelCodeTInfo.h"
 #undef RECORD
   };
@@ -235,17 +254,34 @@ static const MCExpr *MaskShiftGet(const MCExpr *Val, uint32_t Mask,
   return Val;
 }
 
-template <typename T, T amd_kernel_code_t::*ptr>
-static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
-                       raw_ostream &OS, MCContext &) {
-  OS << Name << " = " << (int)(C.KernelCode.*ptr);
-}
+class PrintField {
+public:
+  template <typename T, T AMDGPUMCKernelCodeT::*ptr,
+            typename std::enable_if_t<!std::is_integral_v<T>, T> * = nullptr>
+  static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
+                         raw_ostream &OS, MCContext &Ctx) {
+    OS << Name << " = ";
+    const MCExpr *Value = C.*ptr;
+    int64_t Val;
+    if (Value->evaluateAsAbsolute(Val))
+      OS << Val;
+    else
+      Value->print(OS, Ctx.getAsmInfo());
+  }
 
-template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
+  template <typename T, T AMDGPUMCKernelCodeT::*ptr,
+            typename std::enable_if_t<std::is_integral_v<T>, T> * = nullptr>
+  static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
+                         raw_ostream &OS, MCContext &) {
+    OS << Name << " = " << (int)(C.*ptr);
+  }
+};
+
+template <typename T, T AMDGPUMCKernelCodeT::*ptr, int shift, int width = 1>
 static void printBitField(StringRef Name, const AMDGPUMCKernelCodeT &C,
                           raw_ostream &OS, MCContext &) {
   const auto Mask = (static_cast<T>(1) << width) - 1;
-  OS << Name << " = " << (int)((C.KernelCode.*ptr >> shift) & Mask);
+  OS << Name << " = " << (int)((C.*ptr >> shift) & Mask);
 }
 
 using PrintFx = void (*)(StringRef, const AMDGPUMCKernelCodeT &, raw_ostream &,
@@ -257,6 +293,7 @@ static ArrayRef<PrintFx> getPrinterTable() {
   COMPPGM(name, aname, C_00B848_##AccMacro, S_00B848_##AccMacro, 0)
 #define COMPPGM2(name, aname, AccMacro)                                        \
   COMPPGM(name, aname, C_00B84C_##AccMacro, S_00B84C_##AccMacro, 32)
+#define PRINTFIELD(sname, aname, name) PrintField::printField<FLD_T(name)>
 #define PRINTCOMP(Complement, PGMType)                                         \
   [](StringRef Name, const AMDGPUMCKernelCodeT &C, raw_ostream &OS,            \
      MCContext &Ctx) {                                                         \
@@ -299,25 +336,25 @@ static bool expectAbsExpression(MCAsmParser &MCParser, int64_t &Value,
   return true;
 }
 
-template <typename T, T amd_kernel_code_t::*ptr>
+template <typename T, T AMDGPUMCKernelCodeT::*ptr>
 static bool parseField(AMDGPUMCKernelCodeT &C, MCAsmParser &MCParser,
                        raw_ostream &Err) {
   int64_t Value = 0;
   if (!expectAbsExpression(MCParser, Value, Err))
     return false;
-  C.KernelCode.*ptr = (T)Value;
+  C.*ptr = (T)Value;
   return true;
 }
 
-template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
+template <typename T, T AMDGPUMCKernelCodeT::*ptr, int shift, int width = 1>
 static bool parseBitField(AMDGPUMCKernelCodeT &C, MCAsmParser &MCParser,
                           raw_ostream &Err) {
   int64_t Value = 0;
   if (!expectAbsExpression(MCParser, Value, Err))
     return false;
   const uint64_t Mask = ((UINT64_C(1) << width) - 1) << shift;
-  C.KernelCode.*ptr &= (T)~Mask;
-  C.KernelCode.*ptr |= (T)((Value << shift) & Mask);
+  C.*ptr &= (T)~Mask;
+  C.*ptr |= (T)((Value << shift) & Mask);
   return true;
 }
 
@@ -383,12 +420,12 @@ static void printAmdKernelCodeField(const AMDGPUMCKernelCodeT &C, int FldIndex,
 
 void AMDGPUMCKernelCodeT::initDefault(const MCSubtargetInfo *STI,
                                       MCContext &Ctx) {
-  AMDGPU::initDefaultAMDKernelCodeT(KernelCode, STI);
+  AMDGPU::initDefaultAMDKernelCodeT(*this, STI);
   const MCExpr *ZeroExpr = MCConstantExpr::create(0, Ctx);
-  compute_pgm_resource1_registers = MCConstantExpr::create(
-      KernelCode.compute_pgm_resource_registers & 0xFFFFFFFF, Ctx);
-  compute_pgm_resource2_registers = MCConstantExpr::create(
-      (KernelCode.compute_pgm_resource_registers >> 32) & 0xffffffff, Ctx);
+  compute_pgm_resource1_registers =
+      MCConstantExpr::create(Lo_32(compute_pgm_resource_registers), Ctx);
+  compute_pgm_resource2_registers =
+      MCConstantExpr::create(Hi_32(compute_pgm_resource_registers), Ctx);
   is_dynamic_callstack = ZeroExpr;
   wavefront_sgpr_count = ZeroExpr;
   workitem_vgpr_count = ZeroExpr;
@@ -470,33 +507,31 @@ void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx) {
 }
 
 void AMDGPUMCKernelCodeT::EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx) {
-  OS.emitIntValue(KernelCode.amd_kernel_code_version_major, /*Size=*/4);
-  OS.emitIntValue(KernelCode.amd_kernel_code_version_minor, /*Size=*/4);
-  OS.emitIntValue(KernelCode.amd_machine_kind, /*Size=*/2);
-  OS.emitIntValue(KernelCode.amd_machine_version_major, /*Size=*/2);
-  OS.emitIntValue(KernelCode.amd_machine_version_minor, /*Size=*/2);
-  OS.emitIntValue(KernelCode.amd_machine_version_stepping, /*Size=*/2);
-  OS.emitIntValue(KernelCode.kernel_code_entry_byte_offset, /*Size=*/8);
-  OS.emitIntValue(KernelCode.kernel_code_prefetch_byte_offset, /*Size=*/8);
-  OS.emitIntValue(KernelCode.kernel_code_prefetch_byte_size, /*Size=*/8);
-  OS.emitIntValue(KernelCode.reserved0, /*Size=*/8);
+  OS.emitIntValue(amd_kernel_code_version_major, /*Size=*/4);
+  OS.emitIntValue(amd_kernel_code_version_minor, /*Size=*/4);
+  OS.emitIntValue(amd_machine_kind, /*Size=*/2);
+  OS.emitIntValue(amd_machine_version_major, /*Size=*/2);
+  OS.emitIntValue(amd_machine_version_minor, /*Size=*/2);
+  OS.emitIntValue(amd_machine_version_stepping, /*Size=*/2);
+  OS.emitIntValue(kernel_code_entry_byte_offset, /*Size=*/8);
+  OS.emitIntValue(kernel_code_prefetch_byte_offset, /*Size=*/8);
+  OS.emitIntValue(kernel_code_prefetch_byte_size, /*Size=*/8);
+  OS.emitIntValue(reserved0, /*Size=*/8);
 
   if (compute_pgm_resource1_registers != nullptr)
     OS.emitValue(compute_pgm_resource1_registers, /*Size=*/4);
   else
-    OS.emitIntValue(KernelCode.compute_pgm_resource_registers & 0xFFFFFFFF,
+    OS.emitIntValue(Lo_32(compute_pgm_resource_registers),
                     /*Size=*/4);
 
   if (compute_pgm_resource2_registers != nullptr)
     OS.emitValue(compute_pgm_resource2_registers, /*Size=*/4);
   else
-    OS.emitIntValue((KernelCode.compute_pgm_resource_registers >> 32) &
-                        0xFFFFFFFF,
+    OS.emitIntValue(Hi_32(compute_pgm_resource_registers),
                     /*Size=*/4);
 
   if (is_dynamic_callstack != nullptr) {
-    const MCExpr *CodeProps =
-        MCConstantExpr::create(KernelCode.code_properties, Ctx);
+    const MCExpr *CodeProps = MCConstantExpr::create(code_properties, Ctx);
     CodeProps = MCBinaryExpr::createOr(
         CodeProps,
         MaskShiftSet(is_dynamic_callstack,
@@ -505,43 +540,42 @@ void AMDGPUMCKernelCodeT::EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx) {
         Ctx);
     OS.emitValue(CodeProps, /*Size=*/4);
   } else
-    OS.emitIntValue(KernelCode.code_properties, /*Size=*/4);
+    OS.emitIntValue(code_properties, /*Size=*/4);
 
   if (workitem_private_segment_byte_size != nullptr)
     OS.emitValue(workitem_private_segment_byte_size, /*Size=*/4);
   else
-    OS.emitIntValue(KernelCode.workitem_private_segment_byte_size, /*Size=*/4);
+    OS.emitIntValue(0, /*Size=*/4);
 
-  OS.emitIntValue(KernelCode.workgroup_group_segment_byte_size, /*Size=*/4);
-  OS.emitIntValue(KernelCode.gds_segment_byte_size, /*Size=*/4);
-  OS.emitIntValue(KernelCode.kernarg_segment_byte_size, /*Size=*/8);
-  OS.emitIntValue(KernelCode.workgroup_fbarrier_count, /*Size=*/4);
+  OS.emitIntValue(workgroup_group_segment_byte_size, /*Size=*/4);
+  OS.emitIntValue(gds_segment_byte_size, /*Size=*/4);
+  OS.emitIntValue(kernarg_segment_byte_size, /*Size=*/8);
+  OS.emitIntValue(workgroup_fbarrier_count, /*Size=*/4);
 
   if (wavefront_sgpr_count != nullptr)
     OS.emitValue(wavefront_sgpr_count, /*Size=*/2);
   else
-    OS.emitIntValue(KernelCode.wavefront_sgpr_count, /*Size=*/2);
+    OS.emitIntValue(0, /*Size=*/2);
 
   if (workitem_vgpr_count != nullptr)
     OS.emitValue(workitem_vgpr_count, /*Size=*/2);
   else
-    OS.emitIntValue(KernelCode.workitem_vgpr_count, /*Size=*/2);
+    OS.emitIntValue(0, /*Size=*/2);
 
-  OS.emitIntValue(KernelCode.reserved_vgpr_first, /*Size=*/2);
-  OS.emitIntValue(KernelCode.reserved_vgpr_count, /*Size=*/2);
-  OS.emitIntValue(KernelCode.reserved_sgpr_first, /*Size=*/2);
-  OS.emitIntValue(KernelCode.reserved_sgpr_count, /*Size=*/2);
-  OS.emitIntValue(KernelCode.debug_wavefront_private_segment_offset_sgpr,
+  OS.emitIntValue(reserved_vgpr_first, /*Size=*/2);
+  OS.emitIntValue(reserved_vgpr_count, /*Size=*/2);
+  OS.emitIntValue(reserved_sgpr_first, /*Size=*/2);
+  OS.emitIntValue(reserved_sgpr_count, /*Size=*/2);
+  OS.emitIntValue(debug_wavefront_private_segment_offset_sgpr,
                   /*Size=*/2);
-  OS.emitIntValue(KernelCode.debug_private_segment_buffer_sgpr, /*Size=*/2);
-  OS.emitIntValue(KernelCode.kernarg_segment_alignment, /*Size=*/1);
-  OS.emitIntValue(KernelCode.group_segment_alignment, /*Size=*/1);
-  OS.emitIntValue(KernelCode.private_segment_alignment, /*Size=*/1);
-  OS.emitIntValue(KernelCode.wavefront_size, /*Size=*/1);
+  OS.emitIntValue(debug_private_segment_buffer_sgpr, /*Size=*/2);
+  OS.emitIntValue(kernarg_segment_alignment, /*Size=*/1);
+  OS.emitIntValue(group_segment_alignment, /*Size=*/1);
+  OS.emitIntValue(private_segment_alignment, /*Size=*/1);
+  OS.emitIntValue(wavefront_size, /*Size=*/1);
 
-  OS.emitIntValue(KernelCode.call_convention, /*Size=*/4);
-  OS.emitBytes(StringRef((const char *)KernelCode.reserved3, /*Size=*/12));
-  OS.emitIntValue(KernelCode.runtime_loader_kernel_symbol, /*Size=*/8);
-  OS.emitBytes(
-      StringRef((const char *)KernelCode.control_directives, /*Size=*/16 * 8));
+  OS.emitIntValue(call_convention, /*Size=*/4);
+  OS.emitBytes(StringRef((const char *)reserved3, /*Size=*/12));
+  OS.emitIntValue(runtime_loader_kernel_symbol, /*Size=*/8);
+  OS.emitBytes(StringRef((const char *)control_directives, /*Size=*/16 * 8));
 }

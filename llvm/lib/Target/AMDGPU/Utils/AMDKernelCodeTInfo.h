@@ -12,12 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define QNAME(name) amd_kernel_code_t::name
+#define QNAME(name) AMDGPUMCKernelCodeT::name
 #define FLD_T(name) decltype(QNAME(name)), &QNAME(name)
 
+#ifndef PRINTFIELD
+#define PRINTFIELD(sname, aname, name) printField<FLD_T(name)>
+#endif
+
 #ifndef FIELD2
-#define FIELD2(sname, aname, name) \
-  RECORD(sname, aname, printField<FLD_T(name)>, parseField<FLD_T(name)>)
+#define FIELD2(sname, aname, name)                                             \
+  RECORD(sname, aname, PRINTFIELD(sname, aname, name), parseField<FLD_T(name)>)
 #endif
 
 #ifndef FIELD
@@ -163,6 +167,7 @@ FIELD(runtime_loader_kernel_symbol)
 
 #undef QNAME
 #undef FLD_T
+#undef PRINTFIELD
 #undef FIELD2
 #undef FIELD
 #undef PRINTCODEPROP

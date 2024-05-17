@@ -1,4 +1,4 @@
-//===--- AMDGPUMCKernelCodeT.h --------------------------------*- C++ -*---===//
+//===- AMDGPUKernelCodeTUtils.h - helpers for amd_kernel_code_t -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file
-/// MC layer struct for amd_kernel_code_t, provides MCExpr functionality where
+/// \file AMDKernelCodeTUtils.h
+/// MC layer struct for AMDGPUMCKernelCodeT, provides MCExpr functionality where
 /// required.
 ///
 //
@@ -32,7 +32,37 @@ namespace AMDGPU {
 struct AMDGPUMCKernelCodeT {
   AMDGPUMCKernelCodeT() = default;
 
-  amd_kernel_code_t KernelCode;
+  uint32_t amd_kernel_code_version_major;
+  uint32_t amd_kernel_code_version_minor;
+  uint16_t amd_machine_kind;
+  uint16_t amd_machine_version_major;
+  uint16_t amd_machine_version_minor;
+  uint16_t amd_machine_version_stepping;
+  int64_t kernel_code_entry_byte_offset;
+  int64_t kernel_code_prefetch_byte_offset;
+  uint64_t kernel_code_prefetch_byte_size;
+  uint64_t reserved0;
+  uint64_t compute_pgm_resource_registers;
+  uint32_t code_properties;
+  uint32_t workgroup_group_segment_byte_size;
+  uint32_t gds_segment_byte_size;
+  uint64_t kernarg_segment_byte_size;
+  uint32_t workgroup_fbarrier_count;
+  uint16_t reserved_vgpr_first;
+  uint16_t reserved_vgpr_count;
+  uint16_t reserved_sgpr_first;
+  uint16_t reserved_sgpr_count;
+  uint16_t debug_wavefront_private_segment_offset_sgpr;
+  uint16_t debug_private_segment_buffer_sgpr;
+  uint8_t kernarg_segment_alignment;
+  uint8_t group_segment_alignment;
+  uint8_t private_segment_alignment;
+  uint8_t wavefront_size;
+  int32_t call_convention;
+  uint8_t reserved3[12];
+  uint64_t runtime_loader_kernel_symbol;
+  uint64_t control_directives[16];
+
   const MCExpr *compute_pgm_resource1_registers = nullptr;
   const MCExpr *compute_pgm_resource2_registers = nullptr;
 
