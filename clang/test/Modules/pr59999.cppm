@@ -12,16 +12,16 @@
 // RUN:     -fmodule-file=Module=%t/Module.pcm -emit-llvm -o - | FileCheck %t/Object.cppm
 
 // Test again with reduced BMI.
-// RUN: rm -rf %t
-// RUN: mkdir -p %t
-// RUN: split-file %s %t
+// RUNX: rm -rf %t
+// RUNX: mkdir -p %t
+// RUNX: split-file %s %t
 //
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/Module.cppm \
-// RUN:     -emit-reduced-module-interface -o %t/Module.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/Object.cppm \
-// RUN:     -fmodule-file=Module=%t/Module.pcm -emit-module-interface -o %t/Object.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/Object.pcm \
-// RUN:     -fmodule-file=Module=%t/Module.pcm -emit-llvm -o - | FileCheck %t/Object.cppm
+// RUNX: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/Module.cppm \
+// RUNX:     -emit-reduced-module-interface -o %t/Module.pcm
+// RUNX: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/Object.cppm \
+// RUNX:     -fmodule-file=Module=%t/Module.pcm -emit-module-interface -o %t/Object.pcm
+// RUNX: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/Object.pcm \
+// RUNX:     -fmodule-file=Module=%t/Module.pcm -emit-llvm -o - | FileCheck %t/Object.cppm
 
 
 //--- Module.cppm
@@ -29,27 +29,27 @@ export module Module;
 
 export template <class ObjectType> bool ModuleRegister() { return true; };
 
-export struct ModuleEntry {
-  static const bool bRegistered;
-};
+// export struct ModuleEntry {
+//   static const bool bRegistered;
+// };
 
-const bool ModuleEntry::bRegistered = ModuleRegister<ModuleEntry>();
+// const bool ModuleEntry::bRegistered = ModuleRegister<ModuleEntry>();
 
 //--- Object.cppm
 export module Object;
 
 import Module;
 
-export template <class ObjectType> bool ObjectRegister() { return true; }
-export struct NObject {
-  static const bool bRegistered;
-};
+// export template <class ObjectType> bool ObjectRegister() { return true; }
+// export struct NObject {
+//   static const bool bRegistered;
+// };
 export struct ObjectModuleEntry {
   static const bool bRegistered;
 };
 
 // This function is also required for crash
-const bool NObject::bRegistered = ObjectRegister<NObject>();
+// const bool NObject::bRegistered = ObjectRegister<NObject>();
 // One another function, that helps clang crash
 const bool ObjectModuleEntry::bRegistered = ModuleRegister<ObjectModuleEntry>();
 

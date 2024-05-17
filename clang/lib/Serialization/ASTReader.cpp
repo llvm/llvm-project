@@ -3357,20 +3357,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             "duplicate TYPE_OFFSET record in AST file");
       F.TypeOffsets = reinterpret_cast<const UnalignedUInt64 *>(Blob.data());
       F.LocalNumTypes = Record[0];
-      unsigned LocalBaseTypeIndex = Record[1];
       F.BaseTypeIndex = getTotalNumTypes();
 
-      if (F.LocalNumTypes > 0) {
-        // Introduce the global -> local mapping for types within this module.
-        GlobalTypeMap.insert(std::make_pair(getTotalNumTypes(), &F));
-
-        // Introduce the local -> global mapping for types within this module.
-        F.TypeRemap.insertOrReplace(
-          std::make_pair(LocalBaseTypeIndex,
-                         F.BaseTypeIndex - LocalBaseTypeIndex));
-
+      if (F.LocalNumTypes > 0)
         TypesLoaded.resize(TypesLoaded.size() + F.LocalNumTypes);
-      }
+
       break;
     }
 
@@ -4033,7 +4024,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
   RemapBuilder SubmoduleRemap(F.SubmoduleRemap);
   RemapBuilder SelectorRemap(F.SelectorRemap);
-  RemapBuilder TypeRemap(F.TypeRemap);
 
   auto &ImportedModuleVector = F.TransitiveImports;
   assert(ImportedModuleVector.empty());
@@ -4069,8 +4059,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t SelectorIDOffset =
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    uint32_t TypeIndexOffset =
-        endian::readNext<uint32_t, llvm::endianness::little>(Data);
 
     auto mapOffset = [&](uint32_t Offset, uint32_t BaseOffset,
                          RemapBuilder &Remap) {
@@ -4085,7 +4073,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
               PreprocessedEntityRemap);
     mapOffset(SubmoduleIDOffset, OM->BaseSubmoduleID, SubmoduleRemap);
     mapOffset(SelectorIDOffset, OM->BaseSelectorID, SelectorRemap);
-    mapOffset(TypeIndexOffset, OM->BaseTypeIndex, TypeRemap);
   }
 }
 
@@ -5064,12 +5051,12 @@ void ASTReader::InitializeContext() {
 
   // Load the special types.
   if (SpecialTypes.size() >= NumSpecialTypeIDs) {
-    if (unsigned String = SpecialTypes[SPECIAL_TYPE_CF_CONSTANT_STRING]) {
+    if (TypeID String = SpecialTypes[SPECIAL_TYPE_CF_CONSTANT_STRING]) {
       if (!Context.CFConstantStringTypeDecl)
         Context.setCFConstantStringType(GetType(String));
     }
 
-    if (unsigned File = SpecialTypes[SPECIAL_TYPE_FILE]) {
+    if (TypeID File = SpecialTypes[SPECIAL_TYPE_FILE]) {
       QualType FileType = GetType(File);
       if (FileType.isNull()) {
         Error("FILE type is NULL");
@@ -5090,7 +5077,7 @@ void ASTReader::InitializeContext() {
       }
     }
 
-    if (unsigned Jmp_buf = SpecialTypes[SPECIAL_TYPE_JMP_BUF]) {
+    if (TypeID Jmp_buf = SpecialTypes[SPECIAL_TYPE_JMP_BUF]) {
       QualType Jmp_bufType = GetType(Jmp_buf);
       if (Jmp_bufType.isNull()) {
         Error("jmp_buf type is NULL");
@@ -5111,7 +5098,7 @@ void ASTReader::InitializeContext() {
       }
     }
 
-    if (unsigned Sigjmp_buf = SpecialTypes[SPECIAL_TYPE_SIGJMP_BUF]) {
+    if (TypeID Sigjmp_buf = SpecialTypes[SPECIAL_TYPE_SIGJMP_BUF]) {
       QualType Sigjmp_bufType = GetType(Sigjmp_buf);
       if (Sigjmp_bufType.isNull()) {
         Error("sigjmp_buf type is NULL");
@@ -5129,25 +5116,24 @@ void ASTReader::InitializeContext() {
       }
     }
 
-    if (unsigned ObjCIdRedef
-          = SpecialTypes[SPECIAL_TYPE_OBJC_ID_REDEFINITION]) {
+    if (TypeID ObjCIdRedef = SpecialTypes[SPECIAL_TYPE_OBJC_ID_REDEFINITION]) {
       if (Context.ObjCIdRedefinitionType.isNull())
         Context.ObjCIdRedefinitionType = GetType(ObjCIdRedef);
     }
 
-    if (unsigned ObjCClassRedef
-          = SpecialTypes[SPECIAL_TYPE_OBJC_CLASS_REDEFINITION]) {
+    if (TypeID ObjCClassRedef =
+            SpecialTypes[SPECIAL_TYPE_OBJC_CLASS_REDEFINITION]) {
       if (Context.ObjCClassRedefinitionType.isNull())
         Context.ObjCClassRedefinitionType = GetType(ObjCClassRedef);
     }
 
-    if (unsigned ObjCSelRedef
-          = SpecialTypes[SPECIAL_TYPE_OBJC_SEL_REDEFINITION]) {
+    if (TypeID ObjCSelRedef =
+            SpecialTypes[SPECIAL_TYPE_OBJC_SEL_REDEFINITION]) {
       if (Context.ObjCSelRedefinitionType.isNull())
         Context.ObjCSelRedefinitionType = GetType(ObjCSelRedef);
     }
 
-    if (unsigned Ucontext_t = SpecialTypes[SPECIAL_TYPE_UCONTEXT_T]) {
+    if (TypeID Ucontext_t = SpecialTypes[SPECIAL_TYPE_UCONTEXT_T]) {
       QualType Ucontext_tType = GetType(Ucontext_t);
       if (Ucontext_tType.isNull()) {
         Error("ucontext_t type is NULL");
@@ -6632,10 +6618,8 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
 }
 
 /// Get the correct cursor and offset for loading a type.
-ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
-  GlobalTypeMapType::iterator I = GlobalTypeMap.find(Index);
-  assert(I != GlobalTypeMap.end() && "Corrupted global type map");
-  ModuleFile *M = I->second;
+ASTReader::RecordLocation ASTReader::TypeCursorForIndex(TypeID ID) {
+  auto [M, Index] = translateTypeIDToIndex(ID);
   return RecordLocation(M, M->TypeOffsets[Index - M->BaseTypeIndex].get() +
                                M->DeclsBlockStartOffset);
 }
@@ -6656,10 +6640,10 @@ static std::optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
 /// routine actually reads the record corresponding to the type at the given
 /// location. It is a helper routine for GetType, which deals with reading type
 /// IDs.
-QualType ASTReader::readTypeRecord(unsigned Index) {
+QualType ASTReader::readTypeRecord(TypeID ID) {
   assert(ContextObj && "reading type with no AST context");
   ASTContext &Context = *ContextObj;
-  RecordLocation Loc = TypeCursorForIndex(Index);
+  RecordLocation Loc = TypeCursorForIndex(ID);
   BitstreamCursor &DeclsCursor = Loc.F->DeclsCursor;
 
   // Keep track of where we are in the stream, then jump back there
@@ -7100,14 +7084,25 @@ TypeSourceInfo *ASTRecordReader::readTypeSourceInfo() {
   return TInfo;
 }
 
+std::pair<ModuleFile *, unsigned>
+ASTReader::translateTypeIDToIndex(serialization::TypeID ID) const {
+  unsigned Index =
+      (ID & llvm::maskTrailingOnes<TypeID>(32)) >> Qualifiers::FastWidth;
+
+  ModuleFile *OwningModuleFile = getOwningModuleFile(ID);
+  assert(OwningModuleFile &&
+         "untranslated type ID or local type ID shouldn't be in TypesLoaded");
+  return {OwningModuleFile, OwningModuleFile->BaseTypeIndex + Index};
+}
+
 QualType ASTReader::GetType(TypeID ID) {
   assert(ContextObj && "reading type with no AST context");
   ASTContext &Context = *ContextObj;
 
   unsigned FastQuals = ID & Qualifiers::FastMask;
-  unsigned Index = ID >> Qualifiers::FastWidth;
 
-  if (Index < NUM_PREDEF_TYPE_IDS) {
+  if (uint64_t Index = ID >> Qualifiers::FastWidth;
+      Index < NUM_PREDEF_TYPE_IDS) {
     QualType T;
     switch ((PredefinedTypeIDs)Index) {
     case PREDEF_TYPE_LAST_ID:
@@ -7376,10 +7371,11 @@ QualType ASTReader::GetType(TypeID ID) {
     return T.withFastQualifiers(FastQuals);
   }
 
-  Index -= NUM_PREDEF_TYPE_IDS;
+  unsigned Index = translateTypeIDToIndex(ID).second;
+
   assert(Index < TypesLoaded.size() && "Type index out-of-range");
   if (TypesLoaded[Index].isNull()) {
-    TypesLoaded[Index] = readTypeRecord(Index);
+    TypesLoaded[Index] = readTypeRecord(ID);
     if (TypesLoaded[Index].isNull())
       return QualType();
 
@@ -7392,27 +7388,28 @@ QualType ASTReader::GetType(TypeID ID) {
   return TypesLoaded[Index].withFastQualifiers(FastQuals);
 }
 
-QualType ASTReader::getLocalType(ModuleFile &F, unsigned LocalID) {
+QualType ASTReader::getLocalType(ModuleFile &F, TypeID LocalID) {
   return GetType(getGlobalTypeID(F, LocalID));
 }
 
-serialization::TypeID
-ASTReader::getGlobalTypeID(ModuleFile &F, unsigned LocalID) const {
-  unsigned FastQuals = LocalID & Qualifiers::FastMask;
-  unsigned LocalIndex = LocalID >> Qualifiers::FastWidth;
-
-  if (LocalIndex < NUM_PREDEF_TYPE_IDS)
+serialization::TypeID ASTReader::getGlobalTypeID(ModuleFile &F,
+                                                 TypeID LocalID) const {
+  if ((LocalID >> Qualifiers::FastWidth) < NUM_PREDEF_TYPE_IDS)
     return LocalID;
 
   if (!F.ModuleOffsetMap.empty())
     ReadModuleOffsetMap(F);
 
-  ContinuousRangeMap<uint32_t, int, 2>::iterator I
-    = F.TypeRemap.find(LocalIndex - NUM_PREDEF_TYPE_IDS);
-  assert(I != F.TypeRemap.end() && "Invalid index into type index remap");
+  unsigned ModuleFileIndex = LocalID >> 32;
+  LocalID &= llvm::maskTrailingOnes<TypeID>(32);
 
-  unsigned GlobalIndex = LocalIndex + I->second;
-  return (GlobalIndex << Qualifiers::FastWidth) | FastQuals;
+  if (ModuleFileIndex == 0)
+    LocalID -= NUM_PREDEF_TYPE_IDS << Qualifiers::FastWidth;
+
+  ModuleFile &MF =
+      ModuleFileIndex ? *F.TransitiveImports[ModuleFileIndex - 1] : F;
+  ModuleFileIndex = MF.Index + 1;
+  return ((uint64_t)ModuleFileIndex << 32) | LocalID;
 }
 
 TemplateArgumentLocInfo
@@ -7645,6 +7642,16 @@ ModuleFile *ASTReader::getOwningModuleFile(GlobalDeclID ID) const {
     return nullptr;
 
   uint64_t ModuleFileIndex = ID.getModuleFileIndex();
+  assert(ModuleFileIndex && "Untranslated Local Decl?");
+
+  return &getModuleManager()[ModuleFileIndex - 1];
+}
+
+ModuleFile *ASTReader::getOwningModuleFile(TypeID ID) const {
+  if (ID < NUM_PREDEF_TYPE_IDS)
+    return nullptr;
+
+  uint64_t ModuleFileIndex = ID >> 32;
   assert(ModuleFileIndex && "Untranslated Local Decl?");
 
   return &getModuleManager()[ModuleFileIndex - 1];
@@ -8167,7 +8174,6 @@ LLVM_DUMP_METHOD void ASTReader::dump() {
   llvm::errs() << "*** PCH/ModuleFile Remappings:\n";
   dumpModuleIDMap("Global bit offset map", GlobalBitOffsetsMap);
   dumpModuleIDMap("Global source location entry map", GlobalSLocEntryMap);
-  dumpModuleIDMap("Global type map", GlobalTypeMap);
   dumpModuleIDMap("Global macro map", GlobalMacroMap);
   dumpModuleIDMap("Global submodule map", GlobalSubmoduleMap);
   dumpModuleIDMap("Global selector map", GlobalSelectorMap);
