@@ -103,16 +103,16 @@ QueryRef QueryParser::parseSetBool(bool QuerySession::*Var) {
 
 template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
   StringRef ValStr;
-  unsigned OutKind =
-      LexOrCompleteWord<unsigned>(this, ValStr)
-          .Case("diag", OK_Diag)
-          .Case("print", OK_Print)
-          .Case("detailed-ast", OK_DetailedAST)
-          .Case("dump", OK_DetailedAST)
-          .Default(~0u);
+  unsigned OutKind = LexOrCompleteWord<unsigned>(this, ValStr)
+                         .Case("diag", OK_Diag)
+                         .Case("print", OK_Print)
+                         .Case("detailed-ast", OK_DetailedAST)
+                         .Case("dump", OK_DetailedAST)
+                         .Default(~0u);
   if (OutKind == ~0u) {
-    return new InvalidQuery("expected 'diag', 'print', 'detailed-ast'"
-                            " or 'dump', got '" + ValStr + "'");
+    return new InvalidQuery("expected 'diag', 'print', 'detailed-ast' or "
+                            "'dump', got '" +
+                            ValStr + "'");
   }
 
   switch (OutKind) {
