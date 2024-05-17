@@ -774,19 +774,15 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
-static KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS,
-                            bool IsCeil, bool IsSigned) {
-  KnownBits Known = LHS;
-  KnownBits Known2 = RHS;
-  bool IsCeil = false;
-  bool IsSigned = true;
-  unsigned BitWidth = Known.getBitWidth();
-  Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
-  Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
+                            bool IsSigned) {
+  unsigned BitWidth = LHS.getBitWidth();
+  LHS = IsSigned ? LHS.sext(BitWidth + 1) : LHS.zext(BitWidth + 1);
+  RHS = IsSigned ? RHS.sext(BitWidth + 1) : RHS.zext(BitWidth + 1);
   KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
-  Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
-  Known = Known.extractBits(BitWidth, 1);
-  return Known;
+  LHS = KnownBits::computeForAddCarry(LHS, RHS, Carry);
+  LHS = LHS.extractBits(BitWidth, 1);
+  return LHS;
 }
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
@@ -802,11 +798,6 @@ KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
   return avgCompute(LHS, RHS, /* IsCeil */ true,
                     /* IsSigned */ true);
-}
-
-KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ true,
-                    /* IsSigned */ false);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
