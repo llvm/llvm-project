@@ -3036,6 +3036,24 @@ def int_amdgcn_fdot2_f32_bf16 :
     [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
   >;
 
+// f32 %r = llvm.amdgcn.fdot2c.f32.bf16(v2bf16 %a, v2bf16 %b, f32 %c, i1 %clamp)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + c
+// TODO: This actually is similar to llvm.amdgcn.fdot2 intrinsics which produces
+// v_dot2c_f32_f16 on gfx940. Maybe we can consolidate these.
+
+def int_amdgcn_fdot2c_f32_bf16 :
+  ClangBuiltin<"__builtin_amdgcn_fdot2c_f32_bf16">,
+  DefaultAttrsIntrinsic<
+    [llvm_float_ty], // %r
+    [
+      llvm_v2bf16_ty, // %a
+      llvm_v2bf16_ty, // %b
+      llvm_float_ty, // %c
+      llvm_i1_ty     // %clamp
+    ],
+    [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
+  >;
+
 // i32 %r = llvm.amdgcn.sdot2(v2i16 %a, v2i16 %b, i32 %c, i1 %clamp)
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
 def int_amdgcn_sdot2 :
