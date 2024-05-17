@@ -2462,7 +2462,7 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
   const OverloadExpr *Overloads = nullptr;
   bool IsMemExpr = false;
   if (E.getType() == Context.OverloadTy) {
-    OverloadExpr::FindResult FR = OverloadExpr::find(const_cast<Expr*>(&E));
+    OverloadExpr::FindResult FR = OverloadExpr::find(&E);
 
     // Ignore overloads that are pointer-to-member constants.
     if (FR.HasFormOfMemberPointer)
