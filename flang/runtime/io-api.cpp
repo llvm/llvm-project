@@ -1310,4 +1310,5 @@ enum Iostat IODEF(CheckUnitNumberInRange128)(common::int128_t unit,
 }
 #endif
 
+RT_EXT_API_GROUP_END
 } // namespace Fortran::runtime::io
