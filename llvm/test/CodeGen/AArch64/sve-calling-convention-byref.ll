@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -stop-after=finalize-isel < %s | FileCheck %s
 
 ; Test that z8 and z9, passed in by reference, are correctly loaded from x0 and x1.
 ; i.e. z0 =  %z0
