@@ -35,7 +35,7 @@
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@iand_byref_i32 %[[VAL_4]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) {
+! CHECK:             omp.wsloop reduction(byref @iand_byref_i32 %[[VAL_4]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_13:.*]]) : i32 = (%[[VAL_9]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
 ! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFreduction_iandEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 fir.store %[[VAL_13]] to %[[VAL_8]]#1 : !fir.ref<i32>
