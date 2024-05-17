@@ -14574,17 +14574,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   default:
     return false;
 
-  case Builtin::BI__builtin_frexpl:
-    // AIX library function `frexpl` has 'long double' type and not
-    // PPCDoubleDouble type. To make sure we generate the right value, don't
-    // constant evaluate it and instead defer to a libcall.
-    if (Info.Ctx.getTargetInfo().getTriple().isPPC() &&
-        (&Info.Ctx.getTargetInfo().getLongDoubleFormat() !=
-         &llvm::APFloat::PPCDoubleDouble()))
-      return false;
-    LLVM_FALLTHROUGH;
   case Builtin::BI__builtin_frexp:
-  case Builtin::BI__builtin_frexpf: {
+  case Builtin::BI__builtin_frexpf:
+  case Builtin::BI__builtin_frexpl: {
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))

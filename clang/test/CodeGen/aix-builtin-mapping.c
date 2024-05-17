@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix -mlong-double-64 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix -mlong-double-64 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK %s
 
+long double input = 0.0L;
+
 int main()
 {
   int DummyInt;
@@ -13,10 +15,12 @@ int main()
   long double returnValue;
 
   returnValue = __builtin_modfl(1.0L, &DummyLongDouble);
-  returnValue = __builtin_frexpl(0.0L, &DummyInt);
+  returnValue = __builtin_frexpl(input, &DummyInt);
   returnValue = __builtin_ldexpl(1.0L, 1);
 }
 
+// CHECK: @input = global double 0.000000e+00
 // CHECK: %call = call double @modf(double noundef 1.000000e+00, ptr noundef %DummyLongDouble) #3
-// CHECK: %{{.+}} = call { double, i32 } @llvm.frexp.f64.i32(double 0.000000e+00)
+// CHECK: [[TMP0:%.*]] = load double, ptr @input
+// CHECK: %{{.+}} = call { double, i32 } @llvm.frexp.f64.i32(double [[TMP0]])
 // CHECK: %{{.+}} = call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 1)
