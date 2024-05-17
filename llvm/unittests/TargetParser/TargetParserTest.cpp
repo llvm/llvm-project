@@ -1404,8 +1404,8 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_RAS,
                  AArch64::AEK_RCPC, AArch64::AEK_LSE, AArch64::AEK_SB,
                  AArch64::AEK_JSCVT, AArch64::AEK_FCMA, AArch64::AEK_PAUTH,
-                 AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES,
-                 AArch64::AEK_PERFMON}),
+                 AArch64::AEK_FLAGM, AArch64::AEK_PERFMON,
+                 AArch64::AEK_PREDRES}),
             "8-R"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-r82ae", "armv8-r", "crypto-neon-fp-armv8",
@@ -1415,8 +1415,8 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_RAS,
                  AArch64::AEK_RCPC, AArch64::AEK_LSE, AArch64::AEK_SB,
                  AArch64::AEK_JSCVT, AArch64::AEK_FCMA, AArch64::AEK_PAUTH,
-                 AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_PREDRES,
-                 AArch64::AEK_PERFMON}),
+                 AArch64::AEK_FLAGM, AArch64::AEK_PERFMON,
+                 AArch64::AEK_PREDRES}),
             "8-R"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
