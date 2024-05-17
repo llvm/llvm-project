@@ -54,6 +54,7 @@ namespace plugin {
 struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
+struct RecordReplayTy;
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
@@ -269,12 +270,6 @@ struct GenericKernelTy {
 
   /// Get the kernel name.
   const char *getName() const { return Name; }
-
-  /// Return true if this kernel is a constructor or destructor.
-  bool isCtorOrDtor() const {
-    // TODO: This is not a great solution and should be revisited.
-    return StringRef(Name).ends_with("tor");
-  }
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -964,8 +959,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
-        RPCServer(nullptr) {}
+      : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr),
+        RecordReplay(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -1034,11 +1029,11 @@ struct GenericPluginTy {
     return *RPCServer;
   }
 
-  /// Get the OpenMP requires flags set for this plugin.
-  int64_t getRequiresFlags() const { return RequiresFlags; }
-
-  /// Set the OpenMP requires flags for this plugin.
-  void setRequiresFlag(int64_t Flags) { RequiresFlags = Flags; }
+  /// Get a reference to the record and replay interface for the plugin.
+  RecordReplayTy &getRecordReplay() {
+    assert(RecordReplay && "RR interface not initialized");
+    return *RecordReplay;
+  }
 
   /// Initialize a device within the plugin.
   Error initDevice(int32_t DeviceId);
@@ -1079,9 +1074,6 @@ public:
 
   /// Return the number of devices this plugin can support.
   int32_t number_of_devices();
-
-  /// Initializes the OpenMP register requires information.
-  int64_t init_requires(int64_t RequiresFlags);
 
   /// Returns non-zero if the data can be exchanged between the two devices.
   int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
@@ -1209,9 +1201,6 @@ private:
   /// device was not initialized yet.
   llvm::SmallVector<GenericDeviceTy *> Devices;
 
-  /// OpenMP requires flags.
-  int64_t RequiresFlags;
-
   /// Pointer to the global handler for this plugin.
   GenericGlobalHandlerTy *GlobalHandler;
 
@@ -1223,6 +1212,9 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
+
+  /// The interface between the plugin and the GPU for host services.
+  RecordReplayTy *RecordReplay;
 };
 
 namespace Plugin {

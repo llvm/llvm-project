@@ -229,9 +229,6 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
     UserConfigDir = static_cast<std::string>(P);
   }
 #endif
-
-  // Compute the path to the resource directory.
-  ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
 void Driver::setDriverMode(StringRef Value) {
@@ -248,6 +245,24 @@ void Driver::setDriverMode(StringRef Value) {
     Mode = *M;
   else
     Diag(diag::err_drv_unsupported_option_argument) << OptName << Value;
+}
+
+void Driver::setResourceDirectory() {
+  // Compute the path to the resource directory, depending on the driver mode.
+  switch (Mode) {
+  case GCCMode:
+  case GXXMode:
+  case CPPMode:
+  case CLMode:
+  case DXCMode:
+    ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
+    break;
+  case FlangMode:
+    SmallString<64> customResourcePathRelativeToDriver{".."};
+    ResourceDir =
+        GetResourcesPath(ClangExecutable, customResourcePathRelativeToDriver);
+    break;
+  }
 }
 
 InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
@@ -1202,6 +1217,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (!DriverMode.empty())
     setDriverMode(DriverMode);
 
+  setResourceDirectory();
   // FIXME: What are we going to do with -V and -b?
 
   // Arguments specified in command line.

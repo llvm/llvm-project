@@ -1546,7 +1546,8 @@ bool DataFlowSanitizer::runImpl(
   SmallPtrSet<Constant *, 1> PersonalityFns;
   for (Function &F : M)
     if (!F.isIntrinsic() && !DFSanRuntimeFunctions.contains(&F) &&
-        !LibAtomicFunction(F)) {
+        !LibAtomicFunction(F) &&
+        !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
       FnsToInstrument.push_back(&F);
       if (F.hasPersonalityFn())
         PersonalityFns.insert(F.getPersonalityFn()->stripPointerCasts());

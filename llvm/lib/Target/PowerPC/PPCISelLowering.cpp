@@ -14945,7 +14945,7 @@ static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  // If the vector extract indicies are not correct, add the appropriate
+  // If the vector extract indices are not correct, add the appropriate
   // vector_shuffle.
   int TgtElemArrayIdx;
   int InputSize = Input.getValueType().getScalarSizeInBits();

@@ -56,7 +56,7 @@ namespace cwg1804 { // cwg1804: 2.7
 template <typename, typename>
 struct A {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -73,7 +73,7 @@ struct A {
 template <typename U>
 struct A<int, U> {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -97,7 +97,7 @@ class D {
 template <typename U>
 struct A<double, U> {
   void f1();
-  
+
   template <typename V>
   void f2(V);
 
@@ -206,28 +206,19 @@ namespace cwg1814 { // cwg1814: yes
 #endif
 }
 
-namespace cwg1815 { // cwg1815: yes
+namespace cwg1815 { // cwg1815: no
 #if __cplusplus >= 201402L
-  struct A { int &&r = 0; };
+  // FIXME: needs codegen test
+  struct A { int &&r = 0; }; // #cwg1815-A
   A a = {};
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
+  //   since-cxx14-note@#cwg1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #cwg1815-B
   // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
   //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   //   since-cxx14-note@#cwg1815-b {{in implicit default constructor for 'cwg1815::B' first required here}}
   B b; // #cwg1815-b
-
-#if __cplusplus >= 201703L
-  struct C { const int &r = 0; };
-  constexpr C c = {}; // OK, since cwg1815
-  static_assert(c.r == 0);
-
-  constexpr int f() {
-    A a = {}; // OK, since cwg1815
-    return a.r;
-  }
-  static_assert(f() == 0);
-#endif
 #endif
 }
 
@@ -302,6 +293,32 @@ namespace cwg1822 { // cwg1822: yes
   };
 #endif
 }
+
+namespace cwg1824 { // cwg1824: 2.7
+template<typename T>
+struct A {
+  T t;
+};
+
+struct S {
+  A<S> f() { return A<S>(); }
+};
+} // namespace cwg1824
+
+namespace cwg1832 { // cwg1832: 3.0
+enum E { // #cwg1832-E
+  a = static_cast<int>(static_cast<E>(0))
+  // expected-error@-1 {{'E' is an incomplete type}}
+  //   expected-note@#cwg1832-E {{definition of 'cwg1832::E' is not complete until the closing '}'}}
+};
+
+#if __cplusplus >= 201103L
+enum E2: decltype(static_cast<E2>(0), 0) {};
+// expected-error@-1 {{unknown type name 'E2'}}
+enum class E3: decltype(static_cast<E3>(0), 0) {};
+// expected-error@-1 {{unknown type name 'E3'}}
+#endif
+} // namespace cwg1832
 
 namespace cwg1837 { // cwg1837: 3.3
 #if __cplusplus >= 201103L

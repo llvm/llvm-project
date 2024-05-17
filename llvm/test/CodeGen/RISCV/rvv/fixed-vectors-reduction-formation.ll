@@ -160,7 +160,7 @@ define i32 @reduce_sum_16xi32_prefix4(ptr %p) {
 define i32 @reduce_sum_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 224
+; CHECK-NEXT:    li a1, -32
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vmv.v.i v8, -1
@@ -532,7 +532,7 @@ define i32 @reduce_xor_16xi32_prefix2(ptr %p) {
 define i32 @reduce_xor_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_xor_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 224
+; CHECK-NEXT:    li a1, -32
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vmv.v.i v8, -1
@@ -620,7 +620,7 @@ define i32 @reduce_or_16xi32_prefix2(ptr %p) {
 define i32 @reduce_or_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_or_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 224
+; CHECK-NEXT:    li a1, -32
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vmv.v.i v8, -1
@@ -757,7 +757,7 @@ define i32 @reduce_umax_16xi32_prefix2(ptr %p) {
 define i32 @reduce_umax_16xi32_prefix5(ptr %p) {
 ; CHECK-LABEL: reduce_umax_16xi32_prefix5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 224
+; CHECK-NEXT:    li a1, -32
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vmv.v.i v8, -1

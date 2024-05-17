@@ -2488,6 +2488,94 @@ bool ByteCodeExprGen<Emitter>::VisitRecoveryExpr(const RecoveryExpr *E) {
   return this->emitError(E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
+  assert(E->getType()->isVoidPointerType());
+
+  unsigned Offset = allocateLocalPrimitive(
+      E->getLabel(), PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+
+  return this->emitGetLocal(PT_Ptr, Offset, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitConvertVectorExpr(
+    const ConvertVectorExpr *E) {
+  assert(Initializing);
+  const auto *VT = E->getType()->castAs<VectorType>();
+  QualType ElemType = VT->getElementType();
+  PrimType ElemT = classifyPrim(ElemType);
+  const Expr *Src = E->getSrcExpr();
+  PrimType SrcElemT =
+      classifyPrim(Src->getType()->castAs<VectorType>()->getElementType());
+
+  unsigned SrcOffset = this->allocateLocalPrimitive(Src, PT_Ptr, true, false);
+  if (!this->visit(Src))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, SrcOffset, E))
+    return false;
+
+  for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+    if (!this->emitGetLocal(PT_Ptr, SrcOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(SrcElemT, I, E))
+      return false;
+    if (SrcElemT != ElemT) {
+      if (!this->emitPrimCast(SrcElemT, ElemT, ElemType, E))
+        return false;
+    }
+    if (!this->emitInitElem(ElemT, I, E))
+      return false;
+  }
+
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
+    const ShuffleVectorExpr *E) {
+  assert(Initializing);
+  assert(E->getNumSubExprs() > 2);
+
+  const Expr *Vecs[] = {E->getExpr(0), E->getExpr(1)};
+  assert(Vecs[0]->getType() == Vecs[1]->getType());
+
+  const VectorType *VT = Vecs[0]->getType()->castAs<VectorType>();
+  PrimType ElemT = classifyPrim(VT->getElementType());
+  unsigned NumInputElems = VT->getNumElements();
+  unsigned NumOutputElems = E->getNumSubExprs() - 2;
+  assert(NumOutputElems > 0);
+
+  // Save both input vectors to a local variable.
+  unsigned VectorOffsets[2];
+  for (unsigned I = 0; I != 2; ++I) {
+    VectorOffsets[I] = this->allocateLocalPrimitive(
+        Vecs[I], PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+    if (!this->visit(Vecs[I]))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, VectorOffsets[I], E))
+      return false;
+  }
+  for (unsigned I = 0; I != NumOutputElems; ++I) {
+    APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    if (ShuffleIndex == -1)
+      return this->emitInvalid(E); // FIXME: Better diagnostic.
+
+    assert(ShuffleIndex < (NumInputElems * 2));
+    if (!this->emitGetLocal(PT_Ptr,
+                            VectorOffsets[ShuffleIndex >= NumInputElems], E))
+      return false;
+    unsigned InputVectorIndex = ShuffleIndex.getZExtValue() % NumInputElems;
+    if (!this->emitArrayElemPop(ElemT, InputVectorIndex, E))
+      return false;
+
+    if (!this->emitInitElem(ElemT, I, E))
+      return false;
+  }
+
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
@@ -3675,12 +3763,22 @@ bool ByteCodeExprGen<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
       return this->emitCastFP(ToSem, getRoundingMode(E), E);
     }
 
+    if (ToT == PT_IntAP)
+      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(ToQT), E);
+    if (ToT == PT_IntAPS)
+      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(ToQT), E);
+
     // Float to integral.
     if (isIntegralType(ToT) || ToT == PT_Bool)
       return this->emitCastFloatingIntegral(ToT, E);
   }
 
   if (isIntegralType(FromT) || FromT == PT_Bool) {
+    if (ToT == PT_IntAP)
+      return this->emitCastAP(FromT, Ctx.getBitWidth(ToQT), E);
+    if (ToT == PT_IntAPS)
+      return this->emitCastAPS(FromT, Ctx.getBitWidth(ToQT), E);
+
     // Integral to integral.
     if (isIntegralType(ToT) || ToT == PT_Bool)
       return FromT != ToT ? this->emitCast(FromT, ToT, E) : true;
