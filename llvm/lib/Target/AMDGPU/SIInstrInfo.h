@@ -925,6 +925,17 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
   }
 
+  // Check to see if opcode is for a barrier start. Pre gfx12 this is just the
+  // S_BARRIER, but after support for S_BARRIER_SIGNAL* / S_BARRIER_WAIT we want
+  // to check for the barrier start (S_BARRIER_SIGNAL*)
+  bool isBarrierStart(unsigned Opcode) const {
+    return Opcode == AMDGPU::S_BARRIER ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_M0 ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_IMM ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM;
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
   }

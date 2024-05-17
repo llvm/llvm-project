@@ -28,6 +28,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -6018,8 +6019,8 @@ static bool tryObjCWritebackConversion(Sema &S,
 
   // Handle write-back conversion.
   QualType ConvertedArgType;
-  if (!S.isObjCWritebackConversion(ArgType, Entity.getType(),
-                                   ConvertedArgType))
+  if (!S.ObjC().isObjCWritebackConversion(ArgType, Entity.getType(),
+                                          ConvertedArgType))
     return false;
 
   // We should copy unless we're passing to an argument explicitly
@@ -6211,10 +6212,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
   if (Args.size() == 1) {
     Initializer = Args[0];
     if (S.getLangOpts().ObjC) {
-      if (S.CheckObjCBridgeRelatedConversions(Initializer->getBeginLoc(),
-                                              DestType, Initializer->getType(),
-                                              Initializer) ||
-          S.CheckConversionToObjCLiteral(DestType, Initializer))
+      if (S.ObjC().CheckObjCBridgeRelatedConversions(
+              Initializer->getBeginLoc(), DestType, Initializer->getType(),
+              Initializer) ||
+          S.ObjC().CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }
     if (!isa<InitListExpr>(Initializer))
@@ -6576,12 +6577,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
     AddPassByIndirectCopyRestoreStep(DestType, ShouldCopy);
   } else if (ICS.isBad()) {
-    DeclAccessPair dap;
-    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer)) {
+    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer))
       AddZeroInitializationStep(Entity.getType());
-    } else if (Initializer->getType() == Context.OverloadTy &&
-               !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
-                                                     false, dap))
+    else if (DeclAccessPair Found;
+             Initializer->getType() == Context.OverloadTy &&
+             !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
+                                                   /*Complain=*/false, Found))
       SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (Initializer->getType()->isFunctionType() &&
              isExprAnUnaddressableFunction(S, Initializer))
@@ -9575,12 +9576,12 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
 
     // Emit a possible note about the conversion failing because the
     // operand is a message send with a related result type.
-    S.EmitRelatedResultTypeNote(op);
+    S.ObjC().EmitRelatedResultTypeNote(op);
 
     // Emit a possible note about a return failing because we're
     // expecting a related result type.
     if (entity.getKind() == InitializedEntity::EK_Result)
-      S.EmitRelatedResultTypeNoteForReturn(destType);
+      S.ObjC().EmitRelatedResultTypeNoteForReturn(destType);
   }
   QualType fromType = op->getType();
   QualType fromPointeeType = fromType.getCanonicalType()->getPointeeType();
@@ -9641,6 +9642,8 @@ bool InitializationSequence::Diagnose(Sema &S,
   if (!Failed())
     return false;
 
+  QualType DestType = Entity.getType();
+
   // When we want to diagnose only one element of a braced-init-list,
   // we need to factor it out.
   Expr *OnlyArg;
@@ -9650,11 +9653,21 @@ bool InitializationSequence::Diagnose(Sema &S,
       OnlyArg = List->getInit(0);
     else
       OnlyArg = Args[0];
+
+    if (OnlyArg->getType() == S.Context.OverloadTy) {
+      DeclAccessPair Found;
+      if (FunctionDecl *FD = S.ResolveAddressOfOverloadedFunction(
+              OnlyArg, DestType.getNonReferenceType(), /*Complain=*/false,
+              Found)) {
+        if (Expr *Resolved =
+                S.FixOverloadedFunctionReference(OnlyArg, Found, FD).get())
+          OnlyArg = Resolved;
+      }
+    }
   }
   else
     OnlyArg = nullptr;
 
-  QualType DestType = Entity.getType();
   switch (Failure) {
   case FK_TooManyInitsForReference:
     // FIXME: Customize for the initialized entity?

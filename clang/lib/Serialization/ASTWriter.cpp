@@ -66,6 +66,7 @@
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -173,42 +174,39 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
   const ModuleMap &MM = HS.getModuleMap();
-  const SourceManager &SourceMgr = PP.getSourceManager();
 
   std::set<const FileEntry *> ModuleMaps;
-  auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
-    if (!ModuleMaps.insert(F).second)
-      return;
-    SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
-    // The include location of inferred module maps can point into the header
-    // file that triggered the inferring. Cut off the walk if that's the case.
-    while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
-      FID = SourceMgr.getFileID(Loc);
-      F = *SourceMgr.getFileEntryRefForID(FID);
-      if (!ModuleMaps.insert(F).second)
-        break;
-      Loc = SourceMgr.getIncludeLoc(FID);
-    }
-  };
-
   std::set<const Module *> ProcessedModules;
-  auto CollectIncludingMapsFromAncestors = [&](const Module *M) {
-    for (const Module *Mod = M; Mod; Mod = Mod->Parent) {
-      if (!ProcessedModules.insert(Mod).second)
-        break;
+  auto CollectModuleMapsForHierarchy = [&](const Module *M) {
+    M = M->getTopLevelModule();
+
+    if (!ProcessedModules.insert(M).second)
+      return;
+
+    std::queue<const Module *> Q;
+    Q.push(M);
+    while (!Q.empty()) {
+      const Module *Mod = Q.front();
+      Q.pop();
+
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
-      if (FileID FID = MM.getContainingModuleMapFileID(Mod); FID.isValid())
-        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
-      // For inferred modules, the module map that allowed inferring is not in
-      // the include chain of the virtual containing module map file. It did
-      // affect the compilation, though.
-      if (FileID FID = MM.getModuleMapFileIDForUniquing(Mod); FID.isValid())
-        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
+      if (auto FE = MM.getContainingModuleMapFile(Mod))
+        ModuleMaps.insert(*FE);
+      // For inferred modules, the module map that allowed inferring is not
+      // related to the virtual containing module map file. It did affect the
+      // compilation, though.
+      if (auto FE = MM.getModuleMapFileForUniquing(Mod))
+        ModuleMaps.insert(*FE);
+
+      for (auto *SubM : Mod->submodules())
+        Q.push(SubM);
     }
   };
 
   // Handle all the affecting modules referenced from the root module.
+
+  CollectModuleMapsForHierarchy(RootModule);
 
   std::queue<const Module *> Q;
   Q.push(RootModule);
@@ -216,11 +214,10 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     const Module *CurrentModule = Q.front();
     Q.pop();
 
-    CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
-      CollectIncludingMapsFromAncestors(ImportedModule);
+      CollectModuleMapsForHierarchy(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      CollectIncludingMapsFromAncestors(UndeclaredModule);
+      CollectModuleMapsForHierarchy(UndeclaredModule);
 
     for (auto *M : CurrentModule->submodules())
       Q.push(M);
@@ -249,8 +246,26 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
       if (const Module *M = KH.getModule())
-        CollectIncludingMapsFromAncestors(M);
+        CollectModuleMapsForHierarchy(M);
   }
+
+  // FIXME: This algorithm is not correct for module map hierarchies where
+  // module map file defining a (sub)module of a top-level module X includes
+  // a module map file that defines a (sub)module of another top-level module Y.
+  // Whenever X is affecting and Y is not, "replaying" this PCM file will fail
+  // when parsing module map files for X due to not knowing about the `extern`
+  // module map for Y.
+  //
+  // We don't have a good way to fix it here. We could mark all children of
+  // affecting module map files as being affecting as well, but that's
+  // expensive. SourceManager does not model the edge from parent to child
+  // SLocEntries, so instead, we would need to iterate over leaf module map
+  // files, walk up their include hierarchy and check whether we arrive at an
+  // affecting module map.
+  //
+  // Instead of complicating and slowing down this function, we should probably
+  // just ban module map hierarchies where module map defining a (sub)module X
+  // includes a module map defining a module that's not a submodule of X.
 
   return ModuleMaps;
 }
@@ -1186,6 +1201,31 @@ ASTFileSignature ASTWriter::createSignatureForNamedModule() const {
   for (auto [ExportImported, _] : WritingModule->Exports)
     Hasher.update(ExportImported->Signature);
 
+  // We combine all the used modules to make sure the signature is precise.
+  // Consider the case like:
+  //
+  // // a.cppm
+  // export module a;
+  // export inline int a() { ... }
+  //
+  // // b.cppm
+  // export module b;
+  // import a;
+  // export inline int b() { return a(); }
+  //
+  // Since both `a()` and `b()` are inline, we need to make sure the BMI of
+  // `b.pcm` will change after the implementation of `a()` changes. We can't
+  // get that naturally since we won't record the body of `a()` during the
+  // writing process. We can't reuse ODRHash here since ODRHash won't calculate
+  // the called function recursively. So ODRHash will be problematic if `a()`
+  // calls other inline functions.
+  //
+  // Probably we can solve this by a new hash mechanism. But the safety and
+  // efficiency may a problem too. Here we just combine the hash value of the
+  // used modules conservatively.
+  for (Module *M : TouchedTopLevelModules)
+    Hasher.update(M->Signature);
+
   return ASTFileSignature::create(Hasher.result());
 }
 
@@ -1420,7 +1460,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
         (!PP.getHeaderSearchInfo()
               .getHeaderSearchOpts()
               .ModuleMapFileHomeIsCwd ||
-         WritingModule->Directory->getName() != StringRef("."))) {
+         WritingModule->Directory->getName() != ".")) {
       // Module directory.
       auto Abbrev = std::make_shared<BitCodeAbbrev>();
       Abbrev->Add(BitCodeAbbrevOp(MODULE_DIRECTORY));
@@ -1665,6 +1705,18 @@ struct InputFileEntry {
 
 } // namespace
 
+SourceLocation ASTWriter::getAffectingIncludeLoc(const SourceManager &SourceMgr,
+                                                 const SrcMgr::FileInfo &File) {
+  SourceLocation IncludeLoc = File.getIncludeLoc();
+  if (IncludeLoc.isValid()) {
+    FileID IncludeFID = SourceMgr.getFileID(IncludeLoc);
+    assert(IncludeFID.isValid() && "IncludeLoc in invalid file");
+    if (!IsSLocAffecting[IncludeFID.ID])
+      IncludeLoc = SourceLocation();
+  }
+  return IncludeLoc;
+}
+
 void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
                                 HeaderSearchOptions &HSOpts) {
   using namespace llvm;
@@ -1718,7 +1770,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsSystemFile = isSystem(File.getFileCharacteristic());
     Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
-    Entry.IsTopLevel = File.getIncludeLoc().isInvalid();
+    Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     auto ContentHash = hash_code(-1);
@@ -2245,7 +2297,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
       Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      AddSourceLocation(File.getIncludeLoc(), Record);
+      AddSourceLocation(getAffectingIncludeLoc(SourceMgr, File), Record);
       Record.push_back(File.getFileCharacteristic()); // FIXME: stable encoding
       Record.push_back(File.hasLineDirectives());
 
@@ -2966,8 +3018,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
 
     // Emit the requirements.
     for (const auto &R : Mod->Requirements) {
-      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.second};
-      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.first);
+      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.RequiredState};
+      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.FeatureName);
     }
 
     // Emit the umbrella header, if there is one.
@@ -3225,7 +3277,7 @@ void ASTWriter::WriteType(QualType T) {
     TypeOffsets.emplace_back(Offset);
   else if (TypeOffsets.size() < Index) {
     TypeOffsets.resize(Index + 1);
-    TypeOffsets[Index].setBitOffset(Offset);
+    TypeOffsets[Index].set(Offset);
   } else {
     llvm_unreachable("Types emitted in wrong order");
   }
@@ -3496,7 +3548,7 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
   using namespace llvm;
 
   // Do we have to do anything at all?
-  if (SemaRef.MethodPool.empty() && SelectorIDs.empty())
+  if (SemaRef.ObjC().MethodPool.empty() && SelectorIDs.empty())
     return;
   unsigned NumTableEntries = 0;
   // Create and write out the blob that contains selectors and the method pool.
@@ -3510,13 +3562,14 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
     for (auto &SelectorAndID : SelectorIDs) {
       Selector S = SelectorAndID.first;
       SelectorID ID = SelectorAndID.second;
-      Sema::GlobalMethodPool::iterator F = SemaRef.MethodPool.find(S);
+      SemaObjC::GlobalMethodPool::iterator F =
+          SemaRef.ObjC().MethodPool.find(S);
       ASTMethodPoolTrait::data_type Data = {
         ID,
         ObjCMethodList(),
         ObjCMethodList()
       };
-      if (F != SemaRef.MethodPool.end()) {
+      if (F != SemaRef.ObjC().MethodPool.end()) {
         Data.Instance = F->second.first;
         Data.Factory = F->second.second;
       }
@@ -3601,7 +3654,7 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
 void ASTWriter::WriteReferencedSelectorsPool(Sema &SemaRef) {
   using namespace llvm;
 
-  if (SemaRef.ReferencedSelectors.empty())
+  if (SemaRef.ObjC().ReferencedSelectors.empty())
     return;
 
   RecordData Record;
@@ -3610,7 +3663,7 @@ void ASTWriter::WriteReferencedSelectorsPool(Sema &SemaRef) {
   // Note: this writes out all references even for a dependent AST. But it is
   // very tricky to fix, and given that @selector shouldn't really appear in
   // headers, probably not worth it. It's not a correctness issue.
-  for (auto &SelectorAndLocation : SemaRef.ReferencedSelectors) {
+  for (auto &SelectorAndLocation : SemaRef.ObjC().ReferencedSelectors) {
     Selector Sel = SelectorAndLocation.first;
     SourceLocation Loc = SelectorAndLocation.second;
     Writer.AddSelectorRef(Sel);
@@ -3695,7 +3748,7 @@ public:
   using key_type = const IdentifierInfo *;
   using key_type_ref = key_type;
 
-  using data_type = IdentID;
+  using data_type = IdentifierID;
   using data_type_ref = data_type;
 
   using hash_value_type = unsigned;
@@ -3724,7 +3777,7 @@ public:
   }
 
   std::pair<unsigned, unsigned>
-  EmitKeyDataLength(raw_ostream &Out, const IdentifierInfo *II, IdentID ID) {
+  EmitKeyDataLength(raw_ostream &Out, const IdentifierInfo *II, IdentifierID ID) {
     // Record the location of the identifier data. This is used when generating
     // the mapping from persistent IDs to strings.
     Writer.SetIdentifierOffset(II, Out.tell());
@@ -3756,7 +3809,7 @@ public:
     Out.write(II->getNameStart(), KeyLen);
   }
 
-  void EmitData(raw_ostream &Out, const IdentifierInfo *II, IdentID ID,
+  void EmitData(raw_ostream &Out, const IdentifierInfo *II, IdentifierID ID,
                 unsigned) {
     using namespace llvm::support;
 
@@ -3840,7 +3893,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     IdentifierOffsets.resize(NextIdentID - FirstIdentID);
     for (auto IdentIDPair : IdentifierIDs) {
       const IdentifierInfo *II = IdentIDPair.first;
-      IdentID ID = IdentIDPair.second;
+      IdentifierID ID = IdentIDPair.second;
       assert(II && "NULL identifier in identifier table");
 
       // Write out identifiers if either the ID is local or the identifier has
@@ -4728,7 +4781,7 @@ void ASTWriter::AddVersionTuple(const VersionTuple &Version,
 /// Note that the identifier II occurs at the given offset
 /// within the identifier table.
 void ASTWriter::SetIdentifierOffset(const IdentifierInfo *II, uint32_t Offset) {
-  IdentID ID = IdentifierIDs[II];
+  IdentifierID ID = IdentifierIDs[II];
   // Only store offsets new to this AST file. Other identifier names are looked
   // up earlier in the chain and thus don't need an offset.
   if (ID >= FirstIdentID)
@@ -5295,7 +5348,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   for (auto &SelectorAndID : SelectorIDs)
     AllSelectors.push_back(SelectorAndID.first);
   for (auto &Selector : AllSelectors)
-    SemaRef.updateOutOfDateSelector(Selector);
+    SemaRef.ObjC().updateOutOfDateSelector(Selector);
 
   // Form the record of special types.
   RecordData SpecialTypes;
@@ -5894,11 +5947,11 @@ void ASTWriter::AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Recor
   Record.push_back(getIdentifierRef(II));
 }
 
-IdentID ASTWriter::getIdentifierRef(const IdentifierInfo *II) {
+IdentifierID ASTWriter::getIdentifierRef(const IdentifierInfo *II) {
   if (!II)
     return 0;
 
-  IdentID &ID = IdentifierIDs[II];
+  IdentifierID &ID = IdentifierIDs[II];
   if (ID == 0)
     ID = NextIdentID++;
   return ID;
@@ -6086,8 +6139,12 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
 
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
-  if (D->isFromASTFile())
+  if (D->isFromASTFile()) {
+    if (isWritingStdCXXNamedModules() && D->getOwningModule())
+      TouchedTopLevelModules.insert(D->getOwningModule()->getTopLevelModule());
+
     return LocalDeclID(D->getGlobalID());
+  }
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
   LocalDeclID &ID = DeclIDs[D];
@@ -6555,9 +6612,9 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
   NextSubmoduleID = FirstSubmoduleID;
 }
 
-void ASTWriter::IdentifierRead(IdentID ID, IdentifierInfo *II) {
+void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
   // Always keep the highest ID. See \p TypeRead() for more information.
-  IdentID &StoredID = IdentifierIDs[II];
+  IdentifierID &StoredID = IdentifierIDs[II];
   if (ID > StoredID)
     StoredID = ID;
 }
@@ -7730,6 +7787,18 @@ void ASTRecordWriter::writeOMPChildren(OMPChildren *Data) {
     AddStmt(Data->getChildren()[I]);
 }
 
+void ASTRecordWriter::writeOpenACCVarList(const OpenACCClauseWithVarList *C) {
+  writeUInt32(C->getVarList().size());
+  for (Expr *E : C->getVarList())
+    AddStmt(E);
+}
+
+void ASTRecordWriter::writeOpenACCIntExprList(ArrayRef<Expr *> Exprs) {
+  writeUInt32(Exprs.size());
+  for (Expr *E : Exprs)
+    AddStmt(E);
+}
+
 void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeEnum(C->getClauseKind());
   writeSourceLocation(C->getBeginLoc());
@@ -7749,7 +7818,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     return;
   }
   case OpenACCClauseKind::Self: {
-    const auto *SC = cast<OpenACCIfClause>(C);
+    const auto *SC = cast<OpenACCSelfClause>(C);
     writeSourceLocation(SC->getLParenLoc());
     writeBool(SC->hasConditionExpr());
     if (SC->hasConditionExpr())
@@ -7776,6 +7845,110 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
     return;
   }
+  case OpenACCClauseKind::Private: {
+    const auto *PC = cast<OpenACCPrivateClause>(C);
+    writeSourceLocation(PC->getLParenLoc());
+    writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::FirstPrivate: {
+    const auto *FPC = cast<OpenACCFirstPrivateClause>(C);
+    writeSourceLocation(FPC->getLParenLoc());
+    writeOpenACCVarList(FPC);
+    return;
+  }
+  case OpenACCClauseKind::Attach: {
+    const auto *AC = cast<OpenACCAttachClause>(C);
+    writeSourceLocation(AC->getLParenLoc());
+    writeOpenACCVarList(AC);
+    return;
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    const auto *DPC = cast<OpenACCDevicePtrClause>(C);
+    writeSourceLocation(DPC->getLParenLoc());
+    writeOpenACCVarList(DPC);
+    return;
+  }
+  case OpenACCClauseKind::NoCreate: {
+    const auto *NCC = cast<OpenACCNoCreateClause>(C);
+    writeSourceLocation(NCC->getLParenLoc());
+    writeOpenACCVarList(NCC);
+    return;
+  }
+  case OpenACCClauseKind::Present: {
+    const auto *PC = cast<OpenACCPresentClause>(C);
+    writeSourceLocation(PC->getLParenLoc());
+    writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy: {
+    const auto *CC = cast<OpenACCCopyClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeOpenACCVarList(CC);
+    return;
+  }
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::PCopyIn:
+  case OpenACCClauseKind::PresentOrCopyIn: {
+    const auto *CIC = cast<OpenACCCopyInClause>(C);
+    writeSourceLocation(CIC->getLParenLoc());
+    writeBool(CIC->isReadOnly());
+    writeOpenACCVarList(CIC);
+    return;
+  }
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::PCopyOut:
+  case OpenACCClauseKind::PresentOrCopyOut: {
+    const auto *COC = cast<OpenACCCopyOutClause>(C);
+    writeSourceLocation(COC->getLParenLoc());
+    writeBool(COC->isZero());
+    writeOpenACCVarList(COC);
+    return;
+  }
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::PCreate:
+  case OpenACCClauseKind::PresentOrCreate: {
+    const auto *CC = cast<OpenACCCreateClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeBool(CC->isZero());
+    writeOpenACCVarList(CC);
+    return;
+  }
+  case OpenACCClauseKind::Async: {
+    const auto *AC = cast<OpenACCAsyncClause>(C);
+    writeSourceLocation(AC->getLParenLoc());
+    writeBool(AC->hasIntExpr());
+    if (AC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(AC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Wait: {
+    const auto *WC = cast<OpenACCWaitClause>(C);
+    writeSourceLocation(WC->getLParenLoc());
+    writeBool(WC->getDevNumExpr());
+    if (const Expr *DNE = WC->getDevNumExpr())
+      AddStmt(const_cast<Expr *>(DNE));
+    writeSourceLocation(WC->getQueuesLoc());
+
+    writeOpenACCIntExprList(WC->getQueueIdExprs());
+    return;
+  }
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType: {
+    const auto *DTC = cast<OpenACCDeviceTypeClause>(C);
+    writeSourceLocation(DTC->getLParenLoc());
+    writeUInt32(DTC->getArchitectures().size());
+    for (const DeviceTypeArgument &Arg : DTC->getArchitectures()) {
+      writeBool(Arg.first);
+      if (Arg.first)
+        AddIdentifierRef(Arg.first);
+      writeSourceLocation(Arg.second);
+    }
+    return;
+  }
+
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7784,34 +7957,20 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
-  case OpenACCClauseKind::Attach:
   case OpenACCClauseKind::Delete:
   case OpenACCClauseKind::Detach:
   case OpenACCClauseKind::Device:
-  case OpenACCClauseKind::DevicePtr:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::FirstPrivate:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::NoCreate:
-  case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::Private:
-  case OpenACCClauseKind::CopyOut:
-  case OpenACCClauseKind::CopyIn:
-  case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::DeviceType:
-  case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Wait:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

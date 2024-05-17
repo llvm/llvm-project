@@ -225,7 +225,9 @@ std::optional<ProgramTree> ProgramTree::Build(
 
 std::optional<ProgramTree> ProgramTree::Build(
     const parser::CompilerDirective &x, SemanticsContext &context) {
-  context.Say(x.source, "Compiler directive ignored here"_warn_en_US);
+  if (context.ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+    context.Say(x.source, "Compiler directive ignored here"_warn_en_US);
+  }
   return std::nullopt;
 }
 

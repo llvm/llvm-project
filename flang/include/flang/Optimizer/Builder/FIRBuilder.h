@@ -708,6 +708,13 @@ mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

@@ -111,6 +111,7 @@ class SPIRVEmitIntrinsics
                                         unsigned OperandToReplace,
                                         IRBuilder<> &B);
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
+  void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -173,7 +174,7 @@ static bool isAggrToReplace(const Value *V) {
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
-    B.SetInsertPoint(I->getParent(), I->getParent()->getFirstInsertionPt());
+    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
   else
     B.SetInsertPoint(I);
 }
@@ -490,7 +491,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     if (Instruction *User = dyn_cast<Instruction>(Op->use_begin()->get()))
       setInsertPointSkippingPhis(B, User->getNextNode());
     else
-      B.SetInsertPoint(I);
+      setInsertPointSkippingPhis(B, I);
     Value *OpTyVal = Constant::getNullValue(KnownElemTy);
     Type *OpTy = Op->getType();
     if (!Ty) {
@@ -1116,6 +1117,15 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   }
 }
 
+void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
+                                                 IRBuilder<> &B) {
+  if (MDNode *MD = I->getMetadata("spirv.Decorations")) {
+    B.SetInsertPoint(I->getNextNode());
+    B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                      {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+}
+
 void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
                                                  IRBuilder<> &B) {
   auto *II = dyn_cast<IntrinsicInst>(I);
@@ -1287,6 +1297,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     insertAssignPtrTypeIntrs(I, B);
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);
+    insertSpirvDecorations(I, B);
   }
 
   for (auto &I : instructions(Func))

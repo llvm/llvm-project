@@ -32,7 +32,7 @@ class StringRef;
 class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   virtual void anchor();
 
-#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "LoongArchGenSubtargetInfo.inc"
 
@@ -83,7 +83,7 @@ public:
     return &TSInfo;
   }
 
-#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "LoongArchGenSubtargetInfo.inc"
 
@@ -91,6 +91,10 @@ public:
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }
+  bool isSoftFPABI() const {
+    return TargetABI == LoongArchABI::ABI_LP64S ||
+           TargetABI == LoongArchABI::ABI_ILP32S;
+  }
   bool isXRaySupported() const override { return is64Bit(); }
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }

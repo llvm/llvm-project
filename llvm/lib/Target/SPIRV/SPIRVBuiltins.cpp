@@ -1763,7 +1763,7 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       if (!MRI->getRegClassOrNull(GWSPtr))
         MRI->setRegClass(GWSPtr, &SPIRV::IDRegClass);
       // TODO: Maybe simplify generation of the type of the fields.
-      unsigned Size = Call->Builtin->Name.equals("ndrange_3D") ? 3 : 2;
+      unsigned Size = Call->Builtin->Name == "ndrange_3D" ? 3 : 2;
       unsigned BitWidth = GR->getPointerSize() == 64 ? 64 : 32;
       Type *BaseTy = IntegerType::get(MF.getFunction().getContext(), BitWidth);
       Type *FieldTy = ArrayType::get(BaseTy, Size);

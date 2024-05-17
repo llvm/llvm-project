@@ -693,6 +693,22 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   if (ultimateSymbol.test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return builder.create<fir::ZeroOp>(loc, fir::ReferenceType::get(ty));
 
+  if (Fortran::semantics::NeedCUDAAlloc(ultimateSymbol)) {
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         ultimateSymbol);
+    llvm::SmallVector<mlir::Value> indices;
+    llvm::SmallVector<mlir::Value> elidedShape =
+        fir::factory::elideExtentsAlreadyInType(ty, shape);
+    llvm::SmallVector<mlir::Value> elidedLenParams =
+        fir::factory::elideLengthsAlreadyInType(ty, lenParams);
+    auto idxTy = builder.getIndexType();
+    for (mlir::Value sh : elidedShape)
+      indices.push_back(builder.createConvert(loc, idxTy, sh));
+    return builder.create<fir::CUDAAllocOp>(loc, ty, nm, symNm, cudaAttr,
+                                            lenParams, indices);
+  }
+
   // Let the builder do all the heavy lifting.
   if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
     return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
@@ -926,6 +942,19 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                  loc, sym);
       });
     }
+  }
+  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    fir::ExtendedValue exv =
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    auto *sym = &var.getSymbol();
+    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+      fir::CUDADataAttributeAttr cudaAttr =
+          Fortran::lower::translateSymbolCUDADataAttribute(
+              builder->getContext(), *sym);
+      builder->create<fir::CUDAFreeOp>(loc, fir::getBase(exv), cudaAttr);
+    });
   }
 }
 
@@ -1654,7 +1683,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 
       // Declare a local pointer variable.
       auto newBase = builder.create<hlfir::DeclareOp>(
-          loc, boxAlloc, name, /*shape=*/nullptr, lenParams, attributes);
+          loc, boxAlloc, name, /*shape=*/nullptr, lenParams,
+          /*dummy_scope=*/nullptr, attributes);
       mlir::Value nullAddr = builder.createNullConstant(
           loc, llvm::cast<fir::BaseBoxType>(ptrBoxType).getEleTy());
 
@@ -1681,8 +1711,12 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       symMap.addVariableDefinition(sym, newBase, force);
       return;
     }
+    mlir::Value dummyScope;
+    if (converter.isRegisteredDummySymbol(sym))
+      dummyScope = converter.dummyArgsScopeValue();
     auto newBase = builder.create<hlfir::DeclareOp>(
-        loc, base, name, shapeOrShift, lenParams, attributes, cudaAttr);
+        loc, base, name, shapeOrShift, lenParams, dummyScope, attributes,
+        cudaAttr);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -1732,8 +1766,11 @@ void Fortran::lower::genDeclareSymbol(
         Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
                                                          sym.GetUltimate());
     auto name = converter.mangleName(sym);
-    hlfir::EntityWithAttributes declare =
-        hlfir::genDeclare(loc, builder, exv, name, attributes, cudaAttr);
+    mlir::Value dummyScope;
+    if (converter.isRegisteredDummySymbol(sym))
+      dummyScope = converter.dummyArgsScopeValue();
+    hlfir::EntityWithAttributes declare = hlfir::genDeclare(
+        loc, builder, exv, name, attributes, dummyScope, cudaAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -1993,7 +2030,9 @@ void Fortran::lower::mapSymbolAttributes(
           fir::factory::genMutableBoxRead(
               builder, loc,
               fir::factory::createTempMutableBox(builder, loc, ty, {}, {},
-                                                 isPolymorphic)));
+                                                 isPolymorphic)),
+          fir::FortranVariableFlagsEnum::None,
+          converter.isRegisteredDummySymbol(sym));
       return true;
     }
     return false;

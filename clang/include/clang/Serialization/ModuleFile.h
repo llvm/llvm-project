@@ -308,7 +308,7 @@ public:
   const uint32_t *IdentifierOffsets = nullptr;
 
   /// Base identifier ID for identifiers local to this module.
-  serialization::IdentID BaseIdentifierID = 0;
+  serialization::IdentifierID BaseIdentifierID = 0;
 
   /// Remapping table for identifier IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> IdentifierRemap;
@@ -491,7 +491,7 @@ public:
 
   /// Offset of each type within the bitstream, indexed by the
   /// type ID, or the representation of a Type*.
-  const UnderalignedInt64 *TypeOffsets = nullptr;
+  const UnalignedUInt64 *TypeOffsets = nullptr;
 
   /// Base type ID for types local to this module as represented in
   /// the global type ID space.

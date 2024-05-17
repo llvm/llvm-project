@@ -824,8 +824,8 @@ supported for the ``amdgcn`` target.
      Constant                              4               constant    *same as global* 64      0x0000000000000000
      Private                               5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                       6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental)     7               *TODO*
-     Buffer Resource (experimental)        8               *TODO*
+     Buffer Fat Pointer                    7               N/A         N/A              160     0
+     Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
@@ -1156,6 +1156,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    mode. The raw rounding mode values in the MODE
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
+
+  :ref:`llvm.set.rounding<int_set_rounding>`       Input value expected to be one of the valid results
+                                                   from '``llvm.get.rounding``'. Rounding mode is
+                                                   undefined if not passed a valid input. This should be
+                                                   a wave uniform value. In case of a divergent input
+                                                   value, the first active lane's value will be used.
 
   :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
                                                    This stores information related to the current rounding mode,
