@@ -160,6 +160,14 @@ floating_point asinh (arithmetic x);
 float          asinhf(float x);
 long double    asinhl(long double x);
 
+double         assoc_legendre(unsigned l, unsigned m, double x);                    // C++17
+float          assoc_legendre(unsigned l, unsigned m, float x);                     // C++17
+long double    assoc_legendre(unsigned l, unsigned m, long double x);               // C++17
+float          assoc_legendref(unsigned l, unsigned m, float x);                    // C++17
+long double    assoc_legendrel(unsigned l, unsigned m, long double x);              // C++17
+template <class Integer>
+double         assoc_legendre(unsigned l, unsigned m, Integer x);                   // C++17
+
 floating_point atanh (arithmetic x);
 float          atanhf(float x);
 long double    atanhl(long double x);
@@ -315,6 +323,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <limits>
 #include <version>
 
+#include <__math/special_functions.h>
 #include <math.h>
 
 #ifndef _LIBCPP_MATH_H
