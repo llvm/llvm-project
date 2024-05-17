@@ -13,9 +13,8 @@
 
 include "llvm/IR/Intrinsics.td"
 
-// Abstract class to demarcate minimum Shader model version required
-// to support DXIL Op
-class DXILShaderModel<int major, int minor> {
+// Abstract class to represent major and minor version values
+class Version<int major, int minor> {
   int Major = major;
   int Minor = minor;
 }
@@ -24,13 +23,13 @@ class DXILShaderModel<int major, int minor> {
 
 // Shader Model 6.0 - 6.8
 foreach i = 0...8 in {
-  def SM6_#i : DXILShaderModel<6, i>;
+  def SM6_#i : Version<6, i>;
 }
 
 // Abstraction of class mapping valid DXIL Op overloads the minimum
 // version of Shader Model they are supported
-class DXILOpOverload<DXILShaderModel minsm, list<LLVMType> overloads> {
-  DXILShaderModel ShaderModel = minsm;
+class DXILOpOverload<Version minsm, list<LLVMType> overloads> {
+  Version ShaderModel = minsm;
   list<LLVMType> OpOverloads = overloads;
 }
 
@@ -77,8 +76,8 @@ defset list<DXILOpClass> OpClasses = {
   def UnknownOpClass: DXILOpClass<[]>;
 }
 
-// Abstraction DXIL Operation to LLVM intrinsic
-class DXILOpMappingBase {
+// Abstraction DXIL Operation
+class DXILOpPropertiesBase {
   int OpCode = 0;                      // Opcode of DXIL Operation
   DXILOpClass OpClass = UnknownOpClass;// Class of DXIL Operation.
   Intrinsic LLVMIntrinsic = ?;         // LLVM Intrinsic DXIL Operation maps to
@@ -87,118 +86,118 @@ class DXILOpMappingBase {
   string Doc = "";                     // A short description of the operation
 }
 
-class DXILOpMapping<int opCode,
+class DXILOpProperties<int opCode,
                     Intrinsic intrinsic,
                     list<DXILOpOverload> overloadTypes,
-                    string doc> : DXILOpMappingBase {
+                    string doc> : DXILOpPropertiesBase {
   int OpCode = opCode;
   Intrinsic LLVMIntrinsic = intrinsic;
   list<DXILOpOverload> OpOverloadTypes = overloadTypes;
   string Doc = doc;
 }
 
-// Concrete definitions of DXIL Operation mapping to corresponding LLVM intrinsic
+// Concrete definitions of DXIL Operation Properties to corresponding LLVM intrinsic
 
 // IsSpecialFloat Class
 let OpClass = isSpecialFloat in {
-  def IsInf : DXILOpMapping<9,  int_dx_isinf, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def IsInf : DXILOpProperties<9,  int_dx_isinf, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Determines if the specified value is infinite.">;
 }
 
 let OpClass = unary in {
-  def Abs : DXILOpMapping<6, int_fabs, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
+  def Abs : DXILOpProperties<6, int_fabs, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
                           "Returns the absolute value of the input.">;
 
-  def Cos  : DXILOpMapping<12, int_cos, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Cos  : DXILOpProperties<12, int_cos, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                           "Returns cosine(theta) for theta in radians.">;
-  def Sin  : DXILOpMapping<13, int_sin, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Sin  : DXILOpProperties<13, int_sin, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns sine(theta) for theta in radians.">;
-  def Tan  : DXILOpMapping<14, int_tan, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Tan  : DXILOpProperties<14, int_tan, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns tangent(theta) for theta in radians.">;
-  def Exp2 : DXILOpMapping<21, int_exp2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Exp2 : DXILOpProperties<21, int_exp2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns the base 2 exponential, or 2**x, of the"
                            " specified value. exp2(x) = 2**x.">;
-  def Frac : DXILOpMapping<22, int_dx_frac, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Frac : DXILOpProperties<22, int_dx_frac, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "Returns a fraction from 0 to 1 that represents the"
                             " decimal part of the input.">;
-  def Log2 : DXILOpMapping<23, int_log2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Log2 : DXILOpProperties<23, int_log2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns the base-2 logarithm of the specified value.">;
-  def Sqrt : DXILOpMapping<24, int_sqrt, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Sqrt : DXILOpProperties<24, int_sqrt, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns the square root of the specified floating-point"
                            "value, per component.">;
-  def RSqrt : DXILOpMapping<25, int_dx_rsqrt, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def RSqrt : DXILOpProperties<25, int_dx_rsqrt, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "Returns the reciprocal of the square root of the"
                             " specified value. rsqrt(x) = 1 / sqrt(x).">;
-  def Round : DXILOpMapping<26, int_roundeven, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Round : DXILOpProperties<26, int_roundeven, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "Returns the input rounded to the nearest integer"
                             "within a floating-point type.">;
-  def Floor : DXILOpMapping<27, int_floor, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Floor : DXILOpProperties<27, int_floor, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "Returns the largest integer that is less than or equal to the input.">;
-  def Ceil  : DXILOpMapping<28, int_ceil, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Ceil  : DXILOpProperties<28, int_ceil, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "Returns the smallest integer that is greater than or equal to the input.">;
-  def Trunc : DXILOpMapping<29, int_trunc, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Trunc : DXILOpProperties<29, int_trunc, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "Returns the specified value truncated to the integer component.">;
-  def Rbits : DXILOpMapping<30, int_bitreverse, [DXILOpOverload<SM6_0, [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+  def Rbits : DXILOpProperties<30, int_bitreverse, [DXILOpOverload<SM6_0, [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                             "Returns the specified value with its bits reversed.">;
 }
 
 let OpClass = binary in {
 // Float overloads
-  def FMax : DXILOpMapping<35, int_maxnum, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
+  def FMax : DXILOpProperties<35, int_maxnum, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
                            "Float maximum. FMax(a,b) = a > b ? a : b">;
-  def FMin : DXILOpMapping<36, int_minnum, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
+  def FMin : DXILOpProperties<36, int_minnum, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
                            "Float minimum. FMin(a,b) = a < b ? a : b">;
 // Int overloads
-  def SMax : DXILOpMapping<37, int_smax, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+  def SMax : DXILOpProperties<37, int_smax, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                            "Signed integer maximum. SMax(a,b) = a > b ? a : b">;
-  def SMin : DXILOpMapping<38, int_smin, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+  def SMin : DXILOpProperties<38, int_smin, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                            "Signed integer minimum. SMin(a,b) = a < b ? a : b">;
-  def UMax : DXILOpMapping<39, int_umax, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+  def UMax : DXILOpProperties<39, int_umax, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                            "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
-  def UMin : DXILOpMapping<40, int_umin, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+  def UMin : DXILOpProperties<40, int_umin, [DXILOpOverload<SM6_0,[llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                            "Unsigned integer minimum. UMin(a,b) = a < b ? a : b">;
 }
 
 let OpClass = tertiary in {
-  def FMad : DXILOpMapping<46, int_fmuladd, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
+  def FMad : DXILOpProperties<46, int_fmuladd, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
                             "Floating point arithmetic multiply/add operation."
                             " fmad(m,a,b) = m * a + b.">;
 // Int overloads
-def IMad : DXILOpMapping<48, int_dx_imad, [DXILOpOverload<SM6_0, [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+def IMad : DXILOpProperties<48, int_dx_imad, [DXILOpOverload<SM6_0, [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                          "Signed integer arithmetic multiply/add operation."
                           " imad(m,a,b) = m * a + b.">;
-def UMad : DXILOpMapping<49, int_dx_umad, [DXILOpOverload<SM6_0, [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
+def UMad : DXILOpProperties<49, int_dx_umad, [DXILOpOverload<SM6_0, [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>],
                         "Unsigned integer arithmetic multiply/add operation."
                         " umad(m,a, = m * a + b.">;
 }
 
 // Dot Operations
 let OpClass = dot2 in
-  def Dot2 : DXILOpMapping<54, int_dx_dot2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Dot2 : DXILOpProperties<54, int_dx_dot2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] +"
                           " ... + a[n]*b[n] where n is between 0 and 1">;
 let OpClass = dot3 in
-  def Dot3 : DXILOpMapping<55, int_dx_dot3, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+  def Dot3 : DXILOpProperties<55, int_dx_dot3, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "dot product of two float vectors Dot(a,b) = a[0]*b[0] +"
                            " ... + a[n]*b[n] where n is between 0 and 2">;
 let OpClass = dot4 in
-   def Dot4 : DXILOpMapping<56, int_dx_dot4, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+   def Dot4 : DXILOpProperties<56, int_dx_dot4, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                             "dot product of two float vectors Dot(a,b) = a[0]*b[0] +"
                             " ... + a[n]*b[n] where n is between 0 and 3">;
 
 // Thread Operations
 let OpClass =  threadId in
-  def ThreadId : DXILOpMapping<93, int_dx_thread_id, [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
+  def ThreadId : DXILOpProperties<93, int_dx_thread_id, [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
                               "Reads the thread ID">;
 let OpClass =  groupId in
-  def GroupId  : DXILOpMapping<94, int_dx_group_id, [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
+  def GroupId  : DXILOpProperties<94, int_dx_group_id, [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
                                "Reads the group ID (SV_GroupID)">;
 let OpClass =  threadIdInGroup in
-  def ThreadIdInGroup : DXILOpMapping<95, int_dx_thread_id_in_group, [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
+  def ThreadIdInGroup : DXILOpProperties<95, int_dx_thread_id_in_group, [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
                                      "Reads the thread ID within the group "
                                      "(SV_GroupThreadID)">;
 let OpClass = flattenedThreadIdInGroup in
-  def FlattenedThreadIdInGroup : DXILOpMapping<96, int_dx_flattened_thread_id_in_group,
+  def FlattenedThreadIdInGroup : DXILOpProperties<96, int_dx_flattened_thread_id_in_group,
                                                [DXILOpOverload<SM6_0, [llvm_i32_ty]>],
                                                 "Provides a flattened index for a given"
                                                 " thread within a given group (SV_GroupIndex)">;

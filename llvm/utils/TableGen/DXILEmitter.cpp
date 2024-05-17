@@ -509,11 +509,11 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
 static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
-  // Get all DXIL Ops to intrinsic mapping records
-  std::vector<Record *> OpIntrMaps =
-      Records.getAllDerivedDefinitions("DXILOpMappingBase");
+  // Get all DXIL Ops property records
+  std::vector<Record *> OpIntrProps =
+      Records.getAllDerivedDefinitions("DXILOpPropertiesBase");
   std::vector<DXILOperationDesc> DXILOps;
-  for (auto *Record : OpIntrMaps) {
+  for (auto *Record : OpIntrProps) {
     DXILOps.emplace_back(DXILOperationDesc(Record));
   }
   OS << "#ifdef DXIL_OP_ENUM\n";
