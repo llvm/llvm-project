@@ -16,7 +16,7 @@ There are three modes of HLSL availability diagnostic:
 
 #. **Relaxed mode** - same as default mode except the compiler emits a warning. This mode is enabled by ``-Wno-error=hlsl-availability``.
 
-#. **Strict mode** - compiler emits an error when an unavailable API is found in parsed code regardless of whether it can be reached from the shader entry point or exported functions, or not. This mode is enabled by ``-fhlsl-strict-diagnostics``.
+#. **Strict mode** - compiler emits an error when an unavailable API is found in parsed code regardless of whether it can be reached from the shader entry point or exported functions, or not. This mode is enabled by ``-fhlsl-strict-availability``.
 
 Implementation Details
 ======================
@@ -33,9 +33,7 @@ Default and Relaxed Diagnostic Modes
 
 This mode is implemented in ``DiagnoseHLSLAvailability`` class in ``SemaHLSL.cpp`` and it is invoked after the whole translation unit is parsed (from ``Sema::ActOnEndOfTranslationUnit``). The implementation iterates over all shader entry points and exported library functions in the translation unit and performs an AST traversal of each function body.
 
-When a reference to another function or member method is found (``DeclRefExpr`` or ``MemberExpr``) and it has a body, the AST of the referenced function is also scanned. This chain of AST traversals will reach all of the code that is reachable from the initial shader entry point or exported library function.
-
-Another approach would be to construct a call graph by traversing the AST and recording caller and callee for each ``CallExpr``. The availability diagnostics would then run on the call graph. Since Clang currently does not build any call graph during compilation, this seems like an unnecessary step. Traversing all function references (``DeclRefExpr`` or ``MemberExpr``) works just as well, and can be easily extended to support availability diagnostic of classes and other AST nodes.
+When a reference to another function or member method is found (``DeclRefExpr`` or ``MemberExpr``) and it has a body, the AST of the referenced function is also scanned. This chain of AST traversals will reach all of the code that is reachable from the initial shader entry point or exported library function and avoids the need to generate a call graph.
 
 All shader APIs have an availability attribute that specifies the shader model version (and environment, if applicable) when this API was first introduced.When a reference to a function without a definition is found and it has an availability attribute, the version of the attribute is checked against the target shader model version and shader stage (if shader stage context is known), and an appropriate diagnostic is generated as needed.
 
@@ -67,7 +65,7 @@ Compute shader example
 ======================
 
 .. code-block:: c++
-   
+
    float unusedFunction(float f) {
      return ddx(f);
    }
