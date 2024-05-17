@@ -1705,8 +1705,7 @@ define i8 @test_icmp_add(i8 %n, i8 %n2, i8 %other) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_ADD]], 32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ;
@@ -1757,8 +1756,7 @@ define i8 @test_icmp_add2(i8 %n, i8 %n2, i8 %other) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %n_add = add nsw nuw i8 %n, %n2
@@ -1830,8 +1828,7 @@ define i8 @test_icmp_sub(i8 %n, i8 %n2, i8 %other) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_SUB]], -33
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 32
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ;
@@ -1882,8 +1879,7 @@ define i8 @test_icmp_sub2(i8 %n, i8 %n2, i8 %other) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 32
 ;
 entry:
   %n_sub = sub nuw i8 %n, %n2
