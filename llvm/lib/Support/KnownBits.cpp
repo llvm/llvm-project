@@ -774,7 +774,7 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
-KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool IsCeil,
+KnownBits KnownBits::avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool IsCeil,
                      bool IsSigned) {
   KnownBits Known = LHS;
   KnownBits Known2 = RHS;
@@ -788,20 +788,20 @@ KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool IsCeil,
 }
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ false, /* IsSigned */ true);
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ false, /* IsSigned */ true);
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ false,
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ false,
                     /* IsSigned */ false);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ true);
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ true);
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ false);
+  return KnownBits::avgCompute(LHS, RHS, /* IsCeil */ true, /* IsSigned */ false);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
