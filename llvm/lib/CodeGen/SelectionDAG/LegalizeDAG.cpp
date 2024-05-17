@@ -5032,7 +5032,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTPOP:
+  case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
         Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
@@ -5040,7 +5040,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
 
-    if (Node->getOpcode() == ISD::CTTZ) {
+    unsigned NewOpc = Node->getOpcode();
+    if (NewOpc == ISD::CTTZ) {
       // The count is the same in the promoted type except if the original
       // value was zero.  This can be handled by setting the bit just off
       // the top of the original type.
@@ -5048,12 +5049,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
+      NewOpc = ISD::CTTZ_ZERO_UNDEF;
     }
     // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
     // already the correct result.
-    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
-    if (Node->getOpcode() == ISD::CTLZ ||
-        Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+    Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
+    if (NewOpc == ISD::CTLZ || NewOpc == ISD::CTLZ_ZERO_UNDEF) {
       // Tmp1 = Tmp1 - (sizeinbits(NVT) - sizeinbits(Old VT))
       Tmp1 = DAG.getNode(ISD::SUB, dl, NVT, Tmp1,
                           DAG.getConstant(NVT.getSizeInBits() -
@@ -5061,6 +5062,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     }
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
+  }
   case ISD::BITREVERSE:
   case ISD::BSWAP: {
     unsigned DiffBits = NVT.getSizeInBits() - OVT.getSizeInBits();

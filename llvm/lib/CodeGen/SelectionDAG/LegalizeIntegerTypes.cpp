@@ -709,23 +709,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
     }
   }
 
-  if (N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::VP_CTTZ) {
+  unsigned NewOpc = N->getOpcode();
+  if (NewOpc == ISD::CTTZ || NewOpc == ISD::VP_CTTZ) {
     // The count is the same in the promoted type except if the original
     // value was zero.  This can be handled by setting the bit just off
     // the top of the original type.
     auto TopBit = APInt::getOneBitSet(NVT.getScalarSizeInBits(),
                                       OVT.getScalarSizeInBits());
-    if (N->getOpcode() == ISD::CTTZ)
+    if (NewOpc == ISD::CTTZ) {
       Op = DAG.getNode(ISD::OR, dl, NVT, Op, DAG.getConstant(TopBit, dl, NVT));
-    else
+      NewOpc = ISD::CTTZ_ZERO_UNDEF;
+    } else {
       Op =
           DAG.getNode(ISD::VP_OR, dl, NVT, Op, DAG.getConstant(TopBit, dl, NVT),
                       N->getOperand(1), N->getOperand(2));
+      NewOpc = ISD::VP_CTTZ_ZERO_UNDEF;
+    }
   }
   if (!N->isVPOpcode())
-    return DAG.getNode(N->getOpcode(), dl, NVT, Op);
-  return DAG.getNode(N->getOpcode(), dl, NVT, Op, N->getOperand(1),
-                     N->getOperand(2));
+    return DAG.getNode(NewOpc, dl, NVT, Op);
+  return DAG.getNode(NewOpc, dl, NVT, Op, N->getOperand(1), N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VP_CttzElements(SDNode *N) {

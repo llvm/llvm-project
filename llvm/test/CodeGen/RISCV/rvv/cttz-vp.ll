@@ -4145,29 +4145,15 @@ define <vscale x 1 x i9> @vp_cttz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK-NEXT:    li a1, 512
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a1, v0.t
-; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    vsub.vx v9, v8, a0, v0.t
-; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    vrsub.vi v9, v8, 0, v0.t
 ; CHECK-NEXT:    vand.vv v8, v8, v9, v0.t
-; CHECK-NEXT:    vsrl.vi v9, v8, 1, v0.t
-; CHECK-NEXT:    lui a0, 5
-; CHECK-NEXT:    addi a0, a0, 1365
-; CHECK-NEXT:    vand.vx v9, v9, a0, v0.t
-; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
-; CHECK-NEXT:    lui a0, 3
-; CHECK-NEXT:    addi a0, a0, 819
-; CHECK-NEXT:    vand.vx v9, v8, a0, v0.t
-; CHECK-NEXT:    vsrl.vi v8, v8, 2, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vadd.vv v8, v9, v8, v0.t
-; CHECK-NEXT:    vsrl.vi v9, v8, 4, v0.t
-; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
-; CHECK-NEXT:    lui a0, 1
-; CHECK-NEXT:    addi a0, a0, -241
-; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 257
-; CHECK-NEXT:    vmul.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vsrl.vi v8, v8, 8, v0.t
+; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsrl.vi v8, v9, 23, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vsub.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_cttz_nxv1i9:
