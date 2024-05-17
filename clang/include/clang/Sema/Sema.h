@@ -2022,6 +2022,8 @@ public:
   void CheckTCBEnforcement(const SourceLocation CallExprLoc,
                            const NamedDecl *Callee);
 
+  void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
@@ -9356,7 +9358,8 @@ public:
   Decl *ActOnConceptDefinition(Scope *S,
                                MultiTemplateParamsArg TemplateParameterLists,
                                const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr);
+                               SourceLocation NameLoc, Expr *ConstraintExpr,
+                               const ParsedAttributesView &Attrs);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
