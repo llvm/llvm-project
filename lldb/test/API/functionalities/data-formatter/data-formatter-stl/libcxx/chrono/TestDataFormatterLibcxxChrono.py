@@ -12,6 +12,9 @@ from lldbsuite.test import lldbutil
 class LibcxxChronoDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @skipIf(
+        hostoslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/92574"
+    )
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
