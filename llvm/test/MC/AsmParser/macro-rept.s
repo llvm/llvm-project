@@ -3,6 +3,8 @@
 .rept 2
     .long 1
 .endr
+# 3 "a.s"
+/// Test line marker after .endr \n.
 
 .rept 3
 .rept 2
@@ -13,10 +15,10 @@
 // CHECK: .long	1
 // CHECK: .long	1
 
-// CHECK:      .long	0
-// CHECK-NEXT: .long	0
-// CHECK-NEXT: .long	0
-// CHECK-NEXT: .long	0
-// CHECK-NEXT: .long	0
-// CHECK-NEXT: .long	0
-// CHECK-EMPTY:
+// CHECK: .long	0
+// CHECK: .long	0
+// CHECK: .long	0
+
+// CHECK: .long	0
+// CHECK: .long	0
+// CHECK: .long	0
