@@ -71,6 +71,10 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     OS << "ARM_ARCHITECTURE(" << Arch << ")\n";
   OS << "\n#undef ARM_ARCHITECTURE\n\n";
 
+  // Currently only AArch64 (not ARM) is handled beyond this point.
+  if(!RK.getClass("Architecture64"))
+    return;
+
   // Emit the ArchExtKind enum
   OS << "#ifdef EMIT_ARCHEXTKIND_ENUM\n"
      << "enum ArchExtKind : unsigned {\n"
@@ -186,14 +190,41 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifdef EMIT_CPU_INFO\n"
      << "inline constexpr CpuInfo CpuInfos[] = {\n";
 
-  for (const Record *Rec :
-       RK.getAllDerivedDefinitionsIfDefined("AArch64Processor")) {
+  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorModel")) {
     auto Name = Rec->getValueAsString("Name");
-    auto Arch = Rec->getValueAsDef("Arch");
+    auto Features = Rec->getValueAsListOfDefs("Features");
+
+    // "apple-latest" is backend-only, should not be accepted by TargetParser.
+    if (Name == "apple-latest")
+      continue;
+
+    Record *Arch;
+    if (Name == "generic") {
+      // "generic" is an exception. It does not have an architecture, and there
+      // are tests that depend on e.g. -mattr=-v8.4a meaning HasV8_0aOps==false.
+      // However, in TargetParser CPUInfo, it is written as 8.0-A.
+      Arch = RK.getDef("HasV8_0aOps");
+    } else {
+      // Search for an Architecture64 in the list of features.
+      auto IsArch = [](Record *F) { return F->isSubClassOf("Architecture64"); };
+      auto ArchIter = llvm::find_if(Features, IsArch);
+      if (ArchIter == Features.end())
+        PrintFatalError(Rec, "Features must include an Architecture64.");
+      Arch = *ArchIter;
+
+      // Check there is only one Architecture in the list.
+      if (llvm::count_if(Features, IsArch) > 1)
+        PrintFatalError(Rec, "Features has multiple Architecture64 entries");
+    }
+
     auto Major = Arch->getValueAsInt("Major");
     auto Minor = Arch->getValueAsInt("Minor");
     auto Profile = Arch->getValueAsString("Profile");
     auto ArchInfo = ArchInfoName(Major, Minor, Profile);
+
+    // The apple-latest alias is backend only, do not expose it to -mcpu.
+    if (Name == "apple-latest")
+      continue;
 
     OS << "  {\n"
        << "    \"" << Name << "\",\n"
@@ -207,7 +238,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
       if (E->isSubClassOf("Extension")) {
         const auto AEK = E->getValueAsString("ArchExtKindSpelling").upper();
         if (!SeenExts.insert(AEK).second)
-          PrintError(Rec, "feature already added: " + E->getName());
+          PrintFatalError(Rec, "feature already added: " + E->getName());
         OS << "      AArch64::" << AEK << ",\n";
       }
     OS << "    })\n"
