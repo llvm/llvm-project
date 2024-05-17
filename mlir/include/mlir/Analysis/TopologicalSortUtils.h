@@ -104,6 +104,10 @@ bool computeTopologicalSorting(
     MutableArrayRef<Operation *> ops,
     function_ref<bool(Value, Operation *)> isOperandReady = nullptr);
 
+/// Get a list of blocks that is sorted according to dominance. This sort is
+/// stable.
+SetVector<Block *> getBlocksSortedByDominance(Region &region);
+
 } // end namespace mlir
 
 #endif // MLIR_ANALYSIS_TOPOLOGICALSORTUTILS_H

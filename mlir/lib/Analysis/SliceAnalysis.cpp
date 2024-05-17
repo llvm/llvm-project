@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -167,23 +165,6 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
   return topologicalSort(slice);
 }
 
-/// TODO: deduplicate
-static SetVector<Block *> getTopologicallySortedBlocks(Region &region) {
-  // For each block that has not been visited yet (i.e. that has no
-  // predecessors), add it to the list as well as its successors.
-  SetVector<Block *> blocks;
-  for (Block &b : region) {
-    if (blocks.count(&b) == 0) {
-      llvm::ReversePostOrderTraversal<Block *> traversal(&b);
-      blocks.insert(traversal.begin(), traversal.end());
-    }
-  }
-  assert(blocks.size() == region.getBlocks().size() &&
-         "some blocks are not sorted");
-
-  return blocks;
-}
-
 /// Computes the common ancestor region of all operations in `ops`. Remembers
 /// all the traversed regions in `traversedRegions`.
 static Region *findCommonParentRegion(const SetVector<Operation *> &ops,
@@ -220,7 +201,7 @@ static void topoSortRegion(Region &region,
                            const DenseSet<Region *> &relevantRegions,
                            const SetVector<Operation *> &toSort,
                            SetVector<Operation *> &result) {
-  SetVector<Block *> sortedBlocks = getTopologicallySortedBlocks(region);
+  SetVector<Block *> sortedBlocks = getBlocksSortedByDominance(region);
   for (Block *block : sortedBlocks) {
     for (Operation &op : *block) {
       if (toSort.contains(&op))
