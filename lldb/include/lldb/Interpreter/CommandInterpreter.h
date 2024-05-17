@@ -772,10 +772,12 @@ private:
 
   StreamString m_transcript_stream;
 
-  /// Contains a list of handled commands, output and error. Each element in
-  /// the list is a dictionary with three keys: "command" (string), "output"
-  /// (list of strings) and optionally "error" (list of strings). Each string
-  /// in "output" and "error" is a line (without EOL characters).
+  /// Contains a list of handled commands and their details. Each element in
+  /// the list is a dictionary with the following keys/values:
+  /// - "command" (string): The command that was executed.
+  /// - "output" (string): The output of the command. Empty ("") if no output.
+  /// - "error" (string): The error of the command. Empty ("") if no error.
+  /// - "seconds" (float): The time it took to execute the command.
   StructuredData::Array m_transcript;
 };
 
