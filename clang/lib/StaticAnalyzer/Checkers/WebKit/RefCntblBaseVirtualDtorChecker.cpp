@@ -11,16 +11,128 @@
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 using namespace clang;
 using namespace ento;
 
 namespace {
+
+class DerefAnalysisVisitor
+    : public ConstStmtVisitor<DerefAnalysisVisitor, bool> {
+  // Returns true if any of child statements return true.
+  bool VisitChildren(const Stmt *S) {
+    for (const Stmt *Child : S->children()) {
+      if (Child && Visit(Child))
+        return true;
+    }
+    return false;
+  }
+
+  bool VisitBody(const Stmt *Body) {
+    if (!Body)
+      return false;
+
+    auto [It, IsNew] = VisitedBody.insert(Body);
+    if (!IsNew) // This body is recursive
+      return false;
+
+    return Visit(Body);
+  }
+
+public:
+  DerefAnalysisVisitor(const TemplateArgumentList &ArgList,
+                       const CXXRecordDecl *ClassDecl)
+    : ArgList(&ArgList)
+    , ClassDecl(ClassDecl)
+  { }
+
+  DerefAnalysisVisitor(const CXXRecordDecl *ClassDecl)
+    : ClassDecl(ClassDecl)
+  { }
+
+  bool HasSpecializedDelete(CXXMethodDecl *Decl) {
+    if (auto *Tmpl = Decl->getTemplateInstantiationPattern())
+      return VisitBody(Tmpl->getBody());
+    return VisitBody(Decl->getBody());
+  }
+
+  bool VisitCallExpr(const CallExpr *CE) {
+    auto *Callee = CE->getCallee();
+    while (auto *Expr = dyn_cast<CastExpr>(Callee))
+      Callee = Expr->getSubExpr();
+    if (auto *DeclRef = dyn_cast<DeclRefExpr>(Callee)) {
+      auto *Decl = DeclRef->getDecl();
+      if (auto *VD = dyn_cast<VarDecl>(Decl)) {
+        if (auto *Init = VD->getInit()) {
+          if (auto *Lambda = dyn_cast<LambdaExpr>(Init))
+            return VisitBody(Lambda->getBody());
+        }
+      } else if (auto *FD = dyn_cast<FunctionDecl>(Decl))
+        return VisitBody(FD->getBody());
+    }
+    return false;
+  }
+
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+    auto *Callee = MCE->getMethodDecl();
+    if (!Callee)
+      return false;
+    return VisitBody(Callee->getBody());
+  }
+
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
+    auto *Arg = E->getArgument();
+    while (Arg) {
+      if (auto *Paren = dyn_cast<ParenExpr>(Arg))
+        Arg = Paren->getSubExpr();
+      else if (auto *Cast = dyn_cast<ExplicitCastExpr>(Arg)) {
+        Arg = Cast->getSubExpr();
+        auto CastType = Cast->getType();
+        if (auto *PtrType = dyn_cast<PointerType>(CastType)) {
+          auto PointeeType = PtrType->getPointeeType();
+          while (auto *ET = dyn_cast<ElaboratedType>(PointeeType)) {
+            if (ET->isSugared())
+              PointeeType = ET->desugar();
+          }
+          if (auto *ParmType = dyn_cast<TemplateTypeParmType>(PointeeType)) {
+            if (ArgList) {
+              auto ParmIndex = ParmType->getIndex();
+              auto Type = ArgList->get(ParmIndex).getAsType();
+              if (auto *RD = dyn_cast<RecordType>(Type)) {
+                if (RD->getDecl() == ClassDecl)
+                  return true;
+              }
+            }
+          } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
+            if (RD->getDecl() == ClassDecl)
+              return true;
+          }
+        }
+      } else
+        break;
+    }
+    return false;
+  }
+
+  bool VisitStmt(const Stmt *S) { return VisitChildren(S); }
+
+  // Return false since the contents of lambda isn't necessarily executed.
+  // If it is executed, VisitCallExpr above will visit its body.
+  bool VisitLambdaExpr(const LambdaExpr *) { return false; }
+
+private:
+  const TemplateArgumentList* ArgList { nullptr };
+  const CXXRecordDecl* ClassDecl;
+  llvm::DenseSet<const Stmt *> VisitedBody;
+};
+
 class RefCntblBaseVirtualDtorChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
@@ -91,8 +203,6 @@ public:
           const CXXRecordDecl *C = T->getAsCXXRecordDecl();
           if (!C)
             return false;
-          if (isRefCountedClass(C))
-            return false;
 
           bool AnyInconclusiveBase = false;
           const auto hasPublicRefInBase =
@@ -122,6 +232,9 @@ public:
           hasDeref = hasDeref || C->lookupInBases(hasPublicDerefInBase, Paths,
                                                   /*LookupInDependent =*/true);
           if (AnyInconclusiveBase || !hasRef || !hasDeref)
+            return false;
+
+          if (isClassWithSpecializedDelete(C, RD))
             return false;
 
           const auto *Dtor = C->getDestructor();
@@ -180,6 +293,29 @@ public:
     return NamespaceName == "WTF" &&
            (ClsName.ends_with("RefCounted") ||
             ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
+  }
+
+  static bool isClassWithSpecializedDelete(const CXXRecordDecl *C,
+                                           const CXXRecordDecl *DerivedClass) {
+    if (auto *ClsTmplSpDecl = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
+      for (auto *MethodDecl : C->methods()) {
+        if (safeGetName(MethodDecl) == "deref") {
+          DerefAnalysisVisitor DerefAnalysis(ClsTmplSpDecl->getTemplateArgs(),
+                                             DerivedClass);
+          if (DerefAnalysis.HasSpecializedDelete(MethodDecl))
+            return true;
+        }
+      }
+      return false;
+    }
+    for (auto *MethodDecl : C->methods()) {
+        if (safeGetName(MethodDecl) == "deref") {
+          DerefAnalysisVisitor DerefAnalysis(DerivedClass);
+          if (DerefAnalysis.HasSpecializedDelete(MethodDecl))
+            return true;
+        }
+    }
+    return false;
   }
 
   void reportBug(const CXXRecordDecl *DerivedClass,

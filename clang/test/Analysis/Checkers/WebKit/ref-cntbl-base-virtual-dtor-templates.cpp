@@ -58,23 +58,100 @@ protected:
   RefCounted() { }
 };
 
+template <typename X, typename T>
+class ExoticRefCounted : RefCountedBase {
+public:
+  void deref() const {
+    if (derefBase())
+      delete (const_cast<T*>(static_cast<const T*>(this)));
+  }
+};
+
+template <typename X, typename T>
+class BadBase : RefCountedBase {
+public:
+  void deref() const {
+    if (derefBase())
+      delete (const_cast<X*>(static_cast<const X*>(this)));
+  }
+};
+
+template <typename T>
+class FancyDeref {
+public:
+  void ref() const
+  {
+    ++refCount;
+  }
+
+  void deref() const
+  {
+    --refCount;
+    if (refCount)
+      return;
+    auto deleteThis = [this] {
+      delete static_cast<const T*>(this);
+    };
+    deleteThis();
+  }
+private:
+  mutable unsigned refCount { 0 };
+};
+
+template <typename T>
+class BadFancyDeref {
+public:
+  void ref() const
+  {
+    ++refCount;
+  }
+
+  void deref() const
+  {
+    --refCount;
+    if (refCount)
+      return;
+    auto deleteThis = [this] {
+      delete static_cast<const T*>(this);
+    };
+    delete this;
+  }
+private:
+  mutable unsigned refCount { 0 };
+};
+
 template <typename T>
 class ThreadSafeRefCounted {
 public:
-  void ref() const;
-  bool deref() const;
+  void ref() const { ++refCount; }
+  void deref() const {
+    if (!--refCount)
+      delete const_cast<T*>(static_cast<const T*>(this));
+  }
+private:
+  mutable unsigned refCount { 0 };
 };
 
 template <typename T>
 class ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr {
 public:
-  void ref() const;
-  bool deref() const;
+  void ref() const { ++refCount; }
+  void deref() const {
+    if (!--refCount)
+      delete const_cast<T*>(static_cast<const T*>(this));
+  }
+private:
+  mutable unsigned refCount { 0 };
 };
 
 } // namespace WTF
 
 class DerivedClass4 : public WTF::RefCounted<DerivedClass4> { };
+
+class DerivedClass4b : public WTF::ExoticRefCounted<int, DerivedClass4b> { };
+
+class DerivedClass4c : public WTF::BadBase<int, DerivedClass4c> { };
+// expected-warning@-1{{Class 'WTF::BadBase<int, DerivedClass4c>' is used as a base of class 'DerivedClass4c' but doesn't have virtual destructor}}
 
 class DerivedClass5 : public DerivedClass4 { };
 // expected-warning@-1{{Class 'DerivedClass4' is used as a base of class 'DerivedClass5' but doesn't have virtual destructor}}
@@ -88,3 +165,114 @@ class DerivedClass8 : public WTF::ThreadSafeRefCountedAndCanMakeThreadSafeWeakPt
 
 class DerivedClass9 : public DerivedClass8 { };
 // expected-warning@-1{{Class 'DerivedClass8' is used as a base of class 'DerivedClass9' but doesn't have virtual destructor}}
+
+class DerivedClass10 : public WTF::FancyDeref<DerivedClass10> { };
+
+class DerivedClass10b : public WTF::BadFancyDeref<DerivedClass10b> { };
+// expected-warning@-1{{Class 'WTF::BadFancyDeref<DerivedClass10b>' is used as a base of class 'DerivedClass10b' but doesn't have virtual destructor}}
+
+class BaseClass1 {
+public:
+  void ref() const { ++refCount; }
+  void deref() const;
+private:
+  enum class Type { Base, Derived } type { Type::Base };
+  mutable unsigned refCount { 0 };
+};
+
+class DerivedClass11 : public BaseClass1 { };
+
+void BaseClass1::deref() const
+{
+  --refCount;
+  if (refCount)
+    return;
+  switch (type) {
+  case Type::Base:
+    delete const_cast<BaseClass1*>(this);
+    break;
+  case Type::Derived:
+    delete const_cast<DerivedClass11*>(static_cast<const DerivedClass11*>(this));
+    break;
+  }
+}
+
+class BaseClass2;
+static void deleteBase2(BaseClass2*);
+
+class BaseClass2 {
+public:
+  void ref() const { ++refCount; }
+  void deref() const
+  {
+    if (!--refCount)
+      deleteBase2(const_cast<BaseClass2*>(this));
+  }
+  virtual bool isDerived() { return false; }
+private:
+  mutable unsigned refCount { 0 };
+};
+
+class DerivedClass12 : public BaseClass2 {
+  bool isDerived() final { return true; }
+};
+
+void deleteBase2(BaseClass2* obj) {
+  if (obj->isDerived())
+    delete static_cast<DerivedClass12*>(obj);
+  else
+    delete obj;
+}
+
+class BaseClass3 {
+public:
+  void ref() const { ++refCount; }
+  void deref() const
+  {
+    if (!--refCount)
+      const_cast<BaseClass3*>(this)->destory();
+  }
+  virtual bool isDerived() { return false; }
+
+private:
+  void destory();
+
+  mutable unsigned refCount { 0 };
+};
+
+class DerivedClass13 : public BaseClass3 {
+  bool isDerived() final { return true; }
+};
+
+void BaseClass3::destory() {
+  if (isDerived())
+    delete static_cast<DerivedClass13*>(this);
+  else
+    delete this;
+}
+
+class RecursiveBaseClass {
+public:
+  void ref() const {
+    if (otherObject)
+      otherObject->ref();
+    else
+      ++refCount;
+  }
+  void deref() const {
+    if (otherObject)
+      otherObject->deref();
+    else {
+      --refCount;
+      if (refCount)
+        return;
+      delete this;
+    }
+  }
+private:
+  RecursiveBaseClass* otherObject { nullptr };
+  mutable unsigned refCount { 0 };
+};
+
+class RecursiveDerivedClass : public RecursiveBaseClass { };
+// expected-warning@-1{{Class 'RecursiveBaseClass' is used as a base of class 'RecursiveDerivedClass' but doesn't have virtual destructor}}
