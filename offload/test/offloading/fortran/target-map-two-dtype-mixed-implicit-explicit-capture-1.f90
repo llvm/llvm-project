@@ -18,10 +18,10 @@ program main
         real(4) :: array_y(10)
         real(4) :: break_3
     end type scalar_array
-  
+
     type(scalar_array) :: scalar_arr1
     type(scalar_array) :: scalar_arr2
-    
+
   !$omp target map(tofrom:scalar_arr1%break_1)
     scalar_arr2%break_3 = 10
     scalar_arr1%break_1 = 15

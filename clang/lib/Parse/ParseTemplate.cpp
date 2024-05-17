@@ -1541,8 +1541,8 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
     if (!Template)
       return QualType();
     CalledSignatureHelp = true;
-    return Actions.ProduceTemplateArgumentSignatureHelp(Template, TemplateArgs,
-                                                        OpenLoc);
+    return Actions.CodeCompletion().ProduceTemplateArgumentSignatureHelp(
+        Template, TemplateArgs, OpenLoc);
   };
 
   do {
