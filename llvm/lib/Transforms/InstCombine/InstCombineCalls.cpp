@@ -3251,7 +3251,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
 
-    if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+    if (Value *NewOp =
+            simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
       replaceUse(II->getOperandUse(0), NewOp);
       return II;
     }
@@ -3288,7 +3289,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+      if (Value *NewOp =
+              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
         replaceUse(II->getOperandUse(0), NewOp);
         return II;
       }
@@ -3322,7 +3324,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+      if (Value *NewOp =
+              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
         replaceUse(II->getOperandUse(0), NewOp);
         return II;
       }
@@ -3351,7 +3354,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+      if (Value *NewOp =
+              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
         replaceUse(II->getOperandUse(0), NewOp);
         return II;
       }
@@ -3381,7 +3385,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+      if (Value *NewOp =
+              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
         replaceUse(II->getOperandUse(0), NewOp);
         return II;
       }
@@ -3422,7 +3427,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
-      if (Value *NewOp = simplifyReductionOperand(Arg, true)) {
+      if (Value *NewOp =
+              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
         replaceUse(II->getOperandUse(0), NewOp);
         return II;
       }
@@ -3449,15 +3455,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::vector_reduce_fmul: {
-    bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
-                              IID != Intrinsic::vector_reduce_fmul) ||
-                             II->hasAllowReassoc();
+    bool CanReorderLanes = (IID != Intrinsic::vector_reduce_fadd &&
+                            IID != Intrinsic::vector_reduce_fmul) ||
+                           II->hasAllowReassoc();
     const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
                              IID == Intrinsic::vector_reduce_fmul)
                                 ? 1
                                 : 0;
     Value *Arg = II->getArgOperand(ArgIdx);
-    if (Value *NewOp = simplifyReductionOperand(Arg, CanBeReassociated)) {
+    if (Value *NewOp = simplifyReductionOperand(Arg, CanReorderLanes)) {
       replaceUse(II->getOperandUse(ArgIdx), NewOp);
       return nullptr;
     }
