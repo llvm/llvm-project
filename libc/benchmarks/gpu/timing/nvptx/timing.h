@@ -37,12 +37,7 @@ namespace LIBC_NAMESPACE {
 
 // Stimulate a simple function and obtain its latency in clock cycles on the
 // system. This function cannot be inlined or else it will disturb the very
-// deliccate balance of hard-coded dependencies.
-//
-// FIXME: This does not work in general on NVPTX because of further
-// optimizations ptxas performs. The only way to get consistent results is to
-// pass and extra "SHELL:-Xcuda-ptxas -O0" to CMake's compiler flag. This
-// negatively implacts performance but it is at least stable.
+// delicate balance of hard-coded dependencies.
 template <typename F, typename T>
 [[gnu::noinline]] static LIBC_INLINE uint64_t latency(F f, T t) {
   // We need to store the input somewhere to guarantee that the compiler will
@@ -53,7 +48,7 @@ template <typename F, typename T>
 
   // Get the current timestamp from the clock.
   gpu::sync_threads();
-  __nvvm_membar_sys();
+  gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
   // This forces the compiler to load the input argument and run the clock cycle
@@ -70,7 +65,7 @@ template <typename F, typename T>
   // Obtain the current timestamp after running the calculation and force
   // ordering.
   uint64_t stop = gpu::processor_clock();
-  __nvvm_membar_sys();
+  gpu::memory_fence();
   gpu::sync_threads();
   asm volatile("" ::"r"(stop));
   volatile T output = result;
@@ -88,6 +83,7 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
   asm volatile("" ::"r"(arg), "r"(arg2));
 
   gpu::sync_threads();
+  gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
   asm volatile("" ::"r"(arg), "r"(arg2), "llr"(start));
@@ -97,6 +93,7 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
   asm volatile("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result) :);
 
   uint64_t stop = gpu::processor_clock();
+  gpu::memory_fence();
   gpu::sync_threads();
   asm volatile("" ::"r"(stop));
   volatile auto output = result;

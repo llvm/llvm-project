@@ -1,4 +1,7 @@
 #include "LibcGpuBenchmark.h"
+#include "src/__support/CPP/algorithm.h"
+#include "src/__support/FPUtil/sqrt.h"
+#include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE {
 namespace libc_gpu_benchmarks {
@@ -32,27 +35,42 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     iterations = 1;
 
   size_t samples = 0;
+  uint64_t total_time = 0;
   uint64_t best_guess = 0;
   uint64_t total_cycles = 0;
+  uint64_t cycles_2 = 0;
+  uint64_t min = UINT_MAX;
+  uint64_t max = 0;
   for (;;) {
     uint64_t sample_cycles = 0;
     uint64_t overhead = LIBC_NAMESPACE::overhead();
+    const clock_t start = (double)clock();
     for (uint32_t i = 0; i < iterations; i++) {
-      uint64_t result = wrapper_func() - overhead;
+      auto wrapper_intermediate = wrapper_func();
+      uint64_t result = wrapper_intermediate - overhead;
+      max = cpp::max(max, result);
+      min = cpp::min(min, result);
       sample_cycles += result;
     }
-
+    const clock_t end = clock();
+    const clock_t duration_ns =
+        ((end - start) * 1000 * 1000 * 1000) / CLOCKS_PER_SEC;
+    total_time += duration_ns;
     samples++;
     total_cycles += sample_cycles;
+    cycles_2 += sample_cycles * sample_cycles;
+
     total_iterations += iterations;
     const double change_ratio =
         rep.compute_improvement({iterations, sample_cycles});
     best_guess = rep.current_estimation;
 
     if (samples >= options.max_samples ||
-        iterations >= options.max_iterations) {
+        iterations >= options.max_iterations ||
+        total_time >= options.max_duration) {
       break;
-    } else if (samples >= options.min_samples &&
+    } else if (total_time >= options.min_duration &&
+               samples >= options.min_samples &&
                change_ratio < options.epsilon) {
       break;
     }
@@ -60,8 +78,13 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     iterations *= options.scaling_factor;
   }
   result.cycles = best_guess;
+  result.standard_deviation = fputil::sqrt((double)cycles_2 / total_iterations -
+                                           (best_guess * best_guess));
+  result.min = min;
+  result.max = max;
   result.samples = samples;
   result.total_iterations = total_iterations;
+  result.total_time = total_time;
   return result;
 };
 

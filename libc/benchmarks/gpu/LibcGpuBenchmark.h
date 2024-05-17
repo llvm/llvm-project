@@ -4,7 +4,9 @@
 #include "benchmarks/gpu/BenchmarkLogger.h"
 #include "benchmarks/gpu/timing/timing.h"
 #include "src/__support/CPP/functional.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/time/clock.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -18,6 +20,8 @@ struct BenchmarkOptions {
   uint32_t max_iterations = 10000000;
   uint32_t min_samples = 4;
   uint32_t max_samples = 1000;
+  uint64_t min_duration = 0;                  // in nanoseconds (ns)
+  uint64_t max_duration = 1000 * 1000 * 1000; // 1e9 nanoseconds = 1 second
   double epsilon = 0.01;
   double scaling_factor = 1.4;
 };
@@ -61,8 +65,12 @@ public:
 
 struct BenchmarkResult {
   uint64_t cycles = 0;
+  double standard_deviation = 0;
+  uint64_t min = UINT_MAX;
+  uint64_t max = 0;
   size_t samples = 0;
   size_t total_iterations = 0;
+  clock_t total_time = 0;
 };
 
 BenchmarkResult benchmark(const BenchmarkOptions &options,
@@ -107,7 +115,9 @@ private:
     constexpr auto RESET = "\033[0m";
     blog << GREEN << "[ RUN      ] " << RESET << name << '\n';
     blog << GREEN << "[       OK ] " << RESET << name << ": " << result.cycles
-         << " cycles, " << result.total_iterations << " iterations\n";
+         << " cycles, " << result.min << " min, " << result.max << " max, "
+         << result.total_iterations << " iterations, " << result.total_time
+         << " ns, " << (long)result.standard_deviation << " stddev\n";
   }
   const cpp::string_view get_name() const override { return name; }
 };

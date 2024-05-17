@@ -10,6 +10,9 @@ function(add_benchmark benchmark_name)
     "" # Multi-value arguments
     ${ARGN}
   )
+  if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+    message(FATAL_ERROR "target does not support clock")
+  endif()
   add_libc_hermetic_test(
     ${benchmark_name}
     IS_BENCHMARK
@@ -38,10 +41,14 @@ add_unittest_framework_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.functional
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.algorithm
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
+    libc.src.___support.FPUtil.sqrt
+    libc.src.time.clock
     libc.benchmarks.gpu.timing.timing
 )
 
