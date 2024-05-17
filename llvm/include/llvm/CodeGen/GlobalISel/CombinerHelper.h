@@ -822,6 +822,9 @@ public:
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
+  /// Combine select to integer min/max.
+  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
@@ -961,9 +964,6 @@ private:
   bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
-
-  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
-  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
