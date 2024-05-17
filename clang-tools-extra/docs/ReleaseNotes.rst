@@ -94,6 +94,8 @@ Improvements to clang-query
   from an external file, allowing the cost of reading the compilation database
   and building the AST to be imposed just once for faster prototyping.
 
+- Removed support for ``enable output srcloc``. Fixes #GH82591
+
 Improvements to clang-rename
 ----------------------------
 

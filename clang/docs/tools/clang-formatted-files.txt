@@ -252,7 +252,6 @@ clang/include/clang/Tooling/CompilationDatabasePluginRegistry.h
 clang/include/clang/Tooling/DiagnosticsYaml.h
 clang/include/clang/Tooling/Execution.h
 clang/include/clang/Tooling/JSONCompilationDatabase.h
-clang/include/clang/Tooling/NodeIntrospection.h
 clang/include/clang/Tooling/Refactoring.h
 clang/include/clang/Tooling/StandaloneExecution.h
 clang/include/clang/Tooling/ToolExecutorPluginRegistry.h
@@ -562,15 +561,11 @@ clang/lib/Tooling/Execution.cpp
 clang/lib/Tooling/ExpandResponseFilesCompilationDatabase.cpp
 clang/lib/Tooling/FixIt.cpp
 clang/lib/Tooling/GuessTargetAndModeCompilationDatabase.cpp
-clang/lib/Tooling/NodeIntrospection.cpp
 clang/lib/Tooling/StandaloneExecution.cpp
 clang/lib/Tooling/DependencyScanning/DependencyScanningFilesystem.cpp
 clang/lib/Tooling/DependencyScanning/DependencyScanningService.cpp
 clang/lib/Tooling/DependencyScanning/DependencyScanningTool.cpp
 clang/lib/Tooling/DependencyScanning/ModuleDepCollector.cpp
-clang/lib/Tooling/DumpTool/APIData.h
-clang/lib/Tooling/DumpTool/ASTSrcLocProcessor.h
-clang/lib/Tooling/DumpTool/ClangSrcLocDump.cpp
 clang/lib/Tooling/Inclusions/HeaderIncludes.cpp
 clang/lib/Tooling/Inclusions/IncludeStyle.cpp
 clang/lib/Tooling/Inclusions/StandardLibrary.cpp
