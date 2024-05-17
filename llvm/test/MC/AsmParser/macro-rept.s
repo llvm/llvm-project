@@ -3,6 +3,8 @@
 .rept 2
     .long 1
 .endr
+# 3 "a.s"
+/// Test line marker after .endr \n.
 
 .rept 3
 .rept 2
