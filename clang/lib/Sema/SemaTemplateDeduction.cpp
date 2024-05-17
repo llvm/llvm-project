@@ -5638,7 +5638,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S, SourceLocation Loc,
 /// function templates.
 ///
 /// \param NumCallArguments1 The number of arguments in the call to FT1, used
-/// only when \c TPOC is \c TPOC_Call.
+/// only when \c TPOC is \c TPOC_Call. Does not include the object argument when
+/// calling a member function.
 ///
 /// \param RawObj1Ty The type of the object parameter of FT1 if a member
 /// function only used if \c TPOC is \c TPOC_Call and FT1 is a Function
@@ -5707,7 +5708,11 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
                                               IsRValRef1);
       Args2.push_back(Obj2Ty);
     }
-    size_t NumComparedArguments = NumCallArguments1 + ShouldConvert1;
+    size_t NumComparedArguments = NumCallArguments1;
+    // Either added an argument above or the prototype includes an explicit
+    // object argument we need to count
+    if (Method1)
+      ++NumComparedArguments;
 
     Args1.insert(Args1.end(), Proto1->param_type_begin(),
                  Proto1->param_type_end());
