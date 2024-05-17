@@ -114,6 +114,7 @@
 %include "lldb/API/SBHostOS.h"
 %include "lldb/API/SBInstruction.h"
 %include "lldb/API/SBInstructionList.h"
+%include "lldb/API/SBLanguages.h"
 %include "lldb/API/SBLanguageRuntime.h"
 %include "lldb/API/SBLaunchInfo.h"
 %include "lldb/API/SBLineEntry.h"
