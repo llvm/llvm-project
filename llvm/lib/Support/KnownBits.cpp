@@ -774,8 +774,8 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
-KnownBits avgFloorCeilCompute(const KnownBits &LHS, const KnownBits &RHS,
-                              bool IsCeil, bool IsSigned) {
+KnownBits avgCompute(const KnownBits &LHS, const KnownBits &RHS, bool IsCeil,
+                     bool IsSigned) {
   KnownBits Known = LHS;
   KnownBits Known2 = RHS;
   unsigned BitWidth = Known.getBitWidth();
