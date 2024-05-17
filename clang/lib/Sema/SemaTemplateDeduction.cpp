@@ -139,13 +139,15 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     SmallVectorImpl<DeducedTemplateArgument> &Deduced, unsigned TDF,
     bool PartialOrdering = false, bool DeducedFromArrayBound = false);
 
+enum class PackFold { ParameterToArgument, ArgumentToParameter };
 static TemplateDeductionResult
 DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
                         ArrayRef<TemplateArgument> Ps,
                         ArrayRef<TemplateArgument> As,
                         TemplateDeductionInfo &Info,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-                        bool NumberOfArgumentsMustMatch);
+                        bool NumberOfArgumentsMustMatch,
+                        PackFold PackFold = PackFold::ParameterToArgument);
 
 static void MarkUsedTemplateParameters(ASTContext &Ctx,
                                        const TemplateArgument &TemplateArg,
@@ -2550,7 +2552,9 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
                         ArrayRef<TemplateArgument> As,
                         TemplateDeductionInfo &Info,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-                        bool NumberOfArgumentsMustMatch) {
+                        bool NumberOfArgumentsMustMatch, PackFold PackFold) {
+  if (PackFold == PackFold::ArgumentToParameter)
+    std::swap(Ps, As);
   // C++0x [temp.deduct.type]p9:
   //   If the template argument list of P contains a pack expansion that is not
   //   the last template argument, the entire template argument list is a
@@ -2581,8 +2585,11 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
         return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
       // Perform deduction for this Pi/Ai pair.
-      if (auto Result = DeduceTemplateArguments(S, TemplateParams, P,
-                                                As[ArgIdx], Info, Deduced);
+      TemplateArgument Pi = P, Ai = As[ArgIdx];
+      if (PackFold == PackFold::ArgumentToParameter)
+        std::swap(Pi, Ai);
+      if (auto Result =
+              DeduceTemplateArguments(S, TemplateParams, Pi, Ai, Info, Deduced);
           Result != TemplateDeductionResult::Success)
         return Result;
 
@@ -2609,9 +2616,12 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     for (; hasTemplateArgumentForDeduction(As, ArgIdx) &&
            PackScope.hasNextElement();
          ++ArgIdx) {
+      TemplateArgument Pi = Pattern, Ai = As[ArgIdx];
+      if (PackFold == PackFold::ArgumentToParameter)
+        std::swap(Pi, Ai);
       // Deduce template arguments from the pattern.
-      if (auto Result = DeduceTemplateArguments(S, TemplateParams, Pattern,
-                                                As[ArgIdx], Info, Deduced);
+      if (auto Result =
+              DeduceTemplateArguments(S, TemplateParams, Pi, Ai, Info, Deduced);
           Result != TemplateDeductionResult::Success)
         return Result;
 
@@ -5628,7 +5638,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S, SourceLocation Loc,
 /// function templates.
 ///
 /// \param NumCallArguments1 The number of arguments in the call to FT1, used
-/// only when \c TPOC is \c TPOC_Call.
+/// only when \c TPOC is \c TPOC_Call. Does not include the object argument when
+/// calling a member function.
 ///
 /// \param RawObj1Ty The type of the object parameter of FT1 if a member
 /// function only used if \c TPOC is \c TPOC_Call and FT1 is a Function
@@ -5697,7 +5708,11 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
                                               IsRValRef1);
       Args2.push_back(Obj2Ty);
     }
-    size_t NumComparedArguments = NumCallArguments1 + ShouldConvert1;
+    size_t NumComparedArguments = NumCallArguments1;
+    // Either added an argument above or the prototype includes an explicit
+    // object argument we need to count
+    if (Method1)
+      ++NumComparedArguments;
 
     Args1.insert(Args1.end(), Proto1->param_type_begin(),
                  Proto1->param_type_end());
@@ -6299,7 +6314,8 @@ bool Sema::isMoreSpecializedThanPrimary(
 }
 
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
-     TemplateParameterList *P, TemplateDecl *AArg, SourceLocation Loc) {
+    TemplateParameterList *P, TemplateDecl *AArg, SourceLocation Loc,
+    bool IsDeduced) {
   // C++1z [temp.arg.template]p4: (DR 150)
   //   A template template-parameter P is at least as specialized as a
   //   template template-argument A if, given the following rewrite to two
@@ -6309,11 +6325,10 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   // equivalent partial ordering by performing deduction directly on
   // the template parameter lists of the template template parameters.
   //
-  //   Given an invented class template X with the template parameter list of
-  //   A (including default arguments):
-  TemplateName X = Context.getCanonicalTemplateName(TemplateName(AArg));
   TemplateParameterList *A = AArg->getTemplateParameters();
 
+  //   Given an invented class template X with the template parameter list of
+  //   A (including default arguments):
   //    - Each function template has a single function parameter whose type is
   //      a specialization of X with template arguments corresponding to the
   //      template parameters from the respective function template
@@ -6356,14 +6371,43 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
       return false;
   }
 
-  QualType AType = Context.getCanonicalTemplateSpecializationType(X, AArgs);
-  QualType PType = Context.getCanonicalTemplateSpecializationType(X, PArgs);
+  // Determine whether P1 is at least as specialized as P2.
+  TemplateDeductionInfo Info(Loc, A->getDepth());
+  SmallVector<DeducedTemplateArgument, 4> Deduced;
+  Deduced.resize(A->size());
 
   //   ... the function template corresponding to P is at least as specialized
   //   as the function template corresponding to A according to the partial
   //   ordering rules for function templates.
-  TemplateDeductionInfo Info(Loc, A->getDepth());
-  return isAtLeastAsSpecializedAs(*this, PType, AType, AArg, Info);
+
+  // Provisional resolution for CWG2398: Regarding temp.arg.template]p4, when
+  // applying the partial ordering rules for function templates on
+  // the rewritten template template parameters:
+  //   - In a deduced context, the matching of packs versus fixed-size needs to
+  //   be inverted between Ps and As. On non-deduced context, matching needs to
+  //   happen both ways, according to [temp.arg.template]p3, but this is
+  //   currently implemented as a special case elsewhere.
+  if (::DeduceTemplateArguments(*this, A, AArgs, PArgs, Info, Deduced,
+                                /*NumberOfArgumentsMustMatch=*/false,
+                                IsDeduced ? PackFold::ArgumentToParameter
+                                          : PackFold::ParameterToArgument) !=
+      TemplateDeductionResult::Success)
+    return false;
+
+  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
+  Sema::InstantiatingTemplate Inst(*this, Info.getLocation(), AArg, DeducedArgs,
+                                   Info);
+  if (Inst.isInvalid())
+    return false;
+
+  bool AtLeastAsSpecialized;
+  runWithSufficientStackSpace(Info.getLocation(), [&] {
+    AtLeastAsSpecialized =
+        ::FinishTemplateArgumentDeduction(
+            *this, AArg, /*IsPartialOrdering=*/true, PArgs, Deduced, Info) ==
+        TemplateDeductionResult::Success;
+  });
+  return AtLeastAsSpecialized;
 }
 
 namespace {

@@ -5653,6 +5653,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
           /*UpdateArgsWithConversions=*/false))
     return ExprError();
 
+  DiagnoseUseOfDecl(NamedConcept, ConceptNameInfo.getLoc());
+
   auto *CSD = ImplicitConceptSpecializationDecl::Create(
       Context, NamedConcept->getDeclContext(), NamedConcept->getLocation(),
       CanonicalConverted);
@@ -6554,7 +6556,8 @@ bool Sema::CheckTemplateArgument(
 
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion:
-    if (CheckTemplateTemplateArgument(TempParm, Params, Arg))
+    if (CheckTemplateTemplateArgument(TempParm, Params, Arg,
+                                      /*IsDeduced=*/CTAK != CTAK_Specified))
       return true;
 
     SugaredConverted.push_back(Arg.getArgument());
@@ -8472,7 +8475,8 @@ static void DiagnoseTemplateParameterListArityMismatch(
 /// It returns true if an error occurred, and false otherwise.
 bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
                                          TemplateParameterList *Params,
-                                         TemplateArgumentLoc &Arg) {
+                                         TemplateArgumentLoc &Arg,
+                                         bool IsDeduced) {
   TemplateName Name = Arg.getArgument().getAsTemplateOrTemplatePattern();
   TemplateDecl *Template = Name.getAsTemplateDecl();
   if (!Template) {
@@ -8524,8 +8528,8 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
         !Template->hasAssociatedConstraints())
       return false;
 
-    if (isTemplateTemplateParameterAtLeastAsSpecializedAs(Params, Template,
-                                                          Arg.getLocation())) {
+    if (isTemplateTemplateParameterAtLeastAsSpecializedAs(
+            Params, Template, Arg.getLocation(), IsDeduced)) {
       // P2113
       // C++20[temp.func.order]p2
       //   [...] If both deductions succeed, the partial ordering selects the
@@ -9857,7 +9861,8 @@ Decl *Sema::ActOnTemplateDeclarator(Scope *S,
 
 Decl *Sema::ActOnConceptDefinition(
     Scope *S, MultiTemplateParamsArg TemplateParameterLists,
-    const IdentifierInfo *Name, SourceLocation NameLoc, Expr *ConstraintExpr) {
+    const IdentifierInfo *Name, SourceLocation NameLoc, Expr *ConstraintExpr,
+    const ParsedAttributesView &Attrs) {
   DeclContext *DC = CurContext;
 
   if (!DC->getRedeclContext()->isFileContext()) {
@@ -9919,6 +9924,9 @@ Decl *Sema::ActOnConceptDefinition(
   ActOnDocumentableDecl(NewDecl);
   if (AddToScope)
     PushOnScopeChains(NewDecl, S);
+
+  ProcessDeclAttributeList(S, NewDecl, Attrs);
+
   return NewDecl;
 }
 
@@ -10492,7 +10500,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // specialization, with the template arguments from the previous
   // specialization.
   // Take copies of (semantic and syntactic) template argument lists.
-  const TemplateArgumentList *TemplArgs = TemplateArgumentList::CreateCopy(
+  TemplateArgumentList *TemplArgs = TemplateArgumentList::CreateCopy(
       Context, Specialization->getTemplateSpecializationArgs()->asArray());
   FD->setFunctionTemplateSpecialization(
       Specialization->getPrimaryTemplate(), TemplArgs, /*InsertPos=*/nullptr,
