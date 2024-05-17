@@ -351,7 +351,7 @@ def AMDGPUReadlaneOp : SDTypeProfile<1, 2, [
 ]>;
 
 def AMDGPUDWritelaneOp : SDTypeProfile<1, 3, [
-  SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<0, 3>,
+  SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<0, 3>
 ]>;
 
 def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", AMDGPUReadlaneOp>;
