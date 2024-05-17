@@ -5624,20 +5624,27 @@ MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
       return nullptr;
     }
 
-    if (Lexer.is(AsmToken::Identifier)) {
-      StringRef Ident = getTok().getIdentifier();
-      if (Ident == ".rep" || Ident == ".rept" || Ident == ".irp" ||
-          Ident == ".irpc") {
-        ++NestLevel;
-      } else if (Ident == ".endr") {
-        if (NestLevel == 0) {
-          EndToken = getTok();
-          Lex();
-          if (!parseEOL())
-            break;
+    if (Lexer.is(AsmToken::Identifier) &&
+        (getTok().getIdentifier() == ".rep" ||
+         getTok().getIdentifier() == ".rept" ||
+         getTok().getIdentifier() == ".irp" ||
+         getTok().getIdentifier() == ".irpc")) {
+      ++NestLevel;
+    }
+
+    // Otherwise, check whether we have reached the .endr.
+    if (Lexer.is(AsmToken::Identifier) && getTok().getIdentifier() == ".endr") {
+      if (NestLevel == 0) {
+        EndToken = getTok();
+        Lex();
+        if (Lexer.isNot(AsmToken::EndOfStatement)) {
+          printError(getTok().getLoc(),
+                     "unexpected token in '.endr' directive");
+          return nullptr;
         }
-        --NestLevel;
+        break;
       }
+      --NestLevel;
     }
 
     // Otherwise, scan till the end of the statement.
