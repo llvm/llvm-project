@@ -3875,8 +3875,6 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
   }
 }
 
-void Process::SendAsyncInterrupt() { SendAsyncInterrupt(nullptr); }
-
 void Process::SendAsyncInterrupt(Thread *thread) {
   if (thread != nullptr)
     m_interrupt_tid = thread->GetProtocolID();

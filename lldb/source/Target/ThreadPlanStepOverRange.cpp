@@ -349,7 +349,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
 
 void ThreadPlanStepOverRange::DidPush() {
   if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
-    ThreadPlanSingleThreadTimeout::CreateNew(GetThread());
+    ThreadPlanSingleThreadTimeout::CreateNew(GetThread(), m_timeout_info);
 }
 
 bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
@@ -430,6 +430,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
     }
   }
   if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
-    ThreadPlanSingleThreadTimeout::ResetFromPrevState(GetThread());
+    ThreadPlanSingleThreadTimeout::ResetFromPrevState(GetThread(),
+                                                      m_timeout_info);
   return true;
 }

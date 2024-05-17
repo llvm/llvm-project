@@ -1322,10 +1322,14 @@ public:
                          uint32_t start_frame, uint32_t num_frames,
                          uint32_t num_frames_with_source, bool stop_format);
 
-  void SendAsyncInterrupt();
-
-  // Send an async interrupt and receive stop from a specific /p thread.
-  void SendAsyncInterrupt(Thread *thread);
+  /// Send an async interrupt request.
+  ///
+  /// If \a thread is specified the async interrupt stop will be attributed the
+  /// specified thread.
+  ///
+  /// \param[in] thread
+  ///     The thread from which to attribute the async interrupt stop to.
+  void SendAsyncInterrupt(Thread *thread = nullptr);
 
   // Notify this process class that modules got loaded.
   //

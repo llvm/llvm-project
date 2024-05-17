@@ -24,28 +24,20 @@
 using namespace lldb_private;
 using namespace lldb;
 
-std::mutex ThreadPlanSingleThreadTimeout::s_mutex;
-ThreadPlanSingleThreadTimeout *ThreadPlanSingleThreadTimeout::s_instance =
-    nullptr;
-ThreadPlanSingleThreadTimeout::State
-    ThreadPlanSingleThreadTimeout::s_prev_state = State::WaitTimeout;
-
-ThreadPlanSingleThreadTimeout::ThreadPlanSingleThreadTimeout(Thread &thread)
+ThreadPlanSingleThreadTimeout::ThreadPlanSingleThreadTimeout(Thread &thread,
+                                                             TimeoutInfo &info)
     : ThreadPlan(ThreadPlan::eKindSingleThreadTimeout, "Single thread timeout",
                  thread, eVoteNo, eVoteNoOpinion),
-      m_state(State::WaitTimeout), m_exit_flag(false) {
-  std::lock_guard<std::mutex> lock(s_mutex);
+      m_info(info), m_state(State::WaitTimeout), m_exit_flag(false) {
   m_timer_thread = std::thread(TimeoutThreadFunc, this);
-  s_instance = this;
-  m_state = s_prev_state;
+  m_info.m_instance = this;
+  m_state = m_info.m_last_state;
 }
 
 ThreadPlanSingleThreadTimeout::~ThreadPlanSingleThreadTimeout() {
-  std::lock_guard<std::mutex> lock(s_mutex);
-  s_instance = nullptr;
+  m_info.m_instance = nullptr;
   if (m_state == State::Done)
     m_state = State::WaitTimeout;
-  s_prev_state = m_state;
 }
 
 void ThreadPlanSingleThreadTimeout::GetDescription(
@@ -64,22 +56,20 @@ std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
   }
 }
 
-void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread) {
+void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread,
+                                              TimeoutInfo &info) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
+    return;
+
+  if (info.m_instance != nullptr)
     return;
 
   // Do not create timeout if we are not stopping other threads.
   if (!thread.GetCurrentPlan()->StopOthers())
     return;
 
-  if (ThreadPlanSingleThreadTimeout::IsAlive())
-    return;
-  {
-    std::lock_guard<std::mutex> lock(s_mutex);
-    s_prev_state = State::WaitTimeout;
-  }
-  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
+  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread, info);
   ThreadPlanSP thread_plan_sp(timeout_plan);
   auto status = thread.QueueThreadPlan(thread_plan_sp,
                                        /*abort_other_plans*/ false);
@@ -87,19 +77,20 @@ void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread) {
   LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout pushing a brand new one");
 }
 
-void ThreadPlanSingleThreadTimeout::ResetFromPrevState(Thread &thread) {
+void ThreadPlanSingleThreadTimeout::ResetFromPrevState(Thread &thread,
+                                                       TimeoutInfo &info) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
     return;
 
-  if (ThreadPlanSingleThreadTimeout::IsAlive())
+  if (info.m_instance != nullptr)
     return;
 
   // Do not create timeout if we are not stopping other threads.
   if (!thread.GetCurrentPlan()->StopOthers())
     return;
 
-  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
+  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread, info);
   ThreadPlanSP thread_plan_sp(timeout_plan);
   auto status = thread.QueueThreadPlan(thread_plan_sp,
                                        /*abort_other_plans*/ false);
@@ -112,8 +103,8 @@ bool ThreadPlanSingleThreadTimeout::WillStop() {
   LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout::WillStop().");
 
   // Reset the state during stop.
-  std::lock_guard<std::mutex> lock(s_mutex);
-  s_prev_state = State::WaitTimeout;
+  m_info.m_last_state = State::WaitTimeout;
+  m_info.m_instance = this;
   return true;
 }
 
@@ -226,9 +217,4 @@ void ThreadPlanSingleThreadTimeout::HandleTimeout() {
   // Private state thread will only send async interrupt
   // in running state so no need to check state here.
   m_process.SendAsyncInterrupt(&GetThread());
-}
-
-bool ThreadPlanSingleThreadTimeout::IsAlive() {
-  std::lock_guard<std::mutex> lock(s_mutex);
-  return s_instance != nullptr;
 }

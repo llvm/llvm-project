@@ -22,9 +22,9 @@ namespace lldb_private {
 //
 // Thread plan used by single thread execution to issue timeout. This is useful
 // to detect potential deadlock in single thread execution. The timeout measures
-// the elapsed time from the last internal stop and got reset by each internal
-// stops to ensure we are accurately detecting execution not moving forward.
-// This means this thread plan  can be created/destroyed multiple times by the
+// the elapsed time from the last internal stop and gets reset by each internal
+// stop to ensure we are accurately detecting execution not moving forward.
+// This means this thread plan may be created/destroyed multiple times by the
 // parent execution plan.
 //
 // When timeout happens, the thread plan resolves the potential deadlock by
@@ -32,13 +32,24 @@ namespace lldb_private {
 // threads execution are resumed to resolve the potential deadlock.
 //
 class ThreadPlanSingleThreadTimeout : public ThreadPlan {
+  enum class State {
+    WaitTimeout,    // Waiting for timeout.
+    AsyncInterrupt, // Async interrupt has been issued.
+    Done,           // Finished resume all threads.
+  };
+
 public:
+  struct TimeoutInfo {
+    ThreadPlanSingleThreadTimeout *m_instance = nullptr;
+    ThreadPlanSingleThreadTimeout::State m_last_state = State::WaitTimeout;
+  };
+
   ~ThreadPlanSingleThreadTimeout() override;
 
   // Create a new instance from fresh new state.
-  static void CreateNew(Thread &thread);
+  static void CreateNew(Thread &thread, TimeoutInfo &info);
   // Reset and create a new instance from the previous state.
-  static void ResetFromPrevState(Thread &thread);
+  static void ResetFromPrevState(Thread &thread, TimeoutInfo &info);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ValidatePlan(Stream *error) override { return true; }
@@ -57,19 +68,7 @@ public:
   bool StopOthers() override;
 
 private:
-  ThreadPlanSingleThreadTimeout(Thread &thread);
-
-  static bool IsAlive();
-
-  enum class State {
-    WaitTimeout,    // Waiting for timeout.
-    AsyncInterrupt, // Async interrupt has been issued.
-    Done,           // Finished resume all threads.
-  };
-
-  static std::mutex s_mutex;
-  static ThreadPlanSingleThreadTimeout *s_instance;
-  static State s_prev_state;
+  ThreadPlanSingleThreadTimeout(Thread &thread, TimeoutInfo &info);
 
   bool HandleEvent(Event *event_ptr);
   void HandleTimeout();
@@ -80,7 +79,11 @@ private:
   const ThreadPlanSingleThreadTimeout &
   operator=(const ThreadPlanSingleThreadTimeout &) = delete;
 
+  TimeoutInfo &m_info; // Reference to controlling ThreadPlan's TimeoutInfo.
   State m_state;
+
+  // Lock for m_wakeup_cv and m_exit_flag between thread plan thread and timer
+  // thread
   std::mutex m_mutex;
   std::condition_variable m_wakeup_cv;
   // Whether the timer thread should exit or not.

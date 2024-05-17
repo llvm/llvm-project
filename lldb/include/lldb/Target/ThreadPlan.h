@@ -591,7 +591,6 @@ public:
   const Status &GetStatus() { return m_status; }
 
 protected:
-  friend class ThreadPlanSingleThreadTimeout;
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;

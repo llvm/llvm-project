@@ -12,6 +12,7 @@
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanSingleThreadTimeout.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 
 namespace lldb_private {
@@ -50,6 +51,7 @@ private:
 
   bool m_first_resume;
   lldb::RunMode m_run_mode;
+  ThreadPlanSingleThreadTimeout::TimeoutInfo m_timeout_info;
 
   ThreadPlanStepOverRange(const ThreadPlanStepOverRange &) = delete;
   const ThreadPlanStepOverRange &
