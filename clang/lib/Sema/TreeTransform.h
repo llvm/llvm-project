@@ -1550,7 +1550,8 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildCoreturnStmt(SourceLocation CoreturnLoc, Expr *Result,
                                  bool IsImplicit) {
-    return getSema().Coroutine().BuildCoreturnStmt(CoreturnLoc, Result, IsImplicit);
+    return getSema().Coroutine().BuildCoreturnStmt(CoreturnLoc, Result,
+                                                   IsImplicit);
   }
 
   /// Build a new co_await expression.
@@ -1573,12 +1574,12 @@ public:
           CoawaitLoc, Operand, OpCoawaitLookup);
       if (Suspend.isInvalid())
         return ExprError();
-      return getSema().Coroutine().BuildResolvedCoawaitExpr(CoawaitLoc, Operand,
-                                                Suspend.get(), true);
+      return getSema().Coroutine().BuildResolvedCoawaitExpr(
+          CoawaitLoc, Operand, Suspend.get(), true);
     }
 
     return getSema().Coroutine().BuildUnresolvedCoawaitExpr(CoawaitLoc, Operand,
-                                                OpCoawaitLookup);
+                                                            OpCoawaitLookup);
   }
 
   /// Build a new co_await expression.
@@ -1588,7 +1589,8 @@ public:
   ExprResult RebuildDependentCoawaitExpr(SourceLocation CoawaitLoc,
                                          Expr *Result,
                                          UnresolvedLookupExpr *Lookup) {
-    return getSema().Coroutine().BuildUnresolvedCoawaitExpr(CoawaitLoc, Result, Lookup);
+    return getSema().Coroutine().BuildUnresolvedCoawaitExpr(CoawaitLoc, Result,
+                                                            Lookup);
   }
 
   /// Build a new co_yield expression.

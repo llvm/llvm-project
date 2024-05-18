@@ -22,8 +22,8 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/SemaBase.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaBase.h"
 
 namespace clang {
 class SemaCoroutine : public SemaBase {

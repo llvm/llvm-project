@@ -1466,7 +1466,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     SourceLocation CoawaitLoc = ConsumeToken();
     Res = ParseCastExpression(AnyCastExpr);
     if (!Res.isInvalid())
-      Res = Actions.Coroutine().ActOnCoawaitExpr(getCurScope(), CoawaitLoc, Res.get());
+      Res = Actions.Coroutine().ActOnCoawaitExpr(getCurScope(), CoawaitLoc,
+                                                 Res.get());
     return Res;
   }
 

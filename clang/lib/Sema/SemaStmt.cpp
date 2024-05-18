@@ -2474,8 +2474,8 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
       // FIXME: getCurScope() should not be used during template instantiation.
       // We should pick up the set of unqualified lookup results for operator
       // co_await during the initial parse.
-      *BeginExpr = SemaRef.Coroutine().ActOnCoawaitExpr(SemaRef.getCurScope(), ColonLoc,
-                                            BeginExpr->get());
+      *BeginExpr = SemaRef.Coroutine().ActOnCoawaitExpr(
+          SemaRef.getCurScope(), ColonLoc, BeginExpr->get());
       if (BeginExpr->isInvalid())
         return Sema::FRS_DiagnosticIssued;
     }

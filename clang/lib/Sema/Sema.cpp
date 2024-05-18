@@ -43,8 +43,8 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -221,8 +221,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CodeSegStack(nullptr), StrictGuardStackCheckStack(false),
       FpPragmaStack(FPOptionsOverride()), CurInitSeg(nullptr),
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
-      IdResolver(pp),
-      OriginalLexicalContext(nullptr), StdInitializerList(nullptr),
+      IdResolver(pp), OriginalLexicalContext(nullptr),
+      StdInitializerList(nullptr),
       FullyCheckedComparisonCategories(
           static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
       StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),

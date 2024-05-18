@@ -251,8 +251,9 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
 
 /// Build a call to 'operator co_await' if there is a suitable operator for
 /// the given expression.
-ExprResult SemaCoroutine::BuildOperatorCoawaitCall(SourceLocation Loc, Expr *E,
-                                          UnresolvedLookupExpr *Lookup) {
+ExprResult
+SemaCoroutine::BuildOperatorCoawaitCall(SourceLocation Loc, Expr *E,
+                                        UnresolvedLookupExpr *Lookup) {
   UnresolvedSet<16> Functions;
   Functions.append(Lookup->decls_begin(), Lookup->decls_end());
   return SemaRef.CreateOverloadedUnaryOp(Loc, UO_Coawait, Functions, E);
@@ -263,8 +264,8 @@ static ExprResult buildOperatorCoawaitCall(Sema &SemaRef, Scope *S,
   ExprResult R = SemaRef.Coroutine().BuildOperatorCoawaitLookupExpr(S, Loc);
   if (R.isInvalid())
     return ExprError();
-  return SemaRef.Coroutine().BuildOperatorCoawaitCall(Loc, E,
-                                          cast<UnresolvedLookupExpr>(R.get()));
+  return SemaRef.Coroutine().BuildOperatorCoawaitCall(
+      Loc, E, cast<UnresolvedLookupExpr>(R.get()));
 }
 
 static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
@@ -494,9 +495,10 @@ VarDecl *SemaCoroutine::buildCoroutinePromise(SourceLocation Loc) {
   if (T.isNull())
     return nullptr;
 
-  auto *VD = VarDecl::Create(Context, FD, FD->getLocation(), FD->getLocation(),
-                             &SemaRef.PP.getIdentifierTable().get("__promise"), T,
-                             Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
+  auto *VD =
+      VarDecl::Create(Context, FD, FD->getLocation(), FD->getLocation(),
+                      &SemaRef.PP.getIdentifierTable().get("__promise"), T,
+                      Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
   VD->setImplicit();
   SemaRef.CheckVariableDeclarationType(VD);
   if (VD->isInvalidDecl())
@@ -535,9 +537,9 @@ VarDecl *SemaCoroutine::buildCoroutinePromise(SourceLocation Loc) {
     // frame, use that reference.
     auto *MoveDecl =
         cast<VarDecl>(cast<DeclStmt>(Move->second)->getSingleDecl());
-    RefExpr =
-        SemaRef.BuildDeclRefExpr(MoveDecl, MoveDecl->getType().getNonReferenceType(),
-                         ExprValueKind::VK_LValue, FD->getLocation());
+    RefExpr = SemaRef.BuildDeclRefExpr(
+        MoveDecl, MoveDecl->getType().getNonReferenceType(),
+        ExprValueKind::VK_LValue, FD->getLocation());
     if (RefExpr.isInvalid())
       return nullptr;
     CtorArgExprs.push_back(RefExpr.get());
@@ -688,7 +690,7 @@ bool SemaCoroutine::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
 }
 
 bool SemaCoroutine::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
-                                   StringRef Keyword) {
+                                            StringRef Keyword) {
   // Ignore previous expr evaluation contexts.
   EnterExpressionEvaluationContext PotentiallyEvaluated(
       SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
@@ -718,7 +720,8 @@ bool SemaCoroutine::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
       return StmtError();
     Suspend = BuildResolvedCoawaitExpr(Loc, Operand.get(), Suspend.get(),
                                        /*IsImplicit*/ true);
-    Suspend = SemaRef.ActOnFinishFullExpr(Suspend.get(), /*DiscardedValue*/ false);
+    Suspend =
+        SemaRef.ActOnFinishFullExpr(Suspend.get(), /*DiscardedValue*/ false);
     if (Suspend.isInvalid()) {
       Diag(Loc, diag::note_coroutine_promise_suspend_implicitly_required)
           << ((Name == "initial_suspend") ? 0 : 1);
@@ -790,7 +793,8 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
   return true;
 }
 
-ExprResult SemaCoroutine::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
+ExprResult SemaCoroutine::ActOnCoawaitExpr(Scope *S, SourceLocation Loc,
+                                           Expr *E) {
   if (!checkSuspensionContext(SemaRef, Loc, "co_await"))
     return ExprError();
 
@@ -811,7 +815,8 @@ ExprResult SemaCoroutine::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E
                                    cast<UnresolvedLookupExpr>(Lookup.get()));
 }
 
-ExprResult SemaCoroutine::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
+ExprResult SemaCoroutine::BuildOperatorCoawaitLookupExpr(Scope *S,
+                                                         SourceLocation Loc) {
   DeclarationName OpName =
       SemaRef.Context.DeclarationNames.getCXXOperatorName(OO_Coawait);
   LookupResult Operators(SemaRef, OpName, SourceLocation(),
@@ -830,8 +835,9 @@ ExprResult SemaCoroutine::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocatio
 
 // Attempts to resolve and build a CoawaitExpr from "raw" inputs, bailing out to
 // DependentCoawaitExpr if needed.
-ExprResult SemaCoroutine::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
-                                            UnresolvedLookupExpr *Lookup) {
+ExprResult
+SemaCoroutine::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
+                                          UnresolvedLookupExpr *Lookup) {
   auto *FSI = checkCoroutineContext(SemaRef, Loc, "co_await");
   if (!FSI)
     return ExprError();
@@ -870,8 +876,9 @@ ExprResult SemaCoroutine::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *O
   return BuildResolvedCoawaitExpr(Loc, Operand, Awaiter.get());
 }
 
-ExprResult SemaCoroutine::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
-                                          Expr *Awaiter, bool IsImplicit) {
+ExprResult SemaCoroutine::BuildResolvedCoawaitExpr(SourceLocation Loc,
+                                                   Expr *Operand, Expr *Awaiter,
+                                                   bool IsImplicit) {
   auto *Coroutine = checkCoroutineContext(SemaRef, Loc, "co_await", IsImplicit);
   if (!Coroutine)
     return ExprError();
@@ -883,15 +890,16 @@ ExprResult SemaCoroutine::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Ope
   }
 
   if (Awaiter->getType()->isDependentType()) {
-    Expr *Res = new (SemaRef.Context)
-        CoawaitExpr(Loc, SemaRef.Context.DependentTy, Operand, Awaiter, IsImplicit);
+    Expr *Res = new (SemaRef.Context) CoawaitExpr(
+        Loc, SemaRef.Context.DependentTy, Operand, Awaiter, IsImplicit);
     return Res;
   }
 
   // If the expression is a temporary, materialize it as an lvalue so that we
   // can use it multiple times.
   if (Awaiter->isPRValue())
-    Awaiter = SemaRef.CreateMaterializeTemporaryExpr(Awaiter->getType(), Awaiter, true);
+    Awaiter = SemaRef.CreateMaterializeTemporaryExpr(Awaiter->getType(),
+                                                     Awaiter, true);
 
   // The location of the `co_await` token cannot be used when constructing
   // the member call expressions since it's before the location of `Expr`, which
@@ -911,7 +919,8 @@ ExprResult SemaCoroutine::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Ope
   return Res;
 }
 
-ExprResult SemaCoroutine::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
+ExprResult SemaCoroutine::ActOnCoyieldExpr(Scope *S, SourceLocation Loc,
+                                           Expr *E) {
   if (!checkSuspensionContext(SemaRef, Loc, "co_yield"))
     return ExprError();
 
@@ -921,8 +930,9 @@ ExprResult SemaCoroutine::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E
   }
 
   // Build yield_value call.
-  ExprResult Awaitable = buildPromiseCall(
-      SemaRef, SemaRef.getCurFunction()->CoroutinePromise, Loc, "yield_value", E);
+  ExprResult Awaitable =
+      buildPromiseCall(SemaRef, SemaRef.getCurFunction()->CoroutinePromise, Loc,
+                       "yield_value", E);
   if (Awaitable.isInvalid())
     return ExprError();
 
@@ -947,7 +957,8 @@ ExprResult SemaCoroutine::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   Expr *Operand = E;
 
   if (E->getType()->isDependentType()) {
-    Expr *Res = new (SemaRef.Context) CoyieldExpr(Loc, SemaRef.Context.DependentTy, Operand, E);
+    Expr *Res = new (SemaRef.Context)
+        CoyieldExpr(Loc, SemaRef.Context.DependentTy, Operand, E);
     return Res;
   }
 
@@ -957,19 +968,20 @@ ExprResult SemaCoroutine::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
     E = SemaRef.CreateMaterializeTemporaryExpr(E->getType(), E, true);
 
   // Build the await_ready, await_suspend, await_resume calls.
-  ReadySuspendResumeResult RSS = buildCoawaitCalls(
-      SemaRef, Coroutine->CoroutinePromise, Loc, E);
+  ReadySuspendResumeResult RSS =
+      buildCoawaitCalls(SemaRef, Coroutine->CoroutinePromise, Loc, E);
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res =
-      new (SemaRef.Context) CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
-                                RSS.Results[2], RSS.OpaqueValue);
+  Expr *Res = new (SemaRef.Context)
+      CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
+                  RSS.Results[2], RSS.OpaqueValue);
 
   return Res;
 }
 
-StmtResult SemaCoroutine::ActOnCoreturnStmt(Scope *S, SourceLocation Loc, Expr *E) {
+StmtResult SemaCoroutine::ActOnCoreturnStmt(Scope *S, SourceLocation Loc,
+                                            Expr *E) {
   if (!ActOnCoroutineBodyStart(S, Loc, "co_return")) {
     SemaRef.CorrectDelayedTyposInExpr(E);
     return StmtError();
@@ -978,7 +990,7 @@ StmtResult SemaCoroutine::ActOnCoreturnStmt(Scope *S, SourceLocation Loc, Expr *
 }
 
 StmtResult SemaCoroutine::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
-                                   bool IsImplicit) {
+                                            bool IsImplicit) {
   auto *FSI = checkCoroutineContext(SemaRef, Loc, "co_return", IsImplicit);
   if (!FSI)
     return StmtError();
@@ -1002,7 +1014,8 @@ StmtResult SemaCoroutine::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   if (PC.isInvalid())
     return StmtError();
 
-  Expr *PCE = SemaRef.ActOnFinishFullExpr(PC.get(), /*DiscardedValue*/ false).get();
+  Expr *PCE =
+      SemaRef.ActOnFinishFullExpr(PC.get(), /*DiscardedValue*/ false).get();
 
   Stmt *Res = new (SemaRef.Context) CoreturnStmt(Loc, E, PCE, IsImplicit);
   return Res;
@@ -1088,7 +1101,6 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   S.MarkFunctionReferenced(Loc, OperatorDelete);
   return true;
 }
-
 
 void SemaCoroutine::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   FunctionScopeInfo *Fn = SemaRef.getCurFunction();
@@ -1660,7 +1672,7 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
       return false;
   } else if (HasRVoid) {
     Fallthrough = S.Coroutine().BuildCoreturnStmt(FD.getLocation(), nullptr,
-                                      /*IsImplicit=*/true);
+                                                  /*IsImplicit=*/true);
     Fallthrough = S.ActOnFinishFullStmt(Fallthrough.get());
     if (Fallthrough.isInvalid())
       return false;
@@ -1885,9 +1897,9 @@ bool SemaCoroutine::buildCoroutineParameterMoves(SourceLocation Loc) {
     // Preserve the referenced state for unused parameter diagnostics.
     bool DeclReferenced = PD->isReferenced();
 
-    ExprResult PDRefExpr =
-        SemaRef.BuildDeclRefExpr(PD, PD->getType().getNonReferenceType(),
-                         ExprValueKind::VK_LValue, Loc); // FIXME: scope?
+    ExprResult PDRefExpr = SemaRef.BuildDeclRefExpr(
+        PD, PD->getType().getNonReferenceType(), ExprValueKind::VK_LValue,
+        Loc); // FIXME: scope?
 
     PD->setReferenced(DeclReferenced);
 
@@ -1907,7 +1919,8 @@ bool SemaCoroutine::buildCoroutineParameterMoves(SourceLocation Loc) {
     SemaRef.AddInitializerToDecl(D, CExpr, /*DirectInit=*/true);
 
     // Convert decl to a statement.
-    StmtResult Stmt = SemaRef.ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(D), Loc, Loc);
+    StmtResult Stmt =
+        SemaRef.ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(D), Loc, Loc);
     if (Stmt.isInvalid())
       return false;
 
@@ -1916,15 +1929,17 @@ bool SemaCoroutine::buildCoroutineParameterMoves(SourceLocation Loc) {
   return true;
 }
 
-StmtResult SemaCoroutine::BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs Args) {
+StmtResult
+SemaCoroutine::BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs Args) {
   CoroutineBodyStmt *Res = CoroutineBodyStmt::Create(SemaRef.Context, Args);
   if (!Res)
     return StmtError();
   return Res;
 }
 
-ClassTemplateDecl *SemaCoroutine::lookupCoroutineTraits(SourceLocation KwLoc,
-                                               SourceLocation FuncLoc) {
+ClassTemplateDecl *
+SemaCoroutine::lookupCoroutineTraits(SourceLocation KwLoc,
+                                     SourceLocation FuncLoc) {
   if (StdCoroutineTraitsCache)
     return StdCoroutineTraitsCache;
 
@@ -1959,10 +1974,12 @@ void SemaCoroutine::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
   // Allow some_promise_type::get_return_object().
-  if (SemaRef.CanBeGetReturnObject(FD) || SemaRef.CanBeGetReturnTypeOnAllocFailure(FD))
+  if (SemaRef.CanBeGetReturnObject(FD) ||
+      SemaRef.CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
 }
 
-SemaCoroutine::SemaCoroutine(Sema &S) : SemaBase(S), StdCoroutineTraitsCache(nullptr) {}
+SemaCoroutine::SemaCoroutine(Sema &S)
+    : SemaBase(S), StdCoroutineTraitsCache(nullptr) {}

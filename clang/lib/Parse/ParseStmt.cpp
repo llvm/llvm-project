@@ -2457,7 +2457,8 @@ StmtResult Parser::ParseReturnStatement() {
     }
   }
   if (IsCoreturn)
-    return Actions.Coroutine().ActOnCoreturnStmt(getCurScope(), ReturnLoc, R.get());
+    return Actions.Coroutine().ActOnCoreturnStmt(getCurScope(), ReturnLoc,
+                                                 R.get());
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 
