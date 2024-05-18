@@ -1309,7 +1309,7 @@ def select_to_minmax: GICombineRule<
 
 def select_to_iminmax: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
-  (match (G_ICMP $tst, $tst1, $x, $y),
+  (match (G_ICMP $tst, $tst1, $a, $b),
          (G_SELECT $root, $tst, $x, $y),
          [{ return Helper.matchSelectIMinMax(${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnMO(${root}, ${info}); }])>;

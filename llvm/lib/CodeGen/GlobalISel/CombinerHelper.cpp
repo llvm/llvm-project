@@ -6772,13 +6772,20 @@ bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
   if (CmpInst::isEquality(Pred))
     return false;
 
-  [[maybe_unused]] Register CmpLHS = Cmp->getLHSReg();
-  [[maybe_unused]] Register CmpRHS = Cmp->getRHSReg();
+  Register CmpLHS = Cmp->getLHSReg();
+  Register CmpRHS = Cmp->getRHSReg();
+
+  // We can swap CmpLHS and CmpRHS for higher hitrate.
+  if (True == CmpRHS && False == CmpLHS) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
 
   // (icmp X, Y) ? X : Y -> integer minmax.
   // see matchSelectPattern in ValueTracking.
   // Legality between G_SELECT and integer minmax can differ.
-  assert(True == CmpLHS && False == CmpRHS && "unexpected MIR pattern");
+  if (True != CmpLHS || False != CmpRHS)
+    return false;
 
   switch (Pred) {
   case ICmpInst::ICMP_UGT:
