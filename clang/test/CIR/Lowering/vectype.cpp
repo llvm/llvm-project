@@ -74,6 +74,18 @@ void vector_int_test(int x) {
   // CHECK: %[[#T64:]] = llvm.insertelement %[[#T61]], %[[#T63]][%[[#T62]] : i32] : vector<4xi32>
   // CHECK: llvm.store %[[#T64]], %[[#T3]] : vector<4xi32>, !llvm.ptr
 
+  // Compound assignment
+  a[x] += a[0];
+  // CHECK: %[[#LOADCA1:]] = llvm.load %{{[0-9]+}} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#RHSCA:]] = llvm.extractelement %[[#LOADCA1:]][%{{[0-9]+}} : i32] : vector<4xi32>
+  // CHECK: %[[#LOADCAIDX2:]] = llvm.load %{{[0-9]+}} : !llvm.ptr -> i32
+  // CHECK: %[[#LOADCAVEC3:]] = llvm.load %{{[0-9]+}} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#LHSCA:]] = llvm.extractelement %[[#LOADCAVEC3:]][%[[#LOADCAIDX2:]] : i32] : vector<4xi32>
+  // CHECK: %[[#SUMCA:]] = llvm.add %[[#LHSCA:]], %[[#RHSCA:]] : i32
+  // CHECK: %[[#LOADCAVEC4:]] = llvm.load %{{[0-9]+}} : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#RESULTCAVEC:]] = llvm.insertelement %[[#SUMCA:]], %[[#LOADCAVEC4:]][%[[#LOADCAIDX2:]] : i32] : vector<4xi32>
+  // CHECK: llvm.store %[[#RESULTCAVEC:]], %{{[0-9]+}} : vector<4xi32>, !llvm.ptr
+
   // Binary arithmetic operators.
   vi4 d = a + b;
   // CHECK: %[[#T65:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>

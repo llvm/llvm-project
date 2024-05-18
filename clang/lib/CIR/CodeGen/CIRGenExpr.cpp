@@ -646,6 +646,13 @@ RValue CIRGenFunction::buildLoadOfLValue(LValue LV, SourceLocation Loc) {
 
   if (LV.isSimple())
     return RValue::get(buildLoadOfScalar(LV, Loc));
+
+  if (LV.isVectorElt()) {
+    auto load = builder.createLoad(getLoc(Loc), LV.getVectorAddress());
+    return RValue::get(builder.create<mlir::cir::VecExtractOp>(
+        getLoc(Loc), load, LV.getVectorIdx()));
+  }
+
   llvm_unreachable("NYI");
 }
 
