@@ -565,7 +565,8 @@ private:
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
-  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context, DeclContext *DC);
+  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
+                                        const DeclContext *DC);
   uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
