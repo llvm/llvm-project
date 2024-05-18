@@ -26,6 +26,7 @@ static_assert(foo[2][2] == nullptr, "");
 static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
+constexpr int ZeroSizeArray[] = {};
 
 constexpr int SomeInt[] = {1};
 constexpr int getSomeInt() { return *SomeInt; }
