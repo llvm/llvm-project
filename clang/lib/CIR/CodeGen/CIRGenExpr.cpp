@@ -2555,9 +2555,18 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
       llvm_unreachable("NYI: Special treatment of 3-element vector load");
   }
 
-  mlir::cir::LoadOp Load = builder.create<mlir::cir::LoadOp>(
-      Loc, Addr.getElementType(), Addr.getPointer(), /* deref */ false,
-      Volatile, ::mlir::cir::MemOrderAttr{});
+  auto Ptr = Addr.getPointer();
+  auto ElemTy = Addr.getElementType();
+  if (ElemTy.isa<mlir::cir::VoidType>()) {
+    ElemTy = mlir::cir::IntType::get(builder.getContext(), 8, true);
+    auto ElemPtrTy = mlir::cir::PointerType::get(builder.getContext(), ElemTy);
+    Ptr = builder.create<mlir::cir::CastOp>(Loc, ElemPtrTy,
+                                            mlir::cir::CastKind::bitcast, Ptr);
+  }
+
+  mlir::cir::LoadOp Load =
+      builder.create<mlir::cir::LoadOp>(Loc, ElemTy, Ptr, /* deref */ false,
+                                        Volatile, ::mlir::cir::MemOrderAttr{});
 
   if (isNontemporal) {
     llvm_unreachable("NYI");

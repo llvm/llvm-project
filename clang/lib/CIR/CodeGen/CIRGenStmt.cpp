@@ -487,7 +487,7 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
       // Make sure not to return anything, but evaluate the expression
       // for side effects.
       if (RV) {
-        assert(0 && "not implemented");
+        buildAnyExpr(RV);
       }
     } else if (!RV) {
       // Do nothing (return value is left uninitialized)

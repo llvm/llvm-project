@@ -82,9 +82,33 @@ FP f7(FP a, int b) { return a - b; }
 // Similar to f7, just make sure it does not crash.
 FP f7_1(FP a, int b) { return (a -= b); }
 
-// FIXME: add support for the remaining ones.
-// void f8(void *a, int b) { return *(a + b); }
-// void f8_1(void *a, int b) { return a[b]; }
+void f8(void *a, int b) { return *(a + b); }
+// CIR-LABEL: f8
+// CIR: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR: %[[STRIDE:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR: cir.ptr_stride(%[[PTR]] : !cir.ptr<!void>, %[[STRIDE]] : !s32i)
+// CIR: cir.return
+
+// LLVM-LABEL: f8
+// LLVM: %[[PTR:.*]] = load ptr, ptr {{.*}}, align 8
+// LLVM: %[[TOEXT:.*]] = load i32, ptr {{.*}}, align 4
+// LLVM: %[[STRIDE:.*]] = sext i32 %[[TOEXT]] to i64
+// LLVM: getelementptr i8, ptr %[[PTR]], i64 %[[STRIDE]]
+// LLVM: ret void
+
+void f8_1(void *a, int b) { return a[b]; }
+// CIR-LABEL: f8_1
+// CIR: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR: %[[STRIDE:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR: cir.ptr_stride(%[[PTR]] : !cir.ptr<!void>, %[[STRIDE]] : !s32i)
+// CIR: cir.return
+
+// LLVM-LABEL: f8_1
+// LLVM: %[[PTR:.*]] = load ptr, ptr {{.*}}, align 8
+// LLVM: %[[TOEXT:.*]] = load i32, ptr {{.*}}, align 4
+// LLVM: %[[STRIDE:.*]] = sext i32 %[[TOEXT]] to i64
+// LLVM: getelementptr i8, ptr %[[PTR]], i64 %[[STRIDE]]
+// LLVM: ret void
 
 unsigned char *p(unsigned int x) {
   unsigned char *p;
