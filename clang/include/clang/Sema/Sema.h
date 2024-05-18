@@ -168,6 +168,7 @@ class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
 class SemaCodeCompletion;
+class SemaCoroutine;
 class SemaCUDA;
 class SemaHLSL;
 class SemaObjC;
@@ -989,6 +990,11 @@ public:
     return *CodeCompletionPtr;
   }
 
+  SemaCoroutine &Coroutine() {
+    assert(CoroutinePtr);
+    return *CoroutinePtr;
+  }
+
   SemaCUDA &CUDA() {
     assert(CUDAPtr);
     return *CUDAPtr;
@@ -1050,6 +1056,7 @@ private:
   mutable IdentifierInfo *Ident_super;
 
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
+  std::unique_ptr<SemaCoroutine> CoroutinePtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
@@ -2259,57 +2266,6 @@ private:
   /// Adds an expression to the set of gathered misaligned members.
   void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
                                      CharUnits Alignment);
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name C++ Coroutines
-  /// Implementations are in SemaCoroutine.cpp
-  ///@{
-
-public:
-  /// The C++ "std::coroutine_traits" template, which is defined in
-  /// \<coroutine_traits>
-  ClassTemplateDecl *StdCoroutineTraitsCache;
-
-  bool ActOnCoroutineBodyStart(Scope *S, SourceLocation KwLoc,
-                               StringRef Keyword);
-  ExprResult ActOnCoawaitExpr(Scope *S, SourceLocation KwLoc, Expr *E);
-  ExprResult ActOnCoyieldExpr(Scope *S, SourceLocation KwLoc, Expr *E);
-  StmtResult ActOnCoreturnStmt(Scope *S, SourceLocation KwLoc, Expr *E);
-
-  ExprResult BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc);
-  ExprResult BuildOperatorCoawaitCall(SourceLocation Loc, Expr *E,
-                                      UnresolvedLookupExpr *Lookup);
-  ExprResult BuildResolvedCoawaitExpr(SourceLocation KwLoc, Expr *Operand,
-                                      Expr *Awaiter, bool IsImplicit = false);
-  ExprResult BuildUnresolvedCoawaitExpr(SourceLocation KwLoc, Expr *Operand,
-                                        UnresolvedLookupExpr *Lookup);
-  ExprResult BuildCoyieldExpr(SourceLocation KwLoc, Expr *E);
-  StmtResult BuildCoreturnStmt(SourceLocation KwLoc, Expr *E,
-                               bool IsImplicit = false);
-  StmtResult BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs);
-  bool buildCoroutineParameterMoves(SourceLocation Loc);
-  VarDecl *buildCoroutinePromise(SourceLocation Loc);
-  void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
-
-  // As a clang extension, enforces that a non-coroutine function must be marked
-  // with [[clang::coro_wrapper]] if it returns a type marked with
-  // [[clang::coro_return_type]].
-  // Expects that FD is not a coroutine.
-  void CheckCoroutineWrapper(FunctionDecl *FD);
-  /// Lookup 'coroutine_traits' in std namespace and std::experimental
-  /// namespace. The namespace found is recorded in Namespace.
-  ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
-                                           SourceLocation FuncLoc);
-  /// Check that the expression co_await promise.final_suspend() shall not be
-  /// potentially-throwing.
-  bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
-
   ///@}
 
   //

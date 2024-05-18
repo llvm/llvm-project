@@ -46,6 +46,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -15989,17 +15990,6 @@ bool Sema::CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
          methodHasName(FD, "get_return_object_on_allocation_failure");
 }
 
-void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
-  RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
-  if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
-    return;
-  // Allow some_promise_type::get_return_object().
-  if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
-    return;
-  if (!FD->hasAttr<CoroWrapperAttr>())
-    Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
-}
-
 Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
                                     bool IsInstantiation) {
   FunctionScopeInfo *FSI = getCurFunction();
@@ -16014,9 +16004,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   // If we skip function body, we can't tell if a function is a coroutine.
   if (getLangOpts().Coroutines && FD && !FD->hasSkippedBody()) {
     if (FSI->isCoroutine())
-      CheckCompletedCoroutineBody(FD, Body);
+      Coroutine().CheckCompletedCoroutineBody(FD, Body);
     else
-      CheckCoroutineWrapper(FD);
+      Coroutine().CheckCoroutineWrapper(FD);
   }
 
   {

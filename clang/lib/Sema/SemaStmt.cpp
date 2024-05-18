@@ -34,6 +34,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -2391,7 +2392,7 @@ StmtResult Sema::ActOnCXXForRangeStmt(
   // Build the coroutine state immediately and not later during template
   // instantiation
   if (!CoawaitLoc.isInvalid()) {
-    if (!ActOnCoroutineBodyStart(S, CoawaitLoc, "co_await")) {
+    if (!Coroutine().ActOnCoroutineBodyStart(S, CoawaitLoc, "co_await")) {
       ActOnInitializerError(LoopVar);
       return StmtError();
     }
@@ -2473,7 +2474,7 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
       // FIXME: getCurScope() should not be used during template instantiation.
       // We should pick up the set of unqualified lookup results for operator
       // co_await during the initial parse.
-      *BeginExpr = SemaRef.ActOnCoawaitExpr(SemaRef.getCurScope(), ColonLoc,
+      *BeginExpr = SemaRef.Coroutine().ActOnCoawaitExpr(SemaRef.getCurScope(), ColonLoc,
                                             BeginExpr->get());
       if (BeginExpr->isInvalid())
         return Sema::FRS_DiagnosticIssued;
@@ -2705,7 +2706,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
       // begin-expr is __range.
       BeginExpr = BeginRangeRef;
       if (!CoawaitLoc.isInvalid()) {
-        BeginExpr = ActOnCoawaitExpr(S, ColonLoc, BeginExpr.get());
+        BeginExpr = Coroutine().ActOnCoawaitExpr(S, ColonLoc, BeginExpr.get());
         if (BeginExpr.isInvalid())
           return StmtError();
       }
@@ -2898,7 +2899,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
       // FIXME: getCurScope() should not be used during template instantiation.
       // We should pick up the set of unqualified lookup results for operator
       // co_await during the initial parse.
-      IncrExpr = ActOnCoawaitExpr(S, CoawaitLoc, IncrExpr.get());
+      IncrExpr = Coroutine().ActOnCoawaitExpr(S, CoawaitLoc, IncrExpr.get());
     if (!IncrExpr.isInvalid())
       IncrExpr = ActOnFinishFullExpr(IncrExpr.get(), /*DiscardedValue*/ false);
     if (IncrExpr.isInvalid()) {
