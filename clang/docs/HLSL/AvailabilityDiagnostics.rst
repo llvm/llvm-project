@@ -24,7 +24,7 @@ Implementation Details
 Environment Parameter
 ---------------------
 
-In order to encode API availability based on the shader model version and shader model stage a new ``environment`` parameter was added to the existing Clang ``availability`` attribute. 
+In order to encode API availability based on the shader model version and shader model stage a new ``environment`` parameter was added to the existing Clang ``availability`` attribute.
 
 The values allowed for this parameter are a subset of values allowed as the ``llvm::Triple`` environment component. If the environment parameters is present, the declared availability attribute applies only to targets with the same platform and environment.
 
@@ -56,9 +56,9 @@ As a result, availability based on specific shader stage will only be diagnosed 
 Examples
 ========
 
-**Note** 
+**Note**
 For the example below, the ``WaveActiveCountBits`` API function became available in shader model 6.0 and ``WaveMultiPrefixSum`` in shader model 6.5.
-   
+
 The availability of ``ddx`` function depends on a shader stage. It is available for pixel shaders in shader model 2.1 and higher, for compute, mesh and amplification shaders in shader model 6.6 and higher. For any other shader stages it is not available.
 
 Compute shader example
