@@ -3,9 +3,11 @@
 .irp reg,%eax,%ebx
         pushl \reg
 .endr
+pushl %ecx
 
 // CHECK: pushl %eax
 // CHECK: pushl %ebx
+// CHECK-NEXT: pushl %ecx
 
 .irp reg,%eax,%ebx
 .irp imm,4,3,5
