@@ -9,6 +9,7 @@
 #include "Boolean.h"
 #include "Interp.h"
 #include "PrimType.h"
+#include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -1088,6 +1089,17 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
+                                                      CodePtr OpPC,
+                                                      const InterpFrame *Frame,
+                                                      const Function *Func,
+                                                      const CallExpr *Call) {
+  analyze_os_log::OSLogBufferLayout Layout;
+  analyze_os_log::computeOSLogBufferLayout(S.getCtx(), Call, Layout);
+  pushInteger(S, Layout.size().getQuantity(), Call->getType());
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   const InterpFrame *Frame = S.Current;
@@ -1406,6 +1418,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_align_up:
   case Builtin::BI__builtin_align_down:
     if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_os_log_format_buffer_size:
+    if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, F, Call))
       return false;
     break;
 

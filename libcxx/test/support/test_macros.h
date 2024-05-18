@@ -417,8 +417,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
-#if defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
-#  define TEST_HAS_NO_INCOMPLETE_TZDB
+#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
 #endif
 
 #if defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE)

@@ -24,7 +24,8 @@ using namespace mlir::tblgen;
 
 /// Generate a unique label based on the current file name to prevent name
 /// collisions if multiple generated files are included at once.
-static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records) {
+static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records,
+                                        StringRef tag) {
   // Use the input file name when generating a unique name.
   std::string inputFilename = records.getInputFilename();
 
@@ -33,7 +34,7 @@ static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records) {
   nameRef.consume_back(".td");
 
   // Sanitize any invalid characters.
-  std::string uniqueName;
+  std::string uniqueName(tag);
   for (char c : nameRef) {
     if (llvm::isAlnum(c) || c == '_')
       uniqueName.push_back(c);
@@ -44,15 +45,11 @@ static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records) {
 }
 
 StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
-    raw_ostream &os, const llvm::RecordKeeper &records)
-    : os(os), uniqueOutputLabel(getUniqueOutputLabel(records)) {}
+    raw_ostream &os, const llvm::RecordKeeper &records, StringRef tag)
+    : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<llvm::Record *> opDefs, bool emitDecl) {
-  collectOpConstraints(opDefs);
-  if (emitDecl)
-    return;
-
+    ArrayRef<llvm::Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();

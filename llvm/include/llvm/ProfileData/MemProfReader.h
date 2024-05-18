@@ -51,6 +51,12 @@ public:
     return IdToFrame;
   }
 
+  // Return a const reference to the internal Id to call stacks.
+  const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
+  getCallStacks() const {
+    return CSIdToCallStack;
+  }
+
   // Return a const reference to the internal function profile data.
   const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
   getProfileData() const {
@@ -70,20 +76,16 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    auto CallStackCallback = [&](CallStackId CSId) {
-      llvm::SmallVector<Frame> CallStack;
-      auto Iter = CSIdToCallStack.find(CSId);
-      assert(Iter != CSIdToCallStack.end());
-      for (FrameId Id : Iter->second)
-        CallStack.push_back(Callback(Id));
-      return CallStack;
-    };
+    memprof::CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(
+        CSIdToCallStack, Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
         Iter->first,
-        IndexedRecord.toMemProfRecord(CallStackCallback),
+        IndexedRecord.toMemProfRecord(CSIdConv),
     };
+    if (CSIdConv.LastUnmappedId)
+      return make_error<InstrProfError>(instrprof_error::hash_mismatch);
     Iter++;
     return Error::success();
   }

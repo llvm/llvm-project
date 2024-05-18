@@ -30,3 +30,7 @@ logical function compare_h(a,b)
 !ERROR: 'b' is not an object of derived type; it is implicitly typed
   compare_h = (a%h .eq. b%h)
 end
+
+attributes(global) subroutine sub2()
+  if (threadIdx%x == 1) print *, "I'm number one"
+end subroutine

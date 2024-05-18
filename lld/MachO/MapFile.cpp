@@ -77,8 +77,8 @@ static MapInfo gatherMapInfo() {
           // Only emit the prevailing definition of a symbol. Also, don't emit
           // the symbol if it is part of a cstring section (we use the literal
           // value instead, similar to ld64)
-          if (d->isec && d->getFile() == file &&
-              !isa<CStringInputSection>(d->isec)) {
+          if (d->isec() && d->getFile() == file &&
+              !isa<CStringInputSection>(d->isec())) {
             isReferencedFile = true;
             if (!d->isLive())
               info.deadSymbols.push_back(d);
@@ -155,6 +155,12 @@ static void printNonLazyPointerSection(raw_fd_ostream &os,
                  target->wordSize, sym->getName().str().data());
 }
 
+static uint64_t getSymSizeForMap(Defined *sym) {
+  if (sym->wasIdenticalCodeFolded)
+    return 0;
+  return sym->size;
+}
+
 void macho::writeMapFile() {
   if (config->mapFile.empty())
     return;
@@ -201,9 +207,10 @@ void macho::writeMapFile() {
   auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr) {
     for (const ConcatInputSection *isec : arr) {
       for (Defined *sym : isec->symbols) {
-        if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
+        if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0))
           os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                       sym->size, readerToFileOrdinal[sym->getFile()],
+                       getSymSizeForMap(sym),
+                       readerToFileOrdinal[sym->getFile()],
                        sym->getName().str().data());
       }
     }
@@ -255,7 +262,7 @@ void macho::writeMapFile() {
     os << "#        \tSize    \tFile  Name\n";
     for (Defined *sym : info.deadSymbols) {
       assert(!sym->isLive());
-      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", sym->size,
+      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", getSymSizeForMap(sym),
                    readerToFileOrdinal[sym->getFile()],
                    sym->getName().str().data());
     }

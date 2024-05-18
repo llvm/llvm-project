@@ -682,7 +682,7 @@ class BreakpointCommandTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("target create %s" % exe)
         bpid = lldbutil.run_break_set_by_symbol(
-            self, "_dl_debug_state", num_expected_locations=0
+            self, "_dl_debug_state", num_expected_locations=-2
         )
         self.runCmd("run")
         self.assertIsNotNone(

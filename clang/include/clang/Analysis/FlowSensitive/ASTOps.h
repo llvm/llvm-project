@@ -56,6 +56,7 @@ class RecordInitListHelper {
 public:
   // `InitList` must have record type.
   RecordInitListHelper(const InitListExpr *InitList);
+  RecordInitListHelper(const CXXParenListInitExpr *ParenInitList);
 
   // Base classes with their associated initializer expressions.
   ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
@@ -68,6 +69,9 @@ public:
   }
 
 private:
+  RecordInitListHelper(QualType Ty, std::vector<const FieldDecl *> Fields,
+                       ArrayRef<Expr *> Inits);
+
   SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
   SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
 
@@ -91,6 +95,9 @@ struct ReferencedDecls {
 
 /// Returns declarations that are declared in or referenced from `FD`.
 ReferencedDecls getReferencedDecls(const FunctionDecl &FD);
+
+/// Returns declarations that are declared in or referenced from `S`.
+ReferencedDecls getReferencedDecls(const Stmt &S);
 
 } // namespace dataflow
 } // namespace clang

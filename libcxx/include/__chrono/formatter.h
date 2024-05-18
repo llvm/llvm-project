@@ -18,6 +18,7 @@
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
+#include <__chrono/local_info.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
@@ -87,6 +88,9 @@ __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::duration<
   using __duration = chrono::duration<_Rep, _Period>;
 
   auto __fraction = __value - chrono::duration_cast<chrono::seconds>(__value);
+  // Converts a negative fraction to its positive value.
+  if (__value < chrono::seconds{0} && __fraction != __duration{0})
+    __fraction += chrono::seconds{1};
   if constexpr (chrono::treat_as_floating_point_v<_Rep>)
     // When the floating-point value has digits itself they are ignored based
     // on the wording in [tab:time.format.spec]
@@ -204,7 +208,7 @@ struct _LIBCPP_HIDE_FROM_ABI __time_zone {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const _Tp& __value) {
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   if constexpr (same_as<_Tp, chrono::sys_info>)
     return {__value.abbrev, __value.offset};
   else
@@ -416,8 +420,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
     return true;
 #  endif
   else
@@ -460,8 +466,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
     return true;
 #  endif
   else
@@ -504,8 +512,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
     return true;
 #  endif
   else
@@ -548,8 +558,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.month().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::local_info>)
     return true;
 #  endif
   else
@@ -882,7 +894,7 @@ public:
   }
 };
 
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 template <__fmt_char_type _CharT>
 struct formatter<chrono::sys_info, _CharT> : public __formatter_chrono<_CharT> {
 public:
@@ -893,7 +905,18 @@ public:
     return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time_zone);
   }
 };
-#  endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+
+template <__fmt_char_type _CharT>
+struct formatter<chrono::local_info, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags{});
+  }
+};
+#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // if _LIBCPP_STD_VER >= 20
 

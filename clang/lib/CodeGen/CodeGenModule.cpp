@@ -53,6 +53,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CallingConv.h"
@@ -68,11 +69,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
 
 using namespace clang;
@@ -442,6 +444,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       }
     ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
   }
+
+  // Record mregparm value now so it is visible through all of codegen.
+  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
+    getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
+                              CodeGenOpts.NumRegisterParameters);
 }
 
 CodeGenModule::~CodeGenModule() {}
@@ -980,11 +987,6 @@ void CodeGenModule::Release() {
       NMD->addOperand(MD);
   }
 
-  // Record mregparm value now so it is visible through rest of codegen.
-  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
-    getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
-                              CodeGenOpts.NumRegisterParameters);
-
   if (CodeGenOpts.DwarfVersion) {
     getModule().addModuleFlag(llvm::Module::Max, "Dwarf Version",
                               CodeGenOpts.DwarfVersion);
@@ -1189,6 +1191,37 @@ void CodeGenModule::Release() {
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 1);
+
+    if (getTriple().isOSLinux()) {
+      assert(getTriple().isOSBinFormatELF());
+      using namespace llvm::ELF;
+      uint64_t PAuthABIVersion =
+          (LangOpts.PointerAuthIntrinsics
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS) |
+          (LangOpts.PointerAuthCalls
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS) |
+          (LangOpts.PointerAuthReturns
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS) |
+          (LangOpts.PointerAuthAuthTraps
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS) |
+          (LangOpts.PointerAuthVTPtrAddressDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR) |
+          (LangOpts.PointerAuthVTPtrTypeDiscrimination
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR) |
+          (LangOpts.PointerAuthInitFini
+           << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI);
+      static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
+                        AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
+                    "Update when new enum items are defined");
+      if (PAuthABIVersion != 0) {
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "aarch64-elf-pauthabi-platform",
+                                  AARCH64_PAUTH_PLATFORM_LLVM_LINUX);
+        getModule().addModuleFlag(llvm::Module::Error,
+                                  "aarch64-elf-pauthabi-version",
+                                  PAuthABIVersion);
+      }
+    }
   }
 
   if (CodeGenOpts.StackClashProtector)
@@ -4781,6 +4814,10 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
         }
       }
       setDSOLocal(F);
+      // FIXME: We should use CodeGenModule::SetLLVMFunctionAttributes() instead
+      // of trying to approximate the attributes using the LLVM function
+      // signature. This requires revising the API of CreateRuntimeFunction().
+      markRegisterParameterAttributes(F);
     }
   }
 

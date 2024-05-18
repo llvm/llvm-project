@@ -19,7 +19,7 @@ struct S {
     // new and delete are implicitly static
     void *operator new(this unsigned long); // expected-error{{an explicit object parameter cannot appear in a static function}}
     void operator delete(this void*); // expected-error{{an explicit object parameter cannot appear in a static function}}
-    
+
     void g(this auto) const; // expected-error{{explicit object member function cannot have 'const' qualifier}}
     void h(this auto) &; // expected-error{{explicit object member function cannot have '&' qualifier}}
     void i(this auto) &&; // expected-error{{explicit object member function cannot have '&&' qualifier}}
@@ -198,9 +198,7 @@ void func(int i) {
 void TestMutationInLambda() {
     [i = 0](this auto &&){ i++; }();
     [i = 0](this auto){ i++; }();
-    [i = 0](this const auto&){ i++; }();
-    // expected-error@-1 {{cannot assign to a variable captured by copy in a non-mutable lambda}}
-    // expected-note@-2 {{in instantiation of}}
+    [i = 0](this const auto&){ i++; }(); // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
 
     int x;
     const auto l1 = [x](this auto&) { x = 42; }; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
@@ -836,5 +834,62 @@ int h() {
   [&list](this auto self) {
     list = function3{}; // expected-error {{selected deleted operator '='}}
   }();
+}
+}
+
+namespace GH92188 {
+struct A {
+  template<auto N>
+  void operator+=(this auto &&, const char (&)[N]);
+  void operator+=(this auto &&, auto &&) = delete;
+
+  void f1(this A &, auto &);
+  void f1(this A &, auto &&) = delete;
+
+  void f2(this auto&);
+  void f2(this auto&&) = delete;
+
+  void f3(auto&) &;
+  void f3(this A&, auto&&) = delete;
+
+  void f4(auto&&) & = delete;
+  void f4(this A&, auto&);
+
+  static void f5(auto&);
+  void f5(this A&, auto&&) = delete;
+
+  static void f6(auto&&) = delete;
+  void f6(this A&, auto&);
+
+  void implicit_this() {
+    int lval;
+    operator+=("123");
+    f1(lval);
+    f2();
+    f3(lval);
+    f4(lval);
+    f5(lval);
+    f6(lval);
+  }
+
+  void operator-(this A&, auto&&) = delete;
+  friend void operator-(A&, auto&);
+
+  void operator*(this A&, auto&);
+  friend void operator*(A&, auto&&) = delete;
+};
+
+void g() {
+  A a;
+  int lval;
+  a += "123";
+  a.f1(lval);
+  a.f2();
+  a.f3(lval);
+  a.f4(lval);
+  a.f5(lval);
+  a.f6(lval);
+  a - lval;
+  a * lval;
 }
 }
