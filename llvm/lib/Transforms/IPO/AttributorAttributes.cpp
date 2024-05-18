@@ -2452,8 +2452,9 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   }
 
   if (llvm::any_of(Worklist, [&](AA::ValueAndContext VAC) {
-        return !isKnownNonZero(VAC.getValue(), A.getDataLayout(), 0, AC,
-                               VAC.getCtxI(), DT);
+        return !isKnownNonZero(
+            VAC.getValue(), /*Depth=*/0,
+            SimplifyQuery(A.getDataLayout(), DT, AC, VAC.getCtxI()));
       }))
     return false;
 

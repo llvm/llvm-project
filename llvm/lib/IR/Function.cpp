@@ -103,6 +103,12 @@ void Function::setIsNewDbgInfoFormat(bool NewFlag) {
   else if (!NewFlag && IsNewDbgInfoFormat)
     convertFromNewDbgValues();
 }
+void Function::setNewDbgInfoFormatFlag(bool NewFlag) {
+  for (auto &BB : *this) {
+    BB.setNewDbgInfoFormatFlag(NewFlag);
+  }
+  IsNewDbgInfoFormat = NewFlag;
+}
 
 //===----------------------------------------------------------------------===//
 // Argument Implementation
@@ -1164,6 +1170,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V4:
     OutputTable.push_back(IITDescriptor::getVector(4, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V6:
+    OutputTable.push_back(IITDescriptor::getVector(6, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_V8:

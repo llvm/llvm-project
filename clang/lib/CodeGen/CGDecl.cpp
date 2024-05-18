@@ -19,6 +19,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "EHScopeStack.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -1383,7 +1384,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
   // For each dimension stores its QualType and corresponding
   // size-expression Value.
   SmallVector<CodeGenFunction::VlaSizePair, 4> Dimensions;
-  SmallVector<IdentifierInfo *, 4> VLAExprNames;
+  SmallVector<const IdentifierInfo *, 4> VLAExprNames;
 
   // Break down the array into individual dimensions.
   QualType Type1D = D.getType();
@@ -1420,7 +1421,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
       MD = llvm::ConstantAsMetadata::get(C);
     else {
       // Create an artificial VarDecl to generate debug info for.
-      IdentifierInfo *NameIdent = VLAExprNames[NameIdx++];
+      const IdentifierInfo *NameIdent = VLAExprNames[NameIdx++];
       auto QT = getContext().getIntTypeForBitwidth(
           SizeTy->getScalarSizeInBits(), false);
       auto *ArtificialDecl = VarDecl::Create(
@@ -2201,6 +2202,24 @@ void CodeGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                      destroyer, useEHCleanupForArray);
 }
 
+// Pushes a destroy and defers its deactivation until its
+// CleanupDeactivationScope is exited.
+void CodeGenFunction::pushDestroyAndDeferDeactivation(
+    QualType::DestructionKind dtorKind, Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroyAndDeferDeactivation(
+      cleanupKind, addr, type, getDestroyer(dtorKind), cleanupKind & EHCleanup);
+}
+
+void CodeGenFunction::pushDestroyAndDeferDeactivation(
+    CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
+    bool useEHCleanupForArray) {
+  pushCleanupAndDeferDeactivation<DestroyObject>(
+      cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+}
+
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
   EHStack.pushCleanup<CallStackRestore>(Kind, SPMem);
 }
@@ -2217,16 +2236,19 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
   // If we're not in a conditional branch, we don't need to bother generating a
   // conditional cleanup.
   if (!isInConditionalBranch()) {
-    // Push an EH-only cleanup for the object now.
     // FIXME: When popping normal cleanups, we need to keep this EH cleanup
     // around in case a temporary's destructor throws an exception.
-    if (cleanupKind & EHCleanup)
-      EHStack.pushCleanup<DestroyObject>(
-          static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), addr, type,
-          destroyer, useEHCleanupForArray);
 
+    // Add the cleanup to the EHStack. After the full-expr, this would be
+    // deactivated before being popped from the stack.
+    pushDestroyAndDeferDeactivation(cleanupKind, addr, type, destroyer,
+                                    useEHCleanupForArray);
+
+    // Since this is lifetime-extended, push it once again to the EHStack after
+    // the full expression.
     return pushCleanupAfterFullExprWithActiveFlag<DestroyObject>(
-        cleanupKind, Address::invalid(), addr, type, destroyer, useEHCleanupForArray);
+        cleanupKind, Address::invalid(), addr, type, destroyer,
+        useEHCleanupForArray);
   }
 
   // Otherwise, we should only destroy the object if it's been initialized.
@@ -2241,13 +2263,12 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
   Address ActiveFlag = createCleanupActiveFlag();
   SavedType SavedAddr = saveValueInCond(addr);
 
-  if (cleanupKind & EHCleanup) {
-    EHStack.pushCleanup<ConditionalCleanupType>(
-        static_cast<CleanupKind>(cleanupKind & ~NormalCleanup), SavedAddr, type,
-        destroyer, useEHCleanupForArray);
-    initFullExprCleanupWithFlag(ActiveFlag);
-  }
+  pushCleanupAndDeferDeactivation<ConditionalCleanupType>(
+      cleanupKind, SavedAddr, type, destroyer, useEHCleanupForArray);
+  initFullExprCleanupWithFlag(ActiveFlag);
 
+  // Since this is lifetime-extended, push it once again to the EHStack after
+  // the full expression.
   pushCleanupAfterFullExprWithActiveFlag<ConditionalCleanupType>(
       cleanupKind, ActiveFlag, SavedAddr, type, destroyer,
       useEHCleanupForArray);
@@ -2442,9 +2463,9 @@ namespace {
   };
 } // end anonymous namespace
 
-/// pushIrregularPartialArrayCleanup - Push an EH cleanup to destroy
-/// already-constructed elements of the given array.  The cleanup
-/// may be popped with DeactivateCleanupBlock or PopCleanupBlock.
+/// pushIrregularPartialArrayCleanup - Push a NormalAndEHCleanup to
+/// destroy already-constructed elements of the given array.  The cleanup may be
+/// popped with DeactivateCleanupBlock or PopCleanupBlock.
 ///
 /// \param elementType - the immediate element type of the array;
 ///   possibly still an array type
@@ -2453,10 +2474,9 @@ void CodeGenFunction::pushIrregularPartialArrayCleanup(llvm::Value *arrayBegin,
                                                        QualType elementType,
                                                        CharUnits elementAlign,
                                                        Destroyer *destroyer) {
-  pushFullExprCleanup<IrregularPartialArrayDestroy>(EHCleanup,
-                                                    arrayBegin, arrayEndPointer,
-                                                    elementType, elementAlign,
-                                                    destroyer);
+  pushFullExprCleanup<IrregularPartialArrayDestroy>(
+      NormalAndEHCleanup, arrayBegin, arrayEndPointer, elementType,
+      elementAlign, destroyer);
 }
 
 /// pushRegularPartialArrayCleanup - Push an EH cleanup to destroy

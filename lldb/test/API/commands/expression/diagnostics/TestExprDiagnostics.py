@@ -172,7 +172,7 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
 
         # Import foundation so that the Obj-C module is loaded (which contains source locations
         # that can be used by LLDB).
-        self.runCmd("expr @import Foundation")
+        self.runCmd("expr --language objective-c++ -- @import Foundation")
         value = frame.EvaluateExpression("NSLog(1);")
         self.assertFalse(value.GetError().Success())
         # LLDB should print the source line that defines NSLog. To not rely on any

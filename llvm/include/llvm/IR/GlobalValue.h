@@ -360,6 +360,7 @@ public:
   // storage is shared between `G1` and `G2`.
   void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
+  void setNoSanitizeMetadata();
 
   bool isTagged() const {
     return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;

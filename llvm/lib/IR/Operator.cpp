@@ -27,6 +27,11 @@ bool Operator::hasPoisonGeneratingFlags() const {
     auto *OBO = cast<OverflowingBinaryOperator>(this);
     return OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap();
   }
+  case Instruction::Trunc: {
+    if (auto *TI = dyn_cast<TruncInst>(this))
+      return TI->hasNoUnsignedWrap() || TI->hasNoSignedWrap();
+    return false;
+  }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::AShr:
@@ -39,6 +44,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
     // Note: inrange exists on constexpr only
     return GEP->isInBounds() || GEP->getInRange() != std::nullopt;
   }
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();

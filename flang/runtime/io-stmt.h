@@ -21,9 +21,9 @@
 #include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
+#include <flang/Common/variant.h>
 #include <functional>
 #include <type_traits>
-#include <variant>
 
 namespace Fortran::runtime::io {
 
@@ -295,6 +295,10 @@ public:
   RT_API_ATTRS std::int64_t InquirePos();
 
   RT_API_ATTRS void BadInquiryKeywordHashCrash(InquiryKeywordHash);
+
+  RT_API_ATTRS void ReportUnsupportedChildIo() const {
+    Crash("not yet implemented: child IO");
+  }
 
 protected:
   bool completedOperation_{false};

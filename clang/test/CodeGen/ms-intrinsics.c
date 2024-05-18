@@ -189,7 +189,7 @@ unsigned char test_BitScanForward64(unsigned long *Index, unsigned __int64 Mask)
 // CHECK-ARM-X64:   ret i8 [[RESULT]]
 // CHECK-ARM-X64:   [[ISNOTZERO_LABEL]]:
 // CHECK-ARM-X64:   [[INDEX:%[0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %Mask, i1 true)
-// CHECK-ARM-X64:   [[TRUNC_INDEX:%[0-9]+]] = trunc i64 [[INDEX]] to i32
+// CHECK-ARM-X64:   [[TRUNC_INDEX:%[0-9]+]] = trunc nuw nsw i64 [[INDEX]] to i32
 // CHECK-ARM-X64:   store i32 [[TRUNC_INDEX]], ptr %Index, align 4
 // CHECK-ARM-X64:   br label %[[END_LABEL]]
 
@@ -204,7 +204,7 @@ unsigned char test_BitScanReverse64(unsigned long *Index, unsigned __int64 Mask)
 // CHECK-ARM-X64:   ret i8 [[RESULT]]
 // CHECK-ARM-X64:   [[ISNOTZERO_LABEL]]:
 // CHECK-ARM-X64:   [[REVINDEX:%[0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %Mask, i1 true)
-// CHECK-ARM-X64:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc i64 [[REVINDEX]] to i32
+// CHECK-ARM-X64:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc nuw nsw i64 [[REVINDEX]] to i32
 // CHECK-ARM-X64:   [[INDEX:%[0-9]+]] = xor i32 [[TRUNC_REVINDEX]], 63
 // CHECK-ARM-X64:   store i32 [[INDEX]], ptr %Index, align 4
 // CHECK-ARM-X64:   br label %[[END_LABEL]]

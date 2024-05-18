@@ -1302,6 +1302,24 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
+  } else if (name == "__builtin_numeric_storage_size") {
+    if (!context.moduleFileName()) {
+      // Don't fold this reference until it appears in the module file
+      // for ISO_FORTRAN_ENV -- the value depends on the compiler options
+      // that might be in force.
+    } else {
+      auto intBytes{
+          context.targetCharacteristics().GetByteSize(TypeCategory::Integer,
+              context.defaults().GetDefaultKind(TypeCategory::Integer))};
+      auto realBytes{
+          context.targetCharacteristics().GetByteSize(TypeCategory::Real,
+              context.defaults().GetDefaultKind(TypeCategory::Real))};
+      if (intBytes != realBytes) {
+        context.messages().Say(*context.moduleFileName(),
+            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
+      }
+      return Expr<T>{8 * std::min(intBytes, realBytes)};
+    }
   }
   return Expr<T>{std::move(funcRef)};
 }

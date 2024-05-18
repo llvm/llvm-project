@@ -2,7 +2,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -13,6 +12,7 @@ load(
 load("//:workspace_root.bzl", "workspace_root")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load("//llvm:driver.bzl", "llvm_driver_cc_binary")
 load("//llvm:tblgen.bzl", "gentbl")
 
 package(
@@ -735,14 +735,6 @@ gentbl(
         (
             "-gen-clang-attr-impl",
             "include/clang/AST/AttrImpl.inc",
-        ),
-        (
-            "-gen-clang-attr-can-print-left-list",
-            "include/clang/Basic/AttrLeftSideCanPrintList.inc",
-        ),
-        (
-            "-gen-clang-attr-must-print-left-list",
-            "include/clang/Basic/AttrLeftSideMustPrintList.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
@@ -2042,6 +2034,7 @@ cc_library(
     name = "install_api",
     srcs = glob([
         "lib/InstallAPI/*.cpp",
+        "lib/InstallAPI/*.h",
     ]),
     hdrs = glob([
         "include/clang/InstallAPI/*.h",
@@ -2056,6 +2049,7 @@ cc_library(
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TextAPI",
+        "//llvm:TextAPIBinaryReader",
     ],
 )
 
@@ -2319,20 +2313,9 @@ cc_binary(
     ],
 )
 
-expand_template(
-    name = "clang_main",
-    out = "clang-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "clang",
-    },
-    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
-)
-
 cc_library(
     name = "clang-driver",
-    srcs = glob([
-        "tools/driver/*.cpp",
-    ]) + ["clang-driver.cpp"],
+    srcs = glob(["tools/driver/*.cpp"]),
     copts = [
         # Disable stack frame size checks in the driver because
         # clang::ensureStackAddressSpace allocates a large array on the stack.
@@ -2370,13 +2353,10 @@ cc_library(
     ],
 )
 
-cc_binary(
+llvm_driver_cc_binary(
     name = "clang",
-    srcs = [],
     stamp = 0,
-    deps = [
-        ":clang-driver",
-    ],
+    deps = [":clang-driver"],
 )
 
 cc_binary(
@@ -2621,19 +2601,9 @@ gentbl(
     td_srcs = ["//llvm:include/llvm/Option/OptParser.td"],
 )
 
-expand_template(
-    name = "clang-scan-deps-main",
-    out = "clang-scan-deps-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "clang_scan_deps",
-    },
-    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
-)
-
-cc_binary(
-    name = "clang-scan-deps",
-    srcs = glob(["tools/clang-scan-deps/*.cpp"]) + ["clang-scan-deps-driver.cpp"],
-    stamp = 0,
+cc_library(
+    name = "clang-scan-deps-lib",
+    srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     deps = [
         ":ScanDepsTableGen",
         ":driver",
@@ -2645,12 +2615,22 @@ cc_binary(
     ],
 )
 
+llvm_driver_cc_binary(
+    name = "clang-scan-deps",
+    stamp = 0,
+    deps = [":clang-scan-deps-lib"],
+)
+
 cc_library(
     name = "extract_api",
     srcs = glob([
         "lib/ExtractAPI/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
+    hdrs = glob([
+       "include/clang/ExtractAPI/**/*.h",
+    ]) + [
+       "include/clang/ExtractAPI/APIRecords.inc",
+    ],
     includes = ["include"],
     deps = [
         ":ast",

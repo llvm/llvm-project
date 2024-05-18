@@ -64,7 +64,9 @@ private:
   /// Derived classes may override this method to hook into the point at which
   /// options are initialized, but should generally always invoke this base
   /// class variant.
-  LogicalResult initializeOptions(StringRef options) override;
+  LogicalResult initializeOptions(
+      StringRef options,
+      function_ref<LogicalResult(const Twine &)> errorHandler) override;
 
   /// Inliner configuration parameters created from the pass options.
   InlinerConfig config;
@@ -103,10 +105,7 @@ static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
   Region *callerRegion = resolvedCall.sourceNode->getCallableRegion();
   Region *calleeRegion = resolvedCall.targetNode->getCallableRegion();
 
-  // We should not get external nodes here, but just return true
-  // for now to preserve the original behavior of the inliner pass.
-  if (!callerRegion || !calleeRegion)
-    return true;
+  assert(calleeRegion && callerRegion && "unexpected external node");
 
   auto countOps = [](Region *region) {
     unsigned count = 0;
@@ -153,8 +152,10 @@ void InlinerPass::runOnOperation() {
   return;
 }
 
-LogicalResult InlinerPass::initializeOptions(StringRef options) {
-  if (failed(Pass::initializeOptions(options)))
+LogicalResult InlinerPass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  if (failed(Pass::initializeOptions(options, errorHandler)))
     return failure();
 
   // Initialize the pipeline builder for operations without the dedicated

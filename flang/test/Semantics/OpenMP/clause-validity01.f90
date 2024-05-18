@@ -342,6 +342,9 @@ use omp_lib
   a = 1.0
   !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
+  !$omp workshare nowait
+  !ERROR: NOWAIT clause is not allowed on the WORKSHARE directive, use it on OMP END WORKSHARE directive
+  !$omp end workshare
   !$omp end parallel
 
 ! 2.8.1 simd-clause -> safelen-clause |

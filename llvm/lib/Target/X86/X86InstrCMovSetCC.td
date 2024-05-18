@@ -127,6 +127,25 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
                 TB, Sched<[WriteSETCCStore]>;
 } // Uses = [EFLAGS]
 
+// SetZUCC and promoted SetCC instructions.
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
+  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [HasNDD] in {
+  def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
+                "setzu${cond}\t$dst", []>,
+                XD, ZU, NoCD8, Sched<[WriteSETCC]>;
+  def SETCCr_EVEX : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
+                "set${cond}\t$dst", []>,
+                XD, PL, Sched<[WriteSETCC]>;
+  let mayStore = 1 in {
+    def SETZUCCm : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
+                  "setzu${cond}\t$dst", []>,
+                  XD, ZU, NoCD8, Sched<[WriteSETCCStore]>;
+    def SETCCm_EVEX : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
+                  "set${cond}\t$dst", []>,
+                  XD, PL, Sched<[WriteSETCCStore]>;
+  }
+}
+
 // SALC is an undocumented instruction. Information for this instruction can be found
 // here http://www.rcollins.org/secrets/opcodes/SALC.html
 // Set AL if carry. 

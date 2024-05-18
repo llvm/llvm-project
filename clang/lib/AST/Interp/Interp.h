@@ -758,7 +758,7 @@ inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
 
   // We cannot compare against weak declarations at compile time.
   for (const auto &FP : {LHS, RHS}) {
-    if (!FP.isZero() && FP.getFunction()->getDecl()->isWeak()) {
+    if (FP.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
           << FP.toDiagnosticString(S.getCtx());
@@ -801,6 +801,17 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  for (const auto &P : {LHS, RHS}) {
+    if (P.isZero())
+      continue;
+    if (P.isWeak()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
+          << P.toDiagnosticString(S.getCtx());
+      return false;
+    }
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS)) {
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
@@ -812,9 +823,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (!LHS.isDummy() && LHS.isArrayRoot())
+    if (!LHS.isZero() && !LHS.isDummy() && LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (!RHS.isDummy() && RHS.isArrayRoot())
+    if (!RHS.isZero() && !RHS.isDummy() && RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1333,6 +1344,11 @@ inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool Dump(InterpState &S, CodePtr OpPC) {
+  S.Stk.dump();
+  return true;
+}
+
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   Pointer Base = Ptr;
@@ -1370,6 +1386,8 @@ bool Load(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
+  if (!Ptr.isBlockPointer())
+    return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
@@ -1378,6 +1396,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool LoadPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
+    return false;
+  if (!Ptr.isBlockPointer())
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -1517,8 +1537,12 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     return true;
   }
 
-  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex))
-    return false;
+  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex)) {
+    // The CheckNull will have emitted a note already, but we only
+    // abort in C++, since this is fine in C.
+    if (S.getLangOpts().CPlusPlus)
+      return false;
+  }
 
   // Arrays of unknown bounds cannot have pointers into them.
   if (!CheckArray(S, OpPC, Ptr))
@@ -1544,23 +1568,25 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
     Invalid = true;
   };
 
-  T MaxOffset = T::from(MaxIndex - Index, Offset.bitWidth());
-  if constexpr (Op == ArithOp::Add) {
-    // If the new offset would be negative, bail out.
-    if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
-      DiagInvalidOffset();
+  if (Ptr.isBlockPointer()) {
+    T MaxOffset = T::from(MaxIndex - Index, Offset.bitWidth());
+    if constexpr (Op == ArithOp::Add) {
+      // If the new offset would be negative, bail out.
+      if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
+        DiagInvalidOffset();
 
-    // If the new offset would be out of bounds, bail out.
-    if (Offset.isPositive() && Offset > MaxOffset)
-      DiagInvalidOffset();
-  } else {
-    // If the new offset would be negative, bail out.
-    if (Offset.isPositive() && Index < Offset)
-      DiagInvalidOffset();
+      // If the new offset would be out of bounds, bail out.
+      if (Offset.isPositive() && Offset > MaxOffset)
+        DiagInvalidOffset();
+    } else {
+      // If the new offset would be negative, bail out.
+      if (Offset.isPositive() && Index < Offset)
+        DiagInvalidOffset();
 
-    // If the new offset would be out of bounds, bail out.
-    if (Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
-      DiagInvalidOffset();
+      // If the new offset would be out of bounds, bail out.
+      if (Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
+        DiagInvalidOffset();
+    }
   }
 
   if (Invalid && !Ptr.isDummy() && S.getLangOpts().CPlusPlus)
@@ -1643,6 +1669,11 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
+
+  if (RHS.isZero()) {
+    S.Stk.push<T>(T::from(LHS.getIndex()));
+    return true;
+  }
 
   if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
     // TODO: Diagnose.
@@ -1822,8 +1853,9 @@ static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool Null(InterpState &S, CodePtr OpPC) {
-  S.Stk.push<T>();
+inline bool Null(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+  // Note: Desc can be null.
+  S.Stk.push<T>(0, Desc);
   return true;
 }
 
@@ -1840,6 +1872,15 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   const Pointer &This = S.Current->getThis();
   if (!CheckThis(S, OpPC, This))
     return false;
+
+  // Ensure the This pointer has been cast to the correct base.
+  if (!This.isDummy()) {
+    assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
+    assert(This.getRecord());
+    assert(
+        This.getRecord()->getDecl() ==
+        cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
+  }
 
   S.Stk.push<Pointer>(This);
   return true;
@@ -2218,6 +2259,14 @@ inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
   return true;
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+  const T &IntVal = S.Stk.pop<T>();
+
+  S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
+  return true;
+}
+
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
@@ -2272,6 +2321,18 @@ inline bool CheckNonNullArg(InterpState &S, CodePtr OpPC) {
   S.CCEDiag(Loc, diag::note_non_null_attribute_failed);
 
   return false;
+}
+
+/// OldPtr -> Integer -> NewPtr.
+template <PrimType TIn, PrimType TOut>
+inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
+  static_assert(isPtrType(TIn) && isPtrType(TOut));
+  using FromT = typename PrimConv<TIn>::T;
+  using ToT = typename PrimConv<TOut>::T;
+
+  const FromT &OldPtr = S.Stk.pop<FromT>();
+  S.Stk.push<ToT>(ToT(OldPtr.getIntegerRepresentation(), nullptr));
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

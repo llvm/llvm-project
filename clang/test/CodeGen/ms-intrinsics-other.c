@@ -87,7 +87,7 @@ unsigned char test_BitScanForward64(unsigned LONG *Index, unsigned __int64 Mask)
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
 // CHECK:   [[INDEX:%[0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %Mask, i1 true)
-// CHECK:   [[TRUNC_INDEX:%[0-9]+]] = trunc i64 [[INDEX]] to i32
+// CHECK:   [[TRUNC_INDEX:%[0-9]+]] = trunc nuw nsw i64 [[INDEX]] to i32
 // CHECK:   store i32 [[TRUNC_INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
 
@@ -102,7 +102,7 @@ unsigned char test_BitScanReverse64(unsigned LONG *Index, unsigned __int64 Mask)
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
 // CHECK:   [[REVINDEX:%[0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %Mask, i1 true)
-// CHECK:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc i64 [[REVINDEX]] to i32
+// CHECK:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc nuw nsw i64 [[REVINDEX]] to i32
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[TRUNC_REVINDEX]], 63
 // CHECK:   store i32 [[INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]

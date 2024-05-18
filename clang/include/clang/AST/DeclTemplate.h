@@ -1389,14 +1389,14 @@ class NonTypeTemplateParmDecl final
 
   NonTypeTemplateParmDecl(DeclContext *DC, SourceLocation StartLoc,
                           SourceLocation IdLoc, unsigned D, unsigned P,
-                          IdentifierInfo *Id, QualType T,
+                          const IdentifierInfo *Id, QualType T,
                           bool ParameterPack, TypeSourceInfo *TInfo)
       : DeclaratorDecl(NonTypeTemplateParm, DC, IdLoc, Id, T, TInfo, StartLoc),
         TemplateParmPosition(D, P), ParameterPack(ParameterPack) {}
 
   NonTypeTemplateParmDecl(DeclContext *DC, SourceLocation StartLoc,
                           SourceLocation IdLoc, unsigned D, unsigned P,
-                          IdentifierInfo *Id, QualType T,
+                          const IdentifierInfo *Id, QualType T,
                           TypeSourceInfo *TInfo,
                           ArrayRef<QualType> ExpandedTypes,
                           ArrayRef<TypeSourceInfo *> ExpandedTInfos);
@@ -1404,12 +1404,12 @@ class NonTypeTemplateParmDecl final
 public:
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-         SourceLocation IdLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+         SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
          QualType T, bool ParameterPack, TypeSourceInfo *TInfo);
 
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-         SourceLocation IdLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+         SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
          QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
          ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
@@ -1581,26 +1581,36 @@ class TemplateTemplateParmDecl final
       DefaultArgStorage<TemplateTemplateParmDecl, TemplateArgumentLoc *>;
   DefArgStorage DefaultArgument;
 
+  /// Whether this template template parameter was declaration with
+  /// the 'typename' keyword.
+  ///
+  /// If false, it was declared with the 'class' keyword.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Typename : 1;
+
   /// Whether this parameter is a parameter pack.
-  bool ParameterPack;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ParameterPack : 1;
 
   /// Whether this template template parameter is an "expanded"
   /// parameter pack, meaning that it is a pack expansion and we
   /// already know the set of template parameters that expansion expands to.
-  bool ExpandedParameterPack = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandedParameterPack : 1;
 
   /// The number of parameters in an expanded parameter pack.
   unsigned NumExpandedParams = 0;
 
-  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L,
-                           unsigned D, unsigned P, bool ParameterPack,
-                           IdentifierInfo *Id, TemplateParameterList *Params)
+  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
+                           unsigned P, bool ParameterPack, IdentifierInfo *Id,
+                           bool Typename, TemplateParameterList *Params)
       : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
-        TemplateParmPosition(D, P), ParameterPack(ParameterPack) {}
+        TemplateParmPosition(D, P), Typename(Typename),
+        ParameterPack(ParameterPack), ExpandedParameterPack(false) {}
 
-  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L,
-                           unsigned D, unsigned P,
-                           IdentifierInfo *Id, TemplateParameterList *Params,
+  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
+                           unsigned P, IdentifierInfo *Id, bool Typename,
+                           TemplateParameterList *Params,
                            ArrayRef<TemplateParameterList *> Expansions);
 
   void anchor() override;
@@ -1613,14 +1623,13 @@ public:
   static TemplateTemplateParmDecl *Create(const ASTContext &C, DeclContext *DC,
                                           SourceLocation L, unsigned D,
                                           unsigned P, bool ParameterPack,
-                                          IdentifierInfo *Id,
+                                          IdentifierInfo *Id, bool Typename,
                                           TemplateParameterList *Params);
-  static TemplateTemplateParmDecl *Create(const ASTContext &C, DeclContext *DC,
-                                          SourceLocation L, unsigned D,
-                                          unsigned P,
-                                          IdentifierInfo *Id,
-                                          TemplateParameterList *Params,
-                                 ArrayRef<TemplateParameterList *> Expansions);
+  static TemplateTemplateParmDecl *
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
+         unsigned P, IdentifierInfo *Id, bool Typename,
+         TemplateParameterList *Params,
+         ArrayRef<TemplateParameterList *> Expansions);
 
   static TemplateTemplateParmDecl *CreateDeserialized(ASTContext &C,
                                                       unsigned ID);
@@ -1633,6 +1642,14 @@ public:
   using TemplateParmPosition::getPosition;
   using TemplateParmPosition::setPosition;
   using TemplateParmPosition::getIndex;
+
+  /// Whether this template template parameter was declared with
+  /// the 'typename' keyword.
+  bool wasDeclaredWithTypename() const { return Typename; }
+
+  /// Set whether this template template parameter was declared with
+  /// the 'typename' or 'class' keyword.
+  void setDeclaredWithTypename(bool withTypename) { Typename = withTypename; }
 
   /// Whether this template template parameter is a template
   /// parameter pack.

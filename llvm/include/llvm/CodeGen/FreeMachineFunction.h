@@ -13,8 +13,7 @@
 
 namespace llvm {
 
-class FreeMachineFunctionPass
-    : public MachinePassInfoMixin<FreeMachineFunctionPass> {
+class FreeMachineFunctionPass : public PassInfoMixin<FreeMachineFunctionPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

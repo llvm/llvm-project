@@ -11,6 +11,7 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         "__debug_utils/.+",
         "__fwd/get[.]h",
         "__support/.+",
+        "__utility/private_constructor_tag.h",
     ]
     if any(re.match(pattern, header) for pattern in ignore):
         return None

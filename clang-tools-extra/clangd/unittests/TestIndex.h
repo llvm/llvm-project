@@ -20,7 +20,7 @@ Symbol symbol(llvm::StringRef QName);
 // Helpers to produce fake index symbols with proper SymbolID.
 // USRFormat is a regex replacement string for the unqualified part of the USR.
 Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
-           llvm::StringRef USRFormat);
+           llvm::StringRef USRFormat, llvm::StringRef Signature = {});
 // Creats a function symbol assuming no function arg.
 Symbol func(llvm::StringRef Name);
 // Creates a class symbol.
@@ -35,6 +35,8 @@ Symbol var(llvm::StringRef Name);
 Symbol ns(llvm::StringRef Name);
 // Create a C++20 concept symbol.
 Symbol conceptSym(llvm::StringRef Name);
+// Create a macro symbol.
+Symbol macro(llvm::StringRef Name, llvm::StringRef ArgList = {});
 
 // Create an Objective-C symbol.
 Symbol objcSym(llvm::StringRef Name, index::SymbolKind Kind,

@@ -5,23 +5,18 @@
 
 /// FIXME: The new interpreter is missing all the 'control flows through...' diagnostics.
 
-constexpr int f(int n) {  // ref20-error {{constexpr function never produces a constant expression}} \
-                          // expected20-error {{constexpr function never produces a constant expression}}
+constexpr int f(int n) {  // ref20-error {{constexpr function never produces a constant expression}}
   static const int m = n; // ref20-note {{control flows through the definition of a static variable}} \
                           // ref20-warning {{is a C++23 extension}} \
-                          // expected20-warning {{is a C++23 extension}} \
-                          // expected20-note {{declared here}} \
+                          // expected20-warning {{is a C++23 extension}}
 
-  return m; // expected20-note {{initializer of 'm' is not a constant expression}}
+  return m;
 }
-constexpr int g(int n) {        // ref20-error {{constexpr function never produces a constant expression}} \
-                                // expected20-error {{constexpr function never produces a constant expression}}
+constexpr int g(int n) {        // ref20-error {{constexpr function never produces a constant expression}}
   thread_local const int m = n; // ref20-note {{control flows through the definition of a thread_local variable}} \
                                 // ref20-warning {{is a C++23 extension}} \
-                                // expected20-warning {{is a C++23 extension}} \
-                                // expected20-note {{declared here}}
-  return m; // expected20-note {{initializer of 'm' is not a constant expression}}
-
+                                // expected20-warning {{is a C++23 extension}}
+  return m;
 }
 
 constexpr int c_thread_local(int n) { // ref20-error {{constexpr function never produces a constant expression}} \

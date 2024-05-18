@@ -78,11 +78,19 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned External : 1;
 
-  /// Whether this header is part of a module.
+  /// Whether this header is part of and built with a module.  i.e. it is listed
+  /// in a module map, and is not `excluded` or `textual`. (same meaning as
+  /// `ModuleMap::isModular()`).
   LLVM_PREFERRED_TYPE(bool)
   unsigned isModuleHeader : 1;
 
-  /// Whether this header is part of the module that we are building.
+  /// Whether this header is a `textual header` in a module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned isTextualModuleHeader : 1;
+
+  /// Whether this header is part of the module that we are building, even if it
+  /// doesn't build with the module. i.e. this will include `excluded` and
+  /// `textual` headers as well as normal headers.
   LLVM_PREFERRED_TYPE(bool)
   unsigned isCompilingModuleHeader : 1;
 
@@ -128,13 +136,20 @@ struct HeaderFileInfo {
 
   HeaderFileInfo()
       : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User),
-        External(false), isModuleHeader(false), isCompilingModuleHeader(false),
-        Resolved(false), IndexHeaderMapHeader(false), IsValid(false)  {}
+        External(false), isModuleHeader(false), isTextualModuleHeader(false),
+        isCompilingModuleHeader(false), Resolved(false),
+        IndexHeaderMapHeader(false), IsValid(false) {}
 
   /// Retrieve the controlling macro for this header file, if
   /// any.
   const IdentifierInfo *
   getControllingMacro(ExternalPreprocessorSource *External);
+
+  /// Update the module membership bits based on the header role.
+  ///
+  /// isModuleHeader will potentially be set, but not cleared.
+  /// isTextualModuleHeader will be set or cleared based on the role update.
+  void mergeModuleMembership(ModuleMap::ModuleHeaderRole Role);
 };
 
 /// An external source of header file information, which may supply
@@ -522,6 +537,9 @@ public:
   ///
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
+  ///
+  /// \param M The module to which `File` belongs (this should usually be the
+  /// SuggestedModule returned by LookupFile/LookupSubframeworkHeader)
   bool ShouldEnterIncludeFile(Preprocessor &PP, FileEntryRef File,
                               bool isImport, bool ModulesEnabled, Module *M,
                               bool &IsFirstIncludeOfFile);
@@ -529,14 +547,15 @@ public:
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
   SrcMgr::CharacteristicKind getFileDirFlavor(FileEntryRef File) {
-    return (SrcMgr::CharacteristicKind)getFileInfo(File).DirInfo;
+    if (const HeaderFileInfo *HFI = getExistingFileInfo(File))
+      return (SrcMgr::CharacteristicKind)HFI->DirInfo;
+    return (SrcMgr::CharacteristicKind)HeaderFileInfo().DirInfo;
   }
 
   /// Mark the specified file as a "once only" file due to
   /// \#pragma once.
   void MarkFileIncludeOnce(FileEntryRef File) {
-    HeaderFileInfo &FI = getFileInfo(File);
-    FI.isPragmaOnce = true;
+    getFileInfo(File).isPragmaOnce = true;
   }
 
   /// Mark the specified file as a system header, e.g. due to
@@ -816,16 +835,17 @@ public:
 
   unsigned header_file_size() const { return FileInfo.size(); }
 
-  /// Return the HeaderFileInfo structure for the specified FileEntry,
-  /// in preparation for updating it in some way.
+  /// Return the HeaderFileInfo structure for the specified FileEntry, in
+  /// preparation for updating it in some way.
   HeaderFileInfo &getFileInfo(FileEntryRef FE);
 
-  /// Return the HeaderFileInfo structure for the specified FileEntry,
-  /// if it has ever been filled in.
-  /// \param WantExternal Whether the caller wants purely-external header file
-  ///        info (where \p External is true).
-  const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE,
-                                            bool WantExternal = true) const;
+  /// Return the HeaderFileInfo structure for the specified FileEntry, if it has
+  /// ever been filled in (either locally or externally).
+  const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE) const;
+
+  /// Return the headerFileInfo structure for the specified FileEntry, if it has
+  /// ever been filled in locally.
+  const HeaderFileInfo *getExistingLocalFileInfo(FileEntryRef FE) const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
   SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }

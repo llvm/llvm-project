@@ -671,7 +671,8 @@ TEST(CompletionTest, Kinds) {
           #define MACRO 10
           int X = ^
       )cpp",
-      {func("indexFunction"), var("indexVariable"), cls("indexClass")});
+      {func("indexFunction"), var("indexVariable"), cls("indexClass"),
+       macro("indexObjMacro"), macro("indexFuncMacro", "(x, y)")});
   EXPECT_THAT(Results.Completions,
               AllOf(has("function", CompletionItemKind::Function),
                     has("variable", CompletionItemKind::Variable),
@@ -680,7 +681,9 @@ TEST(CompletionTest, Kinds) {
                     has("MACRO", CompletionItemKind::Constant),
                     has("indexFunction", CompletionItemKind::Function),
                     has("indexVariable", CompletionItemKind::Variable),
-                    has("indexClass", CompletionItemKind::Class)));
+                    has("indexClass", CompletionItemKind::Class),
+                    has("indexObjMacro", CompletionItemKind::Constant),
+                    has("indexFuncMacro", CompletionItemKind::Function)));
 
   Results = completions("nam^");
   EXPECT_THAT(Results.Completions,

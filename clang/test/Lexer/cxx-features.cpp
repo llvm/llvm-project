@@ -85,7 +85,7 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
-#if check(concepts, 0, 0, 0, 0, 201907, 201907, 201907)
+#if check(concepts, 0, 0, 0, 0, 202002, 202002, 202002)
 #error "wrong value for __cpp_concepts"
 #endif
 

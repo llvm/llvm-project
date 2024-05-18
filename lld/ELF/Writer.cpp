@@ -24,6 +24,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
@@ -89,11 +90,6 @@ private:
   uint64_t sectionHeaderOff;
 };
 } // anonymous namespace
-
-static bool needsInterpSection() {
-  return !config->relocatable && !config->shared &&
-         !config->dynamicLinker.empty() && script->needsInterpSection();
-}
 
 template <class ELFT> void elf::writeResult() {
   Writer<ELFT>().run();
@@ -296,292 +292,12 @@ static void demoteSymbolsAndComputeIsPreemptible() {
   }
 }
 
-bool elf::hasMemtag() {
-  return config->emachine == EM_AARCH64 &&
-         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
-}
-
-// Fully static executables don't support MTE globals at this point in time, as
-// we currently rely on:
-//   - A dynamic loader to process relocations, and
-//   - Dynamic entries.
-// This restriction could be removed in future by re-using some of the ideas
-// that ifuncs use in fully static executables.
-bool elf::canHaveMemtagGlobals() {
-  return hasMemtag() &&
-         (config->relocatable || config->shared || needsInterpSection());
-}
-
 static OutputSection *findSection(StringRef name, unsigned partition = 1) {
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       if (osd->osec.name == name && osd->osec.partition == partition)
         return &osd->osec;
   return nullptr;
-}
-
-template <class ELFT> void elf::createSyntheticSections() {
-  // Initialize all pointers with NULL. This is needed because
-  // you can call lld::elf::main more than once as a library.
-  Out::tlsPhdr = nullptr;
-  Out::preinitArray = nullptr;
-  Out::initArray = nullptr;
-  Out::finiArray = nullptr;
-
-  // Add the .interp section first because it is not a SyntheticSection.
-  // The removeUnusedSyntheticSections() function relies on the
-  // SyntheticSections coming last.
-  if (needsInterpSection()) {
-    for (size_t i = 1; i <= partitions.size(); ++i) {
-      InputSection *sec = createInterpSection();
-      sec->partition = i;
-      ctx.inputSections.push_back(sec);
-    }
-  }
-
-  auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
-
-  in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
-
-  Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::programHeaders->addralign = config->wordsize;
-
-  if (config->strip != StripPolicy::All) {
-    in.strTab = std::make_unique<StringTableSection>(".strtab", false);
-    in.symTab = std::make_unique<SymbolTableSection<ELFT>>(*in.strTab);
-    in.symTabShndx = std::make_unique<SymtabShndxSection>();
-  }
-
-  in.bss = std::make_unique<BssSection>(".bss", 0, 1);
-  add(*in.bss);
-
-  // If there is a SECTIONS command and a .data.rel.ro section name use name
-  // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
-  // This makes sure our relro is contiguous.
-  bool hasDataRelRo = script->hasSectionsCommand && findSection(".data.rel.ro");
-  in.bssRelRo = std::make_unique<BssSection>(
-      hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
-  add(*in.bssRelRo);
-
-  // Add MIPS-specific sections.
-  if (config->emachine == EM_MIPS) {
-    if (!config->shared && config->hasDynSymTab) {
-      in.mipsRldMap = std::make_unique<MipsRldMapSection>();
-      add(*in.mipsRldMap);
-    }
-    if ((in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create()))
-      add(*in.mipsAbiFlags);
-    if ((in.mipsOptions = MipsOptionsSection<ELFT>::create()))
-      add(*in.mipsOptions);
-    if ((in.mipsReginfo = MipsReginfoSection<ELFT>::create()))
-      add(*in.mipsReginfo);
-  }
-
-  StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
-
-  const unsigned threadCount = config->threadCount;
-  for (Partition &part : partitions) {
-    auto add = [&](SyntheticSection &sec) {
-      sec.partition = part.getNumber();
-      ctx.inputSections.push_back(&sec);
-    };
-
-    if (!part.name.empty()) {
-      part.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>();
-      part.elfHeader->name = part.name;
-      add(*part.elfHeader);
-
-      part.programHeaders =
-          std::make_unique<PartitionProgramHeadersSection<ELFT>>();
-      add(*part.programHeaders);
-    }
-
-    if (config->buildId != BuildIdKind::None) {
-      part.buildId = std::make_unique<BuildIdSection>();
-      add(*part.buildId);
-    }
-
-    part.dynStrTab = std::make_unique<StringTableSection>(".dynstr", true);
-    part.dynSymTab =
-        std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
-    part.dynamic = std::make_unique<DynamicSection<ELFT>>();
-
-    if (hasMemtag()) {
-      part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
-      add(*part.memtagAndroidNote);
-      if (canHaveMemtagGlobals()) {
-        part.memtagGlobalDescriptors =
-            std::make_unique<MemtagGlobalDescriptors>();
-        add(*part.memtagGlobalDescriptors);
-      }
-    }
-
-    if (config->androidPackDynRelocs)
-      part.relaDyn = std::make_unique<AndroidPackedRelocationSection<ELFT>>(
-          relaDynName, threadCount);
-    else
-      part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
-          relaDynName, config->zCombreloc, threadCount);
-
-    if (config->hasDynSymTab) {
-      add(*part.dynSymTab);
-
-      part.verSym = std::make_unique<VersionTableSection>();
-      add(*part.verSym);
-
-      if (!namedVersionDefs().empty()) {
-        part.verDef = std::make_unique<VersionDefinitionSection>();
-        add(*part.verDef);
-      }
-
-      part.verNeed = std::make_unique<VersionNeedSection<ELFT>>();
-      add(*part.verNeed);
-
-      if (config->gnuHash) {
-        part.gnuHashTab = std::make_unique<GnuHashTableSection>();
-        add(*part.gnuHashTab);
-      }
-
-      if (config->sysvHash) {
-        part.hashTab = std::make_unique<HashTableSection>();
-        add(*part.hashTab);
-      }
-
-      add(*part.dynamic);
-      add(*part.dynStrTab);
-    }
-    add(*part.relaDyn);
-
-    if (config->relrPackDynRelocs) {
-      part.relrDyn = std::make_unique<RelrSection<ELFT>>(threadCount);
-      add(*part.relrDyn);
-    }
-
-    if (!config->relocatable) {
-      if (config->ehFrameHdr) {
-        part.ehFrameHdr = std::make_unique<EhFrameHeader>();
-        add(*part.ehFrameHdr);
-      }
-      part.ehFrame = std::make_unique<EhFrameSection>();
-      add(*part.ehFrame);
-
-      if (config->emachine == EM_ARM) {
-        // This section replaces all the individual .ARM.exidx InputSections.
-        part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
-        add(*part.armExidx);
-      }
-    }
-
-    if (!config->packageMetadata.empty()) {
-      part.packageMetadataNote = std::make_unique<PackageMetadataNote>();
-      add(*part.packageMetadataNote);
-    }
-  }
-
-  if (partitions.size() != 1) {
-    // Create the partition end marker. This needs to be in partition number 255
-    // so that it is sorted after all other partitions. It also has other
-    // special handling (see createPhdrs() and combineEhSections()).
-    in.partEnd =
-        std::make_unique<BssSection>(".part.end", config->maxPageSize, 1);
-    in.partEnd->partition = 255;
-    add(*in.partEnd);
-
-    in.partIndex = std::make_unique<PartitionIndexSection>();
-    addOptionalRegular("__part_index_begin", in.partIndex.get(), 0);
-    addOptionalRegular("__part_index_end", in.partIndex.get(),
-                       in.partIndex->getSize());
-    add(*in.partIndex);
-  }
-
-  // Add .got. MIPS' .got is so different from the other archs,
-  // it has its own class.
-  if (config->emachine == EM_MIPS) {
-    in.mipsGot = std::make_unique<MipsGotSection>();
-    add(*in.mipsGot);
-  } else {
-    in.got = std::make_unique<GotSection>();
-    add(*in.got);
-  }
-
-  if (config->emachine == EM_PPC) {
-    in.ppc32Got2 = std::make_unique<PPC32Got2Section>();
-    add(*in.ppc32Got2);
-  }
-
-  if (config->emachine == EM_PPC64) {
-    in.ppc64LongBranchTarget = std::make_unique<PPC64LongBranchTargetSection>();
-    add(*in.ppc64LongBranchTarget);
-  }
-
-  in.gotPlt = std::make_unique<GotPltSection>();
-  add(*in.gotPlt);
-  in.igotPlt = std::make_unique<IgotPltSection>();
-  add(*in.igotPlt);
-  // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
-  // section in the absence of PHDRS/SECTIONS commands.
-  if (config->zRelro && ((script->phdrsCommands.empty() &&
-        !script->hasSectionsCommand) || script->seenRelroEnd)) {
-    in.relroPadding = std::make_unique<RelroPaddingSection>();
-    add(*in.relroPadding);
-  }
-
-  if (config->emachine == EM_ARM) {
-    in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
-    add(*in.armCmseSGSection);
-  }
-
-  // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
-  // it as a relocation and ensure the referenced section is created.
-  if (ElfSym::globalOffsetTable && config->emachine != EM_MIPS) {
-    if (target->gotBaseSymInGotPlt)
-      in.gotPlt->hasGotPltOffRel = true;
-    else
-      in.got->hasGotOffRel = true;
-  }
-
-  if (config->gdbIndex)
-    add(*GdbIndexSection::create<ELFT>());
-
-  // We always need to add rel[a].plt to output if it has entries.
-  // Even for static linking it can contain R_[*]_IRELATIVE relocations.
-  in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
-      config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false,
-      /*threadCount=*/1);
-  add(*in.relaPlt);
-
-  if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
-      (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-    in.ibtPlt = std::make_unique<IBTPltSection>();
-    add(*in.ibtPlt);
-  }
-
-  if (config->emachine == EM_PPC)
-    in.plt = std::make_unique<PPC32GlinkSection>();
-  else
-    in.plt = std::make_unique<PltSection>();
-  add(*in.plt);
-  in.iplt = std::make_unique<IpltSection>();
-  add(*in.iplt);
-
-  if (config->andFeatures)
-    add(*make<GnuPropertySection>());
-
-  // .note.GNU-stack is always added when we are creating a re-linkable
-  // object file. Other linkers are using the presence of this marker
-  // section to control the executable-ness of the stack area, but that
-  // is irrelevant these days. Stack area should always be non-executable
-  // by default. So we emit this section unconditionally.
-  if (config->relocatable)
-    add(*make<GnuStackSection>());
-
-  if (in.symTab)
-    add(*in.symTab);
-  if (in.symTabShndx)
-    add(*in.symTabShndx);
-  add(*in.shStrTab);
-  if (in.strTab)
-    add(*in.strTab);
 }
 
 // The main function of the writer.
@@ -3110,11 +2826,6 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   for (Partition &part : partitions)
     part.buildId->writeBuildId(output);
 }
-
-template void elf::createSyntheticSections<ELF32LE>();
-template void elf::createSyntheticSections<ELF32BE>();
-template void elf::createSyntheticSections<ELF64LE>();
-template void elf::createSyntheticSections<ELF64BE>();
 
 template void elf::writeResult<ELF32LE>();
 template void elf::writeResult<ELF32BE>();

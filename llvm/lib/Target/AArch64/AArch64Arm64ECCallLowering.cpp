@@ -23,6 +23,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
@@ -31,7 +32,6 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
-using namespace llvm::object;
 
 using OperandBundleDef = OperandBundleDefT<Value *>;
 

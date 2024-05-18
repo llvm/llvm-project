@@ -57,7 +57,7 @@ define <2 x i17> @trunc_ctlz_zext_v2i17_v2i32_multiple_uses(<2 x i17> %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_v2i17_v2i32_multiple_uses(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i17> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[P:%.*]] = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[Z]], i1 false), !range [[RNG2:![0-9]+]]
-; CHECK-NEXT:    [[ZZ:%.*]] = trunc <2 x i32> [[P]] to <2 x i17>
+; CHECK-NEXT:    [[ZZ:%.*]] = trunc nuw nsw <2 x i32> [[P]] to <2 x i17>
 ; CHECK-NEXT:    call void @use(<2 x i32> [[P]])
 ; CHECK-NEXT:    ret <2 x i17> [[ZZ]]
 ;
@@ -91,7 +91,7 @@ define i16 @trunc_ctlz_zext_i10_i32(i10 %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_i10_i32(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i10 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[P:%.*]] = call i32 @llvm.ctlz.i32(i32 [[Z]], i1 false), !range [[RNG3:![0-9]+]]
-; CHECK-NEXT:    [[ZZ:%.*]] = trunc i32 [[P]] to i16
+; CHECK-NEXT:    [[ZZ:%.*]] = trunc nuw nsw i32 [[P]] to i16
 ; CHECK-NEXT:    ret i16 [[ZZ]]
 ;
   %z = zext i10 %x to i32

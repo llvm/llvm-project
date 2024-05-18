@@ -59,6 +59,11 @@ add_math_entrypoint_object(atan2f)
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
 
+add_math_entrypoint_object(canonicalize)
+add_math_entrypoint_object(canonicalizef)
+add_math_entrypoint_object(canonicalizef128)
+add_math_entrypoint_object(canonicalizel)
+
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
 add_math_entrypoint_object(ceill)
@@ -82,6 +87,8 @@ add_math_entrypoint_object(expf)
 
 add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
+
+add_math_entrypoint_object(exp2m1f)
 
 add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
@@ -285,6 +292,11 @@ add_math_entrypoint_object(round)
 add_math_entrypoint_object(roundf)
 add_math_entrypoint_object(roundl)
 add_math_entrypoint_object(roundf128)
+
+add_math_entrypoint_object(roundeven)
+add_math_entrypoint_object(roundevenf)
+add_math_entrypoint_object(roundevenl)
+add_math_entrypoint_object(roundevenf128)
 
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)

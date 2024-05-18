@@ -1,6 +1,12 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Exercise CUDA data attribute checks
 module m
+  type :: t1
+    integer :: i
+  end type
+  type :: t2
+    real, unified :: r(10) ! ok
+  end type
   real, constant :: mc ! ok
   real, constant :: mci = 1. ! ok
   !ERROR: Object 'mcl' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target
@@ -48,14 +54,20 @@ module m
   real, texture, pointer :: mt
   !ERROR: 'bigint' has intrinsic type 'INTEGER(16)' that is not available on the device
   integer(16), device :: bigint
+  !ERROR: Object 'um' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram
+  real, unified :: um
+
  contains
   attributes(device) subroutine devsubr(n,da)
     integer, intent(in) :: n
-    real, device :: da(*) ! ok
+    !ERROR: Object 'da' with ATTRIBUTES(DEVICE) may not be assumed size
+    real, device :: da(*)
     real, managed :: ma(n) ! ok
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
     real, constant :: rc ! ok
+    !ERROR: Object 'u' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram
+    real, unified :: u
   end subroutine
 
   subroutine host()
@@ -67,6 +79,12 @@ module m
     real, shared :: rs
 
     rs = 1 ! ok
+  end subroutine
+
+  subroutine host2()
+    real, unified :: ru ! ok
+    type(t1), unified :: tu ! ok
+    type(t2) :: t ! ok
   end subroutine
 
 end module

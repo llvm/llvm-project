@@ -676,6 +676,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
+  case R_AARCH64_AUTH:
   case R_RISCV_ADD:
   case R_RISCV_LEB128:
     return sym.getVA(a);
@@ -917,8 +918,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       break;
     }
 
-  for (size_t i = 0, relsSize = rels.size(); i != relsSize; ++i) {
-    const RelTy &rel = rels[i];
+  const InputFile *f = this->file;
+  for (auto it = rels.begin(), end = rels.end(); it != end; ++it) {
+    const RelTy &rel = *it;
     const RelType type = rel.getType(config->isMips64EL);
     const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
@@ -926,23 +928,22 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (!RelTy::IsRela)
       addend += target.getImplicitAddend(bufLoc, type);
 
-    Symbol &sym = this->file->getRelocTargetSym(rel);
+    Symbol &sym = f->getRelocTargetSym(rel);
     RelExpr expr = target.getRelExpr(type, sym, bufLoc);
     if (expr == R_NONE)
       continue;
     auto *ds = dyn_cast<Defined>(&sym);
 
     if (emachine == EM_RISCV && type == R_RISCV_SET_ULEB128) {
-      if (++i < relsSize &&
-          rels[i].getType(/*isMips64EL=*/false) == R_RISCV_SUB_ULEB128 &&
-          rels[i].r_offset == offset) {
+      if (++it != end &&
+          it->getType(/*isMips64EL=*/false) == R_RISCV_SUB_ULEB128 &&
+          it->r_offset == offset) {
         uint64_t val;
         if (!ds && tombstone) {
           val = *tombstone;
         } else {
           val = sym.getVA(addend) -
-                (this->file->getRelocTargetSym(rels[i]).getVA(0) +
-                 getAddend<ELFT>(rels[i]));
+                (f->getRelocTargetSym(*it).getVA(0) + getAddend<ELFT>(*it));
         }
         if (overwriteULEB128(bufLoc, val) >= 0x80)
           errorOrWarn(getLocation(offset) + ": ULEB128 value " + Twine(val) +
@@ -1258,10 +1259,10 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
       msg = "CIE/FDE too small";
       break;
     }
-    uint64_t size = endian::read32<ELFT::TargetEndianness>(d.data());
+    uint64_t size = endian::read32<ELFT::Endianness>(d.data());
     if (size == 0) // ZERO terminator
       break;
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(d.data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(d.data() + 4);
     size += 4;
     if (LLVM_UNLIKELY(size > d.size())) {
       // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,

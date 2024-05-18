@@ -161,9 +161,11 @@ class ShrinkWrap : public MachineFunctionPass {
   /// Current MachineFunction.
   MachineFunction *MachineFunc = nullptr;
 
-  /// Is `true` for block numbers where we can guarantee no stack access
-  /// or computation of stack-relative addresses on any CFG path including
-  /// the block itself.
+  /// Is `true` for the block numbers where we assume possible stack accesses
+  /// or computation of stack-relative addresses on any CFG path including the
+  /// block itself. Is `false` for basic blocks where we can guarantee the
+  /// opposite. False positives won't lead to incorrect analysis results,
+  /// therefore this approach is fair.
   BitVector StackAddressUsedBlockInfo;
 
   /// Check if \p MI uses or defines a callee-saved register or
@@ -948,6 +950,9 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
+  // Initially, conservatively assume that stack addresses can be used in each
+  // basic block and change the state only for those basic blocks for which we
+  // were able to prove the opposite.
   StackAddressUsedBlockInfo.resize(MF.getNumBlockIDs(), true);
   bool HasCandidate = performShrinkWrapping(RPOT, RS.get());
   StackAddressUsedBlockInfo.clear();

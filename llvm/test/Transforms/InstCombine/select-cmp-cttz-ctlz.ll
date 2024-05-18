@@ -220,7 +220,7 @@ define i64 @test6c(i32 %x) {
 define i16 @test1d(i64 %x) {
 ; CHECK-LABEL: @test1d(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[CT]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %ct = tail call i64 @llvm.cttz.i64(i64 %x, i1 true)
@@ -233,7 +233,7 @@ define i16 @test1d(i64 %x) {
 define i32 @test2d(i64 %x) {
 ; CHECK-LABEL: @test2d(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %ct = tail call i64 @llvm.cttz.i64(i64 %x, i1 true)
@@ -246,7 +246,7 @@ define i32 @test2d(i64 %x) {
 define i16 @test3d(i32 %x) {
 ; CHECK-LABEL: @test3d(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i32 [[CT]] to i16
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i32 [[CT]] to i16
 ; CHECK-NEXT:    ret i16 [[CAST]]
 ;
   %ct = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -259,7 +259,7 @@ define i16 @test3d(i32 %x) {
 define i16 @test4d(i64 %x) {
 ; CHECK-LABEL: @test4d(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i16
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i16
 ; CHECK-NEXT:    ret i16 [[CAST]]
 ;
   %ct = tail call i64 @llvm.ctlz.i64(i64 %x, i1 true)
@@ -272,7 +272,7 @@ define i16 @test4d(i64 %x) {
 define i32 @test5d(i64 %x) {
 ; CHECK-LABEL: @test5d(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %ct = tail call i64 @llvm.ctlz.i64(i64 %x, i1 true)
@@ -288,7 +288,7 @@ define i32 @not_op_ctlz(i64 %x) {
 ; CHECK-LABEL: @not_op_ctlz(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %n = xor i64 %x, -1
@@ -303,7 +303,7 @@ define i32 @not_op_cttz(i64 %x) {
 ; CHECK-LABEL: @not_op_cttz(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[N]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %n = xor i64 %x, -1
@@ -320,7 +320,7 @@ define i32 @not_op_ctlz_wrong_xor_op1(i64 %x) {
 ; CHECK-LABEL: @not_op_ctlz_wrong_xor_op1(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -2
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 true), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X]], -1
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -339,7 +339,7 @@ define i32 @not_op_ctlz_wrong_xor_op0(i64 %x, i64 %y) {
 ; CHECK-LABEL: @not_op_ctlz_wrong_xor_op0(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 true), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], -1
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -358,7 +358,7 @@ define i32 @not_op_cttz_wrong_cmp(i64 %x) {
 ; CHECK-LABEL: @not_op_cttz_wrong_cmp(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[N]], i1 true), !range [[RNG2]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i64 [[CT]] to i32
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X]], 0
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -374,7 +374,7 @@ define i32 @not_op_cttz_wrong_cmp(i64 %x) {
 define i16 @test6d(i32 %x) {
 ; CHECK-LABEL: @test6d(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
-; CHECK-NEXT:    [[CAST:%.*]] = trunc i32 [[CT]] to i16
+; CHECK-NEXT:    [[CAST:%.*]] = trunc nuw nsw i32 [[CT]] to i16
 ; CHECK-NEXT:    ret i16 [[CAST]]
 ;
   %ct = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
@@ -400,7 +400,7 @@ define i64 @select_bug1(i32 %x) {
 define i16 @select_bug2(i32 %x) {
 ; CHECK-LABEL: @select_bug2(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[CT]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i32 [[CT]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %ct = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
@@ -595,7 +595,7 @@ define i64 @test_multiuse_zext_undef(i32 %x, ptr %p) {
 define i16 @test_multiuse_trunc_def(i64 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_trunc_def(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[CT]] to i16
 ; CHECK-NEXT:    store i16 [[CONV]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
@@ -610,7 +610,7 @@ define i16 @test_multiuse_trunc_def(i64 %x, ptr %p) {
 define i16 @test_multiuse_trunc_undef(i64 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_trunc_undef(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[CT]] to i16
 ; CHECK-NEXT:    store i16 [[CONV]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;

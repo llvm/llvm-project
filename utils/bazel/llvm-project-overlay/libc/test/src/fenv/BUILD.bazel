@@ -16,10 +16,12 @@ libc_test(
     libc_function_deps = [
         "//libc:feclearexcept",
         "//libc:feraiseexcept",
+        "//libc:fesetexcept",
         "//libc:fetestexcept",
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+	"//libc:hdr_fenv_macros",
     ],
 )
 
@@ -30,6 +32,7 @@ libc_test(
         "//libc:fegetround",
         "//libc:fesetround",
     ],
+    deps = ["//libc:hdr_fenv_macros"],
 )
 
 libc_test(
@@ -46,6 +49,7 @@ libc_test(
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_macros_properties_architectures",
         "//libc/test/UnitTest:fp_test_helpers",
+	"//libc:hdr_fenv_macros",
     ],
 )
 
@@ -84,6 +88,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
+	"//libc:hdr_fenv_macros",
     ],
 )
 
@@ -98,6 +103,7 @@ libc_test(
     deps = [
         "//libc:__support_common",
         "//libc:__support_macros_properties_architectures",
+	"//libc:hdr_fenv_macros",
     ],
 )
 

@@ -3122,6 +3122,81 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // VectorizeOp
 //===----------------------------------------------------------------------===//
+
+static const StringLiteral kVectorSizesKeyword = "vector_sizes";
+
+ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
+  OpAsmParser::UnresolvedOperand target;
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
+  DenseI64ArrayAttr staticSizes;
+  SmallVector<Type> operandTypes;
+  llvm::SMLoc operandLoc;
+  DenseBoolArrayAttr scalableVals;
+
+  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
+    return ParseResult::failure();
+
+  if (succeeded(parser.parseOptionalKeyword(kVectorSizesKeyword))) {
+    if (failed(parseDynamicIndexList(parser, dynamicSizes, staticSizes,
+                                     scalableVals)))
+      return ParseResult::failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword(
+          getVectorizeNdExtractAttrName(result.name))))
+    result.addAttribute(getVectorizeNdExtractAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonTypeList(operandTypes))
+    return ParseResult::failure();
+
+  if (operandTypes.size() != dynamicSizes.size() + 1) {
+    return parser.emitError(operandLoc)
+           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
+  }
+  if (parser.resolveOperand(target, operandTypes.front(), result.operands) ||
+      parser.resolveOperands(dynamicSizes, ArrayRef(operandTypes).drop_front(),
+                             operandLoc, result.operands)) {
+    return failure();
+  }
+
+  if (scalableVals)
+    result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
+  if (staticSizes)
+    result.addAttribute(getStaticVectorSizesAttrName(result.name), staticSizes);
+
+  return success();
+}
+
+void transform::VectorizeOp::print(OpAsmPrinter &p) {
+  p << ' ' << getTarget() << ' ';
+  if (!getMixedVectorSizes().empty()) {
+    p << kVectorSizesKeyword << ' ';
+    printDynamicIndexList(p, getOperation(), getVectorSizes(),
+                          getStaticVectorSizesAttr(),
+                          /*valueTypes=*/{}, getScalableSizesAttr(),
+                          OpAsmParser::Delimiter::Square);
+  }
+
+  if (getVectorizeNdExtract())
+    p << getVectorizeNdExtractAttrName() << ' ';
+
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{
+          getScalableSizesAttrName(getOperation()->getName()),
+          getStaticVectorSizesAttrName(getOperation()->getName())});
+  p << " : ";
+  p << getTarget().getType();
+  if (!getVectorSizes().empty()) {
+    p << ", ";
+    llvm::interleaveComma(getVectorSizes(), p,
+                          [&](Value operand) { p << operand.getType(); });
+  }
+}
+
 DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
@@ -3135,6 +3210,13 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     if (sz.is<Attribute>()) {
       auto attr = sz.get<Attribute>();
       vectorSizes.push_back(cast<IntegerAttr>(attr).getInt());
+      continue;
+    } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
+      if (params.size() != 1)
+        return emitSilenceableFailure(getLoc()) << "expected a single param";
+      vectorSizes.push_back(
+          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
       continue;
     }
 

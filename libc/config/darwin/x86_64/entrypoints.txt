@@ -101,6 +101,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     # libc.src.fenv.fegetround
     # libc.src.fenv.feholdexcept
     # libc.src.fenv.fesetenv
+    # libc.src.fenv.fesetexcept
     # libc.src.fenv.fesetexceptflag
     # libc.src.fenv.fesetround
     # libc.src.fenv.feraiseexcept

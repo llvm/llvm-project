@@ -92,7 +92,7 @@ static cl::opt<std::string> AssumeFileName(
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
-             "  TextProto: .textpb .pb.txt .textproto .asciipb\n"
+             "  TextProto: .txtpb .textpb .pb.txt .textproto .asciipb\n"
              "  Verilog: .sv .svh .v .vh"),
     cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 

@@ -33,21 +33,21 @@ func.func @sparse_pack(%pos: tensor<2xi32>, %index: tensor<6x1xi32>, %data: tens
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed), crdWidth=32}>
 // CHECK-LABEL: func @sparse_unpack(
 //  CHECK-SAME: %[[T:.*]]: tensor<100xf64, #
-//  CHECK-SAME: %[[OD:.*]]: tensor<6xf64>
-//  CHECK-SAME: %[[OP:.*]]: tensor<2xindex>
-//  CHECK-SAME: %[[OI:.*]]: tensor<6x1xi32>
+//  CHECK-SAME: %[[OP:.*]]: tensor<2xindex>,
+//  CHECK-SAME: %[[OI:.*]]: tensor<6x1xi32>,
+//  CHECK-SAME: %[[OD:.*]]: tensor<6xf64>)
 //       CHECK: %[[P:.*]]:2, %[[D:.*]], %[[PL:.*]]:2, %[[DL:.*]] = sparse_tensor.disassemble %[[T]]
 //       CHECK: return %[[P]]#0, %[[P]]#1, %[[D]]
 func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>,
-                         %od : tensor<6xf64>,
                          %op : tensor<2xindex>,
-                         %oi : tensor<6x1xi32>)
+                         %oi : tensor<6x1xi32>,
+                         %od : tensor<6xf64>)
                        -> (tensor<2xindex>, tensor<6x1xi32>, tensor<6xf64>) {
-  %rp, %ri, %rd, %vl, %pl, %cl = sparse_tensor.disassemble %sp : tensor<100xf64, #SparseVector>
+  %rp, %ri, %d, %rpl, %ril, %dl = sparse_tensor.disassemble %sp : tensor<100xf64, #SparseVector>
                   out_lvls(%op, %oi : tensor<2xindex>, tensor<6x1xi32>)
                   out_vals(%od : tensor<6xf64>)
                   -> (tensor<2xindex>, tensor<6x1xi32>), tensor<6xf64>, (index, index), index
-  return %rp, %ri, %rd : tensor<2xindex>, tensor<6x1xi32>, tensor<6xf64>
+  return %rp, %ri, %d : tensor<2xindex>, tensor<6x1xi32>, tensor<6xf64>
 }
 
 // -----

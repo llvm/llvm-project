@@ -1889,21 +1889,8 @@ static int __kmp_get_xproc(void) {
 
 #elif KMP_OS_DARWIN
 
-  // Bug C77011 High "OpenMP Threads and number of active cores".
-
-  // Find the number of available CPUs.
-  kern_return_t rc;
-  host_basic_info_data_t info;
-  mach_msg_type_number_t num = HOST_BASIC_INFO_COUNT;
-  rc = host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)&info, &num);
-  if (rc == 0 && num == HOST_BASIC_INFO_COUNT) {
-    // Cannot use KA_TRACE() here because this code works before trace support
-    // is initialized.
-    r = info.avail_cpus;
-  } else {
-    KMP_WARNING(CantGetNumAvailCPU);
-    KMP_INFORM(AssumedNumCPU);
-  }
+  size_t len = sizeof(r);
+  sysctlbyname("hw.logicalcpu", &r, &len, NULL, 0);
 
 #else
 
@@ -2154,10 +2141,10 @@ int __kmp_is_address_mapped(void *addr) {
   // We pass from number of vm entry's semantic
   // to size of whole entry map list.
   lstsz = lstsz * 4 / 3;
-  buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
+  buf = reinterpret_cast<char *>(KMP_INTERNAL_MALLOC(lstsz));
   rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
   if (rc < 0) {
-    kmpc_free(buf);
+    KMP_INTERNAL_FREE(buf);
     return 0;
   }
 
@@ -2181,7 +2168,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
     lw += cursz;
   }
-  kmpc_free(buf);
+  KMP_INTERNAL_FREE(buf);
 #elif KMP_OS_DRAGONFLY
   char err[_POSIX2_LINE_MAX];
   kinfo_proc *proc;
@@ -2247,12 +2234,12 @@ int __kmp_is_address_mapped(void *addr) {
     return 0;
   }
 
-  buf = kmpc_malloc(sz);
+  buf = KMP_INTERNAL_MALLOC(sz);
 
   while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
     void *newbuf;
     sz <<= 1;
-    newbuf = kmpc_realloc(buf, sz);
+    newbuf = KMP_INTERNAL_REALLOC(buf, sz);
     buf = newbuf;
   }
 
@@ -2268,7 +2255,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
   }
 
-  kmpc_free(map);
+  KMP_INTERNAL_FREE(map);
   close(file);
   KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN
@@ -2635,7 +2622,8 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF ||   \
+      KMP_ARCH_AARCH64_32)
 
 // Because WebAssembly will use `call_indirect` to invoke the microtask and
 // WebAssembly indirect calls check that the called signature is a precise

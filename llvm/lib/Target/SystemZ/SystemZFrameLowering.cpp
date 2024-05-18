@@ -66,22 +66,6 @@ SystemZFrameLowering::create(const SystemZSubtarget &STI) {
   return std::make_unique<SystemZELFFrameLowering>();
 }
 
-MachineBasicBlock::iterator SystemZFrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MI) const {
-  switch (MI->getOpcode()) {
-  case SystemZ::ADJCALLSTACKDOWN:
-  case SystemZ::ADJCALLSTACKUP:
-    assert(hasReservedCallFrame(MF) &&
-           "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
-    return MBB.erase(MI);
-    break;
-
-  default:
-    llvm_unreachable("Unexpected call frame instruction");
-  }
-}
-
 namespace {
 struct SZFrameSortingObj {
   bool IsValid = false;     // True if we care about this Object.

@@ -772,7 +772,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   // DPP8 forbids modifiers and can inherit from VOPC_Profile
 
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
-  dag InsPartVOP3DPP = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, VRegSrc_32:$src1);
+  dag InsPartVOP3DPP = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, VCSrc_b32:$src1);
   let InsVOP3Base = !con(InsPartVOP3DPP, !if(HasOpSel, (ins op_sel0:$op_sel),
                                                        (ins)));
   let AsmVOP3Base = "$sdst, $src0_modifiers, $src1";
@@ -1377,31 +1377,9 @@ multiclass VOPC_Real_Base<GFXGen Gen, bits<9> op> {
     }
     if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e64" #"_dpp");
-      defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       def _e64_dpp#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP>,
                                 SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget>;
-      def _e64_dpp_w32#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP> {
-        let AsmString = psDPP.OpName # " vcc_lo, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp_w64#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP> {
-        let AsmString = psDPP.OpName # " vcc, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
-      defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
       def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64>;
-      def _e64_dpp8_w32#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64> {
-        let AsmString = ps32.OpName # " vcc_lo, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp8_w64#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64> {
-        let AsmString = ps32.OpName # " vcc, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
     }
   } // AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace
 }
@@ -1472,35 +1450,9 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
 
     if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e64" #"_dpp");
-      defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       def _e64_dpp#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name>,
                                 SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget>;
-      def _e64_dpp_w32#Gen.Suffix
-          : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name> {
-        let AsmString = asm_name # " vcc_lo, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp_w64#Gen.Suffix
-          : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name> {
-        let AsmString = asm_name # " vcc, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
-      defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
       def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name>;
-      def _e64_dpp8_w32#Gen.Suffix
-          : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name> {
-        let AsmString = asm_name # " vcc_lo, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp8_w64#Gen.Suffix
-          : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name> {
-        let AsmString = asm_name # " vcc, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
     }
   } // End AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace
 }

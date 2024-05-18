@@ -14,26 +14,26 @@ namespace std {
   };
 }
 
-namespace dr1004 { // dr1004: 5
+namespace cwg1004 { // cwg1004: 5
   template<typename> struct A {};
   template<typename> struct B1 {};
   template<template<typename> class> struct B2 {};
-  template<typename X> void f(); // #dr1004-f-1
-  template<template<typename> class X> void f(); // #dr1004-f-2
-  template<template<typename> class X> void g(); // #dr1004-g-1
-  template<typename X> void g(); // #dr1004-g-2
+  template<typename X> void f(); // #cwg1004-f-1
+  template<template<typename> class X> void f(); // #cwg1004-f-2
+  template<template<typename> class X> void g(); // #cwg1004-g-1
+  template<typename X> void g(); // #cwg1004-g-2
   struct C : A<int> {
     B1<A> b1a;
     B2<A> b2a;
     void h() {
       f<A>();
       // expected-error@-1 {{call to 'f' is ambiguous}}
-      //   expected-note@#dr1004-f-1 {{candidate function [with X = dr1004::A<int>]}}
-      //   expected-note@#dr1004-f-2 {{candidate function [with X = dr1004::A]}}
+      //   expected-note@#cwg1004-f-1 {{candidate function [with X = cwg1004::A<int>]}}
+      //   expected-note@#cwg1004-f-2 {{candidate function [with X = cwg1004::A]}}
       g<A>();
       // expected-error@-1 {{call to 'g' is ambiguous}}
-      //   expected-note@#dr1004-g-1 {{candidate function [with X = dr1004::A]}}
-      //   expected-note@#dr1004-g-2 {{candidate function [with X = dr1004::A<int>]}}
+      //   expected-note@#cwg1004-g-1 {{candidate function [with X = cwg1004::A]}}
+      //   expected-note@#cwg1004-g-2 {{candidate function [with X = cwg1004::A<int>]}}
     }
   };
 
@@ -41,17 +41,17 @@ namespace dr1004 { // dr1004: 5
   // name lookup of "T::template A" names the constructor.
   template<class T, template<class> class U = T::template A> struct Third { };
   // expected-error@-1 {{is a constructor name}}
-  //   expected-note@#dr1004-t {{in instantiation of default argument}}
-  Third<A<int> > t; // #dr1004-t
+  //   expected-note@#cwg1004-t {{in instantiation of default argument}}
+  Third<A<int> > t; // #cwg1004-t
 }
 
-namespace dr1042 { // dr1042: 3.5
+namespace cwg1042 { // cwg1042: 3.5
 #if __cplusplus >= 201402L
   // C++14 added an attribute that we can test the semantics of.
-  using foo [[deprecated]] = int; // #dr1042-using
+  using foo [[deprecated]] = int; // #cwg1042-using
   foo f = 12;
   // since-cxx14-warning@-1 {{'foo' is deprecated}}
-  //   since-cxx14-note@#dr1042-using {{'foo' has been explicitly marked deprecated here}}
+  //   since-cxx14-note@#cwg1042-using {{'foo' has been explicitly marked deprecated here}}
 #elif __cplusplus >= 201103L
   // C++11 did not have any attributes that could be applied to an alias
   // declaration, so the best we can test is that we accept an empty attribute
@@ -60,7 +60,7 @@ namespace dr1042 { // dr1042: 3.5
 #endif
 }
 
-namespace dr1048 { // dr1048: 3.6
+namespace cwg1048 { // cwg1048: 3.6
   struct A {};
   const A f();
   A g();
@@ -78,20 +78,20 @@ namespace dr1048 { // dr1048: 3.6
 #endif
 }
 
-namespace dr1054 { // dr1054: no
+namespace cwg1054 { // cwg1054: no
   // FIXME: Test is incomplete.
   struct A {} volatile a;
   void f() {
     // FIXME: This is wrong: an lvalue-to-rvalue conversion is applied here,
     // which copy-initializes a temporary from 'a'. Therefore this is
     // ill-formed because A does not have a volatile copy constructor.
-    // (We might want to track this aspect under dr1383 instead?)
+    // (We might want to track this aspect under cwg1383 instead?)
     a;
     // expected-warning@-1 {{expression result unused; assign into a variable to force a volatile load}}
   }
 }
 
-namespace dr1070 { // dr1070: 3.5
+namespace cwg1070 { // cwg1070: 3.5
 #if __cplusplus >= 201103L
   struct A {
     A(std::initializer_list<int>);

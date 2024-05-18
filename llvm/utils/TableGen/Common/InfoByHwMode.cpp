@@ -183,6 +183,20 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
+SubRegRange::SubRegRange(Record *R) {
+  Size = R->getValueAsInt("Size");
+  Offset = R->getValueAsInt("Offset");
+}
+
+SubRegRangeByHwMode::SubRegRangeByHwMode(Record *R, const CodeGenHwModes &CGH) {
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+  for (const HwModeSelect::PairType &P : MS.Items) {
+    auto I = Map.insert({P.first, SubRegRange(P.second)});
+    assert(I.second && "Duplicate entry?");
+    (void)I;
+  }
+}
+
 EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R,
                                            const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);

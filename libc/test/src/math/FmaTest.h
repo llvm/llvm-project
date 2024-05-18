@@ -10,9 +10,10 @@
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/stdlib/rand.h"
+#include "src/stdlib/srand.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "test/src/math/RandUtils.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -43,8 +44,7 @@ private:
   StorageType get_random_bit_pattern() {
     StorageType bits{0};
     for (StorageType i = 0; i < sizeof(StorageType) / 2; ++i) {
-      bits = (bits << 2) +
-             static_cast<uint16_t>(LIBC_NAMESPACE::testutils::rand());
+      bits = (bits << 2) + static_cast<uint16_t>(LIBC_NAMESPACE::rand());
     }
     return bits;
   }
@@ -77,6 +77,7 @@ public:
   void test_subnormal_range(Func func) {
     constexpr StorageType COUNT = 100'001;
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    LIBC_NAMESPACE::srand(1);
     for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
          v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
       T x = FPBits(get_random_bit_pattern()).get_val(), y = FPBits(v).get_val(),
@@ -90,6 +91,7 @@ public:
   void test_normal_range(Func func) {
     constexpr StorageType COUNT = 100'001;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    LIBC_NAMESPACE::srand(1);
     for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
          v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
       T x = FPBits(v).get_val(), y = FPBits(w).get_val(),

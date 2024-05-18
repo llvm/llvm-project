@@ -179,10 +179,12 @@ public:
     uptr Fractional;
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
                       &Fractional);
-    Str->append("Stats: MapAllocatorCache: EntriesCount: %d, "
-                "MaxEntriesCount: %u, MaxEntrySize: %zu\n",
-                EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
-                atomic_load_relaxed(&MaxEntrySize));
+    const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
+    Str->append(
+        "Stats: MapAllocatorCache: EntriesCount: %d, "
+        "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsIntervalMs = %d\n",
+        EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
+        atomic_load_relaxed(&MaxEntrySize), Interval >= 0 ? Interval : -1);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);

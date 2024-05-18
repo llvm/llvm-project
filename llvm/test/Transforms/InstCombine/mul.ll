@@ -684,9 +684,8 @@ define <2 x i32> @signbit_mul_vec_commute(<2 x i32> %a, <2 x i32> %b) {
 
 define i32 @lowbit_mul(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lowbit_mul(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[DOTNOT]], i32 0, i32 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i1
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %d = and i32 %a, 1

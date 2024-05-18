@@ -49,6 +49,7 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   }
 }
 
+RT_OFFLOAD_API_GROUP_BEGIN
 Fortran::common::optional<Convert> GetConvertFromString(
     const char *x, std::size_t n) {
   static const char *keywords[]{
@@ -68,6 +69,7 @@ Fortran::common::optional<Convert> GetConvertFromString(
     return Fortran::common::nullopt;
   }
 }
+RT_OFFLOAD_API_GROUP_END
 
 void ExecutionEnvironment::Configure(int ac, const char *av[],
     const char *env[], const EnvironmentDefaultList *envDefaults) {

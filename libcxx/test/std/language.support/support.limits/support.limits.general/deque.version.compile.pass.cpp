@@ -15,11 +15,12 @@
 
 // Test the feature test macros defined by <deque>
 
-/*  Constant                                      Value
-    __cpp_lib_allocator_traits_is_always_equal    201411L [C++17]
-    __cpp_lib_erase_if                            202002L [C++20]
-    __cpp_lib_nonmember_container_access          201411L [C++17]
-    __cpp_lib_ranges_to_container                 202202L [C++23]
+/*  Constant                                                Value
+    __cpp_lib_allocator_traits_is_always_equal              201411L [C++17]
+    __cpp_lib_default_template_type_for_algorithm_values    202403L [C++26]
+    __cpp_lib_erase_if                                      202002L [C++20]
+    __cpp_lib_nonmember_container_access                    201411L [C++17]
+    __cpp_lib_ranges_to_container                           202202L [C++23]
 */
 
 #include <deque>
@@ -29,6 +30,10 @@
 
 # ifdef __cpp_lib_allocator_traits_is_always_equal
 #   error "__cpp_lib_allocator_traits_is_always_equal should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_default_template_type_for_algorithm_values
+#   error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -47,6 +52,10 @@
 
 # ifdef __cpp_lib_allocator_traits_is_always_equal
 #   error "__cpp_lib_allocator_traits_is_always_equal should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_default_template_type_for_algorithm_values
+#   error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -68,6 +77,10 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++17"
+# endif
+
+# ifdef __cpp_lib_default_template_type_for_algorithm_values
+#   error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -92,6 +105,10 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++20"
+# endif
+
+# ifdef __cpp_lib_default_template_type_for_algorithm_values
+#   error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_erase_if
@@ -119,6 +136,10 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++23"
+# endif
+
+# ifdef __cpp_lib_default_template_type_for_algorithm_values
+#   error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_erase_if
@@ -149,6 +170,19 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_default_template_type_for_algorithm_values
+#     error "__cpp_lib_default_template_type_for_algorithm_values should be defined in c++26"
+#   endif
+#   if __cpp_lib_default_template_type_for_algorithm_values != 202403L
+#     error "__cpp_lib_default_template_type_for_algorithm_values should have the value 202403L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_default_template_type_for_algorithm_values
+#     error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_erase_if

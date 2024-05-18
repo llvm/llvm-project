@@ -17,6 +17,8 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 
+#include <set>
+
 using AIX = clang::driver::toolchains::AIX;
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -471,7 +473,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
   // the global setting of tocdata in TOCDataGloballyinEffect.
   // Those that have the opposite setting to TOCDataGloballyinEffect, are added
   // to ExplicitlySpecifiedGlobals.
-  llvm::StringSet<> ExplicitlySpecifiedGlobals;
+  std::set<llvm::StringRef> ExplicitlySpecifiedGlobals;
   for (const auto Arg :
        Args.filtered(options::OPT_mtocdata_EQ, options::OPT_mno_tocdata_EQ)) {
     TOCDataSetting ArgTocDataSetting =
@@ -486,7 +488,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         ExplicitlySpecifiedGlobals.erase(Val);
   }
 
-  auto buildExceptionList = [](const llvm::StringSet<> &ExplicitValues,
+  auto buildExceptionList = [](const std::set<llvm::StringRef> &ExplicitValues,
                                const char *OptionSpelling) {
     std::string Option(OptionSpelling);
     bool IsFirst = true;
@@ -495,7 +497,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         Option += ",";
 
       IsFirst = false;
-      Option += E.first();
+      Option += E.str();
     }
     return Option;
   };

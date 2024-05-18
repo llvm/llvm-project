@@ -13,7 +13,7 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 TEST(LlvmLibcFEnvTest, EnableTest) {
 #if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \

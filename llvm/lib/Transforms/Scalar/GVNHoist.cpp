@@ -951,6 +951,14 @@ void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
       OtherGep = cast<GetElementPtrInst>(
           cast<StoreInst>(OtherInst)->getPointerOperand());
     ClonedGep->andIRFlags(OtherGep);
+
+    // Merge debug locations of GEPs, because the hoisted GEP replaces those
+    // in branches. When cloning, ClonedGep preserves the debug location of
+    // Gepd, so Gep is skipped to avoid merging it twice.
+    if (OtherGep != Gep) {
+      ClonedGep->applyMergedLocation(ClonedGep->getDebugLoc(),
+                                     OtherGep->getDebugLoc());
+    }
   }
 
   // Replace uses of Gep with ClonedGep in Repl.

@@ -33,6 +33,7 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::objcopy::elf;
 using namespace llvm::object;
+using namespace llvm::support;
 
 template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
   uint8_t *B = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
@@ -1175,9 +1176,9 @@ template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const GroupSection &Sec) {
   ELF::Elf32_Word *Buf =
       reinterpret_cast<ELF::Elf32_Word *>(Out.getBufferStart() + Sec.Offset);
-  support::endian::write32<ELFT::TargetEndianness>(Buf++, Sec.FlagWord);
+  endian::write32<ELFT::Endianness>(Buf++, Sec.FlagWord);
   for (SectionBase *S : Sec.GroupMembers)
-    support::endian::write32<ELFT::TargetEndianness>(Buf++, S->Index);
+    endian::write32<ELFT::Endianness>(Buf++, S->Index);
   return Error::success();
 }
 
@@ -1522,10 +1523,9 @@ Error ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
       reinterpret_cast<const ELF::Elf32_Word *>(GroupSec->Contents.data());
   const ELF::Elf32_Word *End =
       Word + GroupSec->Contents.size() / sizeof(ELF::Elf32_Word);
-  GroupSec->setFlagWord(
-      support::endian::read32<ELFT::TargetEndianness>(Word++));
+  GroupSec->setFlagWord(endian::read32<ELFT::Endianness>(Word++));
   for (; Word != End; ++Word) {
-    uint32_t Index = support::endian::read32<ELFT::TargetEndianness>(Word);
+    uint32_t Index = support::endian::read32<ELFT::Endianness>(Word);
     Expected<SectionBase *> Sec = SecTable.getSection(
         Index, "group member index " + Twine(Index) + " in section '" +
                    GroupSec->Name + "' is invalid");
@@ -1993,9 +1993,8 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_ident[EI_MAG2] = 'L';
   Ehdr.e_ident[EI_MAG3] = 'F';
   Ehdr.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  Ehdr.e_ident[EI_DATA] = ELFT::TargetEndianness == llvm::endianness::big
-                              ? ELFDATA2MSB
-                              : ELFDATA2LSB;
+  Ehdr.e_ident[EI_DATA] =
+      ELFT::Endianness == llvm::endianness::big ? ELFDATA2MSB : ELFDATA2LSB;
   Ehdr.e_ident[EI_VERSION] = EV_CURRENT;
   Ehdr.e_ident[EI_OSABI] = Obj.OSABI;
   Ehdr.e_ident[EI_ABIVERSION] = Obj.ABIVersion;

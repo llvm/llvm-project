@@ -11,7 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 TEST(LlvmLibcRoundingModeTest, SetAndGet) {
   struct ResetDefaultRoundingMode {

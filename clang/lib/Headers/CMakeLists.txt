@@ -437,14 +437,14 @@ foreach( f ${generated_files} )
 endforeach( f )
 
 function(add_header_target target_name file_list)
-  add_custom_target(${target_name} DEPENDS ${file_list})
+  add_library(${target_name} INTERFACE ${file_list})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Misc"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 endfunction()
 
 # The catch-all clang-resource-headers target
-add_custom_target("clang-resource-headers" ALL DEPENDS ${out_files})
+add_library(clang-resource-headers INTERFACE ${out_files})
 set_target_properties("clang-resource-headers" PROPERTIES
   FOLDER "Misc"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
@@ -501,6 +501,10 @@ add_header_target("windows-resource-headers" ${windows_only_files})
 add_header_target("utility-resource-headers" ${utility_files})
 
 get_clang_resource_dir(header_install_dir SUBDIR include)
+target_include_directories(clang-resource-headers INTERFACE
+  $<BUILD_INTERFACE:${output_dir}>
+  $<INSTALL_INTERFACE:${header_install_dir}>)
+set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS clang-resource-headers)
 
 #############################################################
 # Install rules for the catch-all clang-resource-headers target
