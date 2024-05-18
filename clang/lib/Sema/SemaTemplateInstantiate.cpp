@@ -32,6 +32,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConcept.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -3018,7 +3019,7 @@ void Sema::SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
     // On error, recover by dropping the exception specification.
     ESI.Type = EST_None;
 
-  UpdateExceptionSpec(New, ESI);
+  ExceptionSpec().UpdateExceptionSpec(New, ESI);
 }
 
 namespace {
@@ -3493,6 +3494,33 @@ namespace clang {
         const MultiLevelTemplateArgumentList &TemplateArgs);
   }
 }
+
+class SavePendingParsedClassStateRAII {
+public:
+  SavePendingParsedClassStateRAII(Sema &S) : S(S) { swapSavedState(); }
+
+  ~SavePendingParsedClassStateRAII() {
+    assert(S.ExceptionSpec().DelayedOverridingExceptionSpecChecks.empty() &&
+            "there shouldn't be any pending delayed exception spec checks");
+    assert(S.ExceptionSpec().DelayedEquivalentExceptionSpecChecks.empty() &&
+            "there shouldn't be any pending delayed exception spec checsks");
+    swapSavedState();
+  }
+
+private:
+  Sema &S;
+  decltype(SemaExceptionSpec::DelayedOverridingExceptionSpecChecks)
+      SavedOverridingExceptionSpecChecks;
+  decltype(SemaExceptionSpec::DelayedEquivalentExceptionSpecChecks)
+      SavedEquivalentExceptionSpecChecks;
+
+  void swapSavedState() {
+    SavedOverridingExceptionSpecChecks.swap(
+        S.ExceptionSpec().DelayedOverridingExceptionSpecChecks);
+    SavedEquivalentExceptionSpecChecks.swap(
+        S.ExceptionSpec().DelayedEquivalentExceptionSpecChecks);
+  }
+};
 
 /// Instantiate the definition of a class from a given pattern.
 ///

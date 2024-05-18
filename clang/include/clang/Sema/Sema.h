@@ -169,6 +169,7 @@ class PseudoObjectExpr;
 class QualType;
 class SemaCodeCompletion;
 class SemaCUDA;
+class SemaExceptionSpec;
 class SemaHLSL;
 class SemaObjC;
 class SemaOpenACC;
@@ -461,29 +462,28 @@ class Sema final : public SemaBase {
   // 9. Declarations (SemaDecl.cpp)
   // 10. Declaration Attribute Handling (SemaDeclAttr.cpp)
   // 11. C++ Declarations (SemaDeclCXX.cpp)
-  // 12. C++ Exception Specifications (SemaExceptionSpec.cpp)
-  // 13. Expressions (SemaExpr.cpp)
-  // 14. C++ Expressions (SemaExprCXX.cpp)
-  // 15. Member Access Expressions (SemaExprMember.cpp)
-  // 16. Initializers (SemaInit.cpp)
-  // 17. C++ Lambda Expressions (SemaLambda.cpp)
-  // 18. Name Lookup (SemaLookup.cpp)
-  // 19. Modules (SemaModule.cpp)
-  // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Pseudo-Object (SemaPseudoObject.cpp)
-  // 22. Statements (SemaStmt.cpp)
-  // 23. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 24. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 25. C++ Templates (SemaTemplate.cpp)
-  // 26. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 28. C++ Template Declaration Instantiation
+  // 12. Expressions (SemaExpr.cpp)
+  // 13. C++ Expressions (SemaExprCXX.cpp)
+  // 14. Member Access Expressions (SemaExprMember.cpp)
+  // 15. Initializers (SemaInit.cpp)
+  // 16. C++ Lambda Expressions (SemaLambda.cpp)
+  // 17. Name Lookup (SemaLookup.cpp)
+  // 18. Modules (SemaModule.cpp)
+  // 19. C++ Overloading (SemaOverload.cpp)
+  // 20. Pseudo-Object (SemaPseudoObject.cpp)
+  // 21. Statements (SemaStmt.cpp)
+  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 24. C++ Templates (SemaTemplate.cpp)
+  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 27. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 30. Constraints and Concepts (SemaConcept.cpp)
-  // 31. Types (SemaType.cpp)
-  // 32. FixIt Helpers (SemaFixItUtils.cpp)
-  // 33. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
+  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 29. Constraints and Concepts (SemaConcept.cpp)
+  // 30. Types (SemaType.cpp)
+  // 31. FixIt Helpers (SemaFixItUtils.cpp)
+  // 32. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -994,6 +994,11 @@ public:
     return *CUDAPtr;
   }
 
+  SemaExceptionSpec &ExceptionSpec() {
+    assert(ExceptionSpecPtr);
+    return *ExceptionSpecPtr;
+  }
+
   SemaHLSL &HLSL() {
     assert(HLSLPtr);
     return *HLSLPtr;
@@ -1051,6 +1056,7 @@ private:
 
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
+  std::unique_ptr<SemaExceptionSpec> ExceptionSpecPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
@@ -4048,25 +4054,6 @@ public:
   /// Evaluate the implicit exception specification for a defaulted
   /// special member function.
   void EvaluateImplicitExceptionSpec(SourceLocation Loc, FunctionDecl *FD);
-
-  /// Check the given exception-specification and update the
-  /// exception specification information with the results.
-  void checkExceptionSpecification(bool IsTopLevel,
-                                   ExceptionSpecificationType EST,
-                                   ArrayRef<ParsedType> DynamicExceptions,
-                                   ArrayRef<SourceRange> DynamicExceptionRanges,
-                                   Expr *NoexceptExpr,
-                                   SmallVectorImpl<QualType> &Exceptions,
-                                   FunctionProtoType::ExceptionSpecInfo &ESI);
-
-  /// Add an exception-specification to the given member or friend function
-  /// (or function template). The exception-specification was parsed
-  /// after the function itself was declared.
-  void actOnDelayedExceptionSpecification(
-      Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
-      ArrayRef<ParsedType> DynamicExceptions,
-      ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
-
   class InheritedConstructorInfo;
 
   /// Determine if a special member function should have a deleted
@@ -4104,12 +4091,6 @@ public:
   /// defining this destructor as the default destructor.
   void DefineImplicitDestructor(SourceLocation CurrentLocation,
                                 CXXDestructorDecl *Destructor);
-
-  /// Build an exception spec for destructors that don't have one.
-  ///
-  /// C++11 says that user-defined destructors with no exception spec get one
-  /// that looks as if the destructor was implicitly declared.
-  void AdjustDestructorExceptionSpec(CXXDestructorDecl *Destructor);
 
   /// Define the specified inheriting constructor.
   void DefineInheritingConstructor(SourceLocation UseLoc,
@@ -4346,11 +4327,6 @@ public:
   void MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
                       bool DefinitionRequired = false);
 
-  /// Mark the exception specifications of all virtual member functions
-  /// in the given class as needed.
-  void MarkVirtualMemberExceptionSpecsNeeded(SourceLocation Loc,
-                                             const CXXRecordDecl *RD);
-
   /// MarkVirtualMembersReferenced - Will mark all members of the given
   /// CXXRecordDecl referenced.
   void MarkVirtualMembersReferenced(SourceLocation Loc, const CXXRecordDecl *RD,
@@ -4437,7 +4413,6 @@ public:
   bool CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
                                              CXXSpecialMemberKind CSM,
                                              SourceLocation DefaultLoc);
-  void CheckDelayedMemberExceptionSpecs();
 
   /// Kinds of defaulted comparison operator functions.
   enum class DefaultedComparisonKind : unsigned char {
@@ -4588,7 +4563,6 @@ public:
   SmallVector<CXXRecordDecl *, 4> DelayedDllExportClasses;
   SmallVector<CXXMethodDecl *, 4> DelayedDllExportMemberFunctions;
 
-  void MergeVarDeclExceptionSpecs(VarDecl *New, VarDecl *Old);
   bool MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old, Scope *S);
 
   /// Helpers for dealing with blocks and functions.
@@ -4827,84 +4801,6 @@ private:
                                   DeclarationName FieldName,
                                   const CXXRecordDecl *RD,
                                   bool DeclIsField = true);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name C++ Exception Specifications
-  /// Implementations are in SemaExceptionSpec.cpp
-  ///@{
-
-public:
-  /// All the overriding functions seen during a class definition
-  /// that had their exception spec checks delayed, plus the overridden
-  /// function.
-  SmallVector<std::pair<const CXXMethodDecl *, const CXXMethodDecl *>, 2>
-      DelayedOverridingExceptionSpecChecks;
-
-  /// All the function redeclarations seen during a class definition that had
-  /// their exception spec checks delayed, plus the prior declaration they
-  /// should be checked against. Except during error recovery, the new decl
-  /// should always be a friend declaration, as that's the only valid way to
-  /// redeclare a special member before its class is complete.
-  SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 2>
-      DelayedEquivalentExceptionSpecChecks;
-
-  /// Determine if we're in a case where we need to (incorrectly) eagerly
-  /// parse an exception specification to work around a libstdc++ bug.
-  bool isLibstdcxxEagerExceptionSpecHack(const Declarator &D);
-
-  /// Check the given noexcept-specifier, convert its expression, and compute
-  /// the appropriate ExceptionSpecificationType.
-  ExprResult ActOnNoexceptSpec(Expr *NoexceptExpr,
-                               ExceptionSpecificationType &EST);
-
-  CanThrowResult canThrow(const Stmt *E);
-  /// Determine whether the callee of a particular function call can throw.
-  /// E, D and Loc are all optional.
-  static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
-                                       SourceLocation Loc = SourceLocation());
-  const FunctionProtoType *ResolveExceptionSpec(SourceLocation Loc,
-                                                const FunctionProtoType *FPT);
-  void UpdateExceptionSpec(FunctionDecl *FD,
-                           const FunctionProtoType::ExceptionSpecInfo &ESI);
-  bool CheckSpecifiedExceptionType(QualType &T, SourceRange Range);
-  bool CheckDistantExceptionSpec(QualType T);
-  bool CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New);
-  bool CheckEquivalentExceptionSpec(const FunctionProtoType *Old,
-                                    SourceLocation OldLoc,
-                                    const FunctionProtoType *New,
-                                    SourceLocation NewLoc);
-  bool CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
-                                    const PartialDiagnostic &NoteID,
-                                    const FunctionProtoType *Old,
-                                    SourceLocation OldLoc,
-                                    const FunctionProtoType *New,
-                                    SourceLocation NewLoc);
-  bool handlerCanCatch(QualType HandlerType, QualType ExceptionType);
-  bool CheckExceptionSpecSubset(
-      const PartialDiagnostic &DiagID, const PartialDiagnostic &NestedDiagID,
-      const PartialDiagnostic &NoteID, const PartialDiagnostic &NoThrowDiagID,
-      const FunctionProtoType *Superset, bool SkipSupersetFirstParameter,
-      SourceLocation SuperLoc, const FunctionProtoType *Subset,
-      bool SkipSubsetFirstParameter, SourceLocation SubLoc);
-  bool CheckParamExceptionSpec(
-      const PartialDiagnostic &NestedDiagID, const PartialDiagnostic &NoteID,
-      const FunctionProtoType *Target, bool SkipTargetFirstParameter,
-      SourceLocation TargetLoc, const FunctionProtoType *Source,
-      bool SkipSourceFirstParameter, SourceLocation SourceLoc);
-
-  bool CheckExceptionSpecCompatibility(Expr *From, QualType ToType);
-
-  /// CheckOverridingFunctionExceptionSpec - Checks whether the exception
-  /// spec is a subset of base spec.
-  bool CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
-                                            const CXXMethodDecl *Old);
 
   ///@}
 
@@ -10653,33 +10549,6 @@ private:
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
   int ParsingClassDepth = 0;
-
-  class SavePendingParsedClassStateRAII {
-  public:
-    SavePendingParsedClassStateRAII(Sema &S) : S(S) { swapSavedState(); }
-
-    ~SavePendingParsedClassStateRAII() {
-      assert(S.DelayedOverridingExceptionSpecChecks.empty() &&
-             "there shouldn't be any pending delayed exception spec checks");
-      assert(S.DelayedEquivalentExceptionSpecChecks.empty() &&
-             "there shouldn't be any pending delayed exception spec checks");
-      swapSavedState();
-    }
-
-  private:
-    Sema &S;
-    decltype(DelayedOverridingExceptionSpecChecks)
-        SavedOverridingExceptionSpecChecks;
-    decltype(DelayedEquivalentExceptionSpecChecks)
-        SavedEquivalentExceptionSpecChecks;
-
-    void swapSavedState() {
-      SavedOverridingExceptionSpecChecks.swap(
-          S.DelayedOverridingExceptionSpecChecks);
-      SavedEquivalentExceptionSpecChecks.swap(
-          S.DelayedEquivalentExceptionSpecChecks);
-    }
-  };
 
   ///@}
 

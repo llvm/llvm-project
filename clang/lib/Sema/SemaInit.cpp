@@ -27,6 +27,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
@@ -8865,7 +8866,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // Reference binding does not have any corresponding ASTs.
 
       // Check exception specifications
-      if (S.CheckExceptionSpecCompatibility(CurInit.get(), DestType))
+      if (S.ExceptionSpec().CheckExceptionSpecCompatibility(CurInit.get(), DestType))
         return ExprError();
 
       // We don't check for e.g. function pointers here, since address
@@ -8889,7 +8890,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       assert(CurInit.get()->isPRValue() && "not a temporary");
 
       // Check exception specifications
-      if (S.CheckExceptionSpecCompatibility(CurInit.get(), DestType))
+      if (S.ExceptionSpec().CheckExceptionSpecCompatibility(CurInit.get(), DestType))
         return ExprError();
 
       QualType MTETy = Step->Type;

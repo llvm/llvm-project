@@ -34,6 +34,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -2727,7 +2728,7 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
                                       DeclarationName Entity) {
   // Verify that we're not building a pointer to pointer to function with
   // exception specification.
-  if (CheckDistantExceptionSpec(T)) {
+  if (ExceptionSpec().CheckDistantExceptionSpec(T)) {
     Diag(Loc, diag::err_distant_exception_spec);
     return QualType();
   }
@@ -4706,7 +4707,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Pointer:
       // Verify that we're not building a pointer to pointer to function with
       // exception specification.
-      if (LangOpts.CPlusPlus && S.CheckDistantExceptionSpec(T)) {
+      if (LangOpts.CPlusPlus && S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
         S.Diag(D.getIdentifierLoc(), diag::err_distant_exception_spec);
         D.setInvalidType(true);
         // Build the type anyway.
@@ -4742,7 +4743,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Reference: {
       // Verify that we're not building a reference to pointer to function with
       // exception specification.
-      if (LangOpts.CPlusPlus && S.CheckDistantExceptionSpec(T)) {
+      if (LangOpts.CPlusPlus && S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
         S.Diag(D.getIdentifierLoc(), diag::err_distant_exception_spec);
         D.setInvalidType(true);
         // Build the type anyway.
@@ -4756,7 +4757,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Array: {
       // Verify that we're not building an array of pointers to function with
       // exception specification.
-      if (LangOpts.CPlusPlus && S.CheckDistantExceptionSpec(T)) {
+      if (LangOpts.CPlusPlus && S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
         S.Diag(D.getIdentifierLoc(), diag::err_distant_exception_spec);
         D.setInvalidType(true);
         // Build the type anyway.
@@ -5256,7 +5257,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           NoexceptExpr = FTI.NoexceptExpr;
         }
 
-        S.checkExceptionSpecification(D.isFunctionDeclarationContext(),
+        S.ExceptionSpec().checkExceptionSpecification(D.isFunctionDeclarationContext(),
                                       FTI.getExceptionSpecType(),
                                       DynamicExceptions,
                                       DynamicExceptionRanges,
