@@ -5019,6 +5019,32 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     }
   }
 
+  // Optimization for urem with a constant divisor
+  if (!isSigned && isa<ConstantSDNode>(N1)) {
+    uint64_t M = cast<ConstantSDNode>(N1)->getZExtValue();
+    uint64_t R = (1ULL << 63) / M + 1;
+
+    SDValue Reciprocal = DAG.getConstant(R, DL, MVT::i64);
+    SDValue N0Ext = DAG.getZExtOrTrunc(N0, DL, MVT::i64);
+
+    // Multiply by reciprocal
+    SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, N0Ext, Reciprocal);
+
+    // Right shift by 63 to get the quotient
+    SDValue ShiftAmount = DAG.getConstant(63, DL, MVT::i64);
+    SDValue Quotient = DAG.getNode(ISD::SRL, DL, MVT::i64, Mul, ShiftAmount);
+
+    // Multiply quotient by M to get the product
+    SDValue Modulus = DAG.getConstant(M, DL, MVT::i64);
+    SDValue Product = DAG.getNode(ISD::MUL, DL, MVT::i64, Quotient, Modulus);
+
+    // Subtract product from the original dividend to get the remainder
+    SDValue Remainder = DAG.getNode(ISD::SUB, DL, MVT::i64, N0Ext, Product);
+
+    // Truncate the result to the original type
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, Remainder);
+  }
+
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
 
   // If X/C can be simplified by the division-by-constant logic, lower
