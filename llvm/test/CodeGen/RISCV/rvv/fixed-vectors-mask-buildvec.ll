@@ -286,8 +286,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -303,8 +303,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -331,8 +331,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -348,8 +348,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -375,8 +375,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -391,8 +391,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; ZVE32F-NEXT:    vmv.v.i v0, 15
 ; ZVE32F-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0

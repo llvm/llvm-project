@@ -2357,7 +2357,9 @@ multiclass FLAT_Real_gfx11 <bits<7> op,
 multiclass FLAT_Aliases_gfx11<string name> {
   defvar ps = get_FLAT_ps<NAME>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX11Only;
+    }
 }
 
 multiclass FLAT_Real_Base_gfx11<bits<7> op,
@@ -2544,10 +2546,12 @@ multiclass VFLAT_Real_gfx12 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
 
 multiclass VFLAT_Aliases_gfx12<string name, string alias = name> {
   defvar ps = get_FLAT_ps<NAME>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Only]>;
-  if !ne(alias, name) then
-    def : MnemonicAlias<alias, name>, Requires<[isGFX12Only]>;
+  let AssemblerPredicate = isGFX12Only in {
+    if !ne(ps.Mnemonic, name) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+    if !ne(alias, name) then
+      def : AMDGPUMnemonicAlias<alias, name>;
+  }
 }
 
 multiclass VFLAT_Real_Base_gfx12<bits<8> op,

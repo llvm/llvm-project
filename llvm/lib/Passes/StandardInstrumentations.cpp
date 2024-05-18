@@ -245,7 +245,8 @@ std::string getIRName(Any IR) {
     return C->getName();
 
   if (const auto *L = unwrapIR<Loop>(IR))
-    return L->getName().str();
+    return "loop %" + L->getName().str() + " in function " +
+           L->getHeader()->getParent()->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
     return MF->getName().str();
@@ -297,14 +298,6 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     auto *M = unwrapModule(IR);
     assert(M && "should have unwrapped module");
     printIR(OS, M);
-
-    if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
-      auto &MMI = MF->getMMI();
-      for (const auto &F : *M) {
-        if (auto *MF = MMI.getMachineFunction(F))
-          MF->print(OS);
-      }
-    }
     return;
   }
 
@@ -829,8 +822,7 @@ PrintIRInstrumentation::PassRunDescriptor
 PrintIRInstrumentation::popPassRunDescriptor(StringRef PassID) {
   assert(!PassRunDescriptorStack.empty() && "empty PassRunDescriptorStack");
   PassRunDescriptor Descriptor = PassRunDescriptorStack.pop_back_val();
-  assert(Descriptor.PassID.equals(PassID) &&
-         "malformed PassRunDescriptorStack");
+  assert(Descriptor.PassID == PassID && "malformed PassRunDescriptorStack");
   return Descriptor;
 }
 
@@ -1493,6 +1485,17 @@ void VerifyInstrumentation::registerCallbacks(
               report_fatal_error(formatv("Broken module found after pass "
                                          "\"{0}\", compilation aborted!",
                                          P));
+          }
+
+          // TODO: Use complete MachineVerifierPass.
+          if (auto *MF = unwrapIR<MachineFunction>(IR)) {
+            if (DebugLogging)
+              dbgs() << "Verifying machine function " << MF->getName() << '\n';
+            verifyMachineFunction(
+                formatv("Broken machine function found after pass "
+                        "\"{0}\", compilation aborted!",
+                        P),
+                *MF);
           }
         }
       });

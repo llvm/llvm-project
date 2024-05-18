@@ -12,7 +12,7 @@
 // TODO TZDB test whether this can be enabled with gcc 14.
 // UNSUPPORTED: gcc-13
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>

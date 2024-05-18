@@ -51,15 +51,17 @@ def : InstAlias<"invlpgb\t{%rax, %edx|rax, edx}", (INVLPGB64)>, Requires<[In64Bi
 
 // CMPCCXADD Instructions Alias
 multiclass CMPCCXADD_Aliases<string Cond, int CC> {
-  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
-                  (CMPCCXADDmr32 GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
-  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
-                  (CMPCCXADDmr64 GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
+  let Predicates = [In64BitMode] in {
+    def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                    (CMPCCXADDmr32 GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
+    def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                    (CMPCCXADDmr64 GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
 
-  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
-                  (CMPCCXADDmr32_EVEX GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
-  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
-                  (CMPCCXADDmr64_EVEX GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
+    def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                    (CMPCCXADDmr32_EVEX GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
+    def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                    (CMPCCXADDmr64_EVEX GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
+  }
 }
 
 // CCMP Instructions Alias

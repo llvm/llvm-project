@@ -795,10 +795,17 @@ def G_FMAXNUM : GenericInstruction {
   let isCommutable = true;
 }
 
-// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimum or maximum on
-// two values, following the IEEE-754 2008 definition. This differs from
-// FMINNUM/FMAXNUM in the handling of signaling NaNs. If one input is a
-// signaling NaN, returns a quiet NaN.
+// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
+// maximumNumber on two values, following IEEE-754 definitions. This
+// differs from FMINNUM/FMAXNUM in the handling of signaling NaNs, and
+// signed zero.
+//
+// If one input is a signaling NaN, returns a quiet NaN. This matches
+// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which
+// differs from 2019).
+//
+// These treat -0 as ordered less than +0, matching the behavior of
+// IEEE-754 2019's minimumNumber/maximumNumber.
 def G_FMINNUM_IEEE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
@@ -976,6 +983,13 @@ def G_FCOS : GenericInstruction {
 
 // Floating point sine of a value.
 def G_FSIN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point tangent of a value.
+def G_FTAN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
   let hasSideEffects = false;

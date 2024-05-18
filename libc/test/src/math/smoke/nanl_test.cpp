@@ -8,6 +8,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/nanl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include <signal.h>
@@ -22,7 +23,7 @@
 #error "Unknown long double type"
 #endif
 
-class LlvmLibcNanlTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcNanlTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using StorageType = LIBC_NAMESPACE::fputil::FPBits<long double>::StorageType;
 

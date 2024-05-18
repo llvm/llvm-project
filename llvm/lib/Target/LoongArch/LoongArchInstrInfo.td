@@ -85,7 +85,6 @@ def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
-def loongarch_rotl_w : SDNode<"LoongArchISD::ROTL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_h_w
@@ -1116,12 +1115,10 @@ def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr<urem, MOD_DU>;
 def : PatGprGpr<rotr, ROTR_D>;
 def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
+def : PatGprGpr_32<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
-def : Pat<(loongarch_rotl_w GPR:$rj, uimm5:$imm),
-          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
-def : Pat<(sext_inreg (loongarch_rotl_w GPR:$rj, uimm5:$imm), i32),
-          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
+def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;
 // TODO: Select "_W[U]" instructions for i32xi32 if only lower 32 bits of the
 // product are used.
 def : PatGprGpr<mul, MUL_D>;
@@ -1606,6 +1603,34 @@ def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
                             Requires<[IsLA64]>;
 } // Defs = [R20], Size = 20
 }
+
+// Used for expand PseudoLA_TLS_DESC_* instructions.
+let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
+    Defs = [R4], Uses = [R4] in
+def PseudoDESC_CALL : Pseudo<(outs GPR:$rd), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+                      PseudoInstExpansion<(JIRL GPR:$rd, GPR:$rj,
+                                           simm16_lsl2:$imm16)>;
+
+// TLSDESC
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1, Defs = [R1] in {
+def PseudoLA_TLS_DESC_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src),
+                                   [], "la.tls.desc", "$dst, $src">,
+                                   Requires<[IsLA32, HasLaGlobalWithAbs]>;
+def PseudoLA_TLS_DESC_ABS_LARGE : Pseudo<(outs GPR:$dst),
+                                         (ins GPR:$tmp, bare_symbol:$src), [],
+                                         "la.tls.desc", "$dst, $src">,
+                                  Requires<[IsLA64, HasLaGlobalWithAbs]>;
+def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                                  "la.tls.desc", "$dst, $src">;
+}
+
+let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4, R20], Size = 32 in
+def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
+                                        (ins GPR:$tmp, bare_symbol:$src), [],
+                                        "la.tls.desc", "$dst, $tmp, $src">,
+                                 Requires<[IsLA64]>;
 
 // Load address inst alias: "la", "la.global" and "la.local".
 // Default:

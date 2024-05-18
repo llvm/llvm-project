@@ -446,6 +446,7 @@ set(files
   __ios/fpos.h
   __iterator/access.h
   __iterator/advance.h
+  __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
   __iterator/common_iterator.h
@@ -581,6 +582,8 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __ostream/basic_ostream.h
+  __ostream/print.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
   __pstl/backends/std_thread.h
@@ -731,7 +734,6 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/apply_cv.h
   __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
@@ -957,7 +959,6 @@ set(files
   istream
   iterator
   latch
-  libcxx.imp
   limits
   list
   locale
@@ -1036,6 +1037,15 @@ foreach(f ${files})
   list(APPEND _all_includes "${dst}")
 endforeach()
 
+# Generate the IWYU mapping. This depends on all header files but it's also considered as an
+# "include" for dependency tracking.
+add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  DEPENDS ${_all_includes}
+  COMMENT "Generate the mapping file for include-what-you-use"
+)
+list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
+
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
@@ -1068,8 +1078,8 @@ if (LIBCXX_INSTALL_HEADERS)
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 
-  # Install the generated modulemap file to the generic include dir.
-  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+  # Install the generated IWYU file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
