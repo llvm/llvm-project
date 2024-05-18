@@ -3757,7 +3757,8 @@ public:
   void VisitDeclRefExpr(DeclRefExpr *E) {
     if (TryCaptureCXXThisMembers || E->isTypeDependent() ||
         E->isValueDependent() || E->containsUnexpandedParameterPack() ||
-        E->isInstantiationDependent())
+        E->isInstantiationDependent() ||
+        E->isNonOdrUse() == clang::NOUR_Unevaluated)
       return;
     if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
       // Check the datasharing rules for the expressions in the clauses.

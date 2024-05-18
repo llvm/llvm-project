@@ -672,12 +672,12 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
 
   // We don't want to throw lvalue-to-rvalue casts on top of
   // expressions of certain types in C++.
-  if (getLangOpts().CPlusPlus &&
-      (E->getType() == Context.OverloadTy ||
-       // FIXME: This is a hack! We want the lvalue-to-rvalue conversion applied
-       // to pointer types even if the pointee type is dependent.
-       (T->isDependentType() && !T->isPointerType()) || T->isRecordType()))
-    return E;
+  if (getLangOpts().CPlusPlus) {
+    if (T == Context.OverloadTy || T->isRecordType() ||
+        (T->isDependentType() && !T->isAnyPointerType() &&
+         !T->isMemberPointerType()))
+      return E;
+  }
 
   // The C standard is actually really unclear on this point, and
   // DR106 tells us what the result should be but not why.  It's
@@ -3699,7 +3699,10 @@ static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
   using llvm::APFloat;
   APFloat Val(Format);
 
-  APFloat::opStatus result = Literal.GetFloatValue(Val);
+  llvm::RoundingMode RM = S.CurFPFeatures.getRoundingMode();
+  if (RM == llvm::RoundingMode::Dynamic)
+    RM = llvm::RoundingMode::NearestTiesToEven;
+  APFloat::opStatus result = Literal.GetFloatValue(Val, RM);
 
   // Overflow is always an error, but underflow is only an error if
   // we underflowed to zero (APFloat reports denormals as underflow).
@@ -5618,9 +5621,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
         Res = Immediate.TransformInitializer(Param->getInit(),
                                              /*NotCopy=*/false);
       });
-      if (Res.isUsable())
-        Res = ConvertParamDefaultArgument(Param, Res.get(),
-                                          Res.get()->getBeginLoc());
+      if (Res.isInvalid())
+        return ExprError();
+      Res = ConvertParamDefaultArgument(Param, Res.get(),
+                                        Res.get()->getBeginLoc());
       if (Res.isInvalid())
         return ExprError();
       Init = Res.get();
@@ -5656,7 +5660,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   Expr *Init = nullptr;
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-  bool InLifetimeExtendingContext = isInLifetimeExtendingContext();
+
   EnterExpressionEvaluationContext EvalContext(
       *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
 
@@ -5691,35 +5695,19 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   ImmediateCallVisitor V(getASTContext());
   if (!NestedDefaultChecking)
     V.TraverseDecl(Field);
-
-  // CWG1815
-  // Support lifetime extension of temporary created by aggregate
-  // initialization using a default member initializer. We should always rebuild
-  // the initializer if it contains any temporaries (if the initializer
-  // expression is an ExprWithCleanups). Then make sure the normal lifetime
-  // extension code recurses into the default initializer and does lifetime
-  // extension when warranted.
-  bool ContainsAnyTemporaries =
-      isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
-  if (V.HasImmediateCalls || InLifetimeExtendingContext ||
-      ContainsAnyTemporaries) {
+  if (V.HasImmediateCalls) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
         NestedDefaultChecking;
-    // Pass down lifetime extending flag, and collect temporaries in
-    // CreateMaterializeTemporaryExpr when we rewrite the call argument.
-    keepInLifetimeExtendingContext();
+
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
-
-    // Rebuild CXXDefaultInitExpr might cause diagnostics.
-    SFINAETrap Trap(*this);
     runWithSufficientStackSpace(Loc, [&] {
       Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
                                            /*CXXDirectInit=*/false);
     });
-    if (Res.isUsable())
+    if (!Res.isInvalid())
       Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
     if (Res.isInvalid()) {
       Field->setInvalidDecl();
@@ -7130,12 +7118,19 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
       // init a VLA in C++ in all cases (such as with non-trivial constructors).
       // FIXME: should we allow this construct in C++ when it makes sense to do
       // so?
-      std::optional<unsigned> NumInits;
-      if (const auto *ILE = dyn_cast<InitListExpr>(LiteralExpr))
-        NumInits = ILE->getNumInits();
-      if ((LangOpts.CPlusPlus || NumInits.value_or(0)) &&
-          !tryToFixVariablyModifiedVarType(TInfo, literalType, LParenLoc,
-                                           diag::err_variable_object_no_init))
+      //
+      // But: C99-C23 6.5.2.5 Compound literals constraint 1: The type name
+      // shall specify an object type or an array of unknown size, but not a
+      // variable length array type. This seems odd, as it allows 'int a[size] =
+      // {}', but forbids 'int *a = (int[size]){}'. As this is what the standard
+      // says, this is what's implemented here for C (except for the extension
+      // that permits constant foldable size arrays)
+
+      auto diagID = LangOpts.CPlusPlus
+                        ? diag::err_variable_object_no_init
+                        : diag::err_compound_literal_with_vla_type;
+      if (!tryToFixVariablyModifiedVarType(TInfo, literalType, LParenLoc,
+                                           diagID))
         return ExprError();
     }
   } else if (!literalType->isDependentType() &&
@@ -10827,7 +10822,7 @@ static bool checkArithmeticIncompletePointerType(Sema &S, SourceLocation Loc,
   if (const AtomicType *ResAtomicType = ResType->getAs<AtomicType>())
     ResType = ResAtomicType->getValueType();
 
-  assert(ResType->isAnyPointerType() && !ResType->isDependentType());
+  assert(ResType->isAnyPointerType());
   QualType PointeeTy = ResType->getPointeeType();
   return S.RequireCompleteSizedType(
       Loc, PointeeTy,
@@ -13955,11 +13950,8 @@ static QualType CheckCommaOperands(Sema &S, ExprResult &LHS, ExprResult &RHS,
 static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
                                                ExprValueKind &VK,
                                                ExprObjectKind &OK,
-                                               SourceLocation OpLoc,
-                                               bool IsInc, bool IsPrefix) {
-  if (Op->isTypeDependent())
-    return S.Context.DependentTy;
-
+                                               SourceLocation OpLoc, bool IsInc,
+                                               bool IsPrefix) {
   QualType ResType = Op->getType();
   // Atomic types can be used for increment / decrement where the non-atomic
   // versions can, so ignore the _Atomic() specifier for the purpose of
@@ -14040,7 +14032,6 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     return ResType.getUnqualifiedType();
   }
 }
-
 
 /// getPrimaryDecl - Helper function for CheckAddressOfOperand().
 /// This routine allows us to typecheck complex/recursive expressions
@@ -14411,9 +14402,6 @@ static void RecordModifiableNonNullParam(Sema &S, const Expr *Exp) {
 static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
                                         SourceLocation OpLoc,
                                         bool IsAfterAmp = false) {
-  if (Op->isTypeDependent())
-    return S.Context.DependentTy;
-
   ExprResult ConvResult = S.UsualUnaryConversions(Op);
   if (ConvResult.isInvalid())
     return QualType();
@@ -14879,6 +14867,11 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_GT:
     ConvertHalfVec = true;
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
+
+    if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
+        BI && BI->isComparisonOp())
+      Diag(OpLoc, diag::warn_consecutive_comparison);
+
     break;
   case BO_EQ:
   case BO_NE:
@@ -15369,14 +15362,10 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // If either expression is type-dependent, always build an
-    // overloaded op.
-    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())
-      return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
-
-    // Otherwise, build an overloaded op if either expression has an
-    // overloadable type.
-    if (LHSExpr->getType()->isOverloadableType() ||
+    // Otherwise, build an overloaded op if either expression is type-dependent
+    // or has an overloadable type.
+    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
+        LHSExpr->getType()->isOverloadableType() ||
         RHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
   }
@@ -15467,188 +15456,191 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 1);
   }
 
-  switch (Opc) {
-  case UO_PreInc:
-  case UO_PreDec:
-  case UO_PostInc:
-  case UO_PostDec:
-    resultType = CheckIncrementDecrementOperand(*this, Input.get(), VK, OK,
-                                                OpLoc,
-                                                Opc == UO_PreInc ||
-                                                Opc == UO_PostInc,
-                                                Opc == UO_PreInc ||
-                                                Opc == UO_PreDec);
-    CanOverflow = isOverflowingIntegerType(Context, resultType);
-    break;
-  case UO_AddrOf:
-    resultType = CheckAddressOfOperand(Input, OpLoc);
-    CheckAddressOfNoDeref(InputExpr);
-    RecordModifiableNonNullParam(*this, InputExpr);
-    break;
-  case UO_Deref: {
-    Input = DefaultFunctionArrayLvalueConversion(Input.get());
-    if (Input.isInvalid()) return ExprError();
-    resultType =
-        CheckIndirectionOperand(*this, Input.get(), VK, OpLoc, IsAfterAmp);
-    break;
-  }
-  case UO_Plus:
-  case UO_Minus:
-    CanOverflow = Opc == UO_Minus &&
-                  isOverflowingIntegerType(Context, Input.get()->getType());
-    Input = UsualUnaryConversions(Input.get());
-    if (Input.isInvalid()) return ExprError();
-    // Unary plus and minus require promoting an operand of half vector to a
-    // float vector and truncating the result back to a half vector. For now, we
-    // do this only when HalfArgsAndReturns is set (that is, when the target is
-    // arm or arm64).
-    ConvertHalfVec = needsConversionOfHalfVec(true, Context, Input.get());
+  if (InputExpr->isTypeDependent() &&
+      InputExpr->getType()->isSpecificBuiltinType(BuiltinType::Dependent)) {
+    resultType = Context.DependentTy;
+  } else {
+    switch (Opc) {
+    case UO_PreInc:
+    case UO_PreDec:
+    case UO_PostInc:
+    case UO_PostDec:
+      resultType =
+          CheckIncrementDecrementOperand(*this, Input.get(), VK, OK, OpLoc,
+                                         Opc == UO_PreInc || Opc == UO_PostInc,
+                                         Opc == UO_PreInc || Opc == UO_PreDec);
+      CanOverflow = isOverflowingIntegerType(Context, resultType);
+      break;
+    case UO_AddrOf:
+      resultType = CheckAddressOfOperand(Input, OpLoc);
+      CheckAddressOfNoDeref(InputExpr);
+      RecordModifiableNonNullParam(*this, InputExpr);
+      break;
+    case UO_Deref: {
+      Input = DefaultFunctionArrayLvalueConversion(Input.get());
+      if (Input.isInvalid())
+        return ExprError();
+      resultType =
+          CheckIndirectionOperand(*this, Input.get(), VK, OpLoc, IsAfterAmp);
+      break;
+    }
+    case UO_Plus:
+    case UO_Minus:
+      CanOverflow = Opc == UO_Minus &&
+                    isOverflowingIntegerType(Context, Input.get()->getType());
+      Input = UsualUnaryConversions(Input.get());
+      if (Input.isInvalid())
+        return ExprError();
+      // Unary plus and minus require promoting an operand of half vector to a
+      // float vector and truncating the result back to a half vector. For now,
+      // we do this only when HalfArgsAndReturns is set (that is, when the
+      // target is arm or arm64).
+      ConvertHalfVec = needsConversionOfHalfVec(true, Context, Input.get());
 
-    // If the operand is a half vector, promote it to a float vector.
-    if (ConvertHalfVec)
-      Input = convertVector(Input.get(), Context.FloatTy, *this);
-    resultType = Input.get()->getType();
-    if (resultType->isDependentType())
-      break;
-    if (resultType->isArithmeticType()) // C99 6.5.3.3p1
-      break;
-    else if (resultType->isVectorType() &&
-             // The z vector extensions don't allow + or - with bool vectors.
-             (!Context.getLangOpts().ZVector ||
-              resultType->castAs<VectorType>()->getVectorKind() !=
-                  VectorKind::AltiVecBool))
-      break;
-    else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
-      break;
-    else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
-             Opc == UO_Plus &&
-             resultType->isPointerType())
-      break;
+      // If the operand is a half vector, promote it to a float vector.
+      if (ConvertHalfVec)
+        Input = convertVector(Input.get(), Context.FloatTy, *this);
+      resultType = Input.get()->getType();
+      if (resultType->isArithmeticType()) // C99 6.5.3.3p1
+        break;
+      else if (resultType->isVectorType() &&
+               // The z vector extensions don't allow + or - with bool vectors.
+               (!Context.getLangOpts().ZVector ||
+                resultType->castAs<VectorType>()->getVectorKind() !=
+                    VectorKind::AltiVecBool))
+        break;
+      else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
+        break;
+      else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
+               Opc == UO_Plus && resultType->isPointerType())
+        break;
 
-    return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-      << resultType << Input.get()->getSourceRange());
-
-  case UO_Not: // bitwise complement
-    Input = UsualUnaryConversions(Input.get());
-    if (Input.isInvalid())
-      return ExprError();
-    resultType = Input.get()->getType();
-    if (resultType->isDependentType())
-      break;
-    // C99 6.5.3.3p1. We allow complex int and float as a GCC extension.
-    if (resultType->isComplexType() || resultType->isComplexIntegerType())
-      // C99 does not support '~' for complex conjugation.
-      Diag(OpLoc, diag::ext_integer_complement_complex)
-          << resultType << Input.get()->getSourceRange();
-    else if (resultType->hasIntegerRepresentation())
-      break;
-    else if (resultType->isExtVectorType() && Context.getLangOpts().OpenCL) {
-      // OpenCL v1.1 s6.3.f: The bitwise operator not (~) does not operate
-      // on vector float types.
-      QualType T = resultType->castAs<ExtVectorType>()->getElementType();
-      if (!T->isIntegerType())
-        return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-                          << resultType << Input.get()->getSourceRange());
-    } else {
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                        << resultType << Input.get()->getSourceRange());
-    }
-    break;
 
-  case UO_LNot: // logical negation
-    // Unlike +/-/~, integer promotions aren't done here (C99 6.5.3.3p5).
-    Input = DefaultFunctionArrayLvalueConversion(Input.get());
-    if (Input.isInvalid()) return ExprError();
-    resultType = Input.get()->getType();
-
-    // Though we still have to promote half FP to float...
-    if (resultType->isHalfType() && !Context.getLangOpts().NativeHalfType) {
-      Input = ImpCastExprToType(Input.get(), Context.FloatTy, CK_FloatingCast).get();
-      resultType = Context.FloatTy;
-    }
-
-    // WebAsembly tables can't be used in unary expressions.
-    if (resultType->isPointerType() &&
-        resultType->getPointeeType().isWebAssemblyReferenceType()) {
-      return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-                       << resultType << Input.get()->getSourceRange());
-    }
-
-    if (resultType->isDependentType())
-      break;
-    if (resultType->isScalarType() && !isScopedEnumerationType(resultType)) {
-      // C99 6.5.3.3p1: ok, fallthrough;
-      if (Context.getLangOpts().CPlusPlus) {
-        // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:
-        // operand contextually converted to bool.
-        Input = ImpCastExprToType(Input.get(), Context.BoolTy,
-                                  ScalarTypeToBooleanCastKind(resultType));
-      } else if (Context.getLangOpts().OpenCL &&
-                 Context.getLangOpts().OpenCLVersion < 120) {
-        // OpenCL v1.1 6.3.h: The logical operator not (!) does not
-        // operate on scalar float types.
-        if (!resultType->isIntegerType() && !resultType->isPointerType())
-          return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-                           << resultType << Input.get()->getSourceRange());
-      }
-    } else if (resultType->isExtVectorType()) {
-      if (Context.getLangOpts().OpenCL &&
-          Context.getLangOpts().getOpenCLCompatibleVersion() < 120) {
-        // OpenCL v1.1 6.3.h: The logical operator not (!) does not
-        // operate on vector float types.
+    case UO_Not: // bitwise complement
+      Input = UsualUnaryConversions(Input.get());
+      if (Input.isInvalid())
+        return ExprError();
+      resultType = Input.get()->getType();
+      // C99 6.5.3.3p1. We allow complex int and float as a GCC extension.
+      if (resultType->isComplexType() || resultType->isComplexIntegerType())
+        // C99 does not support '~' for complex conjugation.
+        Diag(OpLoc, diag::ext_integer_complement_complex)
+            << resultType << Input.get()->getSourceRange();
+      else if (resultType->hasIntegerRepresentation())
+        break;
+      else if (resultType->isExtVectorType() && Context.getLangOpts().OpenCL) {
+        // OpenCL v1.1 s6.3.f: The bitwise operator not (~) does not operate
+        // on vector float types.
         QualType T = resultType->castAs<ExtVectorType>()->getElementType();
         if (!T->isIntegerType())
           return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                            << resultType << Input.get()->getSourceRange());
-      }
-      // Vector logical not returns the signed variant of the operand type.
-      resultType = GetSignedVectorType(resultType);
-      break;
-    } else if (Context.getLangOpts().CPlusPlus && resultType->isVectorType()) {
-      const VectorType *VTy = resultType->castAs<VectorType>();
-      if (VTy->getVectorKind() != VectorKind::Generic)
+      } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                          << resultType << Input.get()->getSourceRange());
-
-      // Vector logical not returns the signed variant of the operand type.
-      resultType = GetSignedVectorType(resultType);
+      }
       break;
-    } else {
-      return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-        << resultType << Input.get()->getSourceRange());
-    }
 
-    // LNot always has type int. C99 6.5.3.3p5.
-    // In C++, it's bool. C++ 5.3.1p8
-    resultType = Context.getLogicalOperationType();
-    break;
-  case UO_Real:
-  case UO_Imag:
-    resultType = CheckRealImagOperand(*this, Input, OpLoc, Opc == UO_Real);
-    // _Real maps ordinary l-values into ordinary l-values. _Imag maps ordinary
-    // complex l-values to ordinary l-values and all other values to r-values.
-    if (Input.isInvalid()) return ExprError();
-    if (Opc == UO_Real || Input.get()->getType()->isAnyComplexType()) {
-      if (Input.get()->isGLValue() &&
-          Input.get()->getObjectKind() == OK_Ordinary)
-        VK = Input.get()->getValueKind();
-    } else if (!getLangOpts().CPlusPlus) {
-      // In C, a volatile scalar is read by __imag. In C++, it is not.
-      Input = DefaultLvalueConversion(Input.get());
+    case UO_LNot: // logical negation
+      // Unlike +/-/~, integer promotions aren't done here (C99 6.5.3.3p5).
+      Input = DefaultFunctionArrayLvalueConversion(Input.get());
+      if (Input.isInvalid())
+        return ExprError();
+      resultType = Input.get()->getType();
+
+      // Though we still have to promote half FP to float...
+      if (resultType->isHalfType() && !Context.getLangOpts().NativeHalfType) {
+        Input = ImpCastExprToType(Input.get(), Context.FloatTy, CK_FloatingCast)
+                    .get();
+        resultType = Context.FloatTy;
+      }
+
+      // WebAsembly tables can't be used in unary expressions.
+      if (resultType->isPointerType() &&
+          resultType->getPointeeType().isWebAssemblyReferenceType()) {
+        return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
+                         << resultType << Input.get()->getSourceRange());
+      }
+
+      if (resultType->isScalarType() && !isScopedEnumerationType(resultType)) {
+        // C99 6.5.3.3p1: ok, fallthrough;
+        if (Context.getLangOpts().CPlusPlus) {
+          // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:
+          // operand contextually converted to bool.
+          Input = ImpCastExprToType(Input.get(), Context.BoolTy,
+                                    ScalarTypeToBooleanCastKind(resultType));
+        } else if (Context.getLangOpts().OpenCL &&
+                   Context.getLangOpts().OpenCLVersion < 120) {
+          // OpenCL v1.1 6.3.h: The logical operator not (!) does not
+          // operate on scalar float types.
+          if (!resultType->isIntegerType() && !resultType->isPointerType())
+            return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
+                             << resultType << Input.get()->getSourceRange());
+        }
+      } else if (resultType->isExtVectorType()) {
+        if (Context.getLangOpts().OpenCL &&
+            Context.getLangOpts().getOpenCLCompatibleVersion() < 120) {
+          // OpenCL v1.1 6.3.h: The logical operator not (!) does not
+          // operate on vector float types.
+          QualType T = resultType->castAs<ExtVectorType>()->getElementType();
+          if (!T->isIntegerType())
+            return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
+                             << resultType << Input.get()->getSourceRange());
+        }
+        // Vector logical not returns the signed variant of the operand type.
+        resultType = GetSignedVectorType(resultType);
+        break;
+      } else if (Context.getLangOpts().CPlusPlus &&
+                 resultType->isVectorType()) {
+        const VectorType *VTy = resultType->castAs<VectorType>();
+        if (VTy->getVectorKind() != VectorKind::Generic)
+          return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
+                           << resultType << Input.get()->getSourceRange());
+
+        // Vector logical not returns the signed variant of the operand type.
+        resultType = GetSignedVectorType(resultType);
+        break;
+      } else {
+        return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
+                         << resultType << Input.get()->getSourceRange());
+      }
+
+      // LNot always has type int. C99 6.5.3.3p5.
+      // In C++, it's bool. C++ 5.3.1p8
+      resultType = Context.getLogicalOperationType();
+      break;
+    case UO_Real:
+    case UO_Imag:
+      resultType = CheckRealImagOperand(*this, Input, OpLoc, Opc == UO_Real);
+      // _Real maps ordinary l-values into ordinary l-values. _Imag maps
+      // ordinary complex l-values to ordinary l-values and all other values to
+      // r-values.
+      if (Input.isInvalid())
+        return ExprError();
+      if (Opc == UO_Real || Input.get()->getType()->isAnyComplexType()) {
+        if (Input.get()->isGLValue() &&
+            Input.get()->getObjectKind() == OK_Ordinary)
+          VK = Input.get()->getValueKind();
+      } else if (!getLangOpts().CPlusPlus) {
+        // In C, a volatile scalar is read by __imag. In C++, it is not.
+        Input = DefaultLvalueConversion(Input.get());
+      }
+      break;
+    case UO_Extension:
+      resultType = Input.get()->getType();
+      VK = Input.get()->getValueKind();
+      OK = Input.get()->getObjectKind();
+      break;
+    case UO_Coawait:
+      // It's unnecessary to represent the pass-through operator co_await in the
+      // AST; just return the input expression instead.
+      assert(!Input.get()->getType()->isDependentType() &&
+             "the co_await expression must be non-dependant before "
+             "building operator co_await");
+      return Input;
     }
-    break;
-  case UO_Extension:
-    resultType = Input.get()->getType();
-    VK = Input.get()->getValueKind();
-    OK = Input.get()->getObjectKind();
-    break;
-  case UO_Coawait:
-    // It's unnecessary to represent the pass-through operator co_await in the
-    // AST; just return the input expression instead.
-    assert(!Input.get()->getType()->isDependentType() &&
-                   "the co_await expression must be non-dependant before "
-                   "building operator co_await");
-    return Input;
   }
   if (resultType.isNull() || Input.isInvalid())
     return ExprError();

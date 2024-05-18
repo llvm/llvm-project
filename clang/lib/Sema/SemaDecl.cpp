@@ -2465,9 +2465,9 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
 /// entity if their types are the same.
 /// FIXME: This is notionally doing the same thing as ASTReaderDecl's
 /// isSameEntity.
-static void filterNonConflictingPreviousTypedefDecls(Sema &S,
-                                                     TypedefNameDecl *Decl,
-                                                     LookupResult &Previous) {
+static void
+filterNonConflictingPreviousTypedefDecls(Sema &S, const TypedefNameDecl *Decl,
+                                         LookupResult &Previous) {
   // This is only interesting when modules are enabled.
   if (!S.getLangOpts().Modules && !S.getLangOpts().ModulesLocalVisibility)
     return;
@@ -2504,9 +2504,9 @@ static void filterNonConflictingPreviousTypedefDecls(Sema &S,
   Filter.done();
 }
 
-bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
+bool Sema::isIncompatibleTypedef(const TypeDecl *Old, TypedefNameDecl *New) {
   QualType OldType;
-  if (TypedefNameDecl *OldTypedef = dyn_cast<TypedefNameDecl>(Old))
+  if (const TypedefNameDecl *OldTypedef = dyn_cast<TypedefNameDecl>(Old))
     OldType = OldTypedef->getUnderlyingType();
   else
     OldType = Context.getTypeDeclType(Old);
@@ -7573,6 +7573,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     tryToFixVariablyModifiedVarType(TInfo, R, D.getIdentifierLoc(),
                                     /*DiagID=*/0);
 
+  if (const AutoType *AutoT = R->getAs<AutoType>())
+    CheckConstrainedAuto(
+        AutoT,
+        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
+
   bool IsMemberSpecialization = false;
   bool IsVariableTemplateSpecialization = false;
   bool IsPartialSpecialization = false;
@@ -8900,11 +8905,20 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     const FunctionDecl *FD = cast<FunctionDecl>(CurContext);
     llvm::StringMap<bool> CallerFeatureMap;
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-    if (!Builtin::evaluateRequiredTargetFeatures(
-        "sve", CallerFeatureMap)) {
-      Diag(NewVD->getLocation(), diag::err_sve_vector_in_non_sve_target) << T;
-      NewVD->setInvalidDecl();
-      return;
+
+    if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
+      if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap)) {
+        Diag(NewVD->getLocation(), diag::err_sve_vector_in_non_sve_target) << T;
+        NewVD->setInvalidDecl();
+        return;
+      } else if (!IsArmStreamingFunction(FD,
+                                         /*IncludeLocallyStreaming=*/true)) {
+        Diag(NewVD->getLocation(),
+             diag::err_sve_vector_in_non_streaming_function)
+            << T;
+        NewVD->setInvalidDecl();
+        return;
+      }
     }
   }
 
