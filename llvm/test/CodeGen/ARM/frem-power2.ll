@@ -14,13 +14,29 @@ define float @frem4(float %x) {
 ;
 ; CHECK-FP-LABEL: frem4:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    mov.w r1, #1082130432
-; CHECK-FP-NEXT:    b fmodf
+; CHECK-FP-NEXT:    vmov.f32 s0, #4.000000e+00
+; CHECK-FP-NEXT:    vmov s2, r0
+; CHECK-FP-NEXT:    lsrs r0, r0, #31
+; CHECK-FP-NEXT:    vdiv.f32 s4, s2, s0
+; CHECK-FP-NEXT:    vrintz.f32 s4, s4
+; CHECK-FP-NEXT:    vfms.f32 s2, s4, s0
+; CHECK-FP-NEXT:    vmov r1, s2
+; CHECK-FP-NEXT:    bfi r1, r0, #31, #1
+; CHECK-FP-NEXT:    mov r0, r1
+; CHECK-FP-NEXT:    bx lr
 ;
 ; CHECK-M33-LABEL: frem4:
 ; CHECK-M33:       @ %bb.0: @ %entry
-; CHECK-M33-NEXT:    mov.w r1, #1082130432
-; CHECK-M33-NEXT:    b fmodf
+; CHECK-M33-NEXT:    vmov.f32 s0, #4.000000e+00
+; CHECK-M33-NEXT:    vmov s2, r0
+; CHECK-M33-NEXT:    lsrs r0, r0, #31
+; CHECK-M33-NEXT:    vdiv.f32 s4, s2, s0
+; CHECK-M33-NEXT:    vrintz.f32 s4, s4
+; CHECK-M33-NEXT:    vmls.f32 s2, s4, s0
+; CHECK-M33-NEXT:    vmov r1, s2
+; CHECK-M33-NEXT:    bfi r1, r0, #31, #1
+; CHECK-M33-NEXT:    mov r0, r1
+; CHECK-M33-NEXT:    bx lr
 entry:
   %fmod = frem float %x, 4.0
   ret float %fmod
