@@ -52,6 +52,7 @@ namespace std {
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cvref.h>
@@ -59,6 +60,8 @@ namespace std {
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <cstdint>
+#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
