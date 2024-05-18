@@ -111,7 +111,8 @@ public:
           } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
             if (RD->getDecl() == ClassDecl)
               return true;
-          } else if (auto* ST = dyn_cast<SubstTemplateTypeParmType>(PointeeType)) {
+          } else if (auto *ST =
+                         dyn_cast<SubstTemplateTypeParmType>(PointeeType)) {
             auto Type = ST->getReplacementType();
             if (auto *RD = dyn_cast<RecordType>(Type)) {
               if (RD->getDecl() == ClassDecl)
@@ -180,7 +181,7 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto& Base : RD->bases()) {
+    for (auto &Base : RD->bases()) {
       const auto AccSpec = Base.getAccessSpecifier();
       if (AccSpec == AS_protected || AccSpec == AS_private ||
           (AccSpec == AS_none && RD->isClass()))
@@ -202,8 +203,7 @@ public:
 
       bool AnyInconclusiveBase = false;
       const auto hasPublicRefInBase =
-          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
-                                 CXXBasePath &) {
+          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
             auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
             if (!hasRefInBase) {
               AnyInconclusiveBase = true;
@@ -235,8 +235,8 @@ public:
 
       const auto *Dtor = C->getDestructor();
       if (!Dtor || !Dtor->isVirtual()) {
-        auto* ProblematicBaseSpecifier = &Base;
-        auto* ProblematicBaseClass = C;
+        auto *ProblematicBaseSpecifier = &Base;
+        auto *ProblematicBaseClass = C;
         reportBug(RD, ProblematicBaseSpecifier, ProblematicBaseClass);
       }
     }
@@ -284,8 +284,9 @@ public:
             ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
   }
 
-  static std::optional<bool> isClassWithSpecializedDelete(
-      const CXXRecordDecl *C, const CXXRecordDecl *DerivedClass) {
+  static std::optional<bool>
+  isClassWithSpecializedDelete(const CXXRecordDecl *C,
+                               const CXXRecordDecl *DerivedClass) {
     if (auto *ClsTmplSpDecl = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
       for (auto *MethodDecl : C->methods()) {
         if (safeGetName(MethodDecl) == "deref") {
