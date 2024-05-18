@@ -1518,8 +1518,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
          *OldRC = Old->getTrailingRequiresClause();
     if ((NewRC != nullptr) != (OldRC != nullptr))
       return true;
-    if (NewRC &&
-        !SemaRef.Concept().AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
+    if (NewRC && !SemaRef.Concept().AreConstraintExpressionsEqual(
+                     OldDecl, OldRC, NewDecl, NewRC))
       return true;
   }
 
@@ -7095,7 +7095,7 @@ void Sema::AddOverloadCandidate(
   if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
     if (Concept().CheckFunctionConstraints(Function, Satisfaction, /*Loc*/ {},
-                                 /*ForOverloadResolution*/ true) ||
+                                           /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -7613,7 +7613,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
     if (Concept().CheckFunctionConstraints(Method, Satisfaction, /*Loc*/ {},
-                                 /*ForOverloadResolution*/ true) ||
+                                           /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -8326,7 +8326,7 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
   if (Conversion->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
     if (Concept().CheckFunctionConstraints(Conversion, Satisfaction, /*Loc*/ {},
-                                 /*ForOverloadResolution*/ true) ||
+                                           /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -11221,8 +11221,8 @@ MaybeDiagnoseAmbiguousConstraints(Sema &S, ArrayRef<OverloadCandidate> Cands) {
     return;
   // The diagnostic can only happen if there are associated constraints on
   // both sides (there needs to be some identical atomic constraint).
-  if (S.Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(FirstCand, FirstAC,
-                                                      SecondCand, SecondAC))
+  if (S.Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
+          FirstCand, FirstAC, SecondCand, SecondAC))
     // Just show the user one diagnostic, they'll probably figure it out
     // from here.
     return;
@@ -11748,7 +11748,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         << TemplateArgString;
 
     S.Concept().DiagnoseUnsatisfiedConstraint(
-        static_cast<CNSInfo*>(DeductionFailure.Data)->Satisfaction);
+        static_cast<CNSInfo *>(DeductionFailure.Data)->Satisfaction);
     return;
   }
   case TemplateDeductionResult::TooManyArguments:
@@ -13342,7 +13342,8 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       }
       // FD has the same CUDA prefernece than Result. Continue check
       // constraints.
-      FunctionDecl *MoreConstrained = Concept().getMoreConstrainedFunction(FD, Result);
+      FunctionDecl *MoreConstrained =
+          Concept().getMoreConstrainedFunction(FD, Result);
       if (MoreConstrained != FD) {
         if (!MoreConstrained) {
           IsResultAmbiguous = true;

@@ -10287,8 +10287,7 @@ public:
     return CodeSynthesisContexts.size() > NonInstantiationEntries;
   }
 
-  private:
-
+private:
   /// Introduce the instantiated captures of the lambda into the local
   /// instantiation scope.
   bool addInstantiatedCapturesToScope(

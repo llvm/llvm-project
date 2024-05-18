@@ -146,8 +146,9 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
 
       if (TryConsumeToken(tok::kw_requires)) {
         OptionalRequiresClauseConstraintER =
-            Actions.Concept().ActOnRequiresClause(ParseConstraintLogicalOrExpression(
-                /*IsTrailingRequiresClause=*/false));
+            Actions.Concept().ActOnRequiresClause(
+                ParseConstraintLogicalOrExpression(
+                    /*IsTrailingRequiresClause=*/false));
         if (!OptionalRequiresClauseConstraintER.isUsable()) {
           // Skip until the semi-colon or a '}'.
           SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
@@ -340,9 +341,9 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   Expr *ConstraintExpr = ConstraintExprResult.get();
-  return Actions.Concept().ActOnConceptDefinition(getCurScope(),
-                                        *TemplateInfo.TemplateParams, Id, IdLoc,
-                                        ConstraintExpr, Attrs);
+  return Actions.Concept().ActOnConceptDefinition(
+      getCurScope(), *TemplateInfo.TemplateParams, Id, IdLoc, ConstraintExpr,
+      Attrs);
 }
 
 /// ParseTemplateParameters - Parses a template-parameter-list enclosed in
@@ -765,8 +766,8 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 
   if (TypeConstraint) {
     Actions.Concept().ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
-                                cast<TemplateTypeParmDecl>(NewDecl),
-                                EllipsisLoc);
+                                          cast<TemplateTypeParmDecl>(NewDecl),
+                                          EllipsisLoc);
   }
 
   return NewDecl;
@@ -801,8 +802,9 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
     }
     if (TryConsumeToken(tok::kw_requires)) {
       OptionalRequiresClauseConstraintER =
-          Actions.Concept().ActOnRequiresClause(ParseConstraintLogicalOrExpression(
-              /*IsTrailingRequiresClause=*/false));
+          Actions.Concept().ActOnRequiresClause(
+              ParseConstraintLogicalOrExpression(
+                  /*IsTrailingRequiresClause=*/false));
       if (!OptionalRequiresClauseConstraintER.isUsable()) {
         SkipUntil(tok::comma, tok::greater, tok::greatergreater,
                   StopAtSemi | StopBeforeMatch);

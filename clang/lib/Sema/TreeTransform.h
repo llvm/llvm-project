@@ -3663,10 +3663,8 @@ public:
       TemplateArgumentListInfo *TALI) {
     CXXScopeSpec SS;
     SS.Adopt(NNS);
-    ExprResult Result = getSema().Concept().CheckConceptTemplateId(SS, TemplateKWLoc,
-                                                         ConceptNameInfo,
-                                                         FoundDecl,
-                                                         NamedConcept, TALI);
+    ExprResult Result = getSema().Concept().CheckConceptTemplateId(
+        SS, TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept, TALI);
     if (Result.isInvalid())
       return ExprError();
     return Result;
@@ -3703,22 +3701,22 @@ public:
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag, bool IsSimple,
       SourceLocation NoexceptLoc,
       concepts::ExprRequirement::ReturnTypeRequirement Ret) {
-    return SemaRef.Concept().BuildExprRequirement(SubstDiag, IsSimple, NoexceptLoc,
-                                        std::move(Ret));
+    return SemaRef.Concept().BuildExprRequirement(SubstDiag, IsSimple,
+                                                  NoexceptLoc, std::move(Ret));
   }
 
   concepts::ExprRequirement *
   RebuildExprRequirement(Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
                          concepts::ExprRequirement::ReturnTypeRequirement Ret) {
     return SemaRef.Concept().BuildExprRequirement(E, IsSimple, NoexceptLoc,
-                                        std::move(Ret));
+                                                  std::move(Ret));
   }
 
   concepts::NestedRequirement *
   RebuildNestedRequirement(StringRef InvalidConstraintEntity,
                            const ASTConstraintSatisfaction &Satisfaction) {
     return SemaRef.Concept().BuildNestedRequirement(InvalidConstraintEntity,
-                                          Satisfaction);
+                                                    Satisfaction);
   }
 
   concepts::NestedRequirement *RebuildNestedRequirement(Expr *Constraint) {

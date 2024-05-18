@@ -1418,8 +1418,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       ++CurTemplateDepthTracker;
       ExprResult RequiresClause;
       if (TryConsumeToken(tok::kw_requires)) {
-        RequiresClause =
-            Actions.Concept().ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+        RequiresClause = Actions.Concept().ActOnRequiresClause(
+            ParseConstraintLogicalOrExpression(
                 /*IsTrailingRequiresClause=*/false));
         if (RequiresClause.isInvalid())
           SkipUntil({tok::l_brace, tok::l_paren}, StopAtSemi | StopBeforeMatch);
@@ -3670,7 +3670,8 @@ ExprResult Parser::ParseRequiresExpression() {
         SourceLocation NoexceptLoc;
         TryConsumeToken(tok::kw_noexcept, NoexceptLoc);
         if (Tok.is(tok::semi)) {
-          Req = Actions.Concept().ActOnCompoundRequirement(Expression.get(), NoexceptLoc);
+          Req = Actions.Concept().ActOnCompoundRequirement(Expression.get(),
+                                                           NoexceptLoc);
           if (Req)
             Requirements.push_back(Req);
           break;
@@ -3765,8 +3766,8 @@ ExprResult Parser::ParseRequiresExpression() {
                         SkipUntilFlags::StopBeforeMatch);
               break;
             }
-            if (auto *Req =
-                    Actions.Concept().ActOnNestedRequirement(ConstraintExpr.get()))
+            if (auto *Req = Actions.Concept().ActOnNestedRequirement(
+                    ConstraintExpr.get()))
               Requirements.push_back(Req);
             else {
               SkipUntil(tok::semi, tok::r_brace,
@@ -3811,9 +3812,8 @@ ExprResult Parser::ParseRequiresExpression() {
                 break;
             }
 
-            if (auto *Req = Actions.Concept().ActOnTypeRequirement(TypenameKWLoc, SS,
-                                                         NameLoc, II,
-                                                         TemplateId)) {
+            if (auto *Req = Actions.Concept().ActOnTypeRequirement(
+                    TypenameKWLoc, SS, NameLoc, II, TemplateId)) {
               Requirements.push_back(Req);
             }
             break;
@@ -3834,7 +3834,8 @@ ExprResult Parser::ParseRequiresExpression() {
         if (!Expression.isInvalid() && PossibleRequiresExprInSimpleRequirement)
           Diag(StartLoc, diag::err_requires_expr_in_simple_requirement)
               << FixItHint::CreateInsertion(StartLoc, "requires");
-        if (auto *Req = Actions.Concept().ActOnSimpleRequirement(Expression.get()))
+        if (auto *Req =
+                Actions.Concept().ActOnSimpleRequirement(Expression.get()))
           Requirements.push_back(Req);
         else {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);

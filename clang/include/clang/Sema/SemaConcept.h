@@ -190,13 +190,13 @@ class TemplateCompareNewDeclInfo {
 public:
   TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
   TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
-                              const DeclContext *LexicalDeclCtx,
-                              SourceLocation Loc)
+                             const DeclContext *LexicalDeclCtx,
+                             SourceLocation Loc)
 
       : DC(DeclCtx), LexicalDC(LexicalDeclCtx), Loc(Loc) {
     assert(DC && LexicalDC &&
-            "Constructor only for cases where we have the information to put "
-            "in here");
+           "Constructor only for cases where we have the information to put "
+           "in here");
   }
 
   // If this was constructed with no information, we cannot do substitution
@@ -472,7 +472,7 @@ public:
                            TemplateTypeParmDecl *ConstrainedParameter,
                            SourceLocation EllipsisLoc,
                            bool AllowUnexpandedPack);
-  
+
   bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
                             DeclarationNameInfo NameInfo,
                             ConceptDecl *NamedConcept, NamedDecl *FoundDecl,

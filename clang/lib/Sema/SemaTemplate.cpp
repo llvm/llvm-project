@@ -4966,8 +4966,8 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   SmallVector<const Expr *, 3> PartialAC, TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   Partial->getAssociatedConstraints(PartialAC);
-  S.Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
-                                                  TemplateAC);
+  S.Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
+      Partial, PartialAC, Template, TemplateAC);
 }
 
 static void
@@ -5474,9 +5474,9 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   }
 
   if (R.getAsSingle<ConceptDecl>()) {
-    return Concept().CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
-                                  R.getRepresentativeDecl(),
-                                  R.getAsSingle<ConceptDecl>(), TemplateArgs);
+    return Concept().CheckConceptTemplateId(
+        SS, TemplateKWLoc, R.getLookupNameInfo(), R.getRepresentativeDecl(),
+        R.getAsSingle<ConceptDecl>(), TemplateArgs);
   }
 
   // We don't want lookup warnings at this point.
@@ -8296,8 +8296,9 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
       Template->getAssociatedConstraints(TemplateAC);
 
       bool IsParamAtLeastAsConstrained;
-      if (Concept().IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
-                                 IsParamAtLeastAsConstrained))
+      if (Concept().IsAtLeastAsConstrained(Param, ParamsAC, Template,
+                                           TemplateAC,
+                                           IsParamAtLeastAsConstrained))
         return true;
       if (!IsParamAtLeastAsConstrained) {
         Diag(Arg.getLocation(),
@@ -8306,8 +8307,8 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
         Diag(Param->getLocation(), diag::note_entity_declared_at) << Param;
         Diag(Template->getLocation(), diag::note_entity_declared_at)
             << Template;
-        Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Param, ParamsAC, Template,
-                                                      TemplateAC);
+        Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
+            Param, ParamsAC, Template, TemplateAC);
         return true;
       }
       return false;
@@ -8634,9 +8635,8 @@ Sema::BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
 
 /// Match two template parameters within template parameter lists.
 static bool MatchTemplateParameterKind(
-    Sema &S, NamedDecl *New,
-    const TemplateCompareNewDeclInfo &NewInstFrom, NamedDecl *Old,
-    const NamedDecl *OldInstFrom, bool Complain,
+    Sema &S, NamedDecl *New, const TemplateCompareNewDeclInfo &NewInstFrom,
+    NamedDecl *Old, const NamedDecl *OldInstFrom, bool Complain,
     Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   // Check the actual kind (type, non-type, template).
   if (Old->getKind() != New->getKind()) {
@@ -8770,8 +8770,8 @@ static bool MatchTemplateParameterKind(
     }
 
     if (NewC) {
-      if (!S.Concept().AreConstraintExpressionsEqual(OldInstFrom, OldC, NewInstFrom,
-                                           NewC)) {
+      if (!S.Concept().AreConstraintExpressionsEqual(OldInstFrom, OldC,
+                                                     NewInstFrom, NewC)) {
         if (Complain)
           Diagnose();
         return false;
@@ -8912,8 +8912,8 @@ bool Sema::TemplateParameterListsAreEqual(
     }
 
     if (NewRC) {
-      if (!Concept().AreConstraintExpressionsEqual(OldInstFrom, OldRC, NewInstFrom,
-                                         NewRC)) {
+      if (!Concept().AreConstraintExpressionsEqual(OldInstFrom, OldRC,
+                                                   NewInstFrom, NewRC)) {
         if (Complain)
           Diagnose();
         return false;
@@ -10204,9 +10204,10 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
         continue;
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
-          (Concept().CheckFunctionConstraints(Method, Satisfaction,
-                                    /*UsageLoc=*/Member->getLocation(),
-                                    /*ForOverloadResolution=*/true) ||
+          (Concept().CheckFunctionConstraints(
+               Method, Satisfaction,
+               /*UsageLoc=*/Member->getLocation(),
+               /*ForOverloadResolution=*/true) ||
            !Satisfaction.IsSatisfied))
         continue;
       Candidates.push_back(Method);

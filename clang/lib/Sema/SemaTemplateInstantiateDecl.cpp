@@ -3112,8 +3112,9 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
       // Note: We attach the uninstantiated constriant here, so that it can be
       // instantiated relative to the top level, like all our other
       // constraints.
-      if (SemaRef.Concept().AttachTypeConstraint(AutoLoc, /*NewConstrainedParm=*/Param,
-                                       /*OrigConstrainedParm=*/D, EllipsisLoc))
+      if (SemaRef.Concept().AttachTypeConstraint(
+              AutoLoc, /*NewConstrainedParm=*/Param,
+              /*OrigConstrainedParm=*/D, EllipsisLoc))
         Invalid = true;
     }
 

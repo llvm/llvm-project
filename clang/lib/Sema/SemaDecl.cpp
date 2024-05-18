@@ -19013,9 +19013,9 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
         AnotherMethodIsMoreConstrained = true;
         break;
       }
-      if (S.Concept().IsAtLeastAsConstrained(OtherMethod, {OtherConstraints}, OrigMethod,
-                                   {Constraints},
-                                   AnotherMethodIsMoreConstrained)) {
+      if (S.Concept().IsAtLeastAsConstrained(OtherMethod, {OtherConstraints},
+                                             OrigMethod, {Constraints},
+                                             AnotherMethodIsMoreConstrained)) {
         // There was an error with the constraints comparison. Exit the loop
         // and don't consider this function eligible.
         AnotherMethodIsMoreConstrained = true;

@@ -4662,7 +4662,8 @@ bool Sema::addInstantiatedCapturesToScope(
     } else {
       Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
       std::optional<unsigned> NumArgumentsInExpansion =
-          SemaRef.getNumArgumentsInExpansion(CapturedPattern->getType(), TemplateArgs);
+          SemaRef.getNumArgumentsInExpansion(CapturedPattern->getType(),
+                                             TemplateArgs);
       if (!NumArgumentsInExpansion)
         continue;
       for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)

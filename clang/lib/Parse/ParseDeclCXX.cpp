@@ -4298,8 +4298,8 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
   TrailingRequiresClause =
       ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
 
-  TrailingRequiresClause =
-      Actions.Concept().ActOnFinishTrailingRequiresClause(TrailingRequiresClause);
+  TrailingRequiresClause = Actions.Concept().ActOnFinishTrailingRequiresClause(
+      TrailingRequiresClause);
 
   if (!D.isDeclarationOfFunction()) {
     Diag(RequiresKWLoc,
