@@ -290,6 +290,7 @@ generator cstring
 generator initializer_list
 generator limits
 generator new
+generator tuple
 generator typeinfo
 initializer_list cstddef
 iomanip istream
