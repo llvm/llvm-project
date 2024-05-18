@@ -209,9 +209,7 @@ void llvm::computeLTOCacheKey(
     ImportedGUIDs.clear();
     for (auto &Fn : Entry.getFunctions())
       ImportedGUIDs.push_back(Fn);
-
     llvm::sort(ImportedGUIDs);
-
     for (auto &GUID : ImportedGUIDs)
       AddUint64(GUID);
   }
