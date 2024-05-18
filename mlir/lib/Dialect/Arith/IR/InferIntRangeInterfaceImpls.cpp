@@ -19,7 +19,7 @@ using namespace mlir;
 using namespace mlir::arith;
 using namespace mlir::intrange;
 
-intrange::OverflowFlags
+static intrange::OverflowFlags
 convertArithOverflowFlags(arith::IntegerOverflowFlags flags) {
   intrange::OverflowFlags retFlags = intrange::OverflowFlags::None;
   if (bitEnumContainsAny(flags, arith::IntegerOverflowFlags::nsw))

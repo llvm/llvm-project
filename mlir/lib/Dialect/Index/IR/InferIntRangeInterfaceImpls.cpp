@@ -47,7 +47,7 @@ void BoolConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 // Some arithmetic inference functions allow specifying special overflow / wrap
 // behavior. We do not require this for the IndexOps and use this helper to call
 // the inference function without any `OverflowFlags`.
-std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>
+static std::function<ConstantIntRanges(ArrayRef<ConstantIntRanges>)>
 inferWithoutOverflowFlags(InferRangeWithOvfFlagsFn inferWithOvfFn) {
   return [inferWithOvfFn](ArrayRef<ConstantIntRanges> argRanges) {
     return inferWithOvfFn(argRanges, OverflowFlags::None);
