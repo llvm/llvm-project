@@ -39,6 +39,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -10457,7 +10458,7 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
         // inaccessible one at a time.
         if (AnyAccessFailures && isa<DecompositionDecl>(decl))
           continue;
-        HandleDelayedAccessCheck(diag, decl);
+        Access().HandleDelayedAccessCheck(diag, decl);
         if (diag.Triggered)
           AnyAccessFailures = true;
         break;

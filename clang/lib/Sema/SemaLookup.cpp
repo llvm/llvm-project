@@ -33,6 +33,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -4884,10 +4885,10 @@ void TypoCorrectionConsumer::performQualifiedLookups() {
         }
         for (LookupResult::iterator TRD = Result.begin(), TRDEnd = Result.end();
              TRD != TRDEnd; ++TRD) {
-          if (SemaRef.CheckMemberAccess(TC.getCorrectionRange().getBegin(),
+          if (SemaRef.Access().CheckMemberAccess(TC.getCorrectionRange().getBegin(),
                                         NSType ? NSType->getAsCXXRecordDecl()
                                                : nullptr,
-                                        TRD.getPair()) == Sema::AR_accessible)
+                                        TRD.getPair()) == SemaAccess::AR_accessible)
             TC.addCorrectionDecl(*TRD);
         }
         if (TC.isResolved()) {

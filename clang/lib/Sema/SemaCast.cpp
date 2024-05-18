@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1735,16 +1736,16 @@ TryStaticDowncast(Sema &Self, CanQualType SrcType, CanQualType DestType,
   }
 
   if (!CStyle) {
-    switch (Self.CheckBaseClassAccess(OpRange.getBegin(),
+    switch (Self.Access().CheckBaseClassAccess(OpRange.getBegin(),
                                       SrcType, DestType,
                                       Paths.front(),
                                 diag::err_downcast_from_inaccessible_base)) {
-    case Sema::AR_accessible:
-    case Sema::AR_delayed:     // be optimistic
-    case Sema::AR_dependent:   // be optimistic
+    case SemaAccess::AR_accessible:
+    case SemaAccess::AR_delayed:     // be optimistic
+    case SemaAccess::AR_dependent:   // be optimistic
       break;
 
-    case Sema::AR_inaccessible:
+    case SemaAccess::AR_inaccessible:
       msg = 0;
       return TC_Failed;
     }
@@ -1834,18 +1835,18 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
   }
 
   if (!CStyle) {
-    switch (Self.CheckBaseClassAccess(OpRange.getBegin(),
+    switch (Self.Access().CheckBaseClassAccess(OpRange.getBegin(),
                                       DestClass, SrcClass,
                                       Paths.front(),
                                       diag::err_upcast_to_inaccessible_base)) {
-    case Sema::AR_accessible:
-    case Sema::AR_delayed:
-    case Sema::AR_dependent:
+    case SemaAccess::AR_accessible:
+    case SemaAccess::AR_delayed:
+    case SemaAccess::AR_dependent:
       // Optimistically assume that the delayed and dependent cases
       // will work out.
       break;
 
-    case Sema::AR_inaccessible:
+    case SemaAccess::AR_inaccessible:
       msg = 0;
       return TC_Failed;
     }

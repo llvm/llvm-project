@@ -33,6 +33,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
@@ -2165,7 +2166,7 @@ DeclResult Sema::CheckClassTemplate(
 
   // Set the access specifier.
   if (!Invalid && TUK != TUK_Friend && NewTemplate->getDeclContext()->isRecord())
-    SetMemberAccessSpecifier(NewTemplate, PrevClassTemplate, AS);
+    Access().SetMemberAccessSpecifier(NewTemplate, PrevClassTemplate, AS);
 
   // Set the lexical context of these templates
   NewClass->setLexicalDeclContext(CurContext);

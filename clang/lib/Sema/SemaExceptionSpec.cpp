@@ -19,6 +19,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/SemaAccess.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include <optional>
@@ -752,16 +753,16 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     return false;
 
   // Do this check from a context without privileges.
-  switch (CheckBaseClassAccess(SourceLocation(), HandlerType, ExceptionType,
+  switch (Access().CheckBaseClassAccess(SourceLocation(), HandlerType, ExceptionType,
                                Paths.front(),
                                /*Diagnostic*/ 0,
                                /*ForceCheck*/ true,
                                /*ForceUnprivileged*/ true)) {
-  case AR_accessible: return true;
-  case AR_inaccessible: return false;
-  case AR_dependent:
+  case SemaAccess::AR_accessible: return true;
+  case SemaAccess::AR_inaccessible: return false;
+  case SemaAccess::AR_dependent:
     llvm_unreachable("access check dependent for unprivileged context");
-  case AR_delayed:
+  case SemaAccess::AR_delayed:
     llvm_unreachable("access check delayed in non-declaration");
   }
   llvm_unreachable("unexpected access check result");

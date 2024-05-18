@@ -167,6 +167,7 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaAccess;
 class SemaCodeCompletion;
 class SemaCUDA;
 class SemaHLSL;
@@ -984,6 +985,11 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaAccess &Access() {
+    assert(AccessPtr);
+    return *AccessPtr;
+  }
+
   SemaCodeCompletion &CodeCompletion() {
     assert(CodeCompletionPtr);
     return *CodeCompletionPtr;
@@ -1049,6 +1055,7 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
+  std::unique_ptr<SemaAccess> AccessPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
@@ -1056,93 +1063,6 @@ private:
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name C++ Access Control
-  /// Implementations are in SemaAccess.cpp
-  ///@{
-
-public:
-  enum AccessResult {
-    AR_accessible,
-    AR_inaccessible,
-    AR_dependent,
-    AR_delayed
-  };
-
-  bool SetMemberAccessSpecifier(NamedDecl *MemberDecl,
-                                NamedDecl *PrevMemberDecl,
-                                AccessSpecifier LexicalAS);
-
-  AccessResult CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
-                                           DeclAccessPair FoundDecl);
-  AccessResult CheckUnresolvedLookupAccess(UnresolvedLookupExpr *E,
-                                           DeclAccessPair FoundDecl);
-  AccessResult CheckAllocationAccess(SourceLocation OperatorLoc,
-                                     SourceRange PlacementRange,
-                                     CXXRecordDecl *NamingClass,
-                                     DeclAccessPair FoundDecl,
-                                     bool Diagnose = true);
-  AccessResult CheckConstructorAccess(SourceLocation Loc, CXXConstructorDecl *D,
-                                      DeclAccessPair FoundDecl,
-                                      const InitializedEntity &Entity,
-                                      bool IsCopyBindingRefToTemp = false);
-  AccessResult CheckConstructorAccess(SourceLocation Loc, CXXConstructorDecl *D,
-                                      DeclAccessPair FoundDecl,
-                                      const InitializedEntity &Entity,
-                                      const PartialDiagnostic &PDiag);
-  AccessResult CheckDestructorAccess(SourceLocation Loc,
-                                     CXXDestructorDecl *Dtor,
-                                     const PartialDiagnostic &PDiag,
-                                     QualType objectType = QualType());
-  AccessResult CheckFriendAccess(NamedDecl *D);
-  AccessResult CheckMemberAccess(SourceLocation UseLoc,
-                                 CXXRecordDecl *NamingClass,
-                                 DeclAccessPair Found);
-  AccessResult
-  CheckStructuredBindingMemberAccess(SourceLocation UseLoc,
-                                     CXXRecordDecl *DecomposedClass,
-                                     DeclAccessPair Field);
-  AccessResult CheckMemberOperatorAccess(SourceLocation Loc, Expr *ObjectExpr,
-                                         const SourceRange &,
-                                         DeclAccessPair FoundDecl);
-  AccessResult CheckMemberOperatorAccess(SourceLocation Loc, Expr *ObjectExpr,
-                                         Expr *ArgExpr,
-                                         DeclAccessPair FoundDecl);
-  AccessResult CheckMemberOperatorAccess(SourceLocation Loc, Expr *ObjectExpr,
-                                         ArrayRef<Expr *> ArgExprs,
-                                         DeclAccessPair FoundDecl);
-  AccessResult CheckAddressOfMemberAccess(Expr *OvlExpr,
-                                          DeclAccessPair FoundDecl);
-  AccessResult CheckBaseClassAccess(SourceLocation AccessLoc, QualType Base,
-                                    QualType Derived, const CXXBasePath &Path,
-                                    unsigned DiagID, bool ForceCheck = false,
-                                    bool ForceUnprivileged = false);
-  void CheckLookupAccess(const LookupResult &R);
-  bool IsSimplyAccessible(NamedDecl *Decl, CXXRecordDecl *NamingClass,
-                          QualType BaseType);
-  bool isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                     DeclAccessPair Found, QualType ObjectType,
-                                     SourceLocation Loc,
-                                     const PartialDiagnostic &Diag);
-  bool isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                     DeclAccessPair Found,
-                                     QualType ObjectType) {
-    return isMemberAccessibleForDeletion(NamingClass, Found, ObjectType,
-                                         SourceLocation(), PDiag());
-  }
-
-  void HandleDependentAccessCheck(
-      const DependentDiagnostic &DD,
-      const MultiLevelTemplateArgumentList &TemplateArgs);
-  void HandleDelayedAccessCheck(sema::DelayedDiagnostic &DD, Decl *Ctx);
 
   ///@}
 
