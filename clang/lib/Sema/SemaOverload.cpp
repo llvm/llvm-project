@@ -32,6 +32,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
@@ -1518,7 +1519,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     if ((NewRC != nullptr) != (OldRC != nullptr))
       return true;
     if (NewRC &&
-        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
+        !SemaRef.Concept().AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
       return true;
   }
 
@@ -7093,7 +7094,7 @@ void Sema::AddOverloadCandidate(
 
   if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckFunctionConstraints(Function, Satisfaction, /*Loc*/ {},
+    if (Concept().CheckFunctionConstraints(Function, Satisfaction, /*Loc*/ {},
                                  /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
@@ -7611,7 +7612,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckFunctionConstraints(Method, Satisfaction, /*Loc*/ {},
+    if (Concept().CheckFunctionConstraints(Method, Satisfaction, /*Loc*/ {},
                                  /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
@@ -8041,7 +8042,7 @@ void Sema::AddConversionCandidate(
 
   if (Conversion->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckFunctionConstraints(Conversion, Satisfaction) ||
+    if (Concept().CheckFunctionConstraints(Conversion, Satisfaction) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -8324,7 +8325,7 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
 
   if (Conversion->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckFunctionConstraints(Conversion, Satisfaction, /*Loc*/ {},
+    if (Concept().CheckFunctionConstraints(Conversion, Satisfaction, /*Loc*/ {},
                                  /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
@@ -11070,7 +11071,7 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
 
   if (FD->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(FD, Satisfaction, Loc))
+    if (S.Concept().CheckFunctionConstraints(FD, Satisfaction, Loc))
       return false;
     if (!Satisfaction.IsSatisfied) {
       if (Complain) {
@@ -11089,7 +11090,7 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
         } else
           S.Diag(Loc, diag::err_addrof_function_constraints_not_satisfied)
               << FD;
-        S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+        S.Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
       }
       return false;
     }
@@ -11220,7 +11221,7 @@ MaybeDiagnoseAmbiguousConstraints(Sema &S, ArrayRef<OverloadCandidate> Cands) {
     return;
   // The diagnostic can only happen if there are associated constraints on
   // both sides (there needs to be some identical atomic constraint).
-  if (S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(FirstCand, FirstAC,
+  if (S.Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(FirstCand, FirstAC,
                                                       SecondCand, SecondAC))
     // Just show the user one diagnostic, they'll probably figure it out
     // from here.
@@ -11746,7 +11747,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
            diag::note_ovl_candidate_unsatisfied_constraints)
         << TemplateArgString;
 
-    S.DiagnoseUnsatisfiedConstraint(
+    S.Concept().DiagnoseUnsatisfiedConstraint(
         static_cast<CNSInfo*>(DeductionFailure.Data)->Satisfaction);
     return;
   }
@@ -12134,9 +12135,9 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
         << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
         << FnDesc /* Ignored */;
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(Fn, Satisfaction))
+    if (S.Concept().CheckFunctionConstraints(Fn, Satisfaction))
       break;
-    S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+    S.Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
   }
   }
 }
@@ -12178,8 +12179,8 @@ static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
            diag::note_ovl_surrogate_constraints_not_satisfied)
         << Cand->Surrogate;
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(Cand->Surrogate, Satisfaction))
-      S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+    if (S.Concept().CheckFunctionConstraints(Cand->Surrogate, Satisfaction))
+      S.Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
   } else {
     S.Diag(Cand->Surrogate->getLocation(), diag::note_ovl_surrogate_cand)
         << FnType;
@@ -13822,7 +13823,7 @@ DiagnoseTwoPhaseOperatorLookup(Sema &SemaRef, OverloadedOperatorKind Op,
 namespace {
 class BuildRecoveryCallExprRAII {
   Sema &SemaRef;
-  Sema::SatisfactionStackResetRAII SatStack;
+  SemaConcept::SatisfactionStackResetRAII SatStack;
 
 public:
   BuildRecoveryCallExprRAII(Sema &S) : SemaRef(S), SatStack(S) {

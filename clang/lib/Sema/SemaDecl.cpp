@@ -46,6 +46,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -10901,7 +10902,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Precalculate whether this is a friend function template with a constraint
     // that depends on an enclosing template, per [temp.friend]p9.
     if (isFriend && FunctionTemplate &&
-        FriendConstraintsDependOnEnclosingTemplate(NewFD)) {
+        Concept().FriendConstraintsDependOnEnclosingTemplate(NewFD)) {
       NewFD->setFriendConstraintRefersToEnclosingTemplate(true);
 
       // C++ [temp.friend]p9:
@@ -18977,7 +18978,7 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
       SatisfactionStatus.push_back(true);
     else {
       ConstraintSatisfaction Satisfaction;
-      if (S.CheckFunctionConstraints(Method, Satisfaction))
+      if (S.Concept().CheckFunctionConstraints(Method, Satisfaction))
         SatisfactionStatus.push_back(false);
       else
         SatisfactionStatus.push_back(Satisfaction.IsSatisfied);
@@ -19012,7 +19013,7 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
         AnotherMethodIsMoreConstrained = true;
         break;
       }
-      if (S.IsAtLeastAsConstrained(OtherMethod, {OtherConstraints}, OrigMethod,
+      if (S.Concept().IsAtLeastAsConstrained(OtherMethod, {OtherConstraints}, OrigMethod,
                                    {Constraints},
                                    AnotherMethodIsMoreConstrained)) {
         // There was an error with the constraints comparison. Exit the loop

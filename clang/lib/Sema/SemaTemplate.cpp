@@ -34,6 +34,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -5166,7 +5167,7 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   SmallVector<const Expr *, 3> PartialAC, TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   Partial->getAssociatedConstraints(PartialAC);
-  S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
+  S.Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
                                                   TemplateAC);
 }
 
@@ -5670,7 +5671,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
       *this, ExpressionEvaluationContext::ConstantEvaluated, CSD};
 
   if (!AreArgsDependent &&
-      CheckConstraintSatisfaction(
+      Concept().CheckConstraintSatisfaction(
           NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
@@ -6946,7 +6947,7 @@ bool Sema::CheckTemplateArgumentList(
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
-    if (EnsureTemplateArgumentListConstraints(
+    if (Concept().EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
       if (ConstraintsNotSatisfied)
@@ -8545,7 +8546,7 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
       Template->getAssociatedConstraints(TemplateAC);
 
       bool IsParamAtLeastAsConstrained;
-      if (IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
+      if (Concept().IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
                                  IsParamAtLeastAsConstrained))
         return true;
       if (!IsParamAtLeastAsConstrained) {
@@ -8555,7 +8556,7 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
         Diag(Param->getLocation(), diag::note_entity_declared_at) << Param;
         Diag(Template->getLocation(), diag::note_entity_declared_at)
             << Template;
-        MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Param, ParamsAC, Template,
+        Concept().MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Param, ParamsAC, Template,
                                                       TemplateAC);
         return true;
       }
@@ -8884,7 +8885,7 @@ Sema::BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
 /// Match two template parameters within template parameter lists.
 static bool MatchTemplateParameterKind(
     Sema &S, NamedDecl *New,
-    const Sema::TemplateCompareNewDeclInfo &NewInstFrom, NamedDecl *Old,
+    const TemplateCompareNewDeclInfo &NewInstFrom, NamedDecl *Old,
     const NamedDecl *OldInstFrom, bool Complain,
     Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   // Check the actual kind (type, non-type, template).
@@ -9019,7 +9020,7 @@ static bool MatchTemplateParameterKind(
     }
 
     if (NewC) {
-      if (!S.AreConstraintExpressionsEqual(OldInstFrom, OldC, NewInstFrom,
+      if (!S.Concept().AreConstraintExpressionsEqual(OldInstFrom, OldC, NewInstFrom,
                                            NewC)) {
         if (Complain)
           Diagnose();
@@ -9161,7 +9162,7 @@ bool Sema::TemplateParameterListsAreEqual(
     }
 
     if (NewRC) {
-      if (!AreConstraintExpressionsEqual(OldInstFrom, OldRC, NewInstFrom,
+      if (!Concept().AreConstraintExpressionsEqual(OldInstFrom, OldRC, NewInstFrom,
                                          NewRC)) {
         if (Complain)
           Diagnose();
@@ -10566,7 +10567,7 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
         continue;
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
-          (CheckFunctionConstraints(Method, Satisfaction,
+          (Concept().CheckFunctionConstraints(Method, Satisfaction,
                                     /*UsageLoc=*/Member->getLocation(),
                                     /*ForOverloadResolution=*/true) ||
            !Satisfaction.IsSatisfied))

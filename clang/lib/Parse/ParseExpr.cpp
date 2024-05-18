@@ -31,6 +31,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -268,7 +269,7 @@ ExprResult Parser::ParseConstraintExpression() {
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   ExprResult LHS(ParseCastExpression(AnyCastExpr));
   ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::LogicalOr));
-  if (Res.isUsable() && !Actions.CheckConstraintExpression(Res.get())) {
+  if (Res.isUsable() && !Actions.Concept().CheckConstraintExpression(Res.get())) {
     Actions.CorrectDelayedTyposInExpr(Res);
     return ExprError();
   }
@@ -330,7 +331,7 @@ Parser::ParseConstraintLogicalAndExpression(bool IsTrailingRequiresClause) {
     }
     bool PossibleNonPrimary;
     bool IsConstraintExpr =
-        Actions.CheckConstraintExpression(E.get(), Tok, &PossibleNonPrimary,
+        Actions.Concept().CheckConstraintExpression(E.get(), Tok, &PossibleNonPrimary,
                                           IsTrailingRequiresClause);
     if (!IsConstraintExpr || PossibleNonPrimary) {
       // Atomic constraint might be an unparenthesized non-primary expression

@@ -39,6 +39,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
@@ -3088,7 +3089,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   if (!Innermost)
     MLTAL.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
 
-  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
+  if (S.Concept().CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
                                     Info.AssociatedConstraintsSatisfaction) ||
       !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
@@ -3940,7 +3941,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (!PartialOverloading ||
       (CanonicalBuilder.size() ==
        FunctionTemplate->getTemplateParameters()->size())) {
-    if (CheckInstantiatedFunctionTemplateConstraints(
+    if (Concept().CheckInstantiatedFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CanonicalBuilder,
             Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
@@ -5100,7 +5101,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     return true;
   MultiLevelTemplateArgumentList MLTAL(Concept, CanonicalConverted,
                                        /*Final=*/false);
-  if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
+  if (S.Concept().CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
                                     MLTAL, TypeLoc.getLocalSourceRange(),
                                     Satisfaction))
     return true;
@@ -5118,7 +5119,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     S.Diag(TypeLoc.getConceptNameLoc(),
            diag::err_placeholder_constraints_not_satisfied)
         << Deduced << Buf << TypeLoc.getLocalSourceRange();
-    S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+    S.Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
     return true;
   }
   return false;
@@ -5853,9 +5854,9 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   FT1->getAssociatedConstraints(AC1);
   FT2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-  if (IsAtLeastAsConstrained(FT1, AC1, FT2, AC2, AtLeastAsConstrained1))
+  if (Concept().IsAtLeastAsConstrained(FT1, AC1, FT2, AC2, AtLeastAsConstrained1))
     return nullptr;
-  if (IsAtLeastAsConstrained(FT2, AC2, FT1, AC1, AtLeastAsConstrained2))
+  if (Concept().IsAtLeastAsConstrained(FT2, AC2, FT1, AC1, AtLeastAsConstrained2))
     return nullptr;
   if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
     return nullptr;
@@ -5996,9 +5997,9 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   F1->getAssociatedConstraints(AC1);
   F2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-  if (IsAtLeastAsConstrained(F1, AC1, F2, AC2, AtLeastAsConstrained1))
+  if (Concept().IsAtLeastAsConstrained(F1, AC1, F2, AC2, AtLeastAsConstrained1))
     return nullptr;
-  if (IsAtLeastAsConstrained(F2, AC2, F1, AC1, AtLeastAsConstrained2))
+  if (Concept().IsAtLeastAsConstrained(F2, AC2, F1, AC1, AtLeastAsConstrained2))
     return nullptr;
   if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
     return nullptr;
@@ -6231,10 +6232,10 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   P1->getAssociatedConstraints(AC1);
   P2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-  if (S.IsAtLeastAsConstrained(P1, AC1, P2, AC2, AtLeastAsConstrained1) ||
+  if (S.Concept().IsAtLeastAsConstrained(P1, AC1, P2, AC2, AtLeastAsConstrained1) ||
       (IsMoreSpecialThanPrimaryCheck && !AtLeastAsConstrained1))
     return nullptr;
-  if (S.IsAtLeastAsConstrained(P2, AC2, P1, AC1, AtLeastAsConstrained2))
+  if (S.Concept().IsAtLeastAsConstrained(P2, AC2, P1, AC1, AtLeastAsConstrained2))
     return nullptr;
   if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
     return nullptr;

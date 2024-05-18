@@ -43,6 +43,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -7466,7 +7467,7 @@ static bool specialMemberIsConstexpr(
   // Suppress duplicate constraint checking here, in case a constraint check
   // caused us to decide to do this.  Any truely recursive checks will get
   // caught during these checks anyway.
-  Sema::SatisfactionStackResetRAII SSRAII{S};
+  SemaConcept::SatisfactionStackResetRAII SSRAII{S};
 
   // If we're inheriting a constructor, see if we need to call it for this base
   // class.
@@ -17585,8 +17586,8 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
         Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
             << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
         ConstraintSatisfaction Satisfaction;
-        if (!CheckConstraintSatisfaction(InnerCond, Satisfaction))
-          DiagnoseUnsatisfiedConstraint(Satisfaction);
+        if (!Concept().CheckConstraintSatisfaction(InnerCond, Satisfaction))
+          Concept().DiagnoseUnsatisfiedConstraint(Satisfaction);
       } else if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond)
                            && !isa<IntegerLiteral>(InnerCond)) {
         Diag(InnerCond->getBeginLoc(),
