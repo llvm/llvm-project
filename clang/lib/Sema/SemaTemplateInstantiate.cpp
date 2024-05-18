@@ -3501,9 +3501,9 @@ public:
 
   ~SavePendingParsedClassStateRAII() {
     assert(S.ExceptionSpec().DelayedOverridingExceptionSpecChecks.empty() &&
-            "there shouldn't be any pending delayed exception spec checks");
+           "there shouldn't be any pending delayed exception spec checks");
     assert(S.ExceptionSpec().DelayedEquivalentExceptionSpecChecks.empty() &&
-            "there shouldn't be any pending delayed exception spec checsks");
+           "there shouldn't be any pending delayed exception spec checsks");
     swapSavedState();
   }
 

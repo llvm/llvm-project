@@ -4139,8 +4139,8 @@ ExceptionSpecificationType Parser::tryParseExceptionSpecification(
 
     T.consumeClose();
     if (!NoexceptExpr.isInvalid()) {
-      NoexceptExpr =
-          Actions.ExceptionSpec().ActOnNoexceptSpec(NoexceptExpr.get(), NoexceptType);
+      NoexceptExpr = Actions.ExceptionSpec().ActOnNoexceptSpec(
+          NoexceptExpr.get(), NoexceptType);
       NoexceptRange = SourceRange(KeywordLoc, T.getCloseLocation());
     } else {
       NoexceptType = EST_BasicNoexcept;

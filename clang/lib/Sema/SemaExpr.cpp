@@ -2312,7 +2312,8 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   //     computation rather than computing a new body.
   if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
-      if (const auto *NewFPT = ExceptionSpec().ResolveExceptionSpec(NameInfo.getLoc(), FPT))
+      if (const auto *NewFPT =
+              ExceptionSpec().ResolveExceptionSpec(NameInfo.getLoc(), FPT))
         E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
     }
   }

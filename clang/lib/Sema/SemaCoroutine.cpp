@@ -615,7 +615,8 @@ static void checkNoThrow(Sema &S, const Stmt *E,
   auto checkDeclNoexcept = [&](const Decl *D, bool IsDtor = false) {
     // In the case of dtor, the call to dtor is implicit and hence we should
     // pass nullptr to canCalleeThrow.
-    if (SemaExceptionSpec::canCalleeThrow(S, IsDtor ? nullptr : cast<Expr>(E), D)) {
+    if (SemaExceptionSpec::canCalleeThrow(S, IsDtor ? nullptr : cast<Expr>(E),
+                                          D)) {
       if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
         // co_await promise.final_suspend() could end up calling
         // __builtin_coro_resume for symmetric transfer if await_suspend()

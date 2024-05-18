@@ -330,9 +330,10 @@ static bool throwEscapes(Sema &S, const CXXThrowExpr *E, CFGBlock &ThrowBlock,
       if (auto *Catch =
               dyn_cast_or_null<CXXCatchStmt>(Succ->getLabel())) {
         QualType Caught = Catch->getCaughtType();
-        if (Caught.isNull() || // catch (...) catches everything
+        if (Caught.isNull() ||  // catch (...) catches everything
             !E->getSubExpr() || // throw; is considered cuaght by any handler
-            S.ExceptionSpec().handlerCanCatch(Caught, E->getSubExpr()->getType()))
+            S.ExceptionSpec().handlerCanCatch(Caught,
+                                              E->getSubExpr()->getType()))
           // Exception doesn't escape via this path.
           break;
       } else {

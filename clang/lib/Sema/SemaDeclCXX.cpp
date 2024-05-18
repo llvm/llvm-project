@@ -9180,7 +9180,8 @@ void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
 
   // The exception specification is needed because we are defining the
   // function. Note that this will reuse the body we just built.
-  ExceptionSpec().ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      UseLoc, FD->getType()->castAs<FunctionProtoType>());
 
   if (ASTMutationListener *L = getASTMutationListener())
     L->CompletedImplicitDefinition(FD);
@@ -14053,8 +14054,8 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       Constructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, Constructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -14193,8 +14194,8 @@ void Sema::DefineInheritingConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       Constructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, Constructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -14342,8 +14343,8 @@ void Sema::DefineImplicitDestructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       Destructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, Destructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -15014,8 +15015,9 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       CopyAssignOperator->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation,
+      CopyAssignOperator->getType()->castAs<FunctionProtoType>());
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(CurrentLocation);
@@ -15411,8 +15413,9 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       MoveAssignOperator->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation,
+      MoveAssignOperator->getType()->castAs<FunctionProtoType>());
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(CurrentLocation);
@@ -15724,8 +15727,8 @@ void Sema::DefineImplicitCopyConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       CopyConstructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, CopyConstructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -15863,8 +15866,8 @@ void Sema::DefineImplicitMoveConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ExceptionSpec().ResolveExceptionSpec(CurrentLocation,
-                       MoveConstructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, MoveConstructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.

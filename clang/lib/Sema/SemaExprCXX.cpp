@@ -9318,7 +9318,8 @@ Sema::BuildExprRequirement(
   if (E->isInstantiationDependent() || E->getType()->isPlaceholderType() ||
       ReturnTypeRequirement.isDependent())
     Status = concepts::ExprRequirement::SS_Dependent;
-  else if (NoexceptLoc.isValid() && ExceptionSpec().canThrow(E) == CanThrowResult::CT_Can)
+  else if (NoexceptLoc.isValid() &&
+           ExceptionSpec().canThrow(E) == CanThrowResult::CT_Can)
     Status = concepts::ExprRequirement::SS_NoexceptNotMet;
   else if (ReturnTypeRequirement.isSubstitutionFailure())
     Status = concepts::ExprRequirement::SS_TypeRequirementSubstitutionFailure;

@@ -961,7 +961,8 @@ MemberExpr *Sema::BuildMemberExpr(
   //     selected member of a set of overloaded functions
   if (auto *FPT = Ty->getAs<FunctionProtoType>()) {
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
-      if (auto *NewFPT = ExceptionSpec().ResolveExceptionSpec(MemberNameInfo.getLoc(), FPT))
+      if (auto *NewFPT = ExceptionSpec().ResolveExceptionSpec(
+              MemberNameInfo.getLoc(), FPT))
         E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
     }
   }

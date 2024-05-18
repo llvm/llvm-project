@@ -6368,14 +6368,16 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
         Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), ArgIdx);
 
         QualType U = getDerived().TransformType(PackExpansion->getPattern());
-        if (U.isNull() || SemaRef.ExceptionSpec().CheckSpecifiedExceptionType(U, Loc))
+        if (U.isNull() ||
+            SemaRef.ExceptionSpec().CheckSpecifiedExceptionType(U, Loc))
           return true;
 
         Exceptions.push_back(U);
       }
     } else {
       QualType U = getDerived().TransformType(T);
-      if (U.isNull() || SemaRef.ExceptionSpec().CheckSpecifiedExceptionType(U, Loc))
+      if (U.isNull() ||
+          SemaRef.ExceptionSpec().CheckSpecifiedExceptionType(U, Loc))
         return true;
       if (T != U)
         Changed = true;

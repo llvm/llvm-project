@@ -4818,7 +4818,8 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
     return true;
 
   if (isa<CXXDestructorDecl>(New) && SemaRef.getLangOpts().CPlusPlus11)
-    SemaRef.ExceptionSpec().AdjustDestructorExceptionSpec(cast<CXXDestructorDecl>(New));
+    SemaRef.ExceptionSpec().AdjustDestructorExceptionSpec(
+        cast<CXXDestructorDecl>(New));
 
   New->setAccess(Tmpl->getAccess());
   if (Tmpl->isVirtualAsWritten())

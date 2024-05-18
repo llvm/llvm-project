@@ -4707,7 +4707,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Pointer:
       // Verify that we're not building a pointer to pointer to function with
       // exception specification.
-      if (LangOpts.CPlusPlus && S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
+      if (LangOpts.CPlusPlus &&
+          S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
         S.Diag(D.getIdentifierLoc(), diag::err_distant_exception_spec);
         D.setInvalidType(true);
         // Build the type anyway.
@@ -4743,7 +4744,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Reference: {
       // Verify that we're not building a reference to pointer to function with
       // exception specification.
-      if (LangOpts.CPlusPlus && S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
+      if (LangOpts.CPlusPlus &&
+          S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
         S.Diag(D.getIdentifierLoc(), diag::err_distant_exception_spec);
         D.setInvalidType(true);
         // Build the type anyway.
@@ -4757,7 +4759,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Array: {
       // Verify that we're not building an array of pointers to function with
       // exception specification.
-      if (LangOpts.CPlusPlus && S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
+      if (LangOpts.CPlusPlus &&
+          S.ExceptionSpec().CheckDistantExceptionSpec(T)) {
         S.Diag(D.getIdentifierLoc(), diag::err_distant_exception_spec);
         D.setInvalidType(true);
         // Build the type anyway.
@@ -5257,13 +5260,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           NoexceptExpr = FTI.NoexceptExpr;
         }
 
-        S.ExceptionSpec().checkExceptionSpecification(D.isFunctionDeclarationContext(),
-                                      FTI.getExceptionSpecType(),
-                                      DynamicExceptions,
-                                      DynamicExceptionRanges,
-                                      NoexceptExpr,
-                                      Exceptions,
-                                      EPI.ExceptionSpec);
+        S.ExceptionSpec().checkExceptionSpecification(
+            D.isFunctionDeclarationContext(), FTI.getExceptionSpecType(),
+            DynamicExceptions, DynamicExceptionRanges, NoexceptExpr, Exceptions,
+            EPI.ExceptionSpec);
 
         // FIXME: Set address space from attrs for C++ mode here.
         // OpenCLCPlusPlus: A class member function has an address space.

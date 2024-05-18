@@ -10419,7 +10419,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // we have selected the primary template so we can check whether it matches.
   if (getLangOpts().CPlusPlus17 &&
       isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
-      !ExceptionSpec().ResolveExceptionSpec(FD->getLocation(), SpecializationFPT))
+      !ExceptionSpec().ResolveExceptionSpec(FD->getLocation(),
+                                            SpecializationFPT))
     return true;
 
   FunctionTemplateSpecializationInfo *SpecInfo

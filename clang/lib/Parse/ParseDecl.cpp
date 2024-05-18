@@ -7532,7 +7532,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // delayed (even if this is a friend declaration).
       bool Delayed = D.getContext() == DeclaratorContext::Member &&
                      D.isFunctionDeclaratorAFunctionDeclaration();
-      if (Delayed && Actions.ExceptionSpec().isLibstdcxxEagerExceptionSpecHack(D) &&
+      if (Delayed &&
+          Actions.ExceptionSpec().isLibstdcxxEagerExceptionSpecHack(D) &&
           GetLookAheadToken(0).is(tok::kw_noexcept) &&
           GetLookAheadToken(1).is(tok::l_paren) &&
           GetLookAheadToken(2).is(tok::kw_noexcept) &&
