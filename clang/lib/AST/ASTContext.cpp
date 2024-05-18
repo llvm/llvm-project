@@ -3054,6 +3054,13 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
   if (!T.hasAddressSpace())
     return T;
 
+  // For arrays, strip the qualifier off the element type, then reconstruct the
+  // array type
+  if (T.getTypePtr()->isArrayType()) {
+    Qualifiers Qualfs;
+    return getUnqualifiedArrayType(T, Qualfs);
+  }
+
   // If we are composing extended qualifiers together, merge together
   // into one ExtQuals node.
   QualifierCollector Quals;
@@ -6093,7 +6100,7 @@ CanQualType ASTContext::getCanonicalParamType(QualType T) const {
 }
 
 QualType ASTContext::getUnqualifiedArrayType(QualType type,
-                                             Qualifiers &quals) {
+                                             Qualifiers &quals) const {
   SplitQualType splitType = type.getSplitUnqualifiedType();
 
   // FIXME: getSplitUnqualifiedType() actually walks all the way to

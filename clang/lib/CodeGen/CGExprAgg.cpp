@@ -537,9 +537,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       elementType.isTriviallyCopyableType(CGF.getContext())) {
     CodeGen::CodeGenModule &CGM = CGF.CGM;
     ConstantEmitter Emitter(CGF);
-    Qualifiers Quals;
     QualType GVArrayQTy = CGM.getContext().getAddrSpaceQualType(
-        CGM.getContext().getUnqualifiedArrayType(ArrayQTy, Quals),
+        CGM.getContext().removeAddrSpaceQualType(ArrayQTy),
         CGM.GetGlobalConstantAddressSpace());
     LangAS AS = GVArrayQTy.getAddressSpace();
     if (llvm::Constant *C =
