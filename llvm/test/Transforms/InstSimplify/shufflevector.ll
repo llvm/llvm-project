@@ -351,6 +351,17 @@ define i32 @not_fold_lookthrough_bitcast(<4 x i8> %x) {
   ret i32 %bitcast
 }
 
+define <8 x i16> @not_fold_lookthrough_bitcast2(<4 x i32> %x, <8 x i16> %y) {
+; CHECK-LABEL: @not_fold_lookthrough_bitcast2(
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[OUT:%.*]] = shufflevector <8 x i16> [[Y:%.*]], <8 x i16> [[CAST]], <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+; CHECK-NEXT:    ret <8 x i16> [[OUT]]
+;
+  %cast = bitcast <4 x i32> %x to <8 x i16>
+  %out = shufflevector <8 x i16> %y, <8 x i16> %cast, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  ret <8 x i16> %out
+}
+
 define <4 x i32> @fold_lookthrough_binop_same_operands(<4 x i32> %x) {
 ; CHECK-LABEL: @fold_lookthrough_binop_same_operands(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
