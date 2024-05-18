@@ -351,7 +351,7 @@ define i8 @callee13() {
 
 define i8 @caller13_okay_use_after_poison_anyways() {
 ; CHECK-LABEL: define i8 @caller13_okay_use_after_poison_anyways() {
-; CHECK-NEXT:    [[R_I:%.*]] = call i8 @val8()
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 0, 10) i8 @val8()
 ; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
 ; CHECK-NEXT:    ret i8 [[R_I]]
 ;
@@ -382,7 +382,7 @@ define i8 @caller14_fail_creates_ub() {
 
 define i8 @caller14_okay_is_ub_anyways() {
 ; CHECK-LABEL: define i8 @caller14_okay_is_ub_anyways() {
-; CHECK-NEXT:    [[R_I:%.*]] = call noundef i8 @val8()
+; CHECK-NEXT:    [[R_I:%.*]] = call noundef range(i8 0, 10) i8 @val8()
 ; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
 ; CHECK-NEXT:    ret i8 [[R_I]]
 ;
@@ -402,7 +402,7 @@ define i8 @callee15() {
 
 define i8 @caller15_okay_intersect_ranges() {
 ; CHECK-LABEL: define i8 @caller15_okay_intersect_ranges() {
-; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 5, 10) i8 @val8()
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 5, 7) i8 @val8()
 ; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
 ; CHECK-NEXT:    ret i8 [[R_I]]
 ;
