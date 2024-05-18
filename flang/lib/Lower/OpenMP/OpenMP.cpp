@@ -215,12 +215,10 @@ createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
 
   mlir::Type tempTy = converter.genType(*sym);
-  mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
-      loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
-      /*shapeParams*/ mlir::ValueRange{},
-      llvm::ArrayRef<mlir::NamedAttribute>{
-          fir::getAdaptToByRefAttr(firOpBuilder)});
-  converter.bindSymbol(*sym, temp);
+
+  assert(converter.isPresentShallowLookup(*sym) &&
+         "Expected symbol to be in symbol table.");
+
   firOpBuilder.restoreInsertionPoint(insPt);
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
   mlir::Operation *storeOp = firOpBuilder.create<fir::StoreOp>(
@@ -580,7 +578,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   std::optional<DataSharingProcessor> tempDsp;
   if (privatize) {
     if (!info.dsp) {
-      tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval);
+      tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval,
+                      Fortran::lower::omp::isLastItemInQueue(item, queue));
       tempDsp->processStep1();
     }
   }
@@ -1316,6 +1315,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   bool privatize = !outerCombined;
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue),
                            /*useDelayedPrivatization=*/true, &symTable);
 
   if (privatize)
@@ -1388,7 +1388,8 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // Insert privatizations before SECTIONS
   symTable.pushScope();
-  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval);
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
 
   List<Clause> nonDsaClauses;
@@ -1458,7 +1459,9 @@ genSimdOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           mlir::Location loc, const ConstructQueue &queue,
           ConstructQueue::iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval);
+  symTable.pushScope();
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
 
   lower::StatementContext stmtCtx;
@@ -1496,6 +1499,7 @@ genSimdOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                      .setGenRegionEntryCb(ivCallback),
                  queue, item);
 
+  symTable.popScope();
   return simdOp;
 }
 
@@ -1761,7 +1765,9 @@ genWsloopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             mlir::Location loc, const ConstructQueue &queue,
             ConstructQueue::iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval);
+  symTable.pushScope();
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue));
   dsp.processStep1();
 
   lower::StatementContext stmtCtx;
@@ -1804,6 +1810,7 @@ genWsloopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                      .setReductions(&reductionSyms, &reductionTypes)
                      .setGenRegionEntryCb(ivCallback),
                  queue, item);
+  symTable.popScope();
   return wsloopOp;
 }
 
