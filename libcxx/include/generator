@@ -426,9 +426,8 @@ private:
       void* const __ptr          = __rebind_al.allocate(static_cast<__rebind_size_type>(__block_count));
 
       // Stores the deallocation function in the allocated block
-      __dealloc_fn* const __dealloc_ptr =
-          reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-      *__dealloc_ptr = __dealloc<__rebind>;
+      __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+      *__dealloc_ptr                    = __dealloc<__rebind>;
       return __ptr;
     } else {
       // Allocates enough blocks for the coroutine frame, the size of the stateful allocator, the alignment of the
@@ -438,9 +437,8 @@ private:
       void* const __ptr = __rebind_al.allocate(static_cast<__rebind_size_type>(__block_count));
 
       // Stores the deallocation function in the allocated block
-      __dealloc_fn* const __dealloc_ptr =
-          reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-      *__dealloc_ptr = __dealloc<__rebind>;
+      __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+      *__dealloc_ptr                    = __dealloc<__rebind>;
 
       // Stores the stateful allocator in the allocated block
       __rebind* const __al_ptr = reinterpret_cast<__rebind*>(
@@ -453,14 +451,13 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI void* operator new(const size_t __size) {
-    void* const __ptr         = ::operator new(__size + sizeof(__dealloc_fn));
-    __dealloc_fn __dealloc = [](void* const __ptr, const size_t __size) static noexcept -> void {
-      ::operator delete(__ptr, __size + sizeof(__dealloc_fn));
+    void* const __ptr      = ::operator new(__size + sizeof(__dealloc_fn));
+    __dealloc_fn __dealloc = [](void* const __dealloc_ptr, const size_t __dealloc_size) static noexcept -> void {
+      ::operator delete(__dealloc_ptr, __dealloc_size + sizeof(__dealloc_fn));
     };
 
-    __dealloc_fn* const __dealloc_ptr =
-        reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-    *__dealloc_ptr = __dealloc;
+    __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+    *__dealloc_ptr                    = __dealloc;
     return __ptr;
   }
 
@@ -477,9 +474,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI static void operator delete(void* const __ptr, const size_t __size) noexcept {
-    __dealloc_fn* const __dealloc_ptr =
-        reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
-    const __dealloc_fn __dealloc = *__dealloc_ptr;
+    __dealloc_fn* const __dealloc_ptr = reinterpret_cast<__dealloc_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+    const __dealloc_fn __dealloc      = *__dealloc_ptr;
     __dealloc(__ptr, __size);
   }
 };
