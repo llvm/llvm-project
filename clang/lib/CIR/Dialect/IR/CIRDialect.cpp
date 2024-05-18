@@ -2089,6 +2089,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
           getLinkageAttrName(),
           getNoProtoAttrName(),
           getSymVisibilityAttrName(),
+          getArgAttrsAttrName(),
+          getResAttrsAttrName(),
       });
 
   if (auto aliaseeName = getAliasee()) {
