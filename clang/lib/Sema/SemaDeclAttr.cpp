@@ -8687,6 +8687,7 @@ static bool CheckCountedByAttrOnField(
   // Note: The `Decl::isFlexibleArrayMemberLike` check earlier on means
   // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
   // when `FieldTy->isArrayType()`.
+  bool ShouldWarn = false;
   if (PointeeTy->isIncompleteType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
   } else if (PointeeTy->isSizelessType()) {
@@ -8694,13 +8695,25 @@ static bool CheckCountedByAttrOnField(
   } else if (PointeeTy->isFunctionType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
   } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+    if (FieldTy->isArrayType()) {
+      // This is a workaround for the Linux kernel that has already adopted
+      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
+      // should be an error because computing the bounds of the array cannot be
+      // done correctly without manually traversing every struct object in the
+      // array at runtime. To allow the code to be built this error is
+      // downgraded to a warning.
+      ShouldWarn = true;
+    }
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
   }
 
   if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
-    S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_pointee_unknown_size)
+    unsigned DiagID = ShouldWarn
+                          ? diag::warn_counted_by_attr_elt_type_unknown_size
+                          : diag::err_counted_by_attr_pointee_unknown_size;
+    S.Diag(FD->getBeginLoc(), DiagID)
         << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
-        << FD->getSourceRange();
+        << (ShouldWarn ? 1 : 0) << FD->getSourceRange();
     return true;
   }
 

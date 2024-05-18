@@ -6737,7 +6737,7 @@ cc_library(
 
 td_library(
     name = "PolynomialTdFiles",
-    srcs = ["include/mlir/Dialect/Polynomial/IR/Polynomial.td"],
+    srcs = glob(["include/mlir/Dialect/Polynomial/IR/*.td"]),
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
