@@ -1419,7 +1419,8 @@ static DeclAccessPair findDecomposableBaseClass(Sema &S, SourceLocation Loc,
 
     //   ... [accessible, implied by other rules] base class of E.
     S.Access().CheckBaseClassAccess(Loc, BaseType, S.Context.getRecordType(RD),
-                           *BestPath, diag::err_decomp_decl_inaccessible_base);
+                                    *BestPath,
+                                    diag::err_decomp_decl_inaccessible_base);
     AS = BestPath->Access;
 
     ClassWithFields = BaseType->getAsCXXRecordDecl();
@@ -3167,8 +3168,8 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
   if (Path) {
     if (!IgnoreAccess) {
       // Check that the base class can be accessed.
-      switch (
-          Access().CheckBaseClassAccess(Loc, Base, Derived, *Path, InaccessibleBaseID)) {
+      switch (Access().CheckBaseClassAccess(Loc, Base, Derived, *Path,
+                                            InaccessibleBaseID)) {
       case SemaAccess::AR_inaccessible:
         return true;
       case SemaAccess::AR_accessible:
@@ -5906,9 +5907,8 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
     if (!Dtor)
       continue;
     Access().CheckDestructorAccess(Field->getLocation(), Dtor,
-                          PDiag(diag::err_access_dtor_field)
-                            << Field->getDeclName()
-                            << FieldType);
+                                   PDiag(diag::err_access_dtor_field)
+                                       << Field->getDeclName() << FieldType);
 
     MarkFunctionReferenced(Location, Dtor);
     DiagnoseUseOfDecl(Dtor, Location);
@@ -5956,9 +5956,10 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
 
     // FIXME: caret should be on the start of the class name
     Access().CheckDestructorAccess(Base.getBeginLoc(), Dtor,
-                          PDiag(diag::err_access_dtor_base)
-                              << Base.getType() << Base.getSourceRange(),
-                          Context.getTypeDeclType(ClassDecl));
+                                   PDiag(diag::err_access_dtor_base)
+                                       << Base.getType()
+                                       << Base.getSourceRange(),
+                                   Context.getTypeDeclType(ClassDecl));
 
     MarkFunctionReferenced(Location, Dtor);
     DiagnoseUseOfDecl(Dtor, Location);
@@ -5996,8 +5997,7 @@ void Sema::MarkVirtualBaseDestructorsReferenced(
             ClassDecl->getLocation(), Dtor,
             PDiag(diag::err_access_dtor_vbase)
                 << Context.getTypeDeclType(ClassDecl) << VBase.getType(),
-            Context.getTypeDeclType(ClassDecl)) ==
-        SemaAccess::AR_accessible) {
+            Context.getTypeDeclType(ClassDecl)) == SemaAccess::AR_accessible) {
       CheckDerivedToBaseConversion(
           Context.getTypeDeclType(ClassDecl), VBase.getType(),
           diag::err_access_dtor_vbase, 0, ClassDecl->getLocation(),
@@ -16236,8 +16236,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   if (!VD->getType()->isArrayType()) {
     MarkFunctionReferenced(VD->getLocation(), Destructor);
     Access().CheckDestructorAccess(VD->getLocation(), Destructor,
-                          PDiag(diag::err_access_dtor_var)
-                              << VD->getDeclName() << VD->getType());
+                                   PDiag(diag::err_access_dtor_var)
+                                       << VD->getDeclName() << VD->getType());
     DiagnoseUseOfDecl(Destructor, VD->getLocation());
   }
 
@@ -18101,7 +18101,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   if (ND->isInvalidDecl()) {
     FrD->setInvalidDecl();
   } else {
-    if (DC->isRecord()) Access().CheckFriendAccess(ND);
+    if (DC->isRecord())
+      Access().CheckFriendAccess(ND);
 
     FunctionDecl *FD;
     if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))

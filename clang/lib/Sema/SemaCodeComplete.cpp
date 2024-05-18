@@ -1779,7 +1779,8 @@ private:
       NamingClass = nullptr;
       BaseType = QualType();
     }
-    return Results.getSema().Access().IsSimplyAccessible(ND, NamingClass, BaseType);
+    return Results.getSema().Access().IsSimplyAccessible(ND, NamingClass,
+                                                         BaseType);
   }
 };
 } // namespace

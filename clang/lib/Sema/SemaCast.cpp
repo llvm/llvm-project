@@ -1736,13 +1736,12 @@ TryStaticDowncast(Sema &Self, CanQualType SrcType, CanQualType DestType,
   }
 
   if (!CStyle) {
-    switch (Self.Access().CheckBaseClassAccess(OpRange.getBegin(),
-                                      SrcType, DestType,
-                                      Paths.front(),
-                                diag::err_downcast_from_inaccessible_base)) {
+    switch (Self.Access().CheckBaseClassAccess(
+        OpRange.getBegin(), SrcType, DestType, Paths.front(),
+        diag::err_downcast_from_inaccessible_base)) {
     case SemaAccess::AR_accessible:
-    case SemaAccess::AR_delayed:     // be optimistic
-    case SemaAccess::AR_dependent:   // be optimistic
+    case SemaAccess::AR_delayed:   // be optimistic
+    case SemaAccess::AR_dependent: // be optimistic
       break;
 
     case SemaAccess::AR_inaccessible:
@@ -1835,10 +1834,9 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
   }
 
   if (!CStyle) {
-    switch (Self.Access().CheckBaseClassAccess(OpRange.getBegin(),
-                                      DestClass, SrcClass,
-                                      Paths.front(),
-                                      diag::err_upcast_to_inaccessible_base)) {
+    switch (Self.Access().CheckBaseClassAccess(
+        OpRange.getBegin(), DestClass, SrcClass, Paths.front(),
+        diag::err_upcast_to_inaccessible_base)) {
     case SemaAccess::AR_accessible:
     case SemaAccess::AR_delayed:
     case SemaAccess::AR_dependent:

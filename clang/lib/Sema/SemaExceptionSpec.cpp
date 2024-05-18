@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
@@ -20,6 +19,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/SemaAccess.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include <optional>
@@ -753,13 +753,15 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     return false;
 
   // Do this check from a context without privileges.
-  switch (Access().CheckBaseClassAccess(SourceLocation(), HandlerType, ExceptionType,
-                               Paths.front(),
-                               /*Diagnostic*/ 0,
-                               /*ForceCheck*/ true,
-                               /*ForceUnprivileged*/ true)) {
-  case SemaAccess::AR_accessible: return true;
-  case SemaAccess::AR_inaccessible: return false;
+  switch (Access().CheckBaseClassAccess(SourceLocation(), HandlerType,
+                                        ExceptionType, Paths.front(),
+                                        /*Diagnostic*/ 0,
+                                        /*ForceCheck*/ true,
+                                        /*ForceUnprivileged*/ true)) {
+  case SemaAccess::AR_accessible:
+    return true;
+  case SemaAccess::AR_inaccessible:
+    return false;
   case SemaAccess::AR_dependent:
     llvm_unreachable("access check dependent for unprivileged context");
   case SemaAccess::AR_delayed:

@@ -3523,8 +3523,8 @@ bool Sema::CheckMemberPointerConversion(Expr *From, QualType ToType,
 
   if (!IgnoreBaseAccess)
     Access().CheckBaseClassAccess(From->getExprLoc(), FromClass, ToClass,
-                         Paths.front(),
-                         diag::err_downcast_from_inaccessible_base);
+                                  Paths.front(),
+                                  diag::err_downcast_from_inaccessible_base);
 
   // Must be a base to derived member conversion.
   BuildBasePathArray(Paths, BasePath);
@@ -6539,7 +6539,8 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
     if (SemaRef.isSFINAEContext())
       return true;
 
-    SemaRef.Access().CheckMemberOperatorAccess(From->getExprLoc(), From, nullptr, Found);
+    SemaRef.Access().CheckMemberOperatorAccess(From->getExprLoc(), From,
+                                               nullptr, Found);
     ExprResult Result = SemaRef.BuildCXXMemberCallExpr(From, Found, Conversion,
                                                        HadMultipleCandidates);
     if (Result.isInvalid())
@@ -6562,7 +6563,8 @@ static bool recordConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
                              DeclAccessPair &Found) {
   CXXConversionDecl *Conversion =
       cast<CXXConversionDecl>(Found->getUnderlyingDecl());
-  SemaRef.Access().CheckMemberOperatorAccess(From->getExprLoc(), From, nullptr, Found);
+  SemaRef.Access().CheckMemberOperatorAccess(From->getExprLoc(), From, nullptr,
+                                             Found);
 
   QualType ToType = Conversion->getConversionType().getNonReferenceType();
   if (!Converter.SuppressConversion) {
@@ -14391,7 +14393,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
       // Convert the arguments.
       if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {
-        Access().CheckMemberOperatorAccess(OpLoc, Input, nullptr, Best->FoundDecl);
+        Access().CheckMemberOperatorAccess(OpLoc, Input, nullptr,
+                                           Best->FoundDecl);
 
         ExprResult InputInit;
         if (Method->isExplicitObjectMemberFunction())
@@ -14788,7 +14791,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // Convert the arguments.
         if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {
           // Best->Access is only meaningful for class members.
-          Access().CheckMemberOperatorAccess(OpLoc, Args[0], Args[1], Best->FoundDecl);
+          Access().CheckMemberOperatorAccess(OpLoc, Args[0], Args[1],
+                                             Best->FoundDecl);
 
           ExprResult Arg0, Arg1;
           unsigned ParamIdx = 0;
@@ -15245,7 +15249,8 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // We matched an overloaded operator. Build a call to that
         // operator.
 
-        Access().CheckMemberOperatorAccess(LLoc, Args[0], ArgExpr, Best->FoundDecl);
+        Access().CheckMemberOperatorAccess(LLoc, Args[0], ArgExpr,
+                                           Best->FoundDecl);
 
         // Convert the arguments.
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
@@ -15873,7 +15878,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
                          Best->Conversions[0].UserDefined.ConversionFunction);
 
     Access().CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
-                              Best->FoundDecl);
+                                       Best->FoundDecl);
     if (DiagnoseUseOfDecl(Best->FoundDecl, LParenLoc))
       return ExprError();
     assert(Conv == Best->FoundDecl.getDecl() &&
@@ -15896,7 +15901,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     return BuildCallExpr(S, Call.get(), LParenLoc, Args, RParenLoc);
   }
 
-  Access().CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr, Best->FoundDecl);
+  Access().CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
+                                     Best->FoundDecl);
 
   // We found an overloaded operator(). Build a CXXOperatorCallExpr
   // that calls this method, using Object for the implicit object

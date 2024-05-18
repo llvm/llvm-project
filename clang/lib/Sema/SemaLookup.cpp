@@ -4885,10 +4885,10 @@ void TypoCorrectionConsumer::performQualifiedLookups() {
         }
         for (LookupResult::iterator TRD = Result.begin(), TRDEnd = Result.end();
              TRD != TRDEnd; ++TRD) {
-          if (SemaRef.Access().CheckMemberAccess(TC.getCorrectionRange().getBegin(),
-                                        NSType ? NSType->getAsCXXRecordDecl()
-                                               : nullptr,
-                                        TRD.getPair()) == SemaAccess::AR_accessible)
+          if (SemaRef.Access().CheckMemberAccess(
+                  TC.getCorrectionRange().getBegin(),
+                  NSType ? NSType->getAsCXXRecordDecl() : nullptr,
+                  TRD.getPair()) == SemaAccess::AR_accessible)
             TC.addCorrectionDecl(*TRD);
         }
         if (TC.isResolved()) {

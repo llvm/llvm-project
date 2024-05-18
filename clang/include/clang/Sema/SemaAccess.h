@@ -100,8 +100,7 @@ public:
                                      SourceLocation Loc,
                                      const PartialDiagnostic &Diag);
   bool isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                     DeclAccessPair Found,
-                                     QualType ObjectType);
+                                     DeclAccessPair Found, QualType ObjectType);
 
   void HandleDependentAccessCheck(
       const DependentDiagnostic &DD,

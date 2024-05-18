@@ -39,8 +39,8 @@ enum AccessResult {
 /// Returns true on error (when the previous member decl access specifier
 /// is different from the new member decl access specifier).
 bool SemaAccess::SetMemberAccessSpecifier(NamedDecl *MemberDecl,
-                                    NamedDecl *PrevMemberDecl,
-                                    AccessSpecifier LexicalAS) {
+                                          NamedDecl *PrevMemberDecl,
+                                          AccessSpecifier LexicalAS) {
   if (!PrevMemberDecl) {
     // Use the lexical access specifier.
     MemberDecl->setAccess(LexicalAS);
@@ -1461,7 +1461,7 @@ static AccessResult CheckEffectiveAccess(Sema &S,
 }
 
 static SemaAccess::AccessResult CheckAccess(Sema &S, SourceLocation Loc,
-                                      AccessTarget &Entity) {
+                                            AccessTarget &Entity) {
   // If the access path is public, it's accessible everywhere.
   if (Entity.getAccess() == AS_public)
     return SemaAccess::AR_accessible;
@@ -1504,9 +1504,12 @@ static SemaAccess::AccessResult CheckAccess(Sema &S, SourceLocation Loc,
 
   EffectiveContext EC(S.CurContext);
   switch (CheckEffectiveAccess(S, EC, Loc, Entity)) {
-  case AR_accessible: return SemaAccess::AR_accessible;
-  case AR_inaccessible: return SemaAccess::AR_inaccessible;
-  case AR_dependent: return SemaAccess::AR_dependent;
+  case AR_accessible:
+    return SemaAccess::AR_accessible;
+  case AR_inaccessible:
+    return SemaAccess::AR_inaccessible;
+  case AR_dependent:
+    return SemaAccess::AR_dependent;
   }
   llvm_unreachable("invalid access result");
 }
@@ -1537,16 +1540,17 @@ void SemaAccess::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
     DD.Triggered = true;
 }
 
-void SemaAccess::HandleDependentAccessCheck(const DependentDiagnostic &DD,
-                        const MultiLevelTemplateArgumentList &TemplateArgs) {
+void SemaAccess::HandleDependentAccessCheck(
+    const DependentDiagnostic &DD,
+    const MultiLevelTemplateArgumentList &TemplateArgs) {
   SourceLocation Loc = DD.getAccessLoc();
   AccessSpecifier Access = DD.getAccess();
 
   Decl *NamingD = SemaRef.FindInstantiatedDecl(Loc, DD.getAccessNamingClass(),
-                                       TemplateArgs);
+                                               TemplateArgs);
   if (!NamingD) return;
-  Decl *TargetD = SemaRef.FindInstantiatedDecl(Loc, DD.getAccessTarget(),
-                                       TemplateArgs);
+  Decl *TargetD =
+      SemaRef.FindInstantiatedDecl(Loc, DD.getAccessTarget(), TemplateArgs);
   if (!TargetD) return;
 
   if (DD.isAccessToMember()) {
@@ -1555,37 +1559,34 @@ void SemaAccess::HandleDependentAccessCheck(const DependentDiagnostic &DD,
     QualType BaseObjectType = DD.getAccessBaseObjectType();
     if (!BaseObjectType.isNull()) {
       BaseObjectType = SemaRef.SubstType(BaseObjectType, TemplateArgs, Loc,
-                                 DeclarationName());
+                                         DeclarationName());
       if (BaseObjectType.isNull()) return;
     }
 
-    AccessTarget Entity(SemaRef.Context,
-                        AccessTarget::Member,
-                        NamingClass,
+    AccessTarget Entity(SemaRef.Context, AccessTarget::Member, NamingClass,
                         DeclAccessPair::make(TargetDecl, Access),
                         BaseObjectType);
     Entity.setDiag(DD.getDiagnostic());
     CheckAccess(SemaRef, Loc, Entity);
   } else {
-    AccessTarget Entity(SemaRef.Context,
-                        AccessTarget::Base,
+    AccessTarget Entity(SemaRef.Context, AccessTarget::Base,
                         cast<CXXRecordDecl>(TargetD),
-                        cast<CXXRecordDecl>(NamingD),
-                        Access);
+                        cast<CXXRecordDecl>(NamingD), Access);
     Entity.setDiag(DD.getDiagnostic());
     CheckAccess(SemaRef, Loc, Entity);
   }
 }
 
-SemaAccess::AccessResult SemaAccess::CheckUnresolvedLookupAccess(UnresolvedLookupExpr *E,
-                                                     DeclAccessPair Found) {
+SemaAccess::AccessResult
+SemaAccess::CheckUnresolvedLookupAccess(UnresolvedLookupExpr *E,
+                                        DeclAccessPair Found) {
   if (!getLangOpts().AccessControl ||
       !E->getNamingClass() ||
       Found.getAccess() == AS_public)
     return AR_accessible;
 
-  AccessTarget Entity(SemaRef.Context, AccessTarget::Member, E->getNamingClass(),
-                      Found, QualType());
+  AccessTarget Entity(SemaRef.Context, AccessTarget::Member,
+                      E->getNamingClass(), Found, QualType());
   Entity.setDiag(diag::err_access) << E->getSourceRange();
 
   return CheckAccess(SemaRef, E->getNameLoc(), Entity);
@@ -1593,8 +1594,9 @@ SemaAccess::AccessResult SemaAccess::CheckUnresolvedLookupAccess(UnresolvedLooku
 
 /// Perform access-control checking on a previously-unresolved member
 /// access which has now been resolved to a member.
-SemaAccess::AccessResult SemaAccess::CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
-                                                     DeclAccessPair Found) {
+SemaAccess::AccessResult
+SemaAccess::CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
+                                        DeclAccessPair Found) {
   if (!getLangOpts().AccessControl ||
       Found.getAccess() == AS_public)
     return AR_accessible;
@@ -1603,8 +1605,8 @@ SemaAccess::AccessResult SemaAccess::CheckUnresolvedMemberAccess(UnresolvedMembe
   if (E->isArrow())
     BaseType = BaseType->castAs<PointerType>()->getPointeeType();
 
-  AccessTarget Entity(SemaRef.Context, AccessTarget::Member, E->getNamingClass(),
-                      Found, BaseType);
+  AccessTarget Entity(SemaRef.Context, AccessTarget::Member,
+                      E->getNamingClass(), Found, BaseType);
   Entity.setDiag(diag::err_access) << E->getSourceRange();
 
   return CheckAccess(SemaRef, E->getMemberLoc(), Entity);
@@ -1613,10 +1615,10 @@ SemaAccess::AccessResult SemaAccess::CheckUnresolvedMemberAccess(UnresolvedMembe
 /// Is the given member accessible for the purposes of deciding whether to
 /// define a special member function as deleted?
 bool SemaAccess::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                         DeclAccessPair Found,
-                                         QualType ObjectType,
-                                         SourceLocation Loc,
-                                         const PartialDiagnostic &Diag) {
+                                               DeclAccessPair Found,
+                                               QualType ObjectType,
+                                               SourceLocation Loc,
+                                               const PartialDiagnostic &Diag) {
   // Fast path.
   if (Found.getAccess() == AS_public || !getLangOpts().AccessControl)
     return true;
@@ -1636,10 +1638,10 @@ bool SemaAccess::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
   llvm_unreachable("bad access result");
 }
 
-SemaAccess::AccessResult SemaAccess::CheckDestructorAccess(SourceLocation Loc,
-                                               CXXDestructorDecl *Dtor,
-                                               const PartialDiagnostic &PDiag,
-                                               QualType ObjectTy) {
+SemaAccess::AccessResult
+SemaAccess::CheckDestructorAccess(SourceLocation Loc, CXXDestructorDecl *Dtor,
+                                  const PartialDiagnostic &PDiag,
+                                  QualType ObjectTy) {
   if (!getLangOpts().AccessControl)
     return AR_accessible;
 
@@ -1649,22 +1651,21 @@ SemaAccess::AccessResult SemaAccess::CheckDestructorAccess(SourceLocation Loc,
     return AR_accessible;
 
   CXXRecordDecl *NamingClass = Dtor->getParent();
-  if (ObjectTy.isNull()) ObjectTy = SemaRef.Context.getTypeDeclType(NamingClass);
+  if (ObjectTy.isNull())
+    ObjectTy = SemaRef.Context.getTypeDeclType(NamingClass);
 
   AccessTarget Entity(SemaRef.Context, AccessTarget::Member, NamingClass,
-                      DeclAccessPair::make(Dtor, Access),
-                      ObjectTy);
+                      DeclAccessPair::make(Dtor, Access), ObjectTy);
   Entity.setDiag(PDiag); // TODO: avoid copy
 
   return CheckAccess(SemaRef, Loc, Entity);
 }
 
 /// Checks access to a constructor.
-SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(SourceLocation UseLoc,
-                                                CXXConstructorDecl *Constructor,
-                                                DeclAccessPair Found,
-                                                const InitializedEntity &Entity,
-                                                bool IsCopyBindingRefToTemp) {
+SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(
+    SourceLocation UseLoc, CXXConstructorDecl *Constructor,
+    DeclAccessPair Found, const InitializedEntity &Entity,
+    bool IsCopyBindingRefToTemp) {
   if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
@@ -1672,8 +1673,8 @@ SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(SourceLocation UseLo
   switch (Entity.getKind()) {
   default:
     PD = SemaRef.PDiag(IsCopyBindingRefToTemp
-                 ? diag::ext_rvalue_to_reference_access_ctor
-                 : diag::err_access_ctor);
+                           ? diag::ext_rvalue_to_reference_access_ctor
+                           : diag::err_access_ctor);
 
     break;
 
@@ -1707,11 +1708,10 @@ SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(SourceLocation UseLo
 }
 
 /// Checks access to a constructor.
-SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(SourceLocation UseLoc,
-                                                CXXConstructorDecl *Constructor,
-                                                DeclAccessPair Found,
-                                                const InitializedEntity &Entity,
-                                                const PartialDiagnostic &PD) {
+SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(
+    SourceLocation UseLoc, CXXConstructorDecl *Constructor,
+    DeclAccessPair Found, const InitializedEntity &Entity,
+    const PartialDiagnostic &PD) {
   if (!getLangOpts().AccessControl ||
       Found.getAccess() == AS_public)
     return AR_accessible;
@@ -1749,11 +1749,9 @@ SemaAccess::AccessResult SemaAccess::CheckConstructorAccess(SourceLocation UseLo
 }
 
 /// Checks access to an overloaded operator new or delete.
-SemaAccess::AccessResult SemaAccess::CheckAllocationAccess(SourceLocation OpLoc,
-                                               SourceRange PlacementRange,
-                                               CXXRecordDecl *NamingClass,
-                                               DeclAccessPair Found,
-                                               bool Diagnose) {
+SemaAccess::AccessResult SemaAccess::CheckAllocationAccess(
+    SourceLocation OpLoc, SourceRange PlacementRange,
+    CXXRecordDecl *NamingClass, DeclAccessPair Found, bool Diagnose) {
   if (!getLangOpts().AccessControl ||
       !NamingClass ||
       Found.getAccess() == AS_public)
@@ -1769,16 +1767,16 @@ SemaAccess::AccessResult SemaAccess::CheckAllocationAccess(SourceLocation OpLoc,
 }
 
 /// Checks access to a member.
-SemaAccess::AccessResult SemaAccess::CheckMemberAccess(SourceLocation UseLoc,
-                                           CXXRecordDecl *NamingClass,
-                                           DeclAccessPair Found) {
+SemaAccess::AccessResult
+SemaAccess::CheckMemberAccess(SourceLocation UseLoc, CXXRecordDecl *NamingClass,
+                              DeclAccessPair Found) {
   if (!getLangOpts().AccessControl ||
       !NamingClass ||
       Found.getAccess() == AS_public)
     return AR_accessible;
 
-  AccessTarget Entity(SemaRef.Context, AccessTarget::Member, NamingClass,
-                      Found, QualType());
+  AccessTarget Entity(SemaRef.Context, AccessTarget::Member, NamingClass, Found,
+                      QualType());
 
   return CheckAccess(SemaRef, UseLoc, Entity);
 }
@@ -1786,23 +1784,23 @@ SemaAccess::AccessResult SemaAccess::CheckMemberAccess(SourceLocation UseLoc,
 /// Checks implicit access to a member in a structured binding.
 SemaAccess::AccessResult
 SemaAccess::CheckStructuredBindingMemberAccess(SourceLocation UseLoc,
-                                         CXXRecordDecl *DecomposedClass,
-                                         DeclAccessPair Field) {
+                                               CXXRecordDecl *DecomposedClass,
+                                               DeclAccessPair Field) {
   if (!getLangOpts().AccessControl ||
       Field.getAccess() == AS_public)
     return AR_accessible;
 
-  AccessTarget Entity(SemaRef.Context, AccessTarget::Member, DecomposedClass, Field,
-                      SemaRef.Context.getRecordType(DecomposedClass));
+  AccessTarget Entity(SemaRef.Context, AccessTarget::Member, DecomposedClass,
+                      Field, SemaRef.Context.getRecordType(DecomposedClass));
   Entity.setDiag(diag::err_decomp_decl_inaccessible_field);
 
   return CheckAccess(SemaRef, UseLoc, Entity);
 }
 
-SemaAccess::AccessResult SemaAccess::CheckMemberOperatorAccess(SourceLocation OpLoc,
-                                                   Expr *ObjectExpr,
-                                                   const SourceRange &Range,
-                                                   DeclAccessPair Found) {
+SemaAccess::AccessResult
+SemaAccess::CheckMemberOperatorAccess(SourceLocation OpLoc, Expr *ObjectExpr,
+                                      const SourceRange &Range,
+                                      DeclAccessPair Found) {
   if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
@@ -1818,19 +1816,18 @@ SemaAccess::AccessResult SemaAccess::CheckMemberOperatorAccess(SourceLocation Op
 
 /// Checks access to an overloaded member operator, including
 /// conversion operators.
-SemaAccess::AccessResult SemaAccess::CheckMemberOperatorAccess(SourceLocation OpLoc,
-                                                   Expr *ObjectExpr,
-                                                   Expr *ArgExpr,
-                                                   DeclAccessPair Found) {
+SemaAccess::AccessResult
+SemaAccess::CheckMemberOperatorAccess(SourceLocation OpLoc, Expr *ObjectExpr,
+                                      Expr *ArgExpr, DeclAccessPair Found) {
   return CheckMemberOperatorAccess(
       OpLoc, ObjectExpr, ArgExpr ? ArgExpr->getSourceRange() : SourceRange(),
       Found);
 }
 
-SemaAccess::AccessResult SemaAccess::CheckMemberOperatorAccess(SourceLocation OpLoc,
-                                                   Expr *ObjectExpr,
-                                                   ArrayRef<Expr *> ArgExprs,
-                                                   DeclAccessPair FoundDecl) {
+SemaAccess::AccessResult
+SemaAccess::CheckMemberOperatorAccess(SourceLocation OpLoc, Expr *ObjectExpr,
+                                      ArrayRef<Expr *> ArgExprs,
+                                      DeclAccessPair FoundDecl) {
   SourceRange R;
   if (!ArgExprs.empty()) {
     R = SourceRange(ArgExprs.front()->getBeginLoc(),
@@ -1865,15 +1862,18 @@ SemaAccess::AccessResult SemaAccess::CheckFriendAccess(NamedDecl *target) {
   // while the ParsingDeclarator is active.
   EffectiveContext EC(SemaRef.CurContext);
   switch (CheckEffectiveAccess(SemaRef, EC, target->getLocation(), entity)) {
-  case ::AR_accessible: return SemaAccess::AR_accessible;
-  case ::AR_inaccessible: return SemaAccess::AR_inaccessible;
-  case ::AR_dependent: return SemaAccess::AR_dependent;
+  case ::AR_accessible:
+    return SemaAccess::AR_accessible;
+  case ::AR_inaccessible:
+    return SemaAccess::AR_inaccessible;
+  case ::AR_dependent:
+    return SemaAccess::AR_dependent;
   }
   llvm_unreachable("invalid access result");
 }
 
-SemaAccess::AccessResult SemaAccess::CheckAddressOfMemberAccess(Expr *OvlExpr,
-                                                    DeclAccessPair Found) {
+SemaAccess::AccessResult
+SemaAccess::CheckAddressOfMemberAccess(Expr *OvlExpr, DeclAccessPair Found) {
   if (!getLangOpts().AccessControl ||
       Found.getAccess() == AS_none ||
       Found.getAccess() == AS_public)
@@ -1896,13 +1896,11 @@ SemaAccess::AccessResult SemaAccess::CheckAddressOfMemberAccess(Expr *OvlExpr,
 ///     control is disabled;  some things rely on this for semantics
 /// \param ForceUnprivileged true if this check should proceed as if the
 ///     context had no special privileges
-SemaAccess::AccessResult SemaAccess::CheckBaseClassAccess(SourceLocation AccessLoc,
-                                              QualType Base,
-                                              QualType Derived,
-                                              const CXXBasePath &Path,
-                                              unsigned DiagID,
-                                              bool ForceCheck,
-                                              bool ForceUnprivileged) {
+SemaAccess::AccessResult
+SemaAccess::CheckBaseClassAccess(SourceLocation AccessLoc, QualType Base,
+                                 QualType Derived, const CXXBasePath &Path,
+                                 unsigned DiagID, bool ForceCheck,
+                                 bool ForceUnprivileged) {
   if (!ForceCheck && !getLangOpts().AccessControl)
     return AR_accessible;
 
@@ -1919,11 +1917,14 @@ SemaAccess::AccessResult SemaAccess::CheckBaseClassAccess(SourceLocation AccessL
     Entity.setDiag(DiagID) << Derived << Base;
 
   if (ForceUnprivileged) {
-    switch (CheckEffectiveAccess(SemaRef, EffectiveContext(),
-                                 AccessLoc, Entity)) {
-    case ::AR_accessible: return SemaAccess::AR_accessible;
-    case ::AR_inaccessible: return SemaAccess::AR_inaccessible;
-    case ::AR_dependent: return SemaAccess::AR_dependent;
+    switch (
+        CheckEffectiveAccess(SemaRef, EffectiveContext(), AccessLoc, Entity)) {
+    case ::AR_accessible:
+      return SemaAccess::AR_accessible;
+    case ::AR_inaccessible:
+      return SemaAccess::AR_inaccessible;
+    case ::AR_dependent:
+      return SemaAccess::AR_dependent;
     }
     llvm_unreachable("unexpected result from CheckEffectiveAccess");
   }
@@ -1964,8 +1965,9 @@ void SemaAccess::CheckLookupAccess(const LookupResult &R) {
 ///        - target (unqualified lookup).
 ///          BaseType is null, NamingClass is the parent class of 'target'.
 /// \return true if the Target is accessible from the Class, false otherwise.
-bool SemaAccess::IsSimplyAccessible(NamedDecl *Target, CXXRecordDecl *NamingClass,
-                              QualType BaseType) {
+bool SemaAccess::IsSimplyAccessible(NamedDecl *Target,
+                                    CXXRecordDecl *NamingClass,
+                                    QualType BaseType) {
   // Perform the C++ accessibility checks first.
   if (Target->isCXXClassMember() && NamingClass) {
     if (!getLangOpts().CPlusPlus)
@@ -2022,10 +2024,10 @@ bool SemaAccess::IsSimplyAccessible(NamedDecl *Target, CXXRecordDecl *NamingClas
 }
 
 bool SemaAccess::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                    DeclAccessPair Found,
-                                    QualType ObjectType) {
+                                               DeclAccessPair Found,
+                                               QualType ObjectType) {
   return isMemberAccessibleForDeletion(NamingClass, Found, ObjectType,
-                                        SourceLocation(), SemaRef.PDiag());
+                                       SourceLocation(), SemaRef.PDiag());
 }
 
 SemaAccess::SemaAccess(Sema &S) : SemaBase(S) {}
