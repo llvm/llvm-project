@@ -838,8 +838,8 @@ def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
 
 class PermlanePat<SDPatternOperator permlane,
-  Instruction inst> : GCNPat<
-  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
+  Instruction inst, ValueType vt> : GCNPat<
+  (permlane vt:$vdst_in, vt:$src0, i32:$src1, i32:$src2,
             timm:$fi, timm:$bc),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         SCSrc_b32:$src1, 0, SCSrc_b32:$src2, VGPR_32:$vdst_in)
@@ -864,8 +864,10 @@ let SubtargetPredicate = isGFX10Plus in {
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
-  def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64>;
-  def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64>;
+  foreach vt = Reg32Types.types in {
+    def : PermlanePat<AMDGPUpermlane16, V_PERMLANE16_B32_e64, vt>;
+    def : PermlanePat<AMDGPUpermlanex16, V_PERMLANEX16_B32_e64, vt>;
+  }
 
   defm V_ADD_NC_U16 : VOP3Inst <"v_add_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, add>;
   defm V_SUB_NC_U16 : VOP3Inst <"v_sub_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, sub>;

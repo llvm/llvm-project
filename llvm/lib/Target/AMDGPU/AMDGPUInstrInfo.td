@@ -354,9 +354,21 @@ def AMDGPUDWritelaneOp : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<0, 3>
 ]>;
 
+def AMDGPUDPermlane16Op : SDTypeProfile<1, 6, [
+  SDTCisSameAs<0, 1>,  // old
+  SDTCisSameAs<0, 2>,  // src0
+  SDTCisInt<3>,        // src1
+  SDTCisInt<4>,        // src2
+  SDTCisInt<5>,        // i1 fi
+  SDTCisInt<6>         // i1 bound_ctrl
+]>;
+
 def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", AMDGPUReadlaneOp>;
 def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", AMDGPUReadfirstlaneOp>;
 def AMDGPUwritelane_impl : SDNode<"AMDGPUISD::WRITELANE", AMDGPUDWritelaneOp>;
+def AMDGPUpermlane16_impl : SDNode<"AMDGPUISD::PERMLANE16", AMDGPUDPermlane16Op>;
+def AMDGPUpermlanex16_impl : SDNode<"AMDGPUISD::PERMLANEX16", AMDGPUDPermlane16Op>;
+def AMDGPUpermlane64_impl : SDNode<"AMDGPUISD::PERMLANE64", AMDGPUReadfirstlaneOp>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
@@ -534,4 +546,17 @@ def AMDGPUreadfirstlane : PatFrags<(ops node:$src),
 def AMDGPUwritelane : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_writelane node:$src0, node:$src1, node:$src2),
    (AMDGPUwritelane_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUpermlane16 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5),
+  [(int_amdgcn_permlane16 node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5),
+   (AMDGPUpermlane16_impl node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5)]>;
+
+def AMDGPUpermlanex16 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5),
+  [(int_amdgcn_permlanex16 node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5),
+   (AMDGPUpermlanex16_impl node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5)]>;
+
+def AMDGPUpermlane64 : PatFrags<(ops node:$src),
+  [(int_amdgcn_permlane64 node:$src),
+   (AMDGPUpermlane64_impl node:$src)]>;
+
 

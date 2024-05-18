@@ -5397,25 +5397,42 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   Register DstReg = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(2).getReg();
 
+  bool IsPermLane16 = IID == Intrinsic::amdgcn_permlane16 ||
+                      IID == Intrinsic::amdgcn_permlanex16;
+
   auto createLaneOp = [&](Register Src0, Register Src1,
                           Register Src2) -> Register {
     auto LaneOp = B.buildIntrinsic(IID, {S32}).addUse(Src0);
     switch (IID) {
     case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_permlane64:
       return LaneOp.getReg(0);
     case Intrinsic::amdgcn_readlane:
       return LaneOp.addUse(Src1).getReg(0);
     case Intrinsic::amdgcn_writelane:
       return LaneOp.addUse(Src1).addUse(Src2).getReg(0);
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16: {
+      Register Src3 = MI.getOperand(5).getReg();
+      Register Src4 = MI.getOperand(6).getImm();
+      Register Src5 = MI.getOperand(7).getImm();
+      return LaneOp.addUse(Src1)
+          .addUse(Src2)
+          .addUse(Src3)
+          .addImm(Src4)
+          .addImm(Src5)
+          .getReg(0);
+    }
     default:
       llvm_unreachable("unhandled lane op");
     }
   };
 
   Register Src1, Src2;
-  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
+      IsPermLane16) {
     Src1 = MI.getOperand(3).getReg();
-    if (IID == Intrinsic::amdgcn_writelane) {
+    if (IID == Intrinsic::amdgcn_writelane || IsPermLane16) {
       Src2 = MI.getOperand(4).getReg();
     }
   }
@@ -5433,7 +5450,16 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
                             ? Src0
                             : B.buildBitcast(LLT::scalar(Size), Src0).getReg(0);
     Src0 = B.buildAnyExt(S32, Src0Cast).getReg(0);
-    if (Src2.isValid()) {
+
+    if (IsPermLane16) {
+      Register Src1Cast =
+          MRI.getType(Src1).isScalar()
+              ? Src1
+              : B.buildBitcast(LLT::scalar(Size), Src2).getReg(0);
+      Src1 = B.buildAnyExt(LLT::scalar(32), Src1Cast).getReg(0);
+    }
+
+    if (IID == Intrinsic::amdgcn_writelane) {
       Register Src2Cast =
           MRI.getType(Src2).isScalar()
               ? Src2
@@ -5485,46 +5511,45 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
       }
       break;
     }
-    case Intrinsic::amdgcn_readfirstlane: {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_permlane64: {
       for (unsigned i = 0; i < NumParts; ++i) {
         Src0 = IsS16Vec ? B.buildBitcast(S32, Src0Parts.getReg(i)).getReg(0)
                         : Src0Parts.getReg(i);
         PartialRes.push_back(
-            (B.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, {S32})
-                 .addUse(Src0)
-                 .getReg(0)));
+            (B.buildIntrinsic(IID, {S32}).addUse(Src0).getReg(0)));
       }
 
       break;
     }
-    case Intrinsic::amdgcn_writelane: {
+    case Intrinsic::amdgcn_writelane:
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16: {
       Register Src1 = MI.getOperand(3).getReg();
       Register Src2 = MI.getOperand(4).getReg();
-      MachineInstrBuilder Src2Parts;
+
+      Register SrcX = IsPermLane16 ? Src1 : Src2;
+      MachineInstrBuilder SrcXParts;
 
       if (Ty.isPointer()) {
-        auto PtrToInt = B.buildPtrToInt(S64, Src2);
-        Src2Parts = B.buildUnmerge(S32, PtrToInt);
+        auto PtrToInt = B.buildPtrToInt(S64, SrcX);
+        SrcXParts = B.buildUnmerge(S32, PtrToInt);
       } else if (Ty.isPointerVector()) {
         LLT IntVecTy = Ty.changeElementType(
             LLT::scalar(Ty.getElementType().getSizeInBits()));
-        auto PtrToInt = B.buildPtrToInt(IntVecTy, Src2);
-        Src2Parts = B.buildUnmerge(S32, PtrToInt);
+        auto PtrToInt = B.buildPtrToInt(IntVecTy, SrcX);
+        SrcXParts = B.buildUnmerge(S32, PtrToInt);
       } else
-        Src2Parts =
-            IsS16Vec ? B.buildUnmerge(V2S16, Src2) : B.buildUnmerge(S32, Src2);
+        SrcXParts =
+            IsS16Vec ? B.buildUnmerge(V2S16, SrcX) : B.buildUnmerge(S32, SrcX);
 
       for (unsigned i = 0; i < NumParts; ++i) {
         Src0 = IsS16Vec ? B.buildBitcast(S32, Src0Parts.getReg(i)).getReg(0)
                         : Src0Parts.getReg(i);
-        Src2 = IsS16Vec ? B.buildBitcast(S32, Src2Parts.getReg(i)).getReg(0)
-                        : Src2Parts.getReg(i);
-        PartialRes.push_back(
-            (B.buildIntrinsic(Intrinsic::amdgcn_writelane, {S32})
-                 .addUse(Src0)
-                 .addUse(Src1)
-                 .addUse(Src2))
-                .getReg(0));
+        SrcX = IsS16Vec ? B.buildBitcast(S32, SrcXParts.getReg(i)).getReg(0)
+                        : SrcXParts.getReg(i);
+        PartialRes.push_back(IsPermLane16 ? createLaneOp(Src0, SrcX, Src2)
+                                          : createLaneOp(Src0, Src1, SrcX));
       }
 
       break;
@@ -7519,6 +7544,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_writelane:
   case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_permlane16:
+  case Intrinsic::amdgcn_permlanex16:
+  case Intrinsic::amdgcn_permlane64:
     return legalizeLaneOp(Helper, MI, IntrID);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
