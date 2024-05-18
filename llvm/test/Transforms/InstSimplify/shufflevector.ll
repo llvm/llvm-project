@@ -294,6 +294,28 @@ define <4 x i32> @fold_identity(<4 x i32> %x) {
   ret <4 x i32> %revshuf
 }
 
+define <4 x i32> @fold_identity2(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[SHL]]
+;
+  %shl = shl <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %shuf = shufflevector <4 x i32> %shl, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_identity3(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret <4 x i32> [[SHL]]
+;
+  %shl = shl <4 x i32> %x, %x
+  %shuf = shufflevector <4 x i32> %shl, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
 define <4 x i32> @not_fold_identity(<4 x i32> %x) {
 ; CHECK-LABEL: @not_fold_identity(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
