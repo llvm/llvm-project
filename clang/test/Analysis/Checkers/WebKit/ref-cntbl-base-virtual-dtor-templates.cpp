@@ -132,16 +132,36 @@ private:
   mutable unsigned refCount { 0 };
 };
 
-template <typename T>
-class ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr {
+class ThreadSafeRefCountedControlBlock {
 public:
-  void ref() const { ++refCount; }
-  void deref() const {
-    if (!--refCount)
-      delete const_cast<T*>(static_cast<const T*>(this));
+  ThreadSafeRefCountedControlBlock(void* object) : object(object) { }
+  void strongRef() const { ++refCount; }
+  template <typename T>
+  void strongDeref() const {
+    --refCount;
+    if (refCount)
+      return;
+
+    auto deleteObject = [&] {
+      delete static_cast<const T*>(object);
+      delete this;
+    };
+
+    deleteObject();
   }
 private:
   mutable unsigned refCount { 0 };
+  mutable void* object { nullptr };
+};
+
+template <typename T>
+class ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr {
+public:
+  ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr() { }
+  void ref() const { controlBlock.strongRef(); }
+  void deref() const { controlBlock.template strongDeref<T>(); }
+private:
+  ThreadSafeRefCountedControlBlock& controlBlock { *new ThreadSafeRefCountedControlBlock(static_cast<T*>(this)) };
 };
 
 } // namespace WTF
@@ -150,8 +170,12 @@ class DerivedClass4 : public WTF::RefCounted<DerivedClass4> { };
 
 class DerivedClass4b : public WTF::ExoticRefCounted<int, DerivedClass4b> { };
 
-class DerivedClass4c : public WTF::BadBase<int, DerivedClass4c> { };
-// expected-warning@-1{{Class 'WTF::BadBase<int, DerivedClass4c>' is used as a base of class 'DerivedClass4c' but doesn't have virtual destructor}}
+class OtherType;
+class DerivedClass4c : public WTF::BadBase<OtherType, DerivedClass4c> { };
+// expected-warning@-1{{Class 'WTF::BadBase<OtherType, DerivedClass4c>' is used as a base of class 'DerivedClass4c' but doesn't have virtual destructor}}
+class OtherType : public DerivedClass4c { };
+// expected-warning@-1{{Class 'DerivedClass4c' is used as a base of class 'OtherType' but doesn't have virtual destructor}}
+void UseDerived4c(DerivedClass4c &obj) { obj.deref(); }
 
 class DerivedClass5 : public DerivedClass4 { };
 // expected-warning@-1{{Class 'DerivedClass4' is used as a base of class 'DerivedClass5' but doesn't have virtual destructor}}
@@ -163,6 +187,9 @@ class DerivedClass7 : public DerivedClass6 { };
 
 class DerivedClass8 : public WTF::ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<DerivedClass8> { };
 
+class DerivedClass8b : public WTF::ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<DerivedClass8b> { };
+void UseDerived8b(DerivedClass8b &obj) { obj.deref(); }
+
 class DerivedClass9 : public DerivedClass8 { };
 // expected-warning@-1{{Class 'DerivedClass8' is used as a base of class 'DerivedClass9' but doesn't have virtual destructor}}
 
@@ -170,6 +197,7 @@ class DerivedClass10 : public WTF::FancyDeref<DerivedClass10> { };
 
 class DerivedClass10b : public WTF::BadFancyDeref<DerivedClass10b> { };
 // expected-warning@-1{{Class 'WTF::BadFancyDeref<DerivedClass10b>' is used as a base of class 'DerivedClass10b' but doesn't have virtual destructor}}
+void UseDerived10b(DerivedClass10b &obj) { obj.deref(); }
 
 class BaseClass1 {
 public:

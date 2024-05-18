@@ -53,10 +53,12 @@ public:
 
   DerefAnalysisVisitor(const CXXRecordDecl *ClassDecl) : ClassDecl(ClassDecl) {}
 
-  bool HasSpecializedDelete(CXXMethodDecl *Decl) {
+  std::optional<bool> HasSpecializedDelete(CXXMethodDecl *Decl) {
+    if (auto *Body = Decl->getBody())
+      return VisitBody(Body);
     if (auto *Tmpl = Decl->getTemplateInstantiationPattern())
-      return VisitBody(Tmpl->getBody());
-    return VisitBody(Decl->getBody());
+      return std::nullopt; // Indeterminate. There was no concrete instance.
+    return false;
   }
 
   bool VisitCallExpr(const CallExpr *CE) {
@@ -88,7 +90,7 @@ public:
     while (Arg) {
       if (auto *Paren = dyn_cast<ParenExpr>(Arg))
         Arg = Paren->getSubExpr();
-      else if (auto *Cast = dyn_cast<ExplicitCastExpr>(Arg)) {
+      else if (auto *Cast = dyn_cast<CastExpr>(Arg)) {
         Arg = Cast->getSubExpr();
         auto CastType = Cast->getType();
         if (auto *PtrType = dyn_cast<PointerType>(CastType)) {
@@ -109,6 +111,12 @@ public:
           } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
             if (RD->getDecl() == ClassDecl)
               return true;
+          } else if (auto* ST = dyn_cast<SubstTemplateTypeParmType>(PointeeType)) {
+            auto Type = ST->getReplacementType();
+            if (auto *RD = dyn_cast<RecordType>(Type)) {
+              if (RD->getDecl() == ClassDecl)
+                return true;
+            }
           }
         }
       } else
@@ -172,7 +180,7 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto &Base : RD->bases()) {
+    for (auto& Base : RD->bases()) {
       const auto AccSpec = Base.getAccessSpecifier();
       if (AccSpec == AS_protected || AccSpec == AS_private ||
           (AccSpec == AS_none && RD->isClass()))
@@ -194,7 +202,8 @@ public:
 
       bool AnyInconclusiveBase = false;
       const auto hasPublicRefInBase =
-          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+          [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
+                                 CXXBasePath &) {
             auto hasRefInBase = clang::hasPublicMethodInBase(Base, "ref");
             if (!hasRefInBase) {
               AnyInconclusiveBase = true;
@@ -220,13 +229,14 @@ public:
       if (AnyInconclusiveBase || !hasRef || !hasDeref)
         continue;
 
-      if (isClassWithSpecializedDelete(C, RD))
+      auto HasSpecializedDelete = isClassWithSpecializedDelete(C, RD);
+      if (!HasSpecializedDelete || *HasSpecializedDelete)
         continue;
 
       const auto *Dtor = C->getDestructor();
       if (!Dtor || !Dtor->isVirtual()) {
-        auto *ProblematicBaseSpecifier = &Base;
-        auto *ProblematicBaseClass = C;
+        auto* ProblematicBaseSpecifier = &Base;
+        auto* ProblematicBaseClass = C;
         reportBug(RD, ProblematicBaseSpecifier, ProblematicBaseClass);
       }
     }
@@ -274,15 +284,16 @@ public:
             ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
   }
 
-  static bool isClassWithSpecializedDelete(const CXXRecordDecl *C,
-                                           const CXXRecordDecl *DerivedClass) {
+  static std::optional<bool> isClassWithSpecializedDelete(
+      const CXXRecordDecl *C, const CXXRecordDecl *DerivedClass) {
     if (auto *ClsTmplSpDecl = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
       for (auto *MethodDecl : C->methods()) {
         if (safeGetName(MethodDecl) == "deref") {
           DerefAnalysisVisitor DerefAnalysis(ClsTmplSpDecl->getTemplateArgs(),
                                              DerivedClass);
-          if (DerefAnalysis.HasSpecializedDelete(MethodDecl))
-            return true;
+          auto Result = DerefAnalysis.HasSpecializedDelete(MethodDecl);
+          if (!Result || *Result)
+            return Result;
         }
       }
       return false;
@@ -290,8 +301,9 @@ public:
     for (auto *MethodDecl : C->methods()) {
       if (safeGetName(MethodDecl) == "deref") {
         DerefAnalysisVisitor DerefAnalysis(DerivedClass);
-        if (DerefAnalysis.HasSpecializedDelete(MethodDecl))
-          return true;
+        auto Result = DerefAnalysis.HasSpecializedDelete(MethodDecl);
+        if (!Result || *Result)
+          return Result;
       }
     }
     return false;
