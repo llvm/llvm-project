@@ -6,8 +6,12 @@ module {
     cir.return
   }
 
+  // Should print/parse function aliases.
+  // CHECK: cir.func @l1() alias(@l0)
   cir.func @l1() alias(@l0)
 
+  // Should print/parse variadic function types.
+  // CHECK: cir.func private @variadic(!s32i, ...) -> !s32i
   cir.func private @variadic(!s32i, ...) -> !s32i
 
   // Should accept call with only the required parameters.
@@ -28,18 +32,25 @@ module {
     cir.return
   }
 
-  // Should parse void return types.
+  // Should drop void return types.
+  // CHECK: cir.func @parse_explicit_void_func() {
   cir.func @parse_explicit_void_func() -> !cir.void {
     cir.return
   }
 
-  // Should parse omitted void return type.
+  // Should print/parse omitted void return type.
+  // CHECK: cir.func @parse_func_type_with_omitted_void() {
   cir.func @parse_func_type_with_omitted_void() {
     cir.return
   }
 
-  // Should parse variadic no-proto functions.
+  // Should print/parse variadic no-proto functions.
+  // CHECK: cir.func no_proto private @no_proto(...) -> !s32i
   cir.func no_proto private @no_proto(...) -> !s32i
-}
 
-// CHECK: cir.func @l0()
+  // Should print/parse argument and result attributes.
+  // CHECK: cir.func @parse_arg_res_attrs(%arg0: !u8i {cir.zeroext}) -> (!u8i {cir.zeroext}) {
+  cir.func @parse_arg_res_attrs(%0: !u8i {cir.zeroext}) -> (!u8i {cir.zeroext}) {
+    cir.return %0 : !u8i
+  }
+}
