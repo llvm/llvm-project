@@ -340,6 +340,17 @@ define <4 x i64> @not_fold_lookthrough_cast(<4 x i32> %x) {
   ret <4 x i64> %revshuf
 }
 
+define <4 x i64> @not_fold_lookthrough_cast2(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_lookthrough_cast2(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %zext = zext <4 x i32> %shuf to <4 x i64>
+  ret <4 x i64> %zext
+}
+
 define i32 @not_fold_lookthrough_bitcast(<4 x i8> %x) {
 ; CHECK-LABEL: @not_fold_lookthrough_bitcast(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
