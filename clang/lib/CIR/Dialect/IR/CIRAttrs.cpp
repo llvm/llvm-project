@@ -44,9 +44,9 @@ parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value, mlir::Type ty);
 
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
-                                       uint64_t &value);
+                                       mlir::IntegerAttr &value);
 
-static void printConstPtr(mlir::AsmPrinter &p, uint64_t value);
+static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
@@ -220,18 +220,19 @@ void LangAttr::print(AsmPrinter &printer) const {
 
 // TODO: Consider encoding the null value differently and use conditional
 // assembly format instead of custom parsing/printing.
-static ParseResult parseConstPtr(AsmParser &parser, uint64_t &value) {
+static ParseResult parseConstPtr(AsmParser &parser, mlir::IntegerAttr &value) {
 
   if (parser.parseOptionalKeyword("null").succeeded()) {
-    value = 0;
+    value = mlir::IntegerAttr::get(
+        mlir::IntegerType::get(parser.getContext(), 64), 0);
     return success();
   }
 
-  return parser.parseInteger(value);
+  return parser.parseAttribute(value);
 }
 
-static void printConstPtr(AsmPrinter &p, uint64_t value) {
-  if (!value)
+static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
+  if (!value.getInt())
     p << "null";
   else
     p << value;

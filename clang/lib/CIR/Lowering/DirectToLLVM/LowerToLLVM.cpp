@@ -188,8 +188,10 @@ lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::cir::ConstPtrAttr ptrAttr,
     return rewriter.create<mlir::LLVM::ZeroOp>(
         loc, converter->convertType(ptrAttr.getType()));
   }
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
   mlir::Value ptrVal = rewriter.create<mlir::LLVM::ConstantOp>(
-      loc, rewriter.getI64Type(), ptrAttr.getValue());
+      loc, rewriter.getIntegerType(layout.getTypeSizeInBits(ptrAttr.getType())),
+      ptrAttr.getValue().getInt());
   return rewriter.create<mlir::LLVM::IntToPtrOp>(
       loc, converter->convertType(ptrAttr.getType()), ptrVal);
 }
@@ -740,10 +742,12 @@ public:
       return mlir::success();
     }
     case mlir::cir::CastKind::ptr_to_bool: {
+      auto zero =
+          mlir::IntegerAttr::get(mlir::IntegerType::get(getContext(), 64), 0);
       auto null = rewriter.create<mlir::cir::ConstantOp>(
           src.getLoc(), castOp.getSrc().getType(),
           mlir::cir::ConstPtrAttr::get(getContext(), castOp.getSrc().getType(),
-                                       0));
+                                       zero));
       rewriter.replaceOpWithNewOp<mlir::cir::CmpOp>(
           castOp, mlir::cir::BoolType::get(getContext()),
           mlir::cir::CmpOpKind::ne, castOp.getSrc(), null);
