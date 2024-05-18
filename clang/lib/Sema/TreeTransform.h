@@ -16197,8 +16197,8 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   if (First->getObjectKind() == OK_ObjCProperty) {
     BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
     if (BinaryOperator::isAssignmentOp(Opc))
-      return SemaRef.PseudoObject().checkAssignment(/*Scope=*/nullptr, OpLoc, Opc,
-                                                 First, Second);
+      return SemaRef.PseudoObject().checkAssignment(/*Scope=*/nullptr, OpLoc,
+                                                    Opc, First, Second);
     ExprResult Result = SemaRef.CheckPlaceholderExpr(First);
     if (Result.isInvalid())
       return ExprError();

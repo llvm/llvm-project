@@ -17,9 +17,9 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/SemaBase.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaBase.h"
 
 namespace clang {
 
@@ -28,10 +28,9 @@ public:
   SemaPseudoObject(Sema &S);
 
   ExprResult checkIncDec(Scope *S, SourceLocation OpLoc,
-                                     UnaryOperatorKind Opcode, Expr *Op);
+                         UnaryOperatorKind Opcode, Expr *Op);
   ExprResult checkAssignment(Scope *S, SourceLocation OpLoc,
-                                         BinaryOperatorKind Opcode, Expr *LHS,
-                                         Expr *RHS);
+                             BinaryOperatorKind Opcode, Expr *LHS, Expr *RHS);
   ExprResult checkRValue(Expr *E);
   Expr *recreateSyntacticForm(PseudoObjectExpr *E);
 };

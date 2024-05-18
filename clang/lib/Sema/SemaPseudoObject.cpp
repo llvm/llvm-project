@@ -1476,9 +1476,9 @@ ExprResult SemaPseudoObject::checkIncDec(Scope *Sc, SourceLocation opcLoc,
                                          UnaryOperatorKind opcode, Expr *op) {
   // Do nothing if the operand is dependent.
   if (op->isTypeDependent())
-    return UnaryOperator::Create(SemaRef.Context, op, opcode, SemaRef.Context.DependentTy,
-                                 VK_PRValue, OK_Ordinary, opcLoc, false,
-                                 SemaRef.CurFPFeatureOverrides());
+    return UnaryOperator::Create(
+        SemaRef.Context, op, opcode, SemaRef.Context.DependentTy, VK_PRValue,
+        OK_Ordinary, opcLoc, false, SemaRef.CurFPFeatureOverrides());
 
   assert(UnaryOperator::isIncrementDecrementOp(opcode));
   Expr *opaqueRef = op->IgnoreParens();
@@ -1507,9 +1507,9 @@ ExprResult SemaPseudoObject::checkAssignment(Scope *S, SourceLocation opcLoc,
                                              Expr *LHS, Expr *RHS) {
   // Do nothing if either argument is dependent.
   if (LHS->isTypeDependent() || RHS->isTypeDependent())
-    return BinaryOperator::Create(SemaRef.Context, LHS, RHS, opcode,
-                                  SemaRef.Context.DependentTy, VK_PRValue, OK_Ordinary,
-                                  opcLoc, SemaRef.CurFPFeatureOverrides());
+    return BinaryOperator::Create(
+        SemaRef.Context, LHS, RHS, opcode, SemaRef.Context.DependentTy,
+        VK_PRValue, OK_Ordinary, opcLoc, SemaRef.CurFPFeatureOverrides());
 
   // Filter out non-overload placeholder types in the RHS.
   if (RHS->getType()->isNonOverloadPlaceholderType()) {
@@ -1530,12 +1530,12 @@ ExprResult SemaPseudoObject::checkAssignment(Scope *S, SourceLocation opcLoc,
     return builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
   } else if (MSPropertyRefExpr *refExpr
              = dyn_cast<MSPropertyRefExpr>(opaqueRef)) {
-      MSPropertyOpBuilder builder(SemaRef, refExpr, IsSimpleAssign);
-      return builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
+    MSPropertyOpBuilder builder(SemaRef, refExpr, IsSimpleAssign);
+    return builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
   } else if (MSPropertySubscriptExpr *RefExpr
              = dyn_cast<MSPropertySubscriptExpr>(opaqueRef)) {
-      MSPropertyOpBuilder Builder(SemaRef, RefExpr, IsSimpleAssign);
-      return Builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
+    MSPropertyOpBuilder Builder(SemaRef, RefExpr, IsSimpleAssign);
+    return Builder.buildAssignmentOperation(S, opcLoc, opcode, LHS, RHS);
   } else {
     llvm_unreachable("unknown pseudo-object kind!");
   }
@@ -1562,10 +1562,10 @@ Expr *SemaPseudoObject::recreateSyntacticForm(PseudoObjectExpr *E) {
   Expr *syntax = E->getSyntacticForm();
   if (UnaryOperator *uop = dyn_cast<UnaryOperator>(syntax)) {
     Expr *op = stripOpaqueValuesFromPseudoObjectRef(SemaRef, uop->getSubExpr());
-    return UnaryOperator::Create(SemaRef.Context, op, uop->getOpcode(), uop->getType(),
-                                 uop->getValueKind(), uop->getObjectKind(),
-                                 uop->getOperatorLoc(), uop->canOverflow(),
-                                 SemaRef.CurFPFeatureOverrides());
+    return UnaryOperator::Create(
+        SemaRef.Context, op, uop->getOpcode(), uop->getType(),
+        uop->getValueKind(), uop->getObjectKind(), uop->getOperatorLoc(),
+        uop->canOverflow(), SemaRef.CurFPFeatureOverrides());
   } else if (CompoundAssignOperator *cop
                = dyn_cast<CompoundAssignOperator>(syntax)) {
     Expr *lhs = stripOpaqueValuesFromPseudoObjectRef(SemaRef, cop->getLHS());
