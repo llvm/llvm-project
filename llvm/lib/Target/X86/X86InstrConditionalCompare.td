@@ -146,20 +146,11 @@ def : Pat<(X86ctest GR32:$src1, GR32:$src2, timm:$dcf, timm:$cond, EFLAGS),
 def : Pat<(X86ctest GR64:$src1, GR64:$src2, timm:$dcf, timm:$cond, EFLAGS),
           (CTEST64rr GR64:$src1, GR64:$src2, timm:$dcf, timm:$cond)>;
 
-def : Pat<(X86ctest GR8:$src1, (i8 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
+def : Pat<(X86ctestpat GR8:$src1, imm:$src2, timm:$dcf, timm:$cond),
           (CTEST8ri GR8:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctest GR16:$src1, (i16 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
+def : Pat<(X86ctestpat GR16:$src1, imm:$src2, timm:$dcf, timm:$cond),
           (CTEST16ri GR16:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctest GR32:$src1, (i32 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
+def : Pat<(X86ctestpat GR32:$src1, imm:$src2, timm:$dcf, timm:$cond),
           (CTEST32ri GR32:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctest GR64:$src1, (i64 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
+def : Pat<(X86ctestpat GR64:$src1, imm:$src2, timm:$dcf, timm:$cond),
           (CTEST64ri32 GR64:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
-
-def : Pat<(X86ctest (loadi8 addr:$src1), GR8:$src2, timm:$dcf, timm:$cond, EFLAGS),
-          (CTEST8mr addr:$src1, GR8:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctest (loadi16 addr:$src1), GR16:$src2, timm:$dcf, timm:$cond, EFLAGS),
-          (CTEST16mr addr:$src1, GR16:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctest (loadi32 addr:$src1), GR32:$src2, timm:$dcf, timm:$cond, EFLAGS),
-          (CTEST32mr addr:$src1, GR32:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctest (loadi64 addr:$src1), GR64:$src2, timm:$dcf, timm:$cond, EFLAGS),
-          (CTEST64mr addr:$src1, GR64:$src2, timm:$dcf, timm:$cond)>;

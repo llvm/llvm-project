@@ -583,6 +583,14 @@ def add_su : binop_oneuse<add>;
 def and_su : binop_oneuse<and>;
 def srl_su : binop_oneuse<srl>;
 
+class binop_twouses<SDPatternOperator operator>
+    : PatFrag<(ops node:$A, node:$B),
+              (operator node:$A, node:$B), [{
+  return N->hasNUsesOfValue(2, 0);
+}]>;
+
+def and_du : binop_twouses<and>;
+
 // unary op with only one user
 class unop_oneuse<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
@@ -607,7 +615,10 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 
 def X86testpat : PatFrag<(ops node:$lhs, node:$rhs),
                          (X86cmp (and_su node:$lhs, node:$rhs), 0)>;
-
+def X86ctestpat : PatFrag<(ops node:$lhs, node:$rhs, node:$dcf, node:$cond),
+                          (X86ctest (and_du node:$lhs, node:$rhs),
+                            (and_du node:$lhs, node:$rhs), node:$dcf,
+                            node:$cond, EFLAGS)>;
 
 def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
                           [(X86strict_fcmp node:$lhs, node:$rhs),

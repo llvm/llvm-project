@@ -221,9 +221,8 @@ if.end:                                           ; preds = %entry, %if.then
 define void @ctest8ri_zf(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: ctest8ri_zf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb $123, %sil
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    ctestneb {dfv=zf} %sil, %sil
+; CHECK-NEXT:    ctestneb {dfv=zf} $123, %sil
 ; CHECK-NEXT:    jne .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -233,9 +232,8 @@ define void @ctest8ri_zf(i8 noundef %a, i8 noundef %b) {
 ;
 ; NDD-LABEL: ctest8ri_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andb $123, %sil, %al
 ; NDD-NEXT:    testb %dil, %dil
-; NDD-NEXT:    ctestneb {dfv=zf} %al, %al
+; NDD-NEXT:    ctestneb {dfv=zf} $123, %sil
 ; NDD-NEXT:    jne .LBB6_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -299,9 +297,8 @@ if.end:                                           ; preds = %entry, %if.then
 define void @ctest32ri_zf(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: ctest32ri_zf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $12345, %esi # imm = 0x3039
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    ctestnel {dfv=zf} %esi, %esi
+; CHECK-NEXT:    ctestnel {dfv=zf} $12345, %esi # imm = 0x3039
 ; CHECK-NEXT:    jne .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -311,9 +308,8 @@ define void @ctest32ri_zf(i32 noundef %a, i32 noundef %b) {
 ;
 ; NDD-LABEL: ctest32ri_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andl $12345, %esi, %eax # imm = 0x3039
 ; NDD-NEXT:    testl %edi, %edi
-; NDD-NEXT:    ctestnel {dfv=zf} %eax, %eax
+; NDD-NEXT:    ctestnel {dfv=zf} $12345, %esi # imm = 0x3039
 ; NDD-NEXT:    jne .LBB8_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -338,9 +334,8 @@ if.end:                                           ; preds = %entry, %if.then
 define void @ctest64ri32_zf(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: ctest64ri32_zf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $123456, %esi # imm = 0x1E240
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    ctestneq {dfv=zf} %rsi, %rsi
+; CHECK-NEXT:    ctestneq {dfv=zf} $123456, %rsi # imm = 0x1E240
 ; CHECK-NEXT:    jne .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -350,9 +345,8 @@ define void @ctest64ri32_zf(i64 noundef %a, i64 noundef %b) {
 ;
 ; NDD-LABEL: ctest64ri32_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andl $123456, %esi, %eax # imm = 0x1E240
 ; NDD-NEXT:    testq %rdi, %rdi
-; NDD-NEXT:    ctestneq {dfv=zf} %rax, %rax
+; NDD-NEXT:    ctestneq {dfv=zf} $123456, %rsi # imm = 0x1E240
 ; NDD-NEXT:    jne .LBB9_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -533,10 +527,8 @@ if.end:                                           ; preds = %entry, %if.then
 define void @ctest8mi_zf(i8 noundef %a, ptr %ptr) {
 ; CHECK-LABEL: ctest8mi_zf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl (%rsi), %eax
-; CHECK-NEXT:    andb $123, %al
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    ctestneb {dfv=zf} %al, %al
+; CHECK-NEXT:    ctestneb {dfv=zf} $123, (%rsi)
 ; CHECK-NEXT:    jne .LBB14_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -546,9 +538,8 @@ define void @ctest8mi_zf(i8 noundef %a, ptr %ptr) {
 ;
 ; NDD-LABEL: ctest8mi_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andb $123, (%rsi), %al
 ; NDD-NEXT:    testb %dil, %dil
-; NDD-NEXT:    ctestneb {dfv=zf} %al, %al
+; NDD-NEXT:    ctestneb {dfv=zf} $123, (%rsi)
 ; NDD-NEXT:    jne .LBB14_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -659,8 +650,7 @@ define void @ctest64mi32_zf(i64 noundef %a, ptr %ptr) {
 ; CHECK-LABEL: ctest64mi32_zf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    movl $123456, %eax # imm = 0x1E240
-; CHECK-NEXT:    ctestnel {dfv=zf} %eax, (%rsi)
+; CHECK-NEXT:    ctestnel {dfv=zf} $123456, (%rsi) # imm = 0x1E240
 ; CHECK-NEXT:    jne .LBB17_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -670,9 +660,8 @@ define void @ctest64mi32_zf(i64 noundef %a, ptr %ptr) {
 ;
 ; NDD-LABEL: ctest64mi32_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andl $123456, (%rsi), %eax # imm = 0x1E240
 ; NDD-NEXT:    testq %rdi, %rdi
-; NDD-NEXT:    ctestnel {dfv=zf} %eax, %eax
+; NDD-NEXT:    ctestnel {dfv=zf} $123456, (%rsi) # imm = 0x1E240
 ; NDD-NEXT:    jne .LBB17_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
