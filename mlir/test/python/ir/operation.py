@@ -907,7 +907,8 @@ def testCapsuleConversions():
         m_capsule = m._CAPIPtr
         assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
         m2 = Operation._CAPICreate(m_capsule)
-        assert m2 is m
+        assert not m2 is m
+        assert m2 == m
 
 
 # CHECK-LABEL: TEST: testOperationErase

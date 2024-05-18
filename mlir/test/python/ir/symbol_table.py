@@ -56,14 +56,6 @@ def testSymbolTableInsert():
         print(m1)
         assert "bar" not in symbol_table
 
-        try:
-            print(bar)
-        except RuntimeError as e:
-            if "the operation has been invalidated" not in str(e):
-                raise
-        else:
-            assert False, "expected RuntimeError due to invalidated operation"
-
         qux = m2.body.operations[0]
         m1.body.append(qux)
         symbol_table.insert(qux)
