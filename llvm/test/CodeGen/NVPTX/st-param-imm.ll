@@ -509,12 +509,12 @@ define void @st_param_v2_f64_ri(double %val) {
   ret void
 }
 
-declare void @call_v2_i8(%struct.char2)
-declare void @call_v2_i16(%struct.short2)
-declare void @call_v2_i32(%struct.int2)
-declare void @call_v2_i64(%struct.longlong2)
-declare void @call_v2_f32(%struct.float2)
-declare void @call_v2_f64(%struct.double2)
+declare void @call_v2_i8(%struct.char2 alignstack(2))
+declare void @call_v2_i16(%struct.short2 alignstack(4))
+declare void @call_v2_i32(%struct.int2 alignstack(8))
+declare void @call_v2_i64(%struct.longlong2 alignstack(16))
+declare void @call_v2_f32(%struct.float2 alignstack(8))
+declare void @call_v2_f64(%struct.double2 alignstack(16))
 
 define void @st_param_v4_i8_iiii() {
 ; CHECK-LABEL: st_param_v4_i8_iiii(
@@ -1996,19 +1996,7 @@ define void @st_param_v4_f32_riii(float %a) {
   ret void
 }
 
-declare void @call_v4_i8(%struct.char4)
-declare void @call_v4_i16(%struct.short4)
-declare void @call_v4_i32(%struct.int4)
-declare void @call_v4_f32(%struct.float4)
-
-!nvvm.annotations = !{!1, !2, !3, !4, !5, !6, !7, !8, !9, !10}
-!1 = !{ptr @call_v2_i8, !"align", i32 65538}
-!2 = !{ptr @call_v2_i16, !"align", i32 65540}
-!3 = !{ptr @call_v2_i32, !"align", i32 65544}
-!4 = !{ptr @call_v2_i64, !"align", i32 65552}
-!5 = !{ptr @call_v2_f32, !"align", i32 65544}
-!6 = !{ptr @call_v2_f64, !"align", i32 65552}
-!7 = !{ptr @call_v4_i8, !"align", i32 65540}
-!8 = !{ptr @call_v4_i16, !"align", i32 65544}
-!9 = !{ptr @call_v4_i32, !"align", i32 65552}
-!10 = !{ptr @call_v4_f32, !"align", i32 65552}
+declare void @call_v4_i8(%struct.char4 alignstack(4))
+declare void @call_v4_i16(%struct.short4 alignstack(8))
+declare void @call_v4_i32(%struct.int4 alignstack(16))
+declare void @call_v4_f32(%struct.float4 alignstack(16))
