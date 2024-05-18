@@ -3721,7 +3721,8 @@ void DwarfDebug::addAccelNameImpl(
     const DwarfUnit &Unit,
     const DICompileUnit::DebugNameTableKind NameTableKind,
     AccelTable<DataT> &AppleAccel, StringRef Name, const DIE &Die) {
-  if (getAccelTableKind() == AccelTableKind::None || Name.empty())
+  if (getAccelTableKind() == AccelTableKind::None ||
+      Unit.getUnitDie().getTag() == dwarf::DW_TAG_skeleton_unit || Name.empty())
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
