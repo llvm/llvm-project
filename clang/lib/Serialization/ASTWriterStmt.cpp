@@ -473,7 +473,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      Record.AddStmt(const_cast<Expr *>(DetailRecord.first));
+      Record.writeStmtRef(DetailRecord.first);
       auto *E = DetailRecord.second.dyn_cast<Expr *>();
       Record.push_back(E == nullptr);
       if (E)
