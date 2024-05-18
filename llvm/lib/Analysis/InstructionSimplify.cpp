@@ -5349,11 +5349,12 @@ foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1, int MaskVal,
   // vector. Set the RootVec to the cast, the SourceOp to the operand and
   // recurse. If, in a later stack frame, an appropriate ShuffleVector is
   // matched, the example will reduce.
-  if (auto *SourceCast = dyn_cast<CastInst>(SourceOp))
+  if (auto *SourceCast = dyn_cast<CastInst>(SourceOp)) {
     if (auto *CastTy = dyn_cast<FixedVectorType>(SourceCast->getSrcTy()))
       if (CastTy->getNumElements() == InVecNumElts)
         return foldIdentityShuffles(DestElt, SourceCast->getOperand(0), Op1,
                                     MaskVal, NextRootVec, MaxRecurse);
+  }
 
   // Look through a binary operator, with two identical operands. Set the
   // RootVec to the binop, the SourceOp to the operand, and recurse. If, in a
@@ -5386,16 +5387,17 @@ foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1, int MaskVal,
   if (NextRootVec == SourceOp)
     return {NextRootVec, std::nullopt};
 
+  auto *RootCast = dyn_cast<CastInst>(RootVec);
+  auto *CastTy =
+      RootCast ? dyn_cast<FixedVectorType>(RootCast->getSrcTy()) : nullptr;
+
   // We again have to match the condition for a vector-num-element-preserving
   // cast or binop with equal operands, as we are not assured of the recursion
   // happening from the call after the previous match. The RootVec was set to
   // the last cast or binop in the chain.
-  if ((isa<CastInst>(RootVec) &&
-       isa<FixedVectorType>(cast<CastInst>(RootVec)->getSrcTy()) &&
-       cast<FixedVectorType>(cast<CastInst>(RootVec)->getSrcTy())
-               ->getNumElements() == InVecNumElts) ||
+  if ((CastTy && CastTy->getNumElements() == InVecNumElts) ||
       (match(RootVec, m_BinOp(m_Value(BinOpLHS), m_Value(BinOpRHS))) &&
-       BinOpLHS == BinOpRHS))
+       BinOpLHS == BinOpRHS)) {
     // ReplacementSrc should be the User of the the first cast or binop in the
     // chain. SourceOp is the reduced value, which should replace
     // ReplacementSrc.
@@ -5411,6 +5413,7 @@ foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1, int MaskVal,
       if (ReplacementSrc->hasOneUser())
         return {RootVec, std::make_pair(ReplacementSrc, SourceOp)};
     }
+  }
 
   return {nullptr, std::nullopt};
 }
@@ -5517,14 +5520,14 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // shuffle. This handles simple identity shuffles as well as chains of
   // shuffles that may widen/narrow and/or move elements across lanes and back.
   Value *RootVec = nullptr;
-  ReplacementTy ReplaceInRootVec;
+  ReplacementTy ReplacementCandidate;
   for (unsigned Idx = 0; Idx != MaskNumElts; ++Idx) {
     // Note that recursion is limited for each vector element, so if any element
     // exceeds the limit, this will fail to simplify.
     std::pair<Value *, ReplacementTy> Res =
         foldIdentityShuffles(Idx, Op0, Op1, Indices[Idx], RootVec, MaxRecurse);
     RootVec = Res.first;
-    ReplaceInRootVec = Res.second;
+    ReplacementCandidate = Res.second;
 
     // We can't replace a widening/narrowing shuffle with one of its operands.
     if (!RootVec || RootVec->getType() != RetTy)
@@ -5533,8 +5536,8 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
 
   // Apply any replacements in RootVec that are applicable in case we're looking
   // through a cast or binop.
-  if (ReplaceInRootVec) {
-    auto [ReplacementSrc, ReplacementDst] = *ReplaceInRootVec;
+  if (ReplacementCandidate) {
+    auto [ReplacementSrc, ReplacementDst] = *ReplacementCandidate;
     ReplacementSrc->replaceAllUsesWith(ReplacementDst);
   }
   return RootVec;
