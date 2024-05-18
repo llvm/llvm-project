@@ -988,7 +988,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (C->isOne()) {
     if (match(Op0, m_ZExt(m_Add(m_Value(X), m_AllOnes())))) {
       const SimplifyQuery Q = SQ.getWithInstruction(&Add);
-      if (llvm::isKnownNonZero(X, /*Depth=*/0, Q))
+      if (llvm::isKnownNonZero(X, Q))
         return new ZExtInst(X, Ty);
     }
   }
@@ -2281,8 +2281,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (match(Op0, m_APInt(Op0C))) {
     if (Op0C->isMask()) {
       // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
-      // zero.
-      KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
+      // zero. We don't use information from dominating conditions so this
+      // transform is easier to reverse if necessary.
+      KnownBits RHSKnown = llvm::computeKnownBits(
+          Op1, 0, SQ.getWithInstruction(&I).getWithoutDomCondCache());
       if ((*Op0C | RHSKnown.Zero).isAllOnes())
         return BinaryOperator::CreateXor(Op1, Op0);
     }

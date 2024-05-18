@@ -1309,3 +1309,11 @@ namespace pr18633 {
     func2<int>();
   }
 }
+
+namespace {
+  struct F {
+    static constexpr int Z = 12;
+  };
+  F f;
+  static_assert(f.Z == 12, "");
+}

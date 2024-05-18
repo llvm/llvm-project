@@ -54,6 +54,18 @@ define float @returned_poison() {
   ret float poison
 }
 
+; Know nothing
+define float @returned_freeze_poison() {
+; CHECK-LABEL: define noundef float @returned_freeze_poison() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[FREEZE_POISON:%.*]] = freeze float poison
+; CHECK-NEXT:    ret float [[FREEZE_POISON]]
+;
+  call void @unknown()
+  %freeze.poison = freeze float poison
+  ret float %freeze.poison
+}
+
 define double @returned_snan() {
 ; CHECK-LABEL: define noundef nofpclass(qnan inf zero sub norm) double @returned_snan() {
 ; CHECK-NEXT:    call void @unknown()

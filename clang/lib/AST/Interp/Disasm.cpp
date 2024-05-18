@@ -140,7 +140,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     const Descriptor *Desc = G->block()->getDescriptor();
     Pointer GP = getPtrGlobal(GI);
 
-    OS << GI << ": " << (void *)G->block() << " ";
+    OS << GI << ": " << (const void *)G->block() << " ";
     {
       ColorScope SC(OS, true,
                     GP.isInitialized()
@@ -263,4 +263,20 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
     OS << ". Offset " << (Offset + F.Offset) << "\n";
     ++I;
   }
+}
+
+LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
+    OS << "Block " << (const void *)this << "\n";
+  }
+  unsigned NPointers = 0;
+  for (const Pointer *P = Pointers; P; P = P->Next) {
+    ++NPointers;
+  }
+  OS << "  Pointers: " << NPointers << "\n";
+  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Static: " << IsStatic << "\n";
+  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Initialized: " << IsInitialized << "\n";
 }

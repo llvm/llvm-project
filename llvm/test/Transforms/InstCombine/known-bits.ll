@@ -1195,5 +1195,184 @@ define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
   ret i1 %r
 }
 
+define i8 @known_reduce_or(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_or(
+; CHECK-NEXT:    ret i8 1
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_or_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_or_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 4
+  ret i8 %r
+}
+
+define i8 @known_reduce_and(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_and(
+; CHECK-NEXT:    ret i8 1
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.and(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_and_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_and_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.and.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.and(<2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_even(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_even(
+; CHECK-NEXT:    ret i8 0
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.xor(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_even2(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_even2(
+; CHECK-NEXT:    ret i8 0
+;
+  %x = and <2 x i8> %xx, <i8 15, i8 15>
+  %v = call i8 @llvm.vector.reduce.xor(<2 x i8> %x)
+  %r = and i8 %v, 16
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_even_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_even_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.xor(<2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd(
+; CHECK-NEXT:    ret i8 1
+;
+  %x = or <3 x i8> %xx, <i8 5, i8 3, i8 9>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd2(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd2(
+; CHECK-NEXT:    ret i8 0
+;
+  %x = and <3 x i8> %xx, <i8 15, i8 15, i8 31>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 32
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd2_fail(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd2_fail(
+; CHECK-NEXT:    [[X:%.*]] = and <3 x i8> [[XX:%.*]], <i8 15, i8 15, i8 31>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 16
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = and <3 x i8> %xx, <i8 15, i8 15, i8 31>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 16
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd_fail(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <3 x i8> [[XX:%.*]], <i8 5, i8 3, i8 9>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <3 x i8> %xx, <i8 5, i8 3, i8 9>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_even(<vscale x 2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_even(
+; CHECK-NEXT:    ret i8 0
+;
+  %one = insertelement <vscale x 2 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 2 x i8> %one, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+  %x = or <vscale x 2 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], shufflevector (<vscale x 3 x i8> insertelement (<vscale x 3 x i8> poison, i8 1, i64 0), <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer)
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %one = insertelement <vscale x 3 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 3 x i8> %one, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %x = or <vscale x 3 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_even_fail(<vscale x 2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_even_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %one = insertelement <vscale x 2 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 2 x i8> %one, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+  %x = or <vscale x 2 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_odd(<vscale x 3 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd(
+; CHECK-NEXT:    ret i8 0
+;
+  %one = insertelement <vscale x 3 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 3 x i8> %one, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %x = and <vscale x 3 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
 declare void @use(i1)
 declare void @sink(i8)

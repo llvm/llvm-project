@@ -221,6 +221,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
+  for recursive forwarding reference.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -298,6 +302,10 @@ Miscellaneous
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
   ``--format`` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
+
+- Fixed the :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
+  use the check's proper name.
 
 Improvements to include-fixer
 -----------------------------

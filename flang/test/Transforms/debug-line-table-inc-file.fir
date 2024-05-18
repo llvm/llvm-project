@@ -1,5 +1,5 @@
 
-// RUN: fir-opt --add-debug-foundation --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 // REQUIRES: system-linux
 
 // Test for included functions that have a different debug location than the current file

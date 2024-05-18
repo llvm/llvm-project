@@ -352,7 +352,8 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
                      DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
-  attrToNode.insert({attr, node});
+  if (node && !node->isTemporary())
+    attrToNode.insert({attr, node});
   return node;
 }
 

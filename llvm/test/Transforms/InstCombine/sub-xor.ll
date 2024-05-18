@@ -157,3 +157,28 @@ define <2 x i8> @xor_add_splat_undef(<2 x i8> %x) {
   %add = add <2 x i8> %xor, <i8 42, i8 42>
   ret <2 x i8> %add
 }
+
+; Make sure we don't convert sub to xor using dominating condition. That makes
+; it hard for other passe to reverse.
+define i32 @xor_dominating_cond(i32 %x) {
+; CHECK-LABEL: @xor_dominating_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[A:%.*]] = sub nuw nsw i32 255, [[X]]
+; CHECK-NEXT:    ret i32 [[A]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+entry:
+  %cond = icmp ult i32 %x, 256
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  %a = sub i32 255, %x
+  ret i32 %a
+
+if.end:
+  ret i32 %x
+}

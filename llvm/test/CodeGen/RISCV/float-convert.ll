@@ -1424,12 +1424,12 @@ define signext i16 @fcvt_w_s_sat_i16(float %a) nounwind {
 ; RV64IF-LABEL: fcvt_w_s_sat_i16:
 ; RV64IF:       # %bb.0: # %start
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
+; RV64IF-NEXT:    neg a0, a0
 ; RV64IF-NEXT:    lui a1, %hi(.LCPI24_0)
 ; RV64IF-NEXT:    flw fa5, %lo(.LCPI24_0)(a1)
 ; RV64IF-NEXT:    lui a1, 815104
 ; RV64IF-NEXT:    fmv.w.x fa4, a1
 ; RV64IF-NEXT:    fmax.s fa4, fa0, fa4
-; RV64IF-NEXT:    neg a0, a0
 ; RV64IF-NEXT:    fmin.s fa5, fa4, fa5
 ; RV64IF-NEXT:    fcvt.l.s a1, fa5, rtz
 ; RV64IF-NEXT:    and a0, a0, a1
@@ -1450,15 +1450,15 @@ define signext i16 @fcvt_w_s_sat_i16(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: fcvt_w_s_sat_i16:
 ; RV64IZFINX:       # %bb.0: # %start
-; RV64IZFINX-NEXT:    lui a1, 815104
+; RV64IZFINX-NEXT:    feq.s a1, a0, a0
 ; RV64IZFINX-NEXT:    lui a2, %hi(.LCPI24_0)
 ; RV64IZFINX-NEXT:    lw a2, %lo(.LCPI24_0)(a2)
-; RV64IZFINX-NEXT:    fmax.s a1, a0, a1
-; RV64IZFINX-NEXT:    feq.s a0, a0, a0
-; RV64IZFINX-NEXT:    neg a0, a0
-; RV64IZFINX-NEXT:    fmin.s a1, a1, a2
-; RV64IZFINX-NEXT:    fcvt.l.s a1, a1, rtz
-; RV64IZFINX-NEXT:    and a0, a0, a1
+; RV64IZFINX-NEXT:    neg a1, a1
+; RV64IZFINX-NEXT:    lui a3, 815104
+; RV64IZFINX-NEXT:    fmax.s a0, a0, a3
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a2
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rtz
+; RV64IZFINX-NEXT:    and a0, a1, a0
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i16:

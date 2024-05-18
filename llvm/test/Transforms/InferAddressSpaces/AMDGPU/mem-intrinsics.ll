@@ -141,4 +141,4 @@ attributes #1 = { argmemonly nounwind }
 !5 = distinct !{!5, !"some domain"}
 !6 = !{!7}
 !7 = distinct !{!7, !5, !"some scope 2"}
-!8 = !{i64 0, i64 8, null}
+!8 = !{i64 0, i64 8, !0}

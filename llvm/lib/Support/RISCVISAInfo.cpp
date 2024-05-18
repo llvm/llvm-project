@@ -119,6 +119,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"za128rs", {1, 0}},
     {"za64rs", {1, 0}},
     {"zacas", {1, 0}},
+    {"zama16b", {1, 0}},
     {"zawrs", {1, 0}},
 
     {"zba", {1, 0}},
@@ -935,7 +936,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
-  StringRef StdExts = AllStdExts;
   char Baseline = Arch[4];
 
   // First letter should be 'e', 'i' or 'g'.
@@ -951,7 +951,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     if (Arch.size() > 5 && isDigit(Arch[5]))
       return createStringError(errc::invalid_argument,
                                "version not supported for 'g'");
-    StdExts = StdExts.drop_front(4);
     break;
   }
 
@@ -1001,11 +1000,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   Exts = Exts.drop_front(ConsumeLength);
   Exts.consume_front("_");
 
-  std::vector<std::string> SplittedExts;
-  if (auto E = splitExtsByUnderscore(Exts, SplittedExts))
+  std::vector<std::string> SplitExts;
+  if (auto E = splitExtsByUnderscore(Exts, SplitExts))
     return std::move(E);
 
-  for (auto &Ext : SplittedExts) {
+  for (auto &Ext : SplitExts) {
     StringRef CurrExt = Ext;
     while (!CurrExt.empty()) {
       if (AllStdExts.contains(CurrExt.front())) {

@@ -1241,6 +1241,18 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_NE(Expr, nullptr);
   EXPECT_EQ(Expr->getElement(1), 13841306799765140275U);
 
+  // Half.
+  Type *HalfTy = Type::getHalfTy(Context);
+  Expr = createExpression(ConstantFP::get(HalfTy, 5.55), HalfTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 17805U);
+
+  // BFloat.
+  Type *BFloatTy = Type::getBFloatTy(Context);
+  Expr = createExpression(ConstantFP::get(BFloatTy, -5.55), BFloatTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 49330U);
+
   // Pointer.
   PointerType *PtrTy = PointerType::get(Context, 0);
   Expr = createExpression(ConstantPointerNull::get(PtrTy), PtrTy);
@@ -1256,15 +1268,6 @@ TEST(Local, ExpressionForConstant) {
   Expr = createExpression(ConstantExpr::getIntToPtr(K2, PtrTy), PtrTy);
   EXPECT_NE(Expr, nullptr);
   EXPECT_EQ(Expr->getElement(1), 5678U);
-
-  // Others.
-  Type *HalfTy = Type::getHalfTy(Context);
-  Expr = createExpression(ConstantFP::get(HalfTy, 32), HalfTy);
-  EXPECT_EQ(Expr, nullptr);
-
-  Type *BFloatTy = Type::getBFloatTy(Context);
-  Expr = createExpression(ConstantFP::get(BFloatTy, 32), BFloatTy);
-  EXPECT_EQ(Expr, nullptr);
 
   Type *FP128Ty = Type::getFP128Ty(Context);
   Expr = createExpression(ConstantFP::get(FP128Ty, 32), FP128Ty);

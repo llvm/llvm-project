@@ -222,6 +222,12 @@ FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
                                                 RewriterBase &rewriter,
                                                 bool forceCreateCheck = false);
 
+/// Try to uplift `scf.while` op to `scf.for`.
+/// Uplifitng expects a specific ops pattern:
+///  * `before` block consisting of single arith.cmp op
+///  * `after` block containing arith.addi
+FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
+
 } // namespace scf
 } // namespace mlir
 

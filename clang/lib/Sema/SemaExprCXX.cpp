@@ -1416,42 +1416,26 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
 }
 
 ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
-  // C++20 [expr.prim.this]p1:
-  //   The keyword this names a pointer to the object for which an
-  //   implicit object member function is invoked or a non-static
-  //   data member's initializer is evaluated.
+  /// C++ 9.3.2: In the body of a non-static member function, the keyword this
+  /// is a non-lvalue expression whose value is the address of the object for
+  /// which the function is called.
   QualType ThisTy = getCurrentThisType();
 
-  if (CheckCXXThisType(Loc, ThisTy))
-    return ExprError();
+  if (ThisTy.isNull()) {
+    DeclContext *DC = getFunctionLevelDeclContext();
+
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
+        Method && Method->isExplicitObjectMemberFunction()) {
+      return Diag(Loc, diag::err_invalid_this_use) << 1;
+    }
+
+    if (isLambdaCallWithExplicitObjectParameter(CurContext))
+      return Diag(Loc, diag::err_invalid_this_use) << 1;
+
+    return Diag(Loc, diag::err_invalid_this_use) << 0;
+  }
 
   return BuildCXXThisExpr(Loc, ThisTy, /*IsImplicit=*/false);
-}
-
-bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
-  if (!Type.isNull())
-    return false;
-
-  // C++20 [expr.prim.this]p3:
-  //   If a declaration declares a member function or member function template
-  //   of a class X, the expression this is a prvalue of type
-  //   "pointer to cv-qualifier-seq X" wherever X is the current class between
-  //   the optional cv-qualifier-seq and the end of the function-definition,
-  //   member-declarator, or declarator. It shall not appear within the
-  //   declaration of either a static member function or an explicit object
-  //   member function of the current class (although its type and value
-  //   category are defined within such member functions as they are within
-  //   an implicit object member function).
-  DeclContext *DC = getFunctionLevelDeclContext();
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
-      Method && Method->isExplicitObjectMemberFunction()) {
-    Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (isLambdaCallWithExplicitObjectParameter(CurContext)) {
-    Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else {
-    Diag(Loc, diag::err_invalid_this_use) << 0;
-  }
-  return true;
 }
 
 Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
@@ -2716,13 +2700,9 @@ static bool resolveAllocationOverload(
     return true;
 
   case OR_Deleted: {
-    if (Diagnose) {
-      Candidates.NoteCandidates(
-          PartialDiagnosticAt(R.getNameLoc(),
-                              S.PDiag(diag::err_ovl_deleted_call)
-                                  << R.getLookupName() << Range),
-          S, OCD_AllCandidates, Args);
-    }
+    if (Diagnose)
+      S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
+                                     Candidates, Best->Function, Args);
     return true;
   }
   }
@@ -3376,7 +3356,9 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
     // FIXME: DiagnoseUseOfDecl?
     if (Operator->isDeleted()) {
       if (Diagnose) {
-        Diag(StartLoc, diag::err_deleted_function_use);
+        StringLiteral *Msg = Operator->getDeletedMessage();
+        Diag(StartLoc, diag::err_deleted_function_use)
+            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
         NoteDeletedFunction(Operator);
       }
       return true;
@@ -3980,13 +3962,10 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
         S, OCD_AmbiguousCandidates, Args);
     return true;
 
-  case OR_Deleted: {
-    Candidates.NoteCandidates(
-        PartialDiagnosticAt(R.getNameLoc(), S.PDiag(diag::err_ovl_deleted_call)
-                                                << R.getLookupName() << Range),
-        S, OCD_AllCandidates, Args);
+  case OR_Deleted:
+    S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
+                                   Candidates, Best->Function, Args);
     return true;
-  }
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
@@ -4271,7 +4250,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
   // C++ [over.match.oper]p7: [...] operands of class type are converted [...]
-  if (CCK == CCK_ForBuiltinOverloadedOp && !From->getType()->isRecordType())
+  if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp &&
+      !From->getType()->isRecordType())
     return From;
 
   switch (ICS.getKind()) {
@@ -4332,7 +4312,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       // C++ [over.match.oper]p7:
       //   [...] the second standard conversion sequence of a user-defined
       //   conversion sequence is not applied.
-      if (CCK == CCK_ForBuiltinOverloadedOp)
+      if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp)
         return From;
 
       return PerformImplicitConversion(From, ToType, ICS.UserDefined.After,
@@ -4373,7 +4353,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const StandardConversionSequence& SCS,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
-  bool CStyle = (CCK == CCK_CStyleCast || CCK == CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
 
   // Overall FIXME: we are recomputing too many types here and doing far too
   // much extra work. What this means is that we need to keep track of more
@@ -5012,6 +4993,20 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
+/// Checks that type T is not a VLA.
+///
+/// @returns @c true if @p T is VLA and a diagnostic was emitted,
+/// @c false otherwise.
+static bool DiagnoseVLAInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
+                                      clang::tok::TokenKind TypeTraitID) {
+  if (!T->getType()->isVariableArrayType())
+    return false;
+
+  S.Diag(T->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
+      << 1 << TypeTraitID;
+  return true;
+}
+
 /// Check the completeness of a type in a unary type trait.
 ///
 /// If the particular type trait requires a complete type, tries to complete
@@ -5188,7 +5183,9 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
 }
 
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
-                                   SourceLocation KeyLoc, QualType T) {
+                                   SourceLocation KeyLoc,
+                                   TypeSourceInfo *TInfo) {
+  QualType T = TInfo->getType();
   assert(!T->isDependentType() && "Cannot evaluate traits of dependent type");
 
   ASTContext &C = Self.Context;
@@ -5209,25 +5206,17 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return CAT->getSize() != 0;
     return T->isArrayType();
   case UTT_IsBoundedArray:
-    if (!T->isVariableArrayType()) {
-      // Zero-sized arrays aren't considered arrays in partial specializations,
-      // so __is_array shouldn't consider them arrays either.
-      if (const auto *CAT = C.getAsConstantArrayType(T))
-        return CAT->getSize() != 0;
-      return T->isArrayType() && !T->isIncompleteArrayType();
-    }
-
-    Self.Diag(KeyLoc, diag::err_vla_unsupported)
-        << 1 << tok::kw___is_bounded_array;
-    return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_bounded_array))
+      return false;
+    // Zero-sized arrays aren't considered arrays in partial specializations,
+    // so __is_bounded_array shouldn't consider them arrays either.
+    if (const auto *CAT = C.getAsConstantArrayType(T))
+      return CAT->getSize() != 0;
+    return T->isArrayType() && !T->isIncompleteArrayType();
   case UTT_IsUnboundedArray:
-    if (!T->isVariableArrayType()) {
-      return T->isIncompleteArrayType();
-    }
-
-    Self.Diag(KeyLoc, diag::err_vla_unsupported)
-        << 1 << tok::kw___is_unbounded_array;
-    return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_unbounded_array))
+      return false;
+    return T->isIncompleteArrayType();
   case UTT_IsPointer:
     return T->isAnyPointerType();
   case UTT_IsNullPointer:
@@ -5639,7 +5628,7 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     return false;
 
   if (Kind <= UTT_Last)
-    return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]->getType());
+    return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]);
 
   // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
   // alongside the IsConstructible traits to avoid duplication.
@@ -6101,12 +6090,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
                                diag::err_incomplete_type);
 
-    if (LhsT->isVariableArrayType())
-      Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
-          << 1 << tok::kw___is_layout_compatible;
-    if (RhsT->isVariableArrayType())
-      Self.Diag(Rhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
-          << 1 << tok::kw___is_layout_compatible;
+    DiagnoseVLAInCXXTypeTrait(Self, Lhs, tok::kw___is_layout_compatible);
+    DiagnoseVLAInCXXTypeTrait(Self, Rhs, tok::kw___is_layout_compatible);
+
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
   case BTT_IsPointerInterconvertibleBaseOf: {
@@ -6116,12 +6102,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
                                diag::err_incomplete_type);
     }
 
-    if (LhsT->isVariableArrayType())
-      Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
-          << 1 << tok::kw___is_pointer_interconvertible_base_of;
-    if (RhsT->isVariableArrayType())
-      Self.Diag(Rhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
-          << 1 << tok::kw___is_pointer_interconvertible_base_of;
+    DiagnoseVLAInCXXTypeTrait(Self, Lhs,
+                              tok::kw___is_pointer_interconvertible_base_of);
+    DiagnoseVLAInCXXTypeTrait(Self, Rhs,
+                              tok::kw___is_pointer_interconvertible_base_of);
 
     return Self.IsPointerInterconvertibleBaseOf(Lhs, Rhs);
   }
@@ -8455,7 +8439,7 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     // unnecessary temporary objects. If we skip this step, IR generation is
     // able to synthesize the storage for itself in the aggregate case, and
     // adding the extra node to the AST is just clutter.
-    if (isInMaterializeTemporaryObjectContext() && getLangOpts().CPlusPlus17 &&
+    if (isInLifetimeExtendingContext() && getLangOpts().CPlusPlus17 &&
         E->isPRValue() && !E->getType()->isVoidType()) {
       ExprResult Res = TemporaryMaterializationConversion(E);
       if (Res.isInvalid())
@@ -8668,8 +8652,21 @@ static ExprResult attemptRecovery(Sema &SemaRef,
 
       // Detect and handle the case where the decl might be an implicit
       // member.
-      if (SemaRef.isPotentialImplicitMemberAccess(
-              NewSS, R, Consumer.isAddressOfOperand()))
+      bool MightBeImplicitMember;
+      if (!Consumer.isAddressOfOperand())
+        MightBeImplicitMember = true;
+      else if (!NewSS.isEmpty())
+        MightBeImplicitMember = false;
+      else if (R.isOverloadedResult())
+        MightBeImplicitMember = false;
+      else if (R.isUnresolvableResult())
+        MightBeImplicitMember = true;
+      else
+        MightBeImplicitMember = isa<FieldDecl>(ND) ||
+                                isa<IndirectFieldDecl>(ND) ||
+                                isa<MSPropertyDecl>(ND);
+
+      if (MightBeImplicitMember)
         return SemaRef.BuildPossibleImplicitMemberExpr(
             NewSS, /*TemplateKWLoc*/ SourceLocation(), R,
             /*TemplateArgs*/ nullptr, /*S*/ nullptr);
@@ -9164,7 +9161,7 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
 
   // Do the redeclaration lookup in the current scope.
   LookupResult R(*this, TargetNameInfo, Sema::LookupAnyName,
-                 Sema::NotForRedeclaration);
+                 RedeclarationKind::NotForRedeclaration);
   LookupParsedName(R, S, &SS);
   R.suppressDiagnostics();
 

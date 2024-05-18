@@ -1323,6 +1323,8 @@ namespace llvm {
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
 
+    bool addressingModeSupportsTLS(const GlobalValue &GV) const override;
+
     /// Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
     /// compare a register against the immediate without having to materialize

@@ -281,6 +281,13 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
   if (Consumers.empty())
     return nullptr;
 
+  if (CI.getFrontendOpts().GenReducedBMI &&
+      !CI.getFrontendOpts().ModuleOutputPath.empty()) {
+    Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
+        CI.getPreprocessor(), CI.getModuleCache(),
+        CI.getFrontendOpts().ModuleOutputPath));
+  }
+
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 

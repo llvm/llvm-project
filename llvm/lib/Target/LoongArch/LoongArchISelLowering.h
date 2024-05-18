@@ -238,6 +238,7 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
     return false;
   }
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

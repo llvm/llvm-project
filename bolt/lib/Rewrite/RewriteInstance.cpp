@@ -1670,7 +1670,9 @@ void RewriteInstance::disassemblePLT() {
       return disassemblePLTSectionAArch64(Section);
     if (BC->isRISCV())
       return disassemblePLTSectionRISCV(Section);
-    return disassemblePLTSectionX86(Section, EntrySize);
+    if (BC->isX86())
+      return disassemblePLTSectionX86(Section, EntrySize);
+    llvm_unreachable("Unmplemented PLT");
   };
 
   for (BinarySection &Section : BC->allocatableSections()) {
@@ -2605,7 +2607,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (!IsAArch64 && !BC->isRISCV() && Relocation::isPCRelative(RType)) {
+  if (BC->isX86() && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -2859,15 +2861,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       BC->isRISCV())
     ForceRelocation = true;
 
-  if (IsFromCode) {
+  if (IsFromCode)
     ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
                                 Addend, ExtractedValue);
-  } else if (IsToCode || ForceRelocation) {
+  else if (IsToCode || ForceRelocation)
     BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
                       ExtractedValue);
-  } else {
+  else
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
-  }
 }
 
 void RewriteInstance::selectFunctionsToProcess() {
@@ -5762,13 +5763,6 @@ bool RewriteInstance::isDebugSection(StringRef SectionName) {
   if (SectionName.starts_with(".debug_") ||
       SectionName.starts_with(".zdebug_") || SectionName == ".gdb_index" ||
       SectionName == ".stab" || SectionName == ".stabstr")
-    return true;
-
-  return false;
-}
-
-bool RewriteInstance::isKSymtabSection(StringRef SectionName) {
-  if (SectionName.starts_with("__ksymtab"))
     return true;
 
   return false;

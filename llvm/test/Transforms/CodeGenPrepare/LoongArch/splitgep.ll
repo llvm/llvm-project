@@ -4,9 +4,9 @@
 define void @test(ptr %sp, ptr %t, i32 %n) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %s = load ptr, ptr %sp, align 8
-; CHECK-NEXT:    br label %while_cond
-
+; CHECK-NEXT:    %splitgep1 = getelementptr i8, ptr %t, i64 80000
+; CHECK-NEXT:    %s = load ptr, ptr %sp
+; CHECK-NEXT:    %splitgep = getelementptr i8, ptr %s, i64 80000
 entry:
   %s = load ptr, ptr %sp
   br label %while_cond

@@ -118,6 +118,9 @@ public:
     IsInitialized = false;
   }
 
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
+
 protected:
   friend class Pointer;
   friend class DeadBlock;

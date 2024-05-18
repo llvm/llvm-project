@@ -30,6 +30,10 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
+// Test that test-bufferization-analysis-only works. This option is useful
+// for understanding why buffer copies were inserted.
+// RUN: mlir-opt %s --sparsifier="test-bufferization-analysis-only" -o /dev/null
+
 #Sparse1 = #sparse_tensor.encoding<{
   map = (i, j, k) -> (
     j : compressed,

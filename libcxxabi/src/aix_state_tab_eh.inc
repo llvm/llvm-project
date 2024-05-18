@@ -195,8 +195,13 @@ static void invoke_destructor(FSMEntry* fsmEntry, void* addr) {
       _LIBCXXABI_TRACE_STATETAB0("returned from scalar destructor\n");
     } else {
       _LIBCXXABI_TRACE_STATETAB0("calling vector destructor\n");
+      // TODO: in the legacy ABI, destructors had a second argument. We don't expect to encounter
+      // destructors of this type in the itanium-based ABI, so this should be safe, but this could use some cleanup.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
       __cxa_vec_cleanup(addr, reinterpret_cast<size_t>(fsmEntry->elementCount), fsmEntry->elemSize,
                         reinterpret_cast<destruct_f>(fsmEntry->destructor));
+#pragma GCC diagnostic pop
       _LIBCXXABI_TRACE_STATETAB0("returned from vector destructor\n");
     }
   } catch (...) {

@@ -44,7 +44,8 @@ public:
       Expr *ConditionExpr;
     };
 
-    std::variant<DefaultDetails, ConditionDetails> Details;
+    std::variant<std::monostate, DefaultDetails, ConditionDetails> Details =
+        std::monostate{};
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -72,8 +73,17 @@ public:
     }
 
     Expr *getConditionExpr() {
-      assert(ClauseKind == OpenACCClauseKind::If &&
+      assert((ClauseKind == OpenACCClauseKind::If ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind != OpenACCDirectiveKind::Update)) &&
              "Parsed clause kind does not have a condition expr");
+
+      // 'self' has an optional ConditionExpr, so be tolerant of that. This will
+      // assert in variant otherwise.
+      if (ClauseKind == OpenACCClauseKind::Self &&
+          std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
       return std::get<ConditionDetails>(Details).ConditionExpr;
     }
 
@@ -87,7 +97,9 @@ public:
     }
 
     void setConditionDetails(Expr *ConditionExpr) {
-      assert(ClauseKind == OpenACCClauseKind::If &&
+      assert((ClauseKind == OpenACCClauseKind::If ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind != OpenACCDirectiveKind::Update)) &&
              "Parsed clause kind does not have a condition expr");
       // In C++ we can count on this being a 'bool', but in C this gets left as
       // some sort of scalar that codegen will have to take care of converting.

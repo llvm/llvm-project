@@ -1114,7 +1114,7 @@ public:
   virtual DeclUseList getClaimedVarUseSites() const override {
     const auto *ArraySubst = cast<ArraySubscriptExpr>(Node->getSubExpr());
     const auto *DRE =
-        cast<DeclRefExpr>(ArraySubst->getBase()->IgnoreImpCasts());
+        cast<DeclRefExpr>(ArraySubst->getBase()->IgnoreParenImpCasts());
     return {DRE};
   }
 };

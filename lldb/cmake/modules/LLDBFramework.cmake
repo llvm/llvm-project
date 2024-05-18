@@ -119,7 +119,7 @@ add_custom_command(TARGET liblldb POST_BUILD
 if(NOT APPLE_EMBEDDED)
   if (TARGET clang-resource-headers)
     add_dependencies(liblldb clang-resource-headers)
-    set(clang_resource_headers_dir $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>)
+    set(clang_resource_headers_dir $<TARGET_PROPERTY:clang-resource-headers,INTERFACE_INCLUDE_DIRECTORIES>)
   else()
     set(clang_resource_headers_dir ${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}/include)
     if(NOT EXISTS ${clang_resource_headers_dir})

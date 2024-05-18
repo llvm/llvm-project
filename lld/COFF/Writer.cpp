@@ -2072,8 +2072,16 @@ void Writer::createRuntimePseudoRelocs() {
     return;
   }
 
-  if (!rels.empty())
+  if (!rels.empty()) {
     log("Writing " + Twine(rels.size()) + " runtime pseudo relocations");
+    const char *symbolName = "_pei386_runtime_relocator";
+    Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
+    if (!relocator)
+      error("output image has runtime pseudo relocations, but the function " +
+            Twine(symbolName) +
+            " is missing; it is needed for fixing the relocations at runtime");
+  }
+
   PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
   rdataSec->addChunk(table);
   EmptyChunk *endOfList = make<EmptyChunk>();

@@ -160,6 +160,15 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
 
+// These macros determine whether we assume that std::bad_function_call and
+// std::bad_expected_access provide a key function in the dylib. This allows
+// centralizing their vtable and typeinfo instead of having all TUs provide
+// a weak definition that then gets deduplicated.
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION 1
+#  define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION 1
+#  define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION
+
 #elif defined(__APPLE__)
 
 #  define _LIBCPP_AVAILABILITY_HAS_BAD_OPTIONAL_ACCESS                                                                 \
@@ -290,6 +299,13 @@
 #  else
 #    define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 1
 #  endif
+
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION 0
+#  define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION __attribute__((unavailable))
+
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION 0
+#  define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION __attribute__((unavailable))
+
 #else
 
 // ...New vendors can add availability markup here...

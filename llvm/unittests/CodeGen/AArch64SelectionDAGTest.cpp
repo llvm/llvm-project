@@ -826,7 +826,7 @@ TEST_F(AArch64SelectionDAGTest,
   EXPECT_EQ(KnownAVGFLOORU.One, Ones);
 
   SDValue AVGFLOORS =
-      DAG->getNode(ISD::AVGFLOORU, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+      DAG->getNode(ISD::AVGFLOORS, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
   KnownBits KnownAVGFLOORS = DAG->computeKnownBits(AVGFLOORS);
   EXPECT_EQ(KnownAVGFLOORS.Zero, Zeroes);
   EXPECT_EQ(KnownAVGFLOORS.One, Ones);

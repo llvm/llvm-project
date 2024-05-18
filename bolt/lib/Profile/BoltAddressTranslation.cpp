@@ -153,12 +153,13 @@ APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
   return BitMask;
 }
 
-size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map) const {
+size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map,
+                                                  uint32_t Skew) const {
   size_t EqualOffsets = 0;
   for (const std::pair<const uint32_t, uint32_t> &KeyVal : Map) {
     const uint32_t OutputOffset = KeyVal.first;
     const uint32_t InputOffset = KeyVal.second >> 1;
-    if (OutputOffset == InputOffset)
+    if (OutputOffset == InputOffset - Skew)
       ++EqualOffsets;
     else
       break;
@@ -196,12 +197,17 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
         SecondaryEntryPointsMap.count(Address)
             ? SecondaryEntryPointsMap[Address].size()
             : 0;
+    uint32_t Skew = 0;
     if (Cold) {
       auto HotEntryIt = Maps.find(ColdPartSource[Address]);
       assert(HotEntryIt != Maps.end());
       size_t HotIndex = std::distance(Maps.begin(), HotEntryIt);
       encodeULEB128(HotIndex - PrevIndex, OS);
       PrevIndex = HotIndex;
+      // Skew of all input offsets for cold fragments is simply the first input
+      // offset.
+      Skew = Map.begin()->second >> 1;
+      encodeULEB128(Skew, OS);
     } else {
       // Function hash
       size_t BFHash = getBFHash(HotInputAddress);
@@ -217,24 +223,21 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
                         << '\n');
     }
     encodeULEB128(NumEntries, OS);
-    // For hot fragments only: encode the number of equal offsets
-    // (output = input) in the beginning of the function. Only encode one offset
-    // in these cases.
-    const size_t EqualElems = Cold ? 0 : getNumEqualOffsets(Map);
-    if (!Cold) {
-      encodeULEB128(EqualElems, OS);
-      if (EqualElems) {
-        const size_t BranchEntriesBytes = alignTo(EqualElems, 8) / 8;
-        APInt BranchEntries = calculateBranchEntriesBitMask(Map, EqualElems);
-        OS.write(reinterpret_cast<const char *>(BranchEntries.getRawData()),
-                 BranchEntriesBytes);
-        LLVM_DEBUG({
-          dbgs() << "BranchEntries: ";
-          SmallString<8> BitMaskStr;
-          BranchEntries.toString(BitMaskStr, 2, false);
-          dbgs() << BitMaskStr << '\n';
-        });
-      }
+    // Encode the number of equal offsets (output = input - skew) in the
+    // beginning of the function. Only encode one offset in these cases.
+    const size_t EqualElems = getNumEqualOffsets(Map, Skew);
+    encodeULEB128(EqualElems, OS);
+    if (EqualElems) {
+      const size_t BranchEntriesBytes = alignTo(EqualElems, 8) / 8;
+      APInt BranchEntries = calculateBranchEntriesBitMask(Map, EqualElems);
+      OS.write(reinterpret_cast<const char *>(BranchEntries.getRawData()),
+               BranchEntriesBytes);
+      LLVM_DEBUG({
+        dbgs() << "BranchEntries: ";
+        SmallString<8> BitMaskStr;
+        BranchEntries.toString(BitMaskStr, 2, false);
+        dbgs() << BitMaskStr << '\n';
+      });
     }
     const BBHashMapTy &BBHashMap = getBBHashMap(HotInputAddress);
     size_t Index = 0;
@@ -315,10 +318,12 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
     uint64_t HotAddress = Cold ? 0 : Address;
     PrevAddress = Address;
     uint32_t SecondaryEntryPoints = 0;
+    uint64_t ColdInputSkew = 0;
     if (Cold) {
       HotIndex += DE.getULEB128(&Offset, &Err);
       HotAddress = HotFuncs[HotIndex];
       ColdPartSource.emplace(Address, HotAddress);
+      ColdInputSkew = DE.getULEB128(&Offset, &Err);
     } else {
       HotFuncs.push_back(Address);
       // Function hash
@@ -339,28 +344,25 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
                             getULEB128Size(SecondaryEntryPoints)));
     }
     const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
-    // Equal offsets, hot fragments only.
-    size_t EqualElems = 0;
+    // Equal offsets.
+    const size_t EqualElems = DE.getULEB128(&Offset, &Err);
     APInt BEBitMask;
-    if (!Cold) {
-      EqualElems = DE.getULEB128(&Offset, &Err);
-      LLVM_DEBUG(dbgs() << formatv("Equal offsets: {0}, {1} bytes\n",
-                                   EqualElems, getULEB128Size(EqualElems)));
-      if (EqualElems) {
-        const size_t BranchEntriesBytes = alignTo(EqualElems, 8) / 8;
-        BEBitMask = APInt(alignTo(EqualElems, 8), 0);
-        LoadIntFromMemory(
-            BEBitMask,
-            reinterpret_cast<const uint8_t *>(
-                DE.getBytes(&Offset, BranchEntriesBytes, &Err).data()),
-            BranchEntriesBytes);
-        LLVM_DEBUG({
-          dbgs() << "BEBitMask: ";
-          SmallString<8> BitMaskStr;
-          BEBitMask.toString(BitMaskStr, 2, false);
-          dbgs() << BitMaskStr << ", " << BranchEntriesBytes << " bytes\n";
-        });
-      }
+    LLVM_DEBUG(dbgs() << formatv("Equal offsets: {0}, {1} bytes\n", EqualElems,
+                                 getULEB128Size(EqualElems)));
+    if (EqualElems) {
+      const size_t BranchEntriesBytes = alignTo(EqualElems, 8) / 8;
+      BEBitMask = APInt(alignTo(EqualElems, 8), 0);
+      LoadIntFromMemory(
+          BEBitMask,
+          reinterpret_cast<const uint8_t *>(
+              DE.getBytes(&Offset, BranchEntriesBytes, &Err).data()),
+          BranchEntriesBytes);
+      LLVM_DEBUG({
+        dbgs() << "BEBitMask: ";
+        SmallString<8> BitMaskStr;
+        BEBitMask.toString(BitMaskStr, 2, false);
+        dbgs() << BitMaskStr << ", " << BranchEntriesBytes << " bytes\n";
+      });
     }
     MapTy Map;
 
@@ -375,7 +377,7 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
       PrevAddress = OutputAddress;
       int64_t InputDelta = 0;
       if (J < EqualElems) {
-        InputOffset = (OutputOffset << 1) | BEBitMask[J];
+        InputOffset = ((OutputOffset + ColdInputSkew) << 1) | BEBitMask[J];
       } else {
         InputDelta = DE.getSLEB128(&Offset, &Err);
         InputOffset += InputDelta;

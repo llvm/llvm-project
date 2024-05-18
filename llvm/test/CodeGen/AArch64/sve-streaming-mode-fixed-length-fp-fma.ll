@@ -40,8 +40,8 @@ define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) 
 define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.h, p0/m, z2.h, z1.h
@@ -91,8 +91,8 @@ define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %o
 define void @fma_v8f32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.s, p0/m, z2.s, z1.s
@@ -140,8 +140,8 @@ define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double
 define void @fma_v4f64(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.d, p0/m, z2.d, z1.d

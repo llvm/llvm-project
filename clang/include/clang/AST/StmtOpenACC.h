@@ -142,9 +142,7 @@ class OpenACCComputeConstruct final
                           Stmt *StructuredBlock)
       : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass, K, Start,
                                        End, StructuredBlock) {
-    assert((K == OpenACCDirectiveKind::Parallel ||
-            K == OpenACCDirectiveKind::Serial ||
-            K == OpenACCDirectiveKind::Kernels) &&
+    assert(isOpenACCComputeDirectiveKind(K) &&
            "Only parallel, serial, and kernels constructs should be "
            "represented by this type");
 
