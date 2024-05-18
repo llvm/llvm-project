@@ -10,6 +10,22 @@
 #ifndef _LIBCPP_GENERATOR
 #define _LIBCPP_GENERATOR
 
+/*
+
+namespace std {
+  // [coro.generator.class], class template generator
+  template<class Ref, class V = void, class Allocator = void>
+    class generator;
+
+  namespace pmr {
+    template<class R, class V = void>
+      using generator = std::generator<R, V, polymorphic_allocator<>>;
+  }
+}
+
+*/
+
+#include <__algorithm/max.h>
 #include <__assert>
 #include <__concepts/common_reference_with.h>
 #include <__concepts/constructible.h>
@@ -25,6 +41,8 @@
 #include <__memory/addressof.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/construct_at.h>
+#include <__memory_resource/polymorphic_allocator.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/elements_of.h>
@@ -286,6 +304,183 @@ public:
   }
 };
 
+struct alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) __gen_aligned_block {
+  char __data[__STDCPP_DEFAULT_NEW_ALIGNMENT__];
+
+  _LIBCPP_HIDE_FROM_ABI static size_t __count(const size_t __size) noexcept {
+    return (__size + sizeof(__gen_aligned_block) - 1) / sizeof(__gen_aligned_block);
+  };
+};
+
+template <class _Allocator>
+concept __gen_stateless_allocator =
+    default_initializable<_Allocator> && allocator_traits<_Allocator>::is_always_equal::value;
+
+template <class _Allocator>
+class __gen_promise_allocator {
+private:
+  using __rebind           = allocator_traits<_Allocator>::template rebind_alloc<__gen_aligned_block>;
+  using __rebind_size_type = allocator_traits<__rebind>::size_type;
+
+  using __rebind_pointer = allocator_traits<__rebind>::pointer;
+  static_assert(is_pointer_v<__rebind_pointer>);
+
+  _LIBCPP_HIDE_FROM_ABI static void* __allocate(__rebind __al, const size_t __size) {
+    if constexpr (__gen_stateless_allocator<__rebind>) {
+      const size_t __block_count = __gen_aligned_block::__count(__size);
+      return __al.allocate(static_cast<__rebind_size_type>(__block_count));
+    } else {
+      // Allocates enough blocks for the coroutine frame, the size of the stateful allocator, and the alignment of the
+      // stateful allocator
+      const size_t __block_count = __gen_aligned_block::__count(__size + sizeof(__rebind) + alignof(__rebind));
+      void* const __ptr          = __al.allocate(static_cast<__rebind_size_type>(__block_count));
+
+      // Stores the stateful allocator in the allocated block
+      __rebind* const __al_ptr = reinterpret_cast<__rebind*>(
+          (reinterpret_cast<uintptr_t>(__ptr) + __size + alignof(__rebind) - 1) & ~(alignof(__rebind) - 1));
+      std::construct_at(__al_ptr, std::move(__al));
+      return __ptr;
+    }
+  }
+
+public:
+  _LIBCPP_HIDE_FROM_ABI void* operator new(size_t __size)
+    requires default_initializable<_Allocator>
+  {
+    return __allocate({}, __size);
+  }
+
+  template <class _Allocator2, class... _Args>
+    requires convertible_to<const _Allocator2&, _Allocator>
+  _LIBCPP_HIDE_FROM_ABI void*
+  operator new(const size_t __size, allocator_arg_t, const _Allocator2& __alloc, const _Args&...) {
+    return __allocate(static_cast<__rebind>(static_cast<_Allocator>(__alloc)), __size);
+  }
+
+  template <class _This, class _Allocator2, class... _Args>
+    requires convertible_to<const _Allocator2&, _Allocator>
+  _LIBCPP_HIDE_FROM_ABI void*
+  operator new(const size_t __size, const _This&, allocator_arg_t, const _Allocator2& __alloc, const _Args&...) {
+    return __allocate(static_cast<__rebind>(static_cast<_Allocator>(__alloc)), __size);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static void operator delete(void* const __ptr, const size_t __size) noexcept {
+    if constexpr (__gen_stateless_allocator<__rebind>) {
+      __rebind __al;
+      const size_t __block_count = __gen_aligned_block::__count(__size);
+      __al.deallocate(static_cast<__gen_aligned_block*>(__ptr), static_cast<__rebind_size_type>(__block_count));
+    } else {
+      // Retrieves the stateful allocator stored in the allocated block
+      __rebind* const __al_ptr = reinterpret_cast<__rebind*>(
+          (reinterpret_cast<uintptr_t>(__ptr) + __size + alignof(__rebind) - 1) & ~(alignof(__rebind) - 1));
+      __rebind __al = std::move(*__al_ptr);
+      std::destroy_at(__al_ptr);
+
+      const size_t __block_count = __gen_aligned_block::__count(__size + sizeof(__rebind) + alignof(__rebind));
+      __al.deallocate(static_cast<__gen_aligned_block*>(__ptr), static_cast<__rebind_size_type>(__block_count));
+    }
+  }
+};
+
+template <>
+class __gen_promise_allocator<void> {
+private:
+  using __deallocate_fn = void (*)(void*, size_t) noexcept;
+
+  template <class _Rebind>
+  _LIBCPP_HIDE_FROM_ABI static void __deallocate(void* const __ptr, const size_t __size) noexcept {
+    using __rebind_size_type = allocator_traits<_Rebind>::size_type;
+
+    if constexpr (__gen_stateless_allocator<_Rebind>) {
+      _Rebind __al;
+      const size_t __block_count = __gen_aligned_block::__count(__size + sizeof(__deallocate_fn));
+      __al.deallocate(static_cast<__gen_aligned_block*>(__ptr), static_cast<__rebind_size_type>(__block_count));
+    } else {
+      // Retrieves the stateful allocator stored in the allocated block
+      _Rebind* const __al_ptr = reinterpret_cast<_Rebind*>(
+          (reinterpret_cast<uintptr_t>(__ptr) + __size + sizeof(__deallocate_fn) + alignof(_Rebind) - 1) &
+          ~(alignof(_Rebind) - 1));
+      _Rebind __al = std::move(*__al_ptr);
+      std::destroy_at(__al_ptr);
+
+      const size_t __block_count =
+          __gen_aligned_block::__count(__size + sizeof(__deallocate_fn) + sizeof(_Rebind) + alignof(_Rebind));
+      __al.deallocate(static_cast<__gen_aligned_block*>(__ptr), static_cast<__rebind_size_type>(__block_count));
+    }
+  }
+
+  template <class _Allocator>
+  _LIBCPP_HIDE_FROM_ABI static void* __allocate(const _Allocator& __al, const size_t __size) {
+    using __rebind           = allocator_traits<_Allocator>::template rebind_alloc<__gen_aligned_block>;
+    using __rebind_size_type = allocator_traits<__rebind>::size_type;
+
+    using __rebind_pointer = allocator_traits<__rebind>::pointer;
+    static_assert(is_pointer_v<__rebind_pointer>);
+
+    __rebind __rebind_al = static_cast<__rebind>(__al);
+    if constexpr (__gen_stateless_allocator<__rebind>) {
+      const size_t __block_count = __gen_aligned_block::__count(__size + sizeof(__deallocate_fn));
+      void* const __ptr          = __rebind_al.allocate(static_cast<__rebind_size_type>(__block_count));
+
+      // Stores the deallocation function in the allocated block
+      __deallocate_fn* const __dealloc_ptr =
+          reinterpret_cast<__deallocate_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+      *__dealloc_ptr = __deallocate<__rebind>;
+      return __ptr;
+    } else {
+      // Allocates enough blocks for the coroutine frame, the size of the stateful allocator, the alignment of the
+      // stateful allocator, and the deallocation function
+      const size_t __block_count =
+          __gen_aligned_block::__count(__size + sizeof(__deallocate_fn) + sizeof(__rebind) + alignof(__rebind));
+      void* const __ptr = __rebind_al.allocate(static_cast<__rebind_size_type>(__block_count));
+
+      // Stores the deallocation function in the allocated block
+      __deallocate_fn* const __dealloc_ptr =
+          reinterpret_cast<__deallocate_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+      *__dealloc_ptr = __deallocate<__rebind>;
+
+      // Stores the stateful allocator in the allocated block
+      __rebind* const __al_ptr = reinterpret_cast<__rebind*>(
+          (reinterpret_cast<uintptr_t>(__ptr) + sizeof(__deallocate_fn) + __size + alignof(__rebind) - 1) &
+          ~(alignof(__rebind) - 1));
+      std::construct_at(__al_ptr, std::move(__rebind_al));
+      return __ptr;
+    }
+  }
+
+public:
+  _LIBCPP_HIDE_FROM_ABI void* operator new(const size_t __size) {
+    void* const __ptr         = ::operator new(__size + sizeof(__deallocate_fn));
+    __deallocate_fn __dealloc = [](void* const __ptr, const size_t __size) static noexcept -> void {
+      ::operator delete(__ptr, __size + sizeof(__deallocate_fn));
+    };
+
+    __deallocate_fn* const __dealloc_ptr =
+        reinterpret_cast<__deallocate_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+    *__dealloc_ptr = __dealloc;
+    return __ptr;
+  }
+
+  template <class _Allocator, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI void*
+  operator new(const size_t __size, allocator_arg_t, const _Allocator& __alloc, const _Args&...) {
+    return __allocate(__alloc, __size);
+  }
+
+  template <class _This, class _Allocator, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI void*
+  operator new(const size_t __size, const _This&, allocator_arg_t, const _Allocator& __alloc, const _Args&...) {
+    return __allocate(__alloc, __size);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static void operator delete(void* const __ptr, const size_t __size) noexcept {
+    __deallocate_fn* const __dealloc_ptr =
+        reinterpret_cast<__deallocate_fn*>(reinterpret_cast<uintptr_t>(__ptr) + __size);
+    const __deallocate_fn __dealloc = *__dealloc_ptr;
+    __dealloc(__ptr, __size);
+  }
+};
+
 template <class _Ref, class _Val>
 class __gen_iter {
 private:
@@ -347,7 +542,7 @@ private:
 public:
   using yielded = __gen_yielded<_Ref, _Val>;
 
-  struct promise_type : __gen_promise_base<yielded> {
+  struct promise_type : __gen_promise_base<yielded>, __gen_promise_allocator<_Allocator> {
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI generator get_return_object() noexcept {
       return generator{coroutine_handle<promise_type>::from_promise(*this)};
     }
@@ -382,6 +577,13 @@ private:
 
   coroutine_handle<promise_type> __coroutine_;
 };
+
+namespace pmr {
+
+template <class _Ref, class _Val = void>
+using generator = std::generator<_Ref, _Val, polymorphic_allocator<>>;
+
+} // namespace pmr
 
 _LIBCPP_END_NAMESPACE_STD
 
