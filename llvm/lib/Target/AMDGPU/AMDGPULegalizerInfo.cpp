@@ -5424,17 +5424,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   unsigned Size = Ty.getSizeInBits();
 
   if (Size == 32) {
-    if (!Ty.isPointer()) {
-      // Already legal
-      return true;
-    }
-    Src0 = B.buildPtrToInt(S32, Src0).getReg(0);
-    if (Src2.isValid())
-      Src2 = B.buildPtrToInt(S32, Src2).getReg(0);
-
-    Register LaneOpDst = createLaneOp(Src0, Src1, Src2);
-    B.buildIntToPtr(DstReg, LaneOpDst);
-    MI.eraseFromParent();
+    // Already legal
     return true;
   }
 
