@@ -216,3 +216,45 @@ void foo() {
 }
 
 } // namespace conditional_op
+
+namespace local_assignment_basic {
+
+RefCountable *provide_ref_ctnbl();
+
+void foo(RefCountable* a) {
+  RefCountable* b = a;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  if (b->trivial())
+    b = provide_ref_ctnbl();
+}
+
+void bar(RefCountable* a) {
+  RefCountable* b;
+  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  b = provide_ref_ctnbl();
+}
+
+void baz() {
+  RefPtr a = provide_ref_ctnbl();
+  {
+    RefCountable* b = a.get();
+    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    b = provide_ref_ctnbl();
+  }
+}
+
+} // namespace local_assignment_basic
+
+namespace local_assignment_to_parameter {
+
+RefCountable *provide_ref_ctnbl();
+void someFunction();
+
+void foo(RefCountable* a) {
+  a = provide_ref_ctnbl();
+  // expected-warning@-1{{Assignment to an uncounted parameter 'a' is unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  a->method();
+}
+
+} // namespace local_assignment_to_parameter
