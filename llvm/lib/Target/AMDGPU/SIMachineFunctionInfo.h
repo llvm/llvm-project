@@ -39,7 +39,12 @@ class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
   enum AMDGPUPSVKind : unsigned {
     PSVImage = PseudoSourceValue::TargetCustom,
+#ifdef LLPC_BUILD_GFX12
+    GWSResource,
+    GlobalRegister,
+#else /* LLPC_BUILD_GFX12 */
     GWSResource
+#endif /* LLPC_BUILD_GFX12 */
   };
 
 protected:
@@ -86,6 +91,27 @@ public:
   }
 };
 
+#ifdef LLPC_BUILD_GFX12
+class AMDGPUGlobalRegisterPseudoSourceValue final
+    : public AMDGPUPseudoSourceValue {
+public:
+  explicit AMDGPUGlobalRegisterPseudoSourceValue(const AMDGPUTargetMachine &TM)
+      : AMDGPUPseudoSourceValue(GlobalRegister, TM) {}
+
+  static bool classof(const PseudoSourceValue *V) {
+    return V->kind() == GlobalRegister;
+  }
+
+  // These are inaccessible memory from IR.
+  bool isAliased(const MachineFrameInfo *) const override { return false; }
+
+  // These are inaccessible memory from IR.
+  bool mayAlias(const MachineFrameInfo *) const override { return false; }
+
+  void printCustom(raw_ostream &OS) const override { OS << "GlobalRegister"; }
+};
+
+#endif /* LLPC_BUILD_GFX12 */
 namespace yaml {
 
 struct SIArgument {
@@ -430,6 +456,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
+#ifdef LLPC_BUILD_GFX12
+  const AMDGPUGlobalRegisterPseudoSourceValue GlobalRegisterPSV;
+#endif /* LLPC_BUILD_GFX12 */
 
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
@@ -1084,6 +1113,13 @@ public:
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
     return &GWSResourcePSV;
+#ifdef LLPC_BUILD_GFX12
+  }
+
+  const AMDGPUGlobalRegisterPseudoSourceValue *
+  getGlobalRegisterPSV(const AMDGPUTargetMachine &TM) {
+    return &GlobalRegisterPSV;
+#endif /* LLPC_BUILD_GFX12 */
   }
 
   unsigned getOccupancy() const {
