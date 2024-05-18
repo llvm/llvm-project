@@ -3253,7 +3253,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  size_type __target_capacity = __recommend(size());
+  size_type __target_capacity = size();
+  __target_capacity = __target_capacity < __min_cap ? static_cast<size_type>(__min_cap) - 1 : __recommend(__target_capacity);
   if (__target_capacity == capacity())
     return;
 
