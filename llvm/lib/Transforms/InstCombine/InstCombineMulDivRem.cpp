@@ -906,12 +906,13 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   }
 
   // (X * 0.0) * constant => X * 0.0
-  if (match(Op0, m_FMul(m_Value(X), m_AnyZeroFP())) &&
-      match(Op1, m_Constant())) {
-    Instruction *FI = cast<Instruction>(Op0);
-    replaceOperand(*FI, 0, Op1);
-    replaceOperand(I, 1, Op0);
-    return replaceOperand(I, 0, X);
+  Constant *C1;
+  if (match(Op0, m_FMul(m_Value(X), m_Constant(C1))) &&
+      match(C1, m_AnyZeroFP()) && match(Op1, m_Constant(C))) {
+    if (Constant *CC1 =
+            ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
+      return BinaryOperator::CreateFMulFMF(X, CC1, I.getFastMathFlags());
+    }
   }
 
   // Simplify FMUL recurrences starting with 0.0 to 0.0 if nnan and nsz are set.
