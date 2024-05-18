@@ -10636,7 +10636,7 @@ bool clang::isBetterOverloadCandidate(
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
   if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
       sameFunctionParameterTypeLists(S, Cand1, Cand2) &&
-      S.getMoreConstrainedFunction(Cand1.Function, Cand2.Function) ==
+      S.Concept().getMoreConstrainedFunction(Cand1.Function, Cand2.Function) ==
           Cand1.Function)
     return true;
 
@@ -13342,7 +13342,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       }
       // FD has the same CUDA prefernece than Result. Continue check
       // constraints.
-      FunctionDecl *MoreConstrained = getMoreConstrainedFunction(FD, Result);
+      FunctionDecl *MoreConstrained = Concept().getMoreConstrainedFunction(FD, Result);
       if (MoreConstrained != FD) {
         if (!MoreConstrained) {
           IsResultAmbiguous = true;
@@ -13368,7 +13368,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       // constraints.
       if (getLangOpts().CUDA && CheckCUDAPreference(Skipped, Result) != 0)
         continue;
-      if (!getMoreConstrainedFunction(Skipped, Result))
+      if (!Concept().getMoreConstrainedFunction(Skipped, Result))
         return nullptr;
     }
     Pair = DAP;

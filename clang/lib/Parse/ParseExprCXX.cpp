@@ -24,6 +24,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaConcept.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -1418,7 +1419,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       ExprResult RequiresClause;
       if (TryConsumeToken(tok::kw_requires)) {
         RequiresClause =
-            Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+            Actions.Concept().ActOnRequiresClause(ParseConstraintLogicalOrExpression(
                 /*IsTrailingRequiresClause=*/false));
         if (RequiresClause.isInvalid())
           SkipUntil({tok::l_brace, tok::l_paren}, StopAtSemi | StopBeforeMatch);
@@ -3628,7 +3629,7 @@ ExprResult Parser::ParseRequiresExpression() {
   // Dependent diagnostics are attached to this Decl and non-depenedent
   // diagnostics are surfaced after this parse.
   ParsingDeclRAIIObject ParsingBodyDecl(*this, ParsingDeclRAIIObject::NoParent);
-  RequiresExprBodyDecl *Body = Actions.ActOnStartRequiresExpr(
+  RequiresExprBodyDecl *Body = Actions.Concept().ActOnStartRequiresExpr(
       RequiresKWLoc, LocalParameterDecls, getCurScope());
 
   if (Tok.is(tok::r_brace)) {
@@ -3669,7 +3670,7 @@ ExprResult Parser::ParseRequiresExpression() {
         SourceLocation NoexceptLoc;
         TryConsumeToken(tok::kw_noexcept, NoexceptLoc);
         if (Tok.is(tok::semi)) {
-          Req = Actions.ActOnCompoundRequirement(Expression.get(), NoexceptLoc);
+          Req = Actions.Concept().ActOnCompoundRequirement(Expression.get(), NoexceptLoc);
           if (Req)
             Requirements.push_back(Req);
           break;
@@ -3696,7 +3697,7 @@ ExprResult Parser::ParseRequiresExpression() {
           ConsumeAnnotationToken();
         }
 
-        Req = Actions.ActOnCompoundRequirement(
+        Req = Actions.Concept().ActOnCompoundRequirement(
             Expression.get(), NoexceptLoc, SS, takeTemplateIdAnnotation(Tok),
             TemplateParameterDepth);
         ConsumeAnnotationToken();
@@ -3765,7 +3766,7 @@ ExprResult Parser::ParseRequiresExpression() {
               break;
             }
             if (auto *Req =
-                    Actions.ActOnNestedRequirement(ConstraintExpr.get()))
+                    Actions.Concept().ActOnNestedRequirement(ConstraintExpr.get()))
               Requirements.push_back(Req);
             else {
               SkipUntil(tok::semi, tok::r_brace,
@@ -3810,7 +3811,7 @@ ExprResult Parser::ParseRequiresExpression() {
                 break;
             }
 
-            if (auto *Req = Actions.ActOnTypeRequirement(TypenameKWLoc, SS,
+            if (auto *Req = Actions.Concept().ActOnTypeRequirement(TypenameKWLoc, SS,
                                                          NameLoc, II,
                                                          TemplateId)) {
               Requirements.push_back(Req);
@@ -3833,7 +3834,7 @@ ExprResult Parser::ParseRequiresExpression() {
         if (!Expression.isInvalid() && PossibleRequiresExprInSimpleRequirement)
           Diag(StartLoc, diag::err_requires_expr_in_simple_requirement)
               << FixItHint::CreateInsertion(StartLoc, "requires");
-        if (auto *Req = Actions.ActOnSimpleRequirement(Expression.get()))
+        if (auto *Req = Actions.Concept().ActOnSimpleRequirement(Expression.get()))
           Requirements.push_back(Req);
         else {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
@@ -3861,14 +3862,14 @@ ExprResult Parser::ParseRequiresExpression() {
       // other diagnostics quoting an empty requires expression they never
       // wrote.
       Braces.consumeClose();
-      Actions.ActOnFinishRequiresExpr();
+      Actions.Concept().ActOnFinishRequiresExpr();
       return ExprError();
     }
   }
   Braces.consumeClose();
-  Actions.ActOnFinishRequiresExpr();
+  Actions.Concept().ActOnFinishRequiresExpr();
   ParsingBodyDecl.complete(Body);
-  return Actions.ActOnRequiresExpr(
+  return Actions.Concept().ActOnRequiresExpr(
       RequiresKWLoc, Body, Parens.getOpenLocation(), LocalParameterDecls,
       Parens.getCloseLocation(), Requirements, Braces.getCloseLocation());
 }

@@ -14,13 +14,35 @@
 #define LLVM_CLANG_SEMA_SEMACONCEPT_H
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Expr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprConcepts.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Token.h"
+#include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/ParsedTemplate.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -153,6 +175,7 @@ private:
 };
 
 class LocalInstantiationScope;
+class LookupResult;
 class MultiLevelTemplateArgumentList;
 
 // A struct to represent the 'new' declaration, which is either itself just
@@ -398,6 +421,102 @@ public:
                        std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
                        const MultiLevelTemplateArgumentList &MLTAL,
                        LocalInstantiationScope &Scope);
+
+  RequiresExprBodyDecl *
+  ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
+                         ArrayRef<ParmVarDecl *> LocalParameters,
+                         Scope *BodyScope);
+  void ActOnFinishRequiresExpr();
+  concepts::Requirement *ActOnSimpleRequirement(Expr *E);
+  concepts::Requirement *ActOnTypeRequirement(SourceLocation TypenameKWLoc,
+                                              CXXScopeSpec &SS,
+                                              SourceLocation NameLoc,
+                                              const IdentifierInfo *TypeName,
+                                              TemplateIdAnnotation *TemplateId);
+  concepts::Requirement *ActOnCompoundRequirement(Expr *E,
+                                                  SourceLocation NoexceptLoc);
+  concepts::Requirement *ActOnCompoundRequirement(
+      Expr *E, SourceLocation NoexceptLoc, CXXScopeSpec &SS,
+      TemplateIdAnnotation *TypeConstraint, unsigned Depth);
+  concepts::Requirement *ActOnNestedRequirement(Expr *Constraint);
+  concepts::ExprRequirement *BuildExprRequirement(
+      Expr *E, bool IsSatisfied, SourceLocation NoexceptLoc,
+      concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
+  concepts::ExprRequirement *BuildExprRequirement(
+      concepts::Requirement::SubstitutionDiagnostic *ExprSubstDiag,
+      bool IsSatisfied, SourceLocation NoexceptLoc,
+      concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
+  concepts::TypeRequirement *BuildTypeRequirement(TypeSourceInfo *Type);
+  concepts::TypeRequirement *BuildTypeRequirement(
+      concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
+  concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
+  concepts::NestedRequirement *
+  BuildNestedRequirement(StringRef InvalidConstraintEntity,
+                         const ASTConstraintSatisfaction &Satisfaction);
+  ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
+                               RequiresExprBodyDecl *Body,
+                               SourceLocation LParenLoc,
+                               ArrayRef<ParmVarDecl *> LocalParameters,
+                               SourceLocation RParenLoc,
+                               ArrayRef<concepts::Requirement *> Requirements,
+                               SourceLocation ClosingBraceLoc);
+
+  bool CheckTypeConstraint(TemplateIdAnnotation *TypeConstraint);
+
+  bool ActOnTypeConstraint(const CXXScopeSpec &SS,
+                           TemplateIdAnnotation *TypeConstraint,
+                           TemplateTypeParmDecl *ConstrainedParameter,
+                           SourceLocation EllipsisLoc);
+  bool BuildTypeConstraint(const CXXScopeSpec &SS,
+                           TemplateIdAnnotation *TypeConstraint,
+                           TemplateTypeParmDecl *ConstrainedParameter,
+                           SourceLocation EllipsisLoc,
+                           bool AllowUnexpandedPack);
+  
+  bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
+                            DeclarationNameInfo NameInfo,
+                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
+                            const TemplateArgumentListInfo *TemplateArgs,
+                            TemplateTypeParmDecl *ConstrainedParameter,
+                            SourceLocation EllipsisLoc);
+
+  bool AttachTypeConstraint(AutoTypeLoc TL,
+                            NonTypeTemplateParmDecl *NewConstrainedParm,
+                            NonTypeTemplateParmDecl *OrigConstrainedParm,
+                            SourceLocation EllipsisLoc);
+
+  ExprResult
+  CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+                         const DeclarationNameInfo &ConceptNameInfo,
+                         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+                         const TemplateArgumentListInfo *TemplateArgs);
+
+  Decl *ActOnConceptDefinition(Scope *S,
+                               MultiTemplateParamsArg TemplateParameterLists,
+                               const IdentifierInfo *Name,
+                               SourceLocation NameLoc, Expr *ConstraintExpr,
+                               const ParsedAttributesView &Attrs);
+
+  void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
+                                bool &AddToScope);
+
+  void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
+  ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
+  ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
+
+  void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
+
+  /// Returns the more constrained function according to the rules of
+  /// partial ordering by constraints (C++ [temp.constr.order]).
+  ///
+  /// \param FD1 the first function
+  ///
+  /// \param FD2 the second function
+  ///
+  /// \returns the more constrained function. If neither function is
+  /// more constrained, returns NULL.
+  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
+                                           FunctionDecl *FD2);
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were

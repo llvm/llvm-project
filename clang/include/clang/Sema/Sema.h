@@ -2036,8 +2036,6 @@ public:
   void CheckTCBEnforcement(const SourceLocation CallExprLoc,
                            const NamedDecl *Callee);
 
-  void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
-
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
@@ -4735,9 +4733,6 @@ public:
 
   void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
                            StringLiteral *DeletedMessage = nullptr);
-  void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
-  ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
-  ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
 
   NamedDecl *
   ActOnDecompositionDeclarator(Scope *S, Declarator &D,
@@ -6819,45 +6814,6 @@ public:
                                               bool IsIfExists, CXXScopeSpec &SS,
                                               UnqualifiedId &Name);
 
-  RequiresExprBodyDecl *
-  ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
-                         ArrayRef<ParmVarDecl *> LocalParameters,
-                         Scope *BodyScope);
-  void ActOnFinishRequiresExpr();
-  concepts::Requirement *ActOnSimpleRequirement(Expr *E);
-  concepts::Requirement *ActOnTypeRequirement(SourceLocation TypenameKWLoc,
-                                              CXXScopeSpec &SS,
-                                              SourceLocation NameLoc,
-                                              const IdentifierInfo *TypeName,
-                                              TemplateIdAnnotation *TemplateId);
-  concepts::Requirement *ActOnCompoundRequirement(Expr *E,
-                                                  SourceLocation NoexceptLoc);
-  concepts::Requirement *ActOnCompoundRequirement(
-      Expr *E, SourceLocation NoexceptLoc, CXXScopeSpec &SS,
-      TemplateIdAnnotation *TypeConstraint, unsigned Depth);
-  concepts::Requirement *ActOnNestedRequirement(Expr *Constraint);
-  concepts::ExprRequirement *BuildExprRequirement(
-      Expr *E, bool IsSatisfied, SourceLocation NoexceptLoc,
-      concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
-  concepts::ExprRequirement *BuildExprRequirement(
-      concepts::Requirement::SubstitutionDiagnostic *ExprSubstDiag,
-      bool IsSatisfied, SourceLocation NoexceptLoc,
-      concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement);
-  concepts::TypeRequirement *BuildTypeRequirement(TypeSourceInfo *Type);
-  concepts::TypeRequirement *BuildTypeRequirement(
-      concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
-  concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
-  concepts::NestedRequirement *
-  BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                         const ASTConstraintSatisfaction &Satisfaction);
-  ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
-                               RequiresExprBodyDecl *Body,
-                               SourceLocation LParenLoc,
-                               ArrayRef<ParmVarDecl *> LocalParameters,
-                               SourceLocation RParenLoc,
-                               ArrayRef<concepts::Requirement *> Requirements,
-                               SourceLocation ClosingBraceLoc);
-
 private:
   ExprResult BuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
                                                 bool IsDelete);
@@ -8855,30 +8811,6 @@ public:
                                 unsigned Position, SourceLocation EqualLoc,
                                 ParsedType DefaultArg, bool HasTypeConstraint);
 
-  bool CheckTypeConstraint(TemplateIdAnnotation *TypeConstraint);
-
-  bool ActOnTypeConstraint(const CXXScopeSpec &SS,
-                           TemplateIdAnnotation *TypeConstraint,
-                           TemplateTypeParmDecl *ConstrainedParameter,
-                           SourceLocation EllipsisLoc);
-  bool BuildTypeConstraint(const CXXScopeSpec &SS,
-                           TemplateIdAnnotation *TypeConstraint,
-                           TemplateTypeParmDecl *ConstrainedParameter,
-                           SourceLocation EllipsisLoc,
-                           bool AllowUnexpandedPack);
-
-  bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
-                            DeclarationNameInfo NameInfo,
-                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
-                            const TemplateArgumentListInfo *TemplateArgs,
-                            TemplateTypeParmDecl *ConstrainedParameter,
-                            SourceLocation EllipsisLoc);
-
-  bool AttachTypeConstraint(AutoTypeLoc TL,
-                            NonTypeTemplateParmDecl *NewConstrainedParm,
-                            NonTypeTemplateParmDecl *OrigConstrainedParm,
-                            SourceLocation EllipsisLoc);
-
   bool RequireStructuralType(QualType T, SourceLocation Loc);
 
   QualType CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
@@ -8981,12 +8913,6 @@ public:
                                 VarTemplateDecl *Template, NamedDecl *FoundD,
                                 SourceLocation TemplateLoc,
                                 const TemplateArgumentListInfo *TemplateArgs);
-
-  ExprResult
-  CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                         const DeclarationNameInfo &ConceptNameInfo,
-                         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-                         const TemplateArgumentListInfo *TemplateArgs);
 
   void diagnoseMissingTemplateArguments(TemplateName Name, SourceLocation Loc);
 
@@ -9329,15 +9255,6 @@ public:
 
   void CheckDeductionGuideTemplate(FunctionTemplateDecl *TD);
 
-  Decl *ActOnConceptDefinition(Scope *S,
-                               MultiTemplateParamsArg TemplateParameterLists,
-                               const IdentifierInfo *Name,
-                               SourceLocation NameLoc, Expr *ConstraintExpr,
-                               const ParsedAttributesView &Attrs);
-
-  void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
-                                bool &AddToScope);
-
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                const CXXScopeSpec &SS,
                                const IdentifierInfo *Name,
@@ -9353,6 +9270,9 @@ public:
   /// and partial specializations are visible/reachable, and diagnose if not.
   void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
   void checkSpecializationReachability(SourceLocation Loc, NamedDecl *Spec);
+
+  TemplateArgumentListInfo
+  makeTemplateArgumentListInfo(TemplateIdAnnotation &TemplateId);
 
   ///@}
 
@@ -9620,9 +9540,6 @@ public:
                      const PartialDiagnostic &AmbigDiag,
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
-
-  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
-                                           FunctionDecl *FD2);
 
   ///@}
 

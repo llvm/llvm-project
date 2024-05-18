@@ -4195,39 +4195,6 @@ void Sema::ActOnStartCXXInClassMemberInitializer() {
   PushFunctionScope();
 }
 
-void Sema::ActOnStartTrailingRequiresClause(Scope *S, Declarator &D) {
-  if (!D.isFunctionDeclarator())
-    return;
-  auto &FTI = D.getFunctionTypeInfo();
-  if (!FTI.Params)
-    return;
-  for (auto &Param : ArrayRef<DeclaratorChunk::ParamInfo>(FTI.Params,
-                                                          FTI.NumParams)) {
-    auto *ParamDecl = cast<NamedDecl>(Param.Param);
-    if (ParamDecl->getDeclName())
-      PushOnScopeChains(ParamDecl, S, /*AddToContext=*/false);
-  }
-}
-
-ExprResult Sema::ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr) {
-  return ActOnRequiresClause(ConstraintExpr);
-}
-
-ExprResult Sema::ActOnRequiresClause(ExprResult ConstraintExpr) {
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
-  ConstraintExpr = CorrectDelayedTyposInExpr(ConstraintExpr);
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
-  if (DiagnoseUnexpandedParameterPack(ConstraintExpr.get(),
-                                      UPPC_RequiresClause))
-    return ExprError();
-
-  return ConstraintExpr;
-}
-
 ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
                                                     Expr *InitExpr,
                                                     SourceLocation InitLoc) {

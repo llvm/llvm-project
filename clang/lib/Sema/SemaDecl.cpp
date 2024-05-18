@@ -7575,7 +7575,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                                     /*DiagID=*/0);
 
   if (const AutoType *AutoT = R->getAs<AutoType>())
-    CheckConstrainedAuto(
+    SemaRef.Concept().CheckConstrainedAuto(
         AutoT,
         TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
 

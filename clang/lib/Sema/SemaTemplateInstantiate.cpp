@@ -3131,7 +3131,7 @@ bool Sema::SubstTypeConstraint(
                                InstArgs))
       return true;
   }
-  return AttachTypeConstraint(
+  return Concept().AttachTypeConstraint(
       TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
       TC->getNamedConcept(),
       /*FoundDecl=*/TC->getConceptReference()->getFoundDecl(), &InstArgs, Inst,

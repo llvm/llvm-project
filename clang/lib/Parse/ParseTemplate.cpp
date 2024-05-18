@@ -20,6 +20,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
@@ -145,7 +146,7 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
 
       if (TryConsumeToken(tok::kw_requires)) {
         OptionalRequiresClauseConstraintER =
-            Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+            Actions.Concept().ActOnRequiresClause(ParseConstraintLogicalOrExpression(
                 /*IsTrailingRequiresClause=*/false));
         if (!OptionalRequiresClauseConstraintER.isUsable()) {
           // Skip until the semi-colon or a '}'.
@@ -339,7 +340,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   Expr *ConstraintExpr = ConstraintExprResult.get();
-  return Actions.ActOnConceptDefinition(getCurScope(),
+  return Actions.Concept().ActOnConceptDefinition(getCurScope(),
                                         *TemplateInfo.TemplateParams, Id, IdLoc,
                                         ConstraintExpr, Attrs);
 }
@@ -763,7 +764,7 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
                                                   TypeConstraint != nullptr);
 
   if (TypeConstraint) {
-    Actions.ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
+    Actions.Concept().ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
                                 cast<TemplateTypeParmDecl>(NewDecl),
                                 EllipsisLoc);
   }
@@ -800,7 +801,7 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
     }
     if (TryConsumeToken(tok::kw_requires)) {
       OptionalRequiresClauseConstraintER =
-          Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+          Actions.Concept().ActOnRequiresClause(ParseConstraintLogicalOrExpression(
               /*IsTrailingRequiresClause=*/false));
       if (!OptionalRequiresClauseConstraintER.isUsable()) {
         SkipUntil(tok::comma, tok::greater, tok::greatergreater,

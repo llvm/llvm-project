@@ -37,6 +37,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -3662,7 +3663,7 @@ public:
       TemplateArgumentListInfo *TALI) {
     CXXScopeSpec SS;
     SS.Adopt(NNS);
-    ExprResult Result = getSema().CheckConceptTemplateId(SS, TemplateKWLoc,
+    ExprResult Result = getSema().Concept().CheckConceptTemplateId(SS, TemplateKWLoc,
                                                          ConceptNameInfo,
                                                          FoundDecl,
                                                          NamedConcept, TALI);
@@ -3690,11 +3691,11 @@ public:
   concepts::TypeRequirement *
   RebuildTypeRequirement(
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag) {
-    return SemaRef.BuildTypeRequirement(SubstDiag);
+    return SemaRef.Concept().BuildTypeRequirement(SubstDiag);
   }
 
   concepts::TypeRequirement *RebuildTypeRequirement(TypeSourceInfo *T) {
-    return SemaRef.BuildTypeRequirement(T);
+    return SemaRef.Concept().BuildTypeRequirement(T);
   }
 
   concepts::ExprRequirement *
@@ -3702,26 +3703,26 @@ public:
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag, bool IsSimple,
       SourceLocation NoexceptLoc,
       concepts::ExprRequirement::ReturnTypeRequirement Ret) {
-    return SemaRef.BuildExprRequirement(SubstDiag, IsSimple, NoexceptLoc,
+    return SemaRef.Concept().BuildExprRequirement(SubstDiag, IsSimple, NoexceptLoc,
                                         std::move(Ret));
   }
 
   concepts::ExprRequirement *
   RebuildExprRequirement(Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
                          concepts::ExprRequirement::ReturnTypeRequirement Ret) {
-    return SemaRef.BuildExprRequirement(E, IsSimple, NoexceptLoc,
+    return SemaRef.Concept().BuildExprRequirement(E, IsSimple, NoexceptLoc,
                                         std::move(Ret));
   }
 
   concepts::NestedRequirement *
   RebuildNestedRequirement(StringRef InvalidConstraintEntity,
                            const ASTConstraintSatisfaction &Satisfaction) {
-    return SemaRef.BuildNestedRequirement(InvalidConstraintEntity,
+    return SemaRef.Concept().BuildNestedRequirement(InvalidConstraintEntity,
                                           Satisfaction);
   }
 
   concepts::NestedRequirement *RebuildNestedRequirement(Expr *Constraint) {
-    return SemaRef.BuildNestedRequirement(Constraint);
+    return SemaRef.Concept().BuildNestedRequirement(Constraint);
   }
 
   /// \brief Build a new Objective-C boxed expression.

@@ -28,6 +28,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -4082,7 +4083,7 @@ void Parser::ParseDeclarationSpecifiers(
         if (!NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
             goto DoneWithDeclSpec;
 
-        if (TemplateId && !isInvalid && Actions.CheckTypeConstraint(TemplateId))
+        if (TemplateId && !isInvalid && Actions.Concept().CheckTypeConstraint(TemplateId))
             TemplateId = nullptr;
 
         ConsumeAnnotationToken();

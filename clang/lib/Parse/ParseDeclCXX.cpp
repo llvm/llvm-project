@@ -4290,7 +4290,7 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
                                   Scope::FunctionDeclarationScope |
                                   Scope::FunctionPrototypeScope);
 
-  Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
+  Actions.Concept().ActOnStartTrailingRequiresClause(getCurScope(), D);
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
   InitCXXThisScopeForDeclaratorIfRelevant(D, D.getDeclSpec(), ThisScope);
@@ -4299,7 +4299,7 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
       ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
 
   TrailingRequiresClause =
-      Actions.ActOnFinishTrailingRequiresClause(TrailingRequiresClause);
+      Actions.Concept().ActOnFinishTrailingRequiresClause(TrailingRequiresClause);
 
   if (!D.isDeclarationOfFunction()) {
     Diag(RequiresKWLoc,
