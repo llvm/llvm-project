@@ -377,6 +377,21 @@ define <4 x i32> @fold_lookthrough_binop_different_operands(<4 x i32> %x, <4 x i
   ret <4 x i32> %revshuf
 }
 
+define <4 x i32> @fold_lookthrough_binop_multiuse(<4 x i32> %x) {
+; CHECK-LABEL: @fold_lookthrough_binop_multiuse(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD2:%.*]] = add <4 x i32> [[SHUF]], [[REVSHUF]]
+; CHECK-NEXT:    ret <4 x i32> [[ADD2]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add = add <4 x i32> %shuf, %shuf
+  %revshuf = shufflevector <4 x i32> %add, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add2 = add <4 x i32> %shuf, %revshuf
+  ret <4 x i32> %add2
+}
+
 define <4 x i64> @fold_lookthrough_cast_chain(<4 x i16> %x) {
 ; CHECK-LABEL: @fold_lookthrough_cast_chain(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[X:%.*]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
