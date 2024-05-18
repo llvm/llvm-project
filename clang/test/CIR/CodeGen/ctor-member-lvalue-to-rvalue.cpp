@@ -25,13 +25,11 @@ struct String {
 void foo() {
   String s;
   String s1{s};
-  // FIXME: s1 shouldn't be uninitialized.
-
-  //  cir.func @_Z3foov() {
-  //   %0 = cir.alloca !ty_22String22, !cir.ptr<!ty_22String22>, ["s"] {alignment = 8 : i64}
-  //   %1 = cir.alloca !ty_22String22, !cir.ptr<!ty_22String22>, ["s1"] {alignment = 8 : i64}
-  //   cir.call @_ZN6StringC2Ev(%0) : (!cir.ptr<!ty_22String22>) -> ()
-  //   cir.call @_ZN6StringC2ERKS_(%1, %0) : (!cir.ptr<!ty_22String22>, !cir.ptr<!ty_22String22>) -> ()
-  //   cir.return
-  // }
 }
+// CHECK: cir.func @_Z3foov() {{.*}} {
+// CHECK:  %0 = cir.alloca !ty_22String22, !cir.ptr<!ty_22String22>, ["s", init] {alignment = 8 : i64}
+// CHECK:  %1 = cir.alloca !ty_22String22, !cir.ptr<!ty_22String22>, ["s1", init] {alignment = 8 : i64}
+// CHECK:  cir.call @_ZN6StringC2Ev(%0) : (!cir.ptr<!ty_22String22>) -> ()
+// CHECK:  cir.call @_ZN6StringC2ERKS_(%1, %0) : (!cir.ptr<!ty_22String22>, !cir.ptr<!ty_22String22>) -> ()
+// CHECK:  cir.return
+// }
