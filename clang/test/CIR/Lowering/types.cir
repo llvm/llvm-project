@@ -2,7 +2,11 @@
 // RUN: FileCheck --input-file=%t.mlir %s
 
 !void = !cir.void
+!u8i = !cir.int<u, 8>
 module {
+  cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<-8> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !cir.struct<struct {!cir.array<!cir.ptr<!u8i> x 1>}>
+  // CHECK: llvm.mlir.constant(-8 : i64) : i64
+  // CHECK:  llvm.inttoptr %{{[0-9]+}} : i64 to !llvm.ptr
   cir.func @testTypeLowering() {
     // Should lower void pointers as opaque pointers.
     %0 = cir.const #cir.ptr<null> : !cir.ptr<!void>

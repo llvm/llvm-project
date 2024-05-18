@@ -360,9 +360,11 @@ public:
     return create<mlir::cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
   }
 
-  mlir::TypedAttr getConstPtrAttr(mlir::Type t, uint64_t v) {
+  mlir::TypedAttr getConstPtrAttr(mlir::Type t, int64_t v) {
+    auto val =
+        mlir::IntegerAttr::get(mlir::IntegerType::get(t.getContext(), 64), v);
     return mlir::cir::ConstPtrAttr::get(getContext(),
-                                        t.cast<mlir::cir::PointerType>(), v);
+                                        t.cast<mlir::cir::PointerType>(), val);
   }
 
   // Creates constant nullptr for pointer type ty.

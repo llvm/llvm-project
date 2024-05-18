@@ -4,5 +4,5 @@
 int *p = (int*)0x1234;
 
 
-// CIR:  cir.global external @p = #cir.ptr<4660> : !cir.ptr<!s32i>
+// CIR:  cir.global external @p = #cir.ptr<4660 : i64> : !cir.ptr<!s32i>
 // LLVM: @p = global ptr inttoptr (i64 4660 to ptr)

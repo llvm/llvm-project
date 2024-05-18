@@ -1551,9 +1551,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // Note that DestTy is used as the MLIR type instead of a custom
     // nullptr type.
     mlir::Type Ty = CGF.getCIRType(DestTy);
-    return Builder.create<mlir::cir::ConstantOp>(
-        CGF.getLoc(E->getExprLoc()), Ty,
-        mlir::cir::ConstPtrAttr::get(Builder.getContext(), Ty, 0));
+    return Builder.getNullPtr(Ty, CGF.getLoc(E->getExprLoc()));
   }
 
   case CK_NullToMemberPointer: {

@@ -162,9 +162,8 @@ void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
 static void AddPointerLayoutOffset(CIRGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
-  builder.add(mlir::cir::ConstPtrAttr::get(CGM.getBuilder().getContext(),
-                                           CGM.getBuilder().getUInt8PtrTy(),
-                                           offset.getQuantity()));
+  builder.add(CGM.getBuilder().getConstPtrAttr(CGM.getBuilder().getUInt8PtrTy(),
+                                               offset.getQuantity()));
 }
 
 static void AddRelativeLayoutOffset(CIRGenModule &CGM,
