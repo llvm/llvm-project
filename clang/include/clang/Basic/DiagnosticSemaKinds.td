@@ -6552,7 +6552,7 @@ def err_counted_by_attr_refer_to_union : Error<
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 def err_counted_by_attr_pointee_unknown_size : Error<
-  "'counted_by' %select{cannot|should not}3 be applied to %select{"
+  "'counted_by' cannot be applied to %select{"
     "a pointer with pointee|" // pointer
     "an array with element}0" // array
   " of unknown size because %1 is %select{"
@@ -6561,13 +6561,7 @@ def err_counted_by_attr_pointee_unknown_size : Error<
     "a function type|"     // CountedByInvalidPointeeTypeKind::FUNCTION
     // CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER
     "a struct type with a flexible array member"
-    "%select{|. This will be an error in a future compiler version}3"
-    ""
   "}2">;
-
-def warn_counted_by_attr_elt_type_unknown_size :
-  Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
-  InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
 let CategoryName = "ARC Semantic Issue" in {
 
