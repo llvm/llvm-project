@@ -41,6 +41,8 @@
 
 using namespace llvm;
 
+#if defined(_WIN32) || !defined(__wasi__)
+
 #ifdef _WIN32
 WSABalancer::WSABalancer() {
   WSADATA WsaData;
@@ -307,3 +309,5 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 }
 
 raw_socket_stream::~raw_socket_stream() {}
+
+#endif
