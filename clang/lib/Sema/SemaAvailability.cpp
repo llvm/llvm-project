@@ -15,6 +15,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DelayedDiagnostic.h"
@@ -228,8 +229,9 @@ shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
     ForceAvailabilityFromVersion = VersionTuple(/*Major=*/10, /*Minor=*/13);
     break;
   case llvm::Triple::ShaderModel:
-    // Always enable availability diagnostics for shader models.
-    return true;
+    // FIXME: This will be updated when HLSL strict diagnostic mode
+    // is implemented (issue #90096)
+    return false;
   default:
     // New targets should always warn about availability.
     return Triple.getVendor() == llvm::Triple::Apple;
@@ -437,6 +439,10 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         << OffendingDecl << PlatformName << Introduced.getAsString()
         << S.Context.getTargetInfo().getPlatformMinVersion().getAsString()
         << UseEnvironment << AttrEnvironment << TargetEnvironment;
+
+    // Do not offer to silence the warning or fixits for HLSL
+    if (S.getLangOpts().HLSL)
+      return;
 
     if (const auto *Enclosing = findEnclosingDeclToAnnotate(Ctx)) {
       if (const auto *TD = dyn_cast<TagDecl>(Enclosing))
@@ -864,6 +870,10 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
         << OffendingDecl << PlatformName << Introduced.getAsString()
         << SemaRef.Context.getTargetInfo().getPlatformMinVersion().getAsString()
         << UseEnvironment << AttrEnvironment << TargetEnvironment;
+
+    // Do not offer to silence the warning or fixits for HLSL
+    if (SemaRef.getLangOpts().HLSL)
+      return;
 
     auto FixitDiag =
         SemaRef.Diag(Range.getBegin(), diag::note_unguarded_available_silence)
