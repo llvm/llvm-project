@@ -205,12 +205,15 @@ class GoogleTest(TestFormat):
                 f"timeout of {litConfig.maxIndividualTestTime} seconds",
             )
 
+        print("Endill gt-5-1")
         if not os.path.exists(test.gtest_json_file):
+            print("Endill gt-5-2")
             errmsg = f"shard JSON output does not exist: %s" % (test.gtest_json_file)
             stream_msg = f"\n{out}\n--\nexit: {exitCode}\n--\n"
             return lit.Test.FAIL, shard_header + stream_msg + errmsg
 
         if exitCode == 0:
+            print("Endill gt-5-3")
             return lit.Test.PASS, ""
 
         def get_test_stdout(test_name):
@@ -229,6 +232,7 @@ class GoogleTest(TestFormat):
 
         found_failed_test = False
 
+        print("Endill gt-5-4")
         with open(test.gtest_json_file, encoding="utf-8") as f:
             print("Endill gt-6")
             jf = json.load(f)

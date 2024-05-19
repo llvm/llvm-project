@@ -64,7 +64,6 @@ class Run(object):
             skipped = lit.Test.Result(lit.Test.SKIPPED)
             print("Endill 36540")
             for test in self.tests:
-                print("Endill 36550")
                 if test.result is None:
                     test.setResult(skipped)
             print("Endill 36560")
@@ -120,6 +119,9 @@ class Run(object):
                 print("Endill 3651620")
                 test = ar.get(timeout)
                 print("Endill 3651630")
+                print("Endill: test.file_path: {}".format(test.file_path))
+                print("Endill: test.path_in_suite: {}".format(test.path_in_suite))
+                print("Endill 3651635")
             except multiprocessing.TimeoutError:
                 print("Endill 3651640")
                 raise TimeoutError()
