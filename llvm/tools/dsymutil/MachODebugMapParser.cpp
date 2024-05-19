@@ -301,7 +301,7 @@ void MachODebugMapParser::switchToNewLibDebugMapObject(
 
     if (CurrentDebugMapObject &&
         CurrentDebugMapObject->getType() == MachO::N_LIB &&
-        CurrentDebugMapObject->getObjectFilename().compare(Path.str()) == 0) {
+        CurrentDebugMapObject->getObjectFilename() == Path) {
       return;
     }
 

@@ -593,7 +593,7 @@ subroutine omp_target_parallel_do
       !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[ARG_0]](%{{.*}}) {uniq_name = "_QFomp_target_parallel_doEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
       !CHECK: omp.parallel
       !$omp target parallel do map(tofrom: a)
-         !CHECK: %[[I_PVT_ALLOCA:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+         !CHECK: %[[I_PVT_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
          !CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ALLOCA]] {uniq_name = "_QFomp_target_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
          !CHECK: omp.wsloop {
          !CHECK-NEXT: omp.loop_nest (%[[I_VAL:.*]]) : i32
