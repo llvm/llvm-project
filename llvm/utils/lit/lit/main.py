@@ -293,7 +293,7 @@ def run_tests(tests, lit_config, opts, discovered_tests):
     print("Endill 380")
 
     display.clear(interrupted)
-        print("Endill 390")
+    print("Endill 390")
     if error:
         sys.stderr.write("%s, skipping remaining tests\n" % error)
     print("Endill 3100")
