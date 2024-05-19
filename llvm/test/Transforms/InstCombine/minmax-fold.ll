@@ -1524,7 +1524,7 @@ define i32 @test_smin_umin4(i32 %x) {
 
 define i32 @test_umax_nonminmax(i32 %x) {
 ; CHECK-LABEL: @test_umax_nonminmax(
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[Y]], i32 1)
 ; CHECK-NEXT:    ret i32 [[UMAX]]
 ;

@@ -140,11 +140,10 @@ void registerTestTensorCopyInsertionPass();
 void registerTestTensorTransforms();
 void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectEraseSchedulePass();
-void registerTestTransformDialectInterpreterPass();
 void registerTestWrittenToPass();
 void registerTestVectorLowerings();
 void registerTestVectorReductionToSPIRVDotProd();
-void registerTestNvgpuLowerings();
+void registerTestNVGPULowerings();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 void registerTestDialectConversionPasses();
 void registerTestPDLByteCodePass();
@@ -269,10 +268,9 @@ void registerTestPasses() {
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTopologicalSortAnalysisPass();
   mlir::test::registerTestTransformDialectEraseSchedulePass();
-  mlir::test::registerTestTransformDialectInterpreterPass();
   mlir::test::registerTestVectorLowerings();
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
-  mlir::test::registerTestNvgpuLowerings();
+  mlir::test::registerTestNVGPULowerings();
   mlir::test::registerTestWrittenToPass();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   mlir::test::registerTestDialectConversionPasses();

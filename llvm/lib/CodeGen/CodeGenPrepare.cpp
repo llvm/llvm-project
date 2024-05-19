@@ -1431,10 +1431,8 @@ static bool SinkCast(CastInst *CI) {
     if (!InsertedCast) {
       BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
       assert(InsertPt != UserBB->end());
-      InsertedCast = CastInst::Create(CI->getOpcode(), CI->getOperand(0),
-                                      CI->getType(), "");
+      InsertedCast = cast<CastInst>(CI->clone());
       InsertedCast->insertBefore(*UserBB, InsertPt);
-      InsertedCast->setDebugLoc(CI->getDebugLoc());
     }
 
     // Replace a use of the cast with a use of the new cast.
@@ -8272,6 +8270,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch);
+      UI->dropPoisonGeneratingFlags();
       Value *NewCmp = Builder.CreateCmp(ICmpInst::ICMP_EQ, UI,
                                         ConstantInt::get(UI->getType(), 0));
       LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
@@ -8285,6 +8284,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch);
+      UI->dropPoisonGeneratingFlags();
       Value *NewCmp = Builder.CreateCmp(Cmp->getPredicate(), UI,
                                         ConstantInt::get(UI->getType(), 0));
       LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
