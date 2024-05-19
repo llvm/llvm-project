@@ -222,8 +222,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         if (!isa<AllocaInst>(I) || !StaticAllocaMap.count(cast<AllocaInst>(&I)))
           InitializeRegForValue(&I);
 
-      // Decide the preferred extend type for a value.
-      PreferredExtendType[&I] = getPreferredExtendForValue(&I);
+      // Decide the preferred extend type for a value. This iterates over all
+      // users and therefore isn't cheap, so don't do this at O0.
+      if (DAG->getOptLevel() != CodeGenOptLevel::None)
+        PreferredExtendType[&I] = getPreferredExtendForValue(&I);
     }
   }
 
