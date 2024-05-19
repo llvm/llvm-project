@@ -15,6 +15,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -90,6 +91,12 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
     if (isa_and_present<UnitAttr>(initialValue))
       initialValue = {};
 
+    // If converted type is a scalar, extract the splatted initial value.
+    if (initialValue && !isa<emitc::ArrayType>(resultTy)) {
+      auto elementsAttr = llvm::cast<ElementsAttr>(initialValue);
+      initialValue = elementsAttr.getSplatValue<Attribute>();
+    }
+
     rewriter.replaceOpWithNewOp<emitc::GlobalOp>(
         op, operands.getSymName(), resultTy, initialValue, externSpecifier,
         staticSpecifier, operands.getConstant());
@@ -116,6 +123,19 @@ struct ConvertGetGlobal final
   }
 };
 
+template <typename T>
+static Value getMemoryAccess(Value memref, Location loc,
+                             typename T::Adaptor operands,
+                             ConversionPatternRewriter &rewriter) {
+  // If MemRef is an array, access location using array subscripts.
+  if (auto arrayValue = dyn_cast<TypedValue<emitc::ArrayType>>(memref))
+    return rewriter.create<emitc::SubscriptOp>(loc, arrayValue,
+                                               operands.getIndices());
+
+  // MemRef is a scalar, access location using variable's name.
+  return memref;
+}
+
 struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -128,20 +148,13 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
     }
 
-    auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    if (!arrayValue) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
-    }
-
-    auto subscript = rewriter.create<emitc::SubscriptOp>(
-        op.getLoc(), arrayValue, operands.getIndices());
-
+    Value lvalue = getMemoryAccess<memref::LoadOp>(
+        operands.getMemref(), op.getLoc(), operands, rewriter);
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
     auto var =
         rewriter.create<emitc::VariableOp>(op.getLoc(), resultTy, noInit);
 
-    rewriter.create<emitc::AssignOp>(op.getLoc(), var, subscript);
+    rewriter.create<emitc::AssignOp>(op.getLoc(), var, lvalue);
     rewriter.replaceOp(op, var);
     return success();
   }
@@ -153,15 +166,10 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    if (!arrayValue) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
-    }
+    Value lvalue = getMemoryAccess<memref::StoreOp>(
+        operands.getMemref(), op.getLoc(), operands, rewriter);
 
-    auto subscript = rewriter.create<emitc::SubscriptOp>(
-        op.getLoc(), arrayValue, operands.getIndices());
-    rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
+    rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, lvalue,
                                                  operands.getValue());
     return success();
   }
@@ -172,13 +180,15 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
   typeConverter.addConversion(
       [&](MemRefType memRefType) -> std::optional<Type> {
         if (!memRefType.hasStaticShape() ||
-            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0) {
+            !memRefType.getLayout().isIdentity()) {
           return {};
         }
         Type convertedElementType =
             typeConverter.convertType(memRefType.getElementType());
         if (!convertedElementType)
           return {};
+        if (memRefType.getRank() == 0)
+          return convertedElementType;
         return emitc::ArrayType::get(memRefType.getShape(),
                                      convertedElementType);
       });

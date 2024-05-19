@@ -63,6 +63,10 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) {
     emitc.assign %1 : i32 to %x : i32
     emitc.assign %2 : f64 to %y : f64
   }
+  %r1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+  emitc.assign %x : i32 to %r1 : i32
+  %r2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f64
+  emitc.assign %y : f64 to %r2 : f64
   return
 }
 // CPP-DEFAULT: void test_if_yield(bool [[V0:[^ ]*]], float [[V1:[^ ]*]]) {
@@ -80,6 +84,10 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) {
 // CPP-DEFAULT-NEXT: [[V3]] = [[V7]];
 // CPP-DEFAULT-NEXT: [[V4]] = [[V8]];
 // CPP-DEFAULT-NEXT: }
+// CPP-DEFAULT-NEXT: int32_t [[V5:[^ ]*]];
+// CPP-DEFAULT-NEXT: [[V5]] = [[V3]];
+// CPP-DEFAULT-NEXT: double [[V6:[^ ]*]];
+// CPP-DEFAULT-NEXT: [[V6]] = [[V4]];
 // CPP-DEFAULT-NEXT: return;
 
 // CPP-DECLTOP: void test_if_yield(bool [[V0:[^ ]*]], float [[V1:[^ ]*]]) {
@@ -90,6 +98,8 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) {
 // CPP-DECLTOP-NEXT: double [[V6:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[V7:[^ ]*]];
 // CPP-DECLTOP-NEXT: double [[V8:[^ ]*]];
+// CPP-DECLTOP-NEXT: int32_t [[V9:[^ ]*]];
+// CPP-DECLTOP-NEXT: double [[V10:[^ ]*]];
 // CPP-DECLTOP-NEXT: [[V2]] = 0;
 // CPP-DECLTOP-NEXT: ;
 // CPP-DECLTOP-NEXT: ;
@@ -104,4 +114,8 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) {
 // CPP-DECLTOP-NEXT: [[V3]] = [[V7]];
 // CPP-DECLTOP-NEXT: [[V4]] = [[V8]];
 // CPP-DECLTOP-NEXT: }
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: [[V9]] = [[V3]];
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: [[V10]] = [[V4]];
 // CPP-DECLTOP-NEXT: return;

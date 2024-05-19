@@ -53,18 +53,20 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) {
 // CHECK-SAME:                           %[[VAL_0:.*]]: i1,
 // CHECK-SAME:                           %[[VAL_1:.*]]: f32) {
 // CHECK-NEXT:    %[[VAL_2:.*]] = arith.constant 0 : i8
-// CHECK-NEXT:    %[[VAL_3:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-// CHECK-NEXT:    %[[VAL_4:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f64
+// CHECK-NEXT:    %[[VAL_3:.*]] = memref.alloca() : memref<i32>
+// CHECK-NEXT:    %[[VAL_4:.*]] = memref.alloca() : memref<f64>
 // CHECK-NEXT:    emitc.if %[[VAL_0]] {
 // CHECK-NEXT:      %[[VAL_5:.*]] = emitc.call_opaque "func_true_1"(%[[VAL_1]]) : (f32) -> i32
 // CHECK-NEXT:      %[[VAL_6:.*]] = emitc.call_opaque "func_true_2"(%[[VAL_1]]) : (f32) -> f64
-// CHECK-NEXT:      emitc.assign %[[VAL_5]] : i32 to %[[VAL_3]] : i32
-// CHECK-NEXT:      emitc.assign %[[VAL_6]] : f64 to %[[VAL_4]] : f64
+// CHECK-NEXT:      memref.store %[[VAL_5]], %[[VAL_3]][] : memref<i32>
+// CHECK-NEXT:      memref.store %[[VAL_6]], %[[VAL_4]][] : memref<f64>
 // CHECK-NEXT:    } else {
 // CHECK-NEXT:      %[[VAL_7:.*]] = emitc.call_opaque "func_false_1"(%[[VAL_1]]) : (f32) -> i32
 // CHECK-NEXT:      %[[VAL_8:.*]] = emitc.call_opaque "func_false_2"(%[[VAL_1]]) : (f32) -> f64
-// CHECK-NEXT:      emitc.assign %[[VAL_7]] : i32 to %[[VAL_3]] : i32
-// CHECK-NEXT:      emitc.assign %[[VAL_8]] : f64 to %[[VAL_4]] : f64
+// CHECK-NEXT:      memref.store %[[VAL_7]], %[[VAL_3]][] : memref<i32>
+// CHECK-NEXT:      memref.store %[[VAL_8]], %[[VAL_4]][] : memref<f64>
 // CHECK-NEXT:    }
+// CHECK-NEXT:    %[[VAL_9:.*]] = memref.load %[[VAL_3]][] : memref<i32>
+// CHECK-NEXT:    %[[VAL_10:.*]] = memref.load %[[VAL_4]][] : memref<f64>
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
