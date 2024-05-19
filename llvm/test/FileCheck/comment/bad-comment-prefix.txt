@@ -3,17 +3,17 @@
 # Check empty comment prefix.
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
 RUN:                                      -comment-prefixes= | \
-RUN:   FileCheck -check-prefix=PREFIX-EMPTY %s
+RUN:   FileCheck -check-prefix=EMPTY-PREFIX %s
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
 RUN:                                      -comment-prefixes=,FOO | \
-RUN:   FileCheck -check-prefix=PREFIX-EMPTY %s
+RUN:   FileCheck -check-prefix=EMPTY-PREFIX %s
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
 RUN:                                      -comment-prefixes=FOO, | \
-RUN:   FileCheck -check-prefix=PREFIX-EMPTY %s
+RUN:   FileCheck -check-prefix=EMPTY-PREFIX %s
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
 RUN:                                      -comment-prefixes=FOO,,BAR | \
-RUN:   FileCheck -check-prefix=PREFIX-EMPTY %s
-PREFIX-EMPTY: error: supplied comment prefix must not be the empty string
+RUN:   FileCheck -check-prefix=EMPTY-PREFIX %s
+EMPTY-PREFIX: error: supplied comment prefix must not be the empty string
 
 # Check invalid characters in comment prefix.
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
@@ -22,8 +22,8 @@ RUN:   FileCheck -check-prefix=PREFIX-BAD-CHAR1 %s
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
 RUN:                                       -comment-prefixes='foo ' | \
 RUN:   FileCheck -check-prefix=PREFIX-BAD-CHAR2 %s
-PREFIX-BAD-CHAR1: error: supplied comment prefix must start with a letter and contain only alphanumeric characters, hyphens, and underscores: '.'
-PREFIX-BAD-CHAR2: error: supplied comment prefix must start with a letter and contain only alphanumeric characters, hyphens, and underscores: 'foo '
+PREFIX-BAD-CHAR1: error: supplied comment prefix must start with a letter or digit and contain only ascii alphanumeric characters, hyphens, and underscores: '.'
+PREFIX-BAD-CHAR2: error: supplied comment prefix must start with a letter or digit and contain only ascii alphanumeric characters, hyphens, and underscores: 'foo '
 
 # Check duplicate comment prefixes.
 RUN: %ProtectFileCheckOutput not FileCheck /dev/null < /dev/null 2>&1 \
