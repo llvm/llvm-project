@@ -140,7 +140,7 @@ checkSymbolIsTypeOrAttribute(SymbolTableCollection &symbolTable,
     return source->emitOpError() << "symbol '" << symbol << "' not found";
 
   if (!isa<TypeOp, AttributeOp>(targetOp))
-    return source->emitOpError() << "'" << symbol
+    return source->emitOpError() << "symbol '" << symbol
                                  << "' does not refer to a type or attribute "
                                     "definition (refers to '"
                                  << targetOp->getName() << "')";

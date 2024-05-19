@@ -46,7 +46,7 @@ irdl.dialect @testd {
 
 irdl.dialect @invalid_parametric {
   irdl.operation @foo {
-    // expected-error@+1 {{'@not_a_type_or_attr' does not refer to a type or attribute definition}}
+    // expected-error@+1 {{symbol '@not_a_type_or_attr' does not refer to a type or attribute definition}}
     %param = irdl.parametric @not_a_type_or_attr<>
     irdl.results(%param)
   }
