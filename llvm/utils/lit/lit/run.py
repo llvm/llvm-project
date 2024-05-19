@@ -86,6 +86,11 @@ class Run(object):
         )
         print("Endill 365130")
 
+        def debug_callback(arg):
+            print("Endill: debug_callback test.file_path: {}".format(arg.file_path))
+            print("Endill: debug_callback test.path_in_suite: {}".format(arg.path_in_suite))
+            self.progress_callback(arg)
+
         async_results = [
             pool.apply_async(
                 lit.worker.execute, args=[test], callback=self.progress_callback
@@ -117,6 +122,9 @@ class Run(object):
             print("Endill 3651610")
             try:
                 print("Endill 3651620")
+                print("Endill: idx: {}".format(idx))
+                print("Endill: tests[idx].file_path: {}".format(self.tests[idx].file_path))
+                print("Endill: tests[idx].path_in_suite: {}".format(self.tests[idx].path_in_suite))
                 test = ar.get(timeout)
                 print("Endill 3651630")
                 print("Endill: test.file_path: {}".format(test.file_path))

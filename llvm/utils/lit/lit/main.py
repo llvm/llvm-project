@@ -271,6 +271,7 @@ def run_tests(tests, lit_config, opts, discovered_tests):
     print("Endill 320")
     display = lit.display.create_display(opts, tests, discovered_tests, workers)
     print("Endill 330")
+    print("Endill opts.timeout: {}".format(opts.timeout))
     run = lit.run.Run(
         tests, lit_config, workers, display.update, opts.max_failures, opts.timeout
     )
