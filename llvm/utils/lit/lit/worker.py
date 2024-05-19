@@ -44,6 +44,8 @@ def execute(test):
     print("Endill: worker 1")
     with _get_parallelism_semaphore(test):
         print("Endill: worker 2")
+        print("Endill: worker test.file_path: {}".format(test.file_path))
+        print("Endill: worker test.path_in_suite: {}".format(test.path_in_suite))
         result = _execute(test, _lit_config)
         print("Endill: worker 3")
 
