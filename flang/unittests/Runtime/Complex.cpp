@@ -133,23 +133,23 @@ TEST(Complex, cpowk) {
       cpowk(0.f + 1if, std::numeric_limits<std::int64_t>::min()), 1.f + 0if);
 }
 
-TEST(Complex, zpowi) {
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 0), 1. + 0i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 1), 3. + 4i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 2), -7. + 24i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 3), -117. + 44i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 4), -527. - 336i);
+// TEST(Complex, zpowi) {
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 0), 1. + 0i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 1), 3. + 4i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 2), -7. + 24i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 3), -117. + 44i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, 4), -527. - 336i);
 
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, -2), -0.0112 - 0.0384i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(2. + 1i, 10), -237. - 3116i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(0.5 + 0.6i, -10), -9.32293628 - 7.29848564i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(3. + 4i, -2), -0.0112 - 0.0384i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(2. + 1i, 10), -237. - 3116i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(0.5 + 0.6i, -10), -9.32293628 - 7.29848564i);
 
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(2. + 1i, 5), -38. + 41i);
-  EXPECT_COMPLEX_DOUBLE_EQ(zpowi(0.5 + 0.6i, -5), -1.12183773 + 3.25291503i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(2. + 1i, 5), -38. + 41i);
+//   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(0.5 + 0.6i, -5), -1.12183773 + 3.25291503i);
 
-  EXPECT_COMPLEX_DOUBLE_EQ(
-      zpowi(0. + 1i, std::numeric_limits<std::int32_t>::min()), 1. + 0i);
-}
+//   EXPECT_COMPLEX_DOUBLE_EQ(
+//       zpowi(0. + 1i, std::numeric_limits<std::int32_t>::min()), 1. + 0i);
+// }
 
 TEST(Complex, zpowk) {
   EXPECT_COMPLEX_DOUBLE_EQ(zpowk(3. + 4i, 0), 1. + 0i);

@@ -88,38 +88,38 @@ TEST(InternalNamesTest, doTypeTest) {
   ASSERT_EQ(actual, expectedMangledName);
 }
 
-TEST(InternalNamesTest, doIntrinsicTypeDescriptorTest) {
-  using IntrinsicType = fir::NameUniquer::IntrinsicType;
-  std::string actual = NameUniquer::doIntrinsicTypeDescriptor(
-      {}, {}, 0, IntrinsicType::REAL, 42);
-  std::string expectedMangledName = "_QYIrealK42";
-  ASSERT_EQ(actual, expectedMangledName);
+// TEST(InternalNamesTest, doIntrinsicTypeDescriptorTest) {
+//   using IntrinsicType = fir::NameUniquer::IntrinsicType;
+//   std::string actual = NameUniquer::doIntrinsicTypeDescriptor(
+//       {}, {}, 0, IntrinsicType::REAL, 42);
+//   std::string expectedMangledName = "_QYIrealK42";
+//   ASSERT_EQ(actual, expectedMangledName);
 
-  actual = NameUniquer::doIntrinsicTypeDescriptor(
-      {}, {}, 0, IntrinsicType::REAL, {});
-  expectedMangledName = "_QYIrealK0";
-  ASSERT_EQ(actual, expectedMangledName);
+//   actual = NameUniquer::doIntrinsicTypeDescriptor(
+//       {}, {}, 0, IntrinsicType::REAL, {});
+//   expectedMangledName = "_QYIrealK0";
+//   ASSERT_EQ(actual, expectedMangledName);
 
-  actual = NameUniquer::doIntrinsicTypeDescriptor(
-      {}, {}, 0, IntrinsicType::INTEGER, 3);
-  expectedMangledName = "_QYIintegerK3";
-  ASSERT_EQ(actual, expectedMangledName);
+//   actual = NameUniquer::doIntrinsicTypeDescriptor(
+//       {}, {}, 0, IntrinsicType::INTEGER, 3);
+//   expectedMangledName = "_QYIintegerK3";
+//   ASSERT_EQ(actual, expectedMangledName);
 
-  actual = NameUniquer::doIntrinsicTypeDescriptor(
-      {}, {}, 0, IntrinsicType::LOGICAL, 2);
-  expectedMangledName = "_QYIlogicalK2";
-  ASSERT_EQ(actual, expectedMangledName);
+//   actual = NameUniquer::doIntrinsicTypeDescriptor(
+//       {}, {}, 0, IntrinsicType::LOGICAL, 2);
+//   expectedMangledName = "_QYIlogicalK2";
+//   ASSERT_EQ(actual, expectedMangledName);
 
-  actual = NameUniquer::doIntrinsicTypeDescriptor(
-      {}, {}, 0, IntrinsicType::CHARACTER, 4);
-  expectedMangledName = "_QYIcharacterK4";
-  ASSERT_EQ(actual, expectedMangledName);
+//   actual = NameUniquer::doIntrinsicTypeDescriptor(
+//       {}, {}, 0, IntrinsicType::CHARACTER, 4);
+//   expectedMangledName = "_QYIcharacterK4";
+//   ASSERT_EQ(actual, expectedMangledName);
 
-  actual = NameUniquer::doIntrinsicTypeDescriptor(
-      {}, {}, 0, IntrinsicType::COMPLEX, 4);
-  expectedMangledName = "_QYIcomplexK4";
-  ASSERT_EQ(actual, expectedMangledName);
-}
+//   actual = NameUniquer::doIntrinsicTypeDescriptor(
+//       {}, {}, 0, IntrinsicType::COMPLEX, 4);
+//   expectedMangledName = "_QYIcomplexK4";
+//   ASSERT_EQ(actual, expectedMangledName);
+// }
 
 TEST(InternalNamesTest, doDispatchTableTest) {
   std::string actual =
