@@ -93,7 +93,7 @@ class Run(object):
 
         async_results = [
             pool.apply_async(
-                lit.worker.execute, args=[test], callback=self.progress_callback
+                lit.worker.execute, args=[test], callback=debug_callback
             )
             for test in self.tests
         ]
