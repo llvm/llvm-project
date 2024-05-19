@@ -15,6 +15,9 @@ include_directories(../../include)
 # We don't use the C++ Standard Library here, so avoid including it by mistake.
 append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 
+# __sanitizer_siginfo
+append_list_if(COMPILER_RT_HAS_WGNU_ANONYMOUS_STRUCT_FLAG -Wno-gnu-anonymous-struct EXTRA_FLAGS)
+
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
 endif()
