@@ -3699,7 +3699,10 @@ static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
   using llvm::APFloat;
   APFloat Val(Format);
 
-  APFloat::opStatus result = Literal.GetFloatValue(Val);
+  llvm::RoundingMode RM = S.CurFPFeatures.getRoundingMode();
+  if (RM == llvm::RoundingMode::Dynamic)
+    RM = llvm::RoundingMode::NearestTiesToEven;
+  APFloat::opStatus result = Literal.GetFloatValue(Val, RM);
 
   // Overflow is always an error, but underflow is only an error if
   // we underflowed to zero (APFloat reports denormals as underflow).
@@ -14864,6 +14867,11 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_GT:
     ConvertHalfVec = true;
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc);
+
+    if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
+        BI && BI->isComparisonOp())
+      Diag(OpLoc, diag::warn_consecutive_comparison);
+
     break;
   case BO_EQ:
   case BO_NE:

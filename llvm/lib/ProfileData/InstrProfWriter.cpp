@@ -499,6 +499,17 @@ static uint64_t writeMemProfCallStacks(
   return CallStackTableGenerator.Emit(OS.OS);
 }
 
+// Write out MemProf Version0 as follows:
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
 static Error writeMemProfV0(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData) {
   uint64_t HeaderUpdatePos = OS.tell();
@@ -521,6 +532,18 @@ static Error writeMemProfV0(ProfOStream &OS,
   return Error::success();
 }
 
+// Write out MemProf Version1 as follows:
+// uint64_t Version (NEW in V1)
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
 static Error writeMemProfV1(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData) {
   OS.write(memprof::Version1);
@@ -544,6 +567,21 @@ static Error writeMemProfV1(ProfOStream &OS,
   return Error::success();
 }
 
+// Write out MemProf Version2 as follows:
+// uint64_t Version
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Offset for the frame payload
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t CallStackPayloadOffset = Offset for the call stack payload (NEW V2)
+// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit (NEW in V2)
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+// OnDiskChainedHashTable MemProfCallStackData (NEW in V2)
 static Error writeMemProfV2(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
                             bool MemProfFullSchema) {
@@ -579,19 +617,7 @@ static Error writeMemProfV2(ProfOStream &OS,
   return Error::success();
 }
 
-// The MemProf profile data includes a simple schema
-// with the format described below followed by the hashtable:
-// uint64_t Version
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Stream offset before emitting the frame table
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
+// Write out the MemProf data in a requested version.
 static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedMemProfData &MemProfData,
                           memprof::IndexedVersion MemProfVersionRequested,
@@ -613,6 +639,27 @@ static Error writeMemProf(ProfOStream &OS,
               memprof::MaximumSupportedVersion));
 }
 
+uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
+                                      const bool WritePrevVersion,
+                                      ProfOStream &OS) {
+  // Only write out the first four fields.
+  for (int I = 0; I < 4; I++)
+    OS.write(reinterpret_cast<const uint64_t *>(&Header)[I]);
+
+  // Remember the offset of the remaining fields to allow back patching later.
+  auto BackPatchStartOffset = OS.tell();
+
+  // Reserve the space for back patching later.
+  OS.write(0); // HashOffset
+  OS.write(0); // MemProfOffset
+  OS.write(0); // BinaryIdOffset
+  OS.write(0); // TemporalProfTracesOffset
+  if (!WritePrevVersion)
+    OS.write(0); // VTableNamesOffset
+
+  return BackPatchStartOffset;
+}
+
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
   using namespace support;
@@ -625,7 +672,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->CSSummaryBuilder = &CSISB;
 
   // Populate the hash table generator.
-  SmallVector<std::pair<StringRef, const ProfilingData *>, 0> OrderedData;
+  SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
       OrderedData.emplace_back((I.getKey()), &I.getValue());
@@ -667,35 +714,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.TemporalProfTracesOffset = 0;
   Header.VTableNamesOffset = 0;
 
-  // Only write out the first four fields. We need to remember the offset of the
-  // remaining fields to allow back patching later.
-  for (int I = 0; I < 4; I++)
-    OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
-
-  // Save the location of Header.HashOffset field in \c OS.
-  uint64_t HashTableStartFieldOffset = OS.tell();
-  // Reserve the space for HashOffset field.
-  OS.write(0);
-
-  // Save the location of MemProf profile data. This is stored in two parts as
-  // the schema and as a separate on-disk chained hashtable.
-  uint64_t MemProfSectionOffset = OS.tell();
-  // Reserve space for the MemProf table field to be patched later if this
-  // profile contains memory profile information.
-  OS.write(0);
-
-  // Save the location of binary ids section.
-  uint64_t BinaryIdSectionOffset = OS.tell();
-  // Reserve space for the BinaryIdOffset field to be patched later if this
-  // profile contains binary ids.
-  OS.write(0);
-
-  uint64_t TemporalProfTracesOffset = OS.tell();
-  OS.write(0);
-
-  uint64_t VTableNamesOffset = OS.tell();
-  if (!WritePrevVersion)
-    OS.write(0);
+  const uint64_t BackPatchStartOffset =
+      writeHeader(Header, WritePrevVersion, OS);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -824,16 +844,20 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
+  const size_t MemProfOffset = BackPatchStartOffset + sizeof(uint64_t);
+  const size_t BinaryIdOffset = MemProfOffset + sizeof(uint64_t);
+  const size_t TemporalProfTracesOffset = BinaryIdOffset + sizeof(uint64_t);
+  const size_t VTableNamesOffset = TemporalProfTracesOffset + sizeof(uint64_t);
   if (!WritePrevVersion) {
     // Now do the final patch:
     PatchItem PatchItems[] = {
         // Patch the Header.HashOffset field.
-        {HashTableStartFieldOffset, &HashTableStart, 1},
+        {BackPatchStartOffset, &HashTableStart, 1},
         // Patch the Header.MemProfOffset (=0 for profiles without MemProf
         // data).
-        {MemProfSectionOffset, &MemProfSectionStart, 1},
+        {MemProfOffset, &MemProfSectionStart, 1},
         // Patch the Header.BinaryIdSectionOffset.
-        {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
+        {BinaryIdOffset, &BinaryIdSectionStart, 1},
         // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
         // traces).
         {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
@@ -849,12 +873,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     // Now do the final patch:
     PatchItem PatchItems[] = {
         // Patch the Header.HashOffset field.
-        {HashTableStartFieldOffset, &HashTableStart, 1},
+        {BackPatchStartOffset, &HashTableStart, 1},
         // Patch the Header.MemProfOffset (=0 for profiles without MemProf
         // data).
-        {MemProfSectionOffset, &MemProfSectionStart, 1},
+        {MemProfOffset, &MemProfSectionStart, 1},
         // Patch the Header.BinaryIdSectionOffset.
-        {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
+        {BinaryIdOffset, &BinaryIdSectionStart, 1},
         // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
         // traces).
         {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
