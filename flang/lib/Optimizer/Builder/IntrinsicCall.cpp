@@ -3477,27 +3477,26 @@ IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
          (args.size() >= 1 && !resultType.has_value()));
 
   auto cwd = fir::getBase(args[0]);
-  const fir::ExtendedValue &status = args[1];
-
   auto statusValue = fir::runtime::genGetCwd(builder, loc, cwd);
 
-  // Handle optional status argument.
-  if (!isStaticallyAbsent(status)) {
-    mlir::Value statusAddr = fir::getBase(status);
-    mlir::Value statusIsPresentAtRuntime =
-        builder.genIsNotNullAddr(loc, statusAddr);
-    builder.genIfThen(loc, statusIsPresentAtRuntime)
-        .genThen(
-            [&]() { builder.createStoreWithConvert(loc, statusValue, statusAddr); })
-        .end();
-  }
-
-  // Function form, return status.
   if (resultType.has_value()) {
+    // Function form, return status.
     return statusValue;
+  } else {
+    // Subroutine form, store status and return none.
+    const fir::ExtendedValue &status = args[1];
+    if (!isStaticallyAbsent(status)) {
+      mlir::Value statusAddr = fir::getBase(status);
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, statusValue, statusAddr);
+          })
+          .end();
+    }
   }
 
-  // Subroutine form, return none.
   return {};
 }
 
