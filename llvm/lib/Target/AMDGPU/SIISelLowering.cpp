@@ -3074,9 +3074,10 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc)
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);
 
-  auto &ArgUsageInfo =
-    DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
-  ArgUsageInfo.setFuncArgInfo(Fn, Info->getArgInfo());
+  if (DAG.getPass()) {
+    auto &ArgUsageInfo = DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
+    ArgUsageInfo.setFuncArgInfo(Fn, Info->getArgInfo());
+  }
 
   unsigned StackArgSize = CCInfo.getStackSize();
   Info->setBytesInStackArgArea(StackArgSize);
@@ -3288,9 +3289,11 @@ void SITargetLowering::passSpecialInputs(
   const AMDGPUFunctionArgInfo *CalleeArgInfo
     = &AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
   if (const Function *CalleeFunc = CLI.CB->getCalledFunction()) {
-    auto &ArgUsageInfo =
-      DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
-    CalleeArgInfo = &ArgUsageInfo.lookupFuncArgInfo(*CalleeFunc);
+    if (DAG.getPass()) {
+      auto &ArgUsageInfo =
+          DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
+      CalleeArgInfo = &ArgUsageInfo.lookupFuncArgInfo(*CalleeFunc);
+    }
   }
 
   // TODO: Unify with private memory register handling. This is complicated by

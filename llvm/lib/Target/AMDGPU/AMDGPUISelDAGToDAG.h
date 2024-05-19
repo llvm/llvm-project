@@ -280,6 +280,11 @@ protected:
 #include "AMDGPUGenDAGISel.inc"
 };
 
+class AMDGPUISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  AMDGPUISelDAGToDAGPass(TargetMachine &TM);
+};
+
 class AMDGPUDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
   static char ID;

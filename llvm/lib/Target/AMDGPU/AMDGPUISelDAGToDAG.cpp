@@ -777,6 +777,10 @@ StringRef AMDGPUDAGToDAGISelLegacy::getPassName() const {
   return "AMDGPU DAG->DAG Pattern Instruction Selection";
 }
 
+AMDGPUISelDAGToDAGPass::AMDGPUISelDAGToDAGPass(TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<AMDGPUDAGToDAGISel>(TM, TM.getOptLevel())) {}
+
 //===----------------------------------------------------------------------===//
 // Complex Patterns
 //===----------------------------------------------------------------------===//
