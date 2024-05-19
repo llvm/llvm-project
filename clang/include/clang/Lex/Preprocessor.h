@@ -181,6 +181,7 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_variant_os;
   IdentifierInfo *Ident__is_target_variant_environment;
   IdentifierInfo *Ident__FLT_EVAL_METHOD__;        // __FLT_EVAL_METHOD
+  IdentifierInfo *Ident__ROUNDING_MODE__;          // __ROUNDING_MODE__
 
   // Weak, only valid (and set) while InMacroArgs is true.
   Token* ArgMacro;
@@ -200,6 +201,9 @@ class Preprocessor {
 
   LangOptions::FPEvalMethodKind TUFPEvalMethod =
       LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
+
+  LangOptions::RoundingMode CurrentRoundingMode =
+      LangOptions::RoundingMode::Dynamic;
 
   // Next __COUNTER__ value, starts at 0.
   unsigned CounterValue = 0;
@@ -2354,6 +2358,14 @@ public:
     assert(Val != LangOptions::FEM_UnsetOnCommandLine &&
            "TUPEvalMethod should never be set to FEM_UnsetOnCommandLine");
     TUFPEvalMethod = Val;
+  }
+
+  LangOptions::RoundingMode getCurrentRoundingMode() const {
+    return CurrentRoundingMode;
+  }
+
+  void setCurrentRoundingMode(LangOptions::RoundingMode RM) {
+    CurrentRoundingMode = RM;
   }
 
   /// Retrieves the module that we're currently building, if any.
