@@ -212,6 +212,12 @@ private:
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   Error writeImpl(ProfOStream &OS);
+
+  // Writes known header fields and reserves space for fields whose value are
+  // known only after payloads are written. Returns the start byte offset for
+  // back patching.
+  uint64_t writeHeader(const IndexedInstrProf::Header &header,
+                       const bool WritePrevVersion, ProfOStream &OS);
 };
 
 } // end namespace llvm
