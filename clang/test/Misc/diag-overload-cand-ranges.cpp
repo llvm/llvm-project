@@ -70,3 +70,11 @@ template <short T> class Type1 {};
 template <short T> void Function1(int zz, Type1<T> &x, int ww) {}
 
 void Function() { Function1(33, Type1<-42>(), 66); }
+
+// CHECK:      error: no matching function for call to 'b'
+// CHECK:      :{[[@LINE+1]]:41-[[@LINE+1]]:45}: note: {{.*}} no known conversion from 'int' to 'ForwardClass' for 3rd argument
+template <class T, class...U> void b(T, U...);
+class ForwardClass;
+void NoCrash() {
+  b<int, int, ForwardClass>(1, 1, 0);
+}

@@ -629,6 +629,8 @@ Bug Fixes in This Version
 - ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
   zero-sized arrays. Fixes (#GH54705).
 
+- Fix an out-of-bounds crash when diagnosing bad conversion for a function with a parameter pack. 
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

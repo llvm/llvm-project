@@ -11301,8 +11301,14 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   Expr *FromExpr = Conv.Bad.FromExpr;
   QualType FromTy = Conv.Bad.getFromType();
   QualType ToTy = Conv.Bad.getToType();
-  SourceRange ToParamRange =
-      !isObjectArgument ? Fn->getParamDecl(I)->getSourceRange() : SourceRange();
+  SourceRange ToParamRange;
+  if (!isObjectArgument) {
+    if (I < Fn->getNumParams())
+      ToParamRange = Fn->getParamDecl(I)->getSourceRange();
+    else
+      // parameter pack case.
+      ToParamRange = Fn->parameters().back()->getSourceRange();
+  }
 
   if (FromTy == S.Context.OverloadTy) {
     assert(FromExpr && "overload set argument came from implicit argument?");
