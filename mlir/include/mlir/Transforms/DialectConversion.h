@@ -247,7 +247,8 @@ public:
   /// Attempts a 1-1 type conversion, expecting the result type to be
   /// `TargetType`. Returns the converted type cast to `TargetType` on success,
   /// and a null type on conversion or cast failure.
-  template <typename TargetType> TargetType convertType(Type t) const {
+  template <typename TargetType>
+  TargetType convertType(Type t) const {
     return dyn_cast_or_null<TargetType>(convertType(t));
   }
 
@@ -1118,6 +1119,14 @@ struct ConversionConfig {
   // already been modified) and iterators into past IR state cannot be
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
+
+  /// If set to "true", the dialect conversion driver attempts to fold
+  /// operations throughout the conversion. This is problematic because op
+  /// folders may assume that the IR is in a valid state at the beginning of
+  /// the folding process. However, the dialect conversion does not guarantee
+  /// that because some IR modifications are delayed until the end of the
+  /// conversion.
+  bool foldOps = true;
 };
 
 //===----------------------------------------------------------------------===//

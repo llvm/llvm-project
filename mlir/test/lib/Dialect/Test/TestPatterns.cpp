@@ -1102,7 +1102,9 @@ struct TestLegalizePatternDriver
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
 
-  TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
+  TestLegalizePatternDriver() = default;
+  TestLegalizePatternDriver(const TestLegalizePatternDriver &other)
+      : PassWrapper(other) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<func::FuncDialect, test::TestDialect>();
@@ -1179,6 +1181,7 @@ struct TestLegalizePatternDriver
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       config.unlegalizedOps = &unlegalizedOps;
+      config.foldOps = foldOps;
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
@@ -1197,6 +1200,7 @@ struct TestLegalizePatternDriver
       });
 
       ConversionConfig config;
+      config.foldOps = foldOps;
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
@@ -1212,6 +1216,7 @@ struct TestLegalizePatternDriver
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
     ConversionConfig config;
+    config.foldOps = foldOps;
     config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
                                        std::move(patterns), config)))
@@ -1222,23 +1227,24 @@ struct TestLegalizePatternDriver
       op->emitRemark() << "op '" << op->getName() << "' is legalizable";
   }
 
-  /// The mode of conversion to use.
-  ConversionMode mode;
+  Option<bool> foldOps{
+      *this, "fold-ops",
+      llvm::cl::desc("Fold ops throughout the conversion process"),
+      llvm::cl::init(true)};
+
+  Option<TestLegalizePatternDriver::ConversionMode> mode{
+      *this, "legalize-mode",
+      llvm::cl::desc("The legalization mode to use with the test driver"),
+      llvm::cl::init(TestLegalizePatternDriver::ConversionMode::Partial),
+      llvm::cl::values(
+          clEnumValN(TestLegalizePatternDriver::ConversionMode::Analysis,
+                     "analysis", "Perform an analysis conversion"),
+          clEnumValN(TestLegalizePatternDriver::ConversionMode::Full, "full",
+                     "Perform a full conversion"),
+          clEnumValN(TestLegalizePatternDriver::ConversionMode::Partial,
+                     "partial", "Perform a partial conversion"))};
 };
 } // namespace
-
-static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
-    legalizerConversionMode(
-        "test-legalize-mode",
-        llvm::cl::desc("The legalization mode to use with the test driver"),
-        llvm::cl::init(TestLegalizePatternDriver::ConversionMode::Partial),
-        llvm::cl::values(
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Analysis,
-                       "analysis", "Perform an analysis conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Full, "full",
-                       "Perform a full conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Partial,
-                       "partial", "Perform a partial conversion")));
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriter::getRemappedValue testing. This method is used
@@ -1909,9 +1915,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestPatternDriver>();
   PassRegistration<TestStrictPatternDriver>();
 
-  PassRegistration<TestLegalizePatternDriver>([] {
-    return std::make_unique<TestLegalizePatternDriver>(legalizerConversionMode);
-  });
+  PassRegistration<TestLegalizePatternDriver>();
 
   PassRegistration<TestRemappedValue>();
 
