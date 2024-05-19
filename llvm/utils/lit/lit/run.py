@@ -30,6 +30,7 @@ class Run(object):
         assert workers > 0
 
     def execute(self):
+        print("Endill 36500")
         """
         Execute the tests in the run using up to the specified number of
         parallel tasks, and inform the caller of each individual result. The
@@ -55,25 +56,36 @@ class Run(object):
         deadline = time.time() + timeout
 
         try:
+            print("Endill 36510")
             self._execute(deadline)
+            print("Endill 36520")
         finally:
+            print("Endill 36530")
             skipped = lit.Test.Result(lit.Test.SKIPPED)
+            print("Endill 36540")
             for test in self.tests:
+                print("Endill 36550")
                 if test.result is None:
                     test.setResult(skipped)
+            print("Endill 36560")
+            
 
     def _execute(self, deadline):
+        print("Endill 365100")
         self._increase_process_limit()
+        print("Endill 365110")
 
         semaphores = {
             k: multiprocessing.BoundedSemaphore(v)
             for k, v in self.lit_config.parallelism_groups.items()
             if v is not None
         }
+        print("Endill 365120")
 
         pool = multiprocessing.Pool(
             self.workers, lit.worker.initialize, (self.lit_config, semaphores)
         )
+        print("Endill 365130")
 
         async_results = [
             pool.apply_async(
@@ -81,29 +93,45 @@ class Run(object):
             )
             for test in self.tests
         ]
+        print("Endill 365140")
         pool.close()
+        print("Endill 365150")
 
         try:
+            print("Endill 365160")
             self._wait_for(async_results, deadline)
+            print("Endill 365170")
         except:
+            print("Endill 365180")
             pool.terminate()
+            print("Endill 365190")
             raise
         finally:
+            print("Endill 3651100")
             pool.join()
+            print("Endill 3651110")
 
     def _wait_for(self, async_results, deadline):
+        print("Endill 3651600")
         timeout = deadline - time.time()
         for idx, ar in enumerate(async_results):
+            print("Endill 3651610")
             try:
+                print("Endill 3651620")
                 test = ar.get(timeout)
+                print("Endill 3651630")
             except multiprocessing.TimeoutError:
+                print("Endill 3651640")
                 raise TimeoutError()
             else:
+                print("Endill 3651650")
                 self._update_test(self.tests[idx], test)
+                print("Endill 3651660")
                 if test.isFailure():
                     self.failures += 1
                     if self.failures == self.max_failures:
                         raise MaxFailuresError()
+        print("Endill 3651670") 
 
     # Update local test object "in place" from remote test object.  This
     # ensures that the original test object which is used for printing test

@@ -140,18 +140,20 @@ class GoogleTest(TestFormat):
                     )
 
     def execute(self, test, litConfig):
+        print("Endill gt-0")
         if test.gtest_json_file is None:
             return lit.Test.FAIL, ""
 
         testPath = test.getSourcePath()
         from lit.cl_arguments import TestOrder
-
+        print("Endill gt-1")
         use_shuffle = TestOrder(litConfig.order) == TestOrder.RANDOM
         shard_env = {
             "GTEST_OUTPUT": "json:" + test.gtest_json_file,
             "GTEST_SHUFFLE": "1" if use_shuffle else "0",
         }
         if litConfig.gtest_sharding:
+            print("Endill gt-2")
             testPath, testName = os.path.split(test.getSourcePath())
             while not os.path.exists(testPath):
                 # Handle GTest parameterized and typed tests, whose name includes
@@ -186,13 +188,16 @@ class GoogleTest(TestFormat):
         shard_header = get_shard_header(shard_env)
 
         try:
+            print("Endill gt-3")
             out, _, exitCode = lit.util.executeCommand(
                 cmd,
                 env=test.config.environment,
                 timeout=litConfig.maxIndividualTestTime,
                 redirect_stderr=True,
             )
+            print("Endill gt-4")
         except lit.util.ExecuteCommandTimeoutException as e:
+            print("Endill gt-5")
             stream_msg = f"\n{e.out}\n--\nexit: {e.exitCode}\n--\n"
             return (
                 lit.Test.TIMEOUT,
@@ -225,7 +230,9 @@ class GoogleTest(TestFormat):
         found_failed_test = False
 
         with open(test.gtest_json_file, encoding="utf-8") as f:
+            print("Endill gt-6")
             jf = json.load(f)
+            print("Endill gt-7")
 
             if use_shuffle:
                 shard_env["GTEST_RANDOM_SEED"] = str(jf["random_seed"])
@@ -258,7 +265,7 @@ class GoogleTest(TestFormat):
         # the shard could still fail due to memory issues.
         if not found_failed_test:
             output += f"\n{out}\n--\nexit: {exitCode}\n--\n"
-
+        print("Endill gt-8")
         return lit.Test.FAIL, output
 
     def prepareCmd(self, cmd):
