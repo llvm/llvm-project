@@ -13000,27 +13000,77 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
+  const SCEV *End = nullptr, *BECount = nullptr, 
+    *BECountIfBackedgeTaken = nullptr;
   if (!isLoopInvariant(RHS, L)) {
-    // If RHS is an add recurrence, try again with lhs=lhs-rhs and rhs=0
-    if(auto RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS)){
-       return howManyLessThans(getMinusSCEV(IV, RHSAddRec), 
-        getZero(IV->getType()), L, true, ControlsOnlyExit, AllowPredicates);
+    if (auto RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS)){
+      /*
+        The structure of loop we are trying to calculate backedge-count of:
+        left = left_start
+        right = right_start
+        while(left < right){
+          // ... do something here ...
+          left += s1; // stride of left is s1>0
+          right -= s2; // stride of right is -s2 (s2 > 0)
+        }
+        // left and right are converging at the middle
+        // (maybe not exactly at center)
+
+      */
+      const SCEV *RHSStart = RHSAddRec->getStart();
+      const SCEV *RHSStride = RHSAddRec->getStepRecurrence(*this);
+      // if Stride-RHSStride>0 and does not overflow, we can write
+      //  backedge count as:
+      //  RHSStart >= Start ? (RHSStart - Start)/(Stride - RHSStride) ? 0 
+
+      // check if Stride-RHSStride will not overflow
+      if (willNotOverflow(llvm::Instruction::Sub, true, Stride, RHSStride)) {
+        const SCEV *Denominator = getMinusSCEV(Stride, RHSStride); 
+        if (isKnownPositive(Denominator)) {
+          End = IsSigned ? getSMaxExpr(RHSStart, Start) : 
+            getUMaxExpr(RHSStart, Start); // max(RHSStart, Start)
+
+          const SCEV *Delta = getMinusSCEV(End, Start); // End >= Start
+          
+          BECount = getUDivCeilSCEV(Delta, Denominator);
+          BECountIfBackedgeTaken = getUDivCeilSCEV(
+            getMinusSCEV(RHSStart, Start), Denominator);
+
+          const SCEV *ConstantMaxBECount;
+          bool MaxOrZero = false;
+          if (isa<SCEVConstant>(BECount)) {
+            ConstantMaxBECount = BECount;
+          } else if (isa<SCEVConstant>(BECountIfBackedgeTaken)) {
+            ConstantMaxBECount = BECountIfBackedgeTaken;
+            MaxOrZero = true;
+          } else {
+            ConstantMaxBECount = computeMaxBECountForLT(
+                Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), 
+                IsSigned);
+          }
+
+          const SCEV *SymbolicMaxBECount = BECount;
+          return ExitLimit(BECount, ConstantMaxBECount, SymbolicMaxBECount, 
+                          MaxOrZero, Predicates);
+        }
+      }
+    } 
+    if (BECount == nullptr) {
+      // If we cannot calculate ExactBECount, we can calculate the MaxBECount, 
+      // given the start, stride and max value for the end bound of the 
+      // loop (RHS), and the fact that IV does not overflow (which is
+      // checked above).
+      const SCEV *MaxBECount = computeMaxBECountForLT(
+          Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
+      return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
+                      MaxBECount, false /*MaxOrZero*/, Predicates);
     }
-    // If we cannot calculate ExactBECount, we can calculate the MaxBECount, 
-    // given the start, stride and max value for the end bound of the 
-    // loop (RHS), and the fact that IV does not overflow (which is
-    // checked above).
-    const SCEV *MaxBECount = computeMaxBECountForLT(
-        Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
-    return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
-                     MaxBECount, false /*MaxOrZero*/, Predicates);
   }
 
   // We use the expression (max(End,Start)-Start)/Stride to describe the
   // backedge count, as if the backedge is taken at least once max(End,Start)
   // is End and so the result is as above, and if not max(End,Start) is Start
   // so we get a backedge count of zero.
-  const SCEV *BECount = nullptr;
   auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
   assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
   assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
@@ -13052,7 +13102,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     BECount = getUDivExpr(Numerator, Stride);
   }
 
-  const SCEV *BECountIfBackedgeTaken = nullptr;
   if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
@@ -13080,7 +13129,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
     // If we know that RHS >= Start in the context of loop, then we know that
     // max(RHS, Start) = RHS at this point.
-    const SCEV *End;
     if (canProveRHSGreaterThanEqualStart()) {
       End = RHS;
     } else {
