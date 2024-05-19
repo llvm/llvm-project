@@ -147,6 +147,11 @@ function exclude-windows() {
     libc)                ;; # no Windows support
     lldb)                ;; # tests failing
     bolt)                ;; # tests are not supported yet
+    clang)               ;;
+    llvm)                ;;
+    clang-tools-extra)   ;;
+    lld)                 ;;
+    polly)               ;;
     *)
       echo "${project}"
     ;;
@@ -187,6 +192,9 @@ function check-targets() {
     libclc)
       echo "check-all"
     ;;
+    mlir);;
+    clang);;
+    llvm);;
     *)
       echo "check-${project}"
     ;;
