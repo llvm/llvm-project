@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DialectGenUtilities.h"
-#include "DocGenUtilities.h"
-#include "OpGenHelpers.h"
+#include "mlir/TableGen/DialectGenUtilities.h"
+#include "mlir/TableGen/DocGenUtilities.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/GenInfo.h"

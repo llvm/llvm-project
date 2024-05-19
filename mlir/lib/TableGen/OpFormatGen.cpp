@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpFormatGen.h"
-#include "FormatGen.h"
-#include "OpClass.h"
+#include "mlir/TableGen/OpFormatGen.h"
+#include "mlir/TableGen/FormatGen.h"
+#include "mlir/TableGen/OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"

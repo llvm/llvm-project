@@ -13,7 +13,7 @@ llvm_add_library(MLIRTblgenLib STATIC
 
   LINK_LIBS PUBLIC
   MLIRTableGen
-  )
+)
 
 mlir_check_all_link_libraries(MLIRTblgenLib)
 

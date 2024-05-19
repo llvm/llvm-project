@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpClass.h"
-#include "OpFormatGen.h"
-#include "OpGenHelpers.h"
+#include "mlir/TableGen/OpClass.h"
+#include "mlir/TableGen/OpFormatGen.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Class.h"

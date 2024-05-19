@@ -10,7 +10,7 @@
 // generate the corresponding Python binding classes.
 //
 //===----------------------------------------------------------------------===//
-#include "OpGenHelpers.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Attribute.h"

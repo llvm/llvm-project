@@ -13,22 +13,44 @@
 # this means that MLIRSupport (outside of header-only access) cannot be used.
 llvm_add_library(MLIRTableGen STATIC
   Argument.cpp
-  Attribute.cpp
   AttrOrTypeDef.cpp
+  AttrOrTypeDefGen.cpp
+  AttrOrTypeFormatGen.cpp
+  Attribute.cpp
   Builder.cpp
+  BytecodeDialectGen.cpp
   Class.cpp
   CodeGenHelpers.cpp
   Constraint.cpp
   Dialect.cpp
+  DialectGen.cpp
+  DirectiveCommonGen.cpp
+  EnumPythonBindingGen.cpp
+  EnumsGen.cpp
   Format.cpp
+  FormatGen.cpp
   GenInfo.cpp
   Interfaces.cpp
+  LLVMIRConversionGen.cpp
+  LLVMIRIntrinsicGen.cpp
+  OpClass.cpp
+  OpDefinitionsGen.cpp
+  OpDocGen.cpp
+  OpFormatGen.cpp
+  OpGenHelpers.cpp
+  OpInterfacesGen.cpp
+  OpPythonBindingGen.cpp
   Operator.cpp
   Pass.cpp
+  PassCAPIGen.cpp
+  PassDocGen.cpp
+  PassGen.cpp
   Pattern.cpp
   Predicate.cpp
   Property.cpp
   Region.cpp
+  RewriterGen.cpp
+  SPIRVUtilsGen.cpp
   SideEffects.cpp
   Successor.cpp
   Trait.cpp

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatGen.h"
+#include "mlir/TableGen/FormatGen.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"

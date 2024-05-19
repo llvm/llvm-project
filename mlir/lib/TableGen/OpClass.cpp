@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpClass.h"
+#include "mlir/TableGen/OpClass.h"
 
 using namespace mlir;
 using namespace mlir::tblgen;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AttrOrTypeFormatGen.h"
-#include "FormatGen.h"
+#include "mlir/TableGen/AttrOrTypeFormatGen.h"
+#include "mlir/TableGen/FormatGen.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"

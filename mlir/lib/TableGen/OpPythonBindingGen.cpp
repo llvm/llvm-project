@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpGenHelpers.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
