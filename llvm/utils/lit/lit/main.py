@@ -266,19 +266,23 @@ def mark_excluded(discovered_tests, selected_tests):
 
 
 def run_tests(tests, lit_config, opts, discovered_tests):
+    print("Endill 310")
     workers = min(len(tests), opts.workers)
+    print("Endill 320")
     display = lit.display.create_display(opts, tests, discovered_tests, workers)
-
+    print("Endill 330")
     run = lit.run.Run(
         tests, lit_config, workers, display.update, opts.max_failures, opts.timeout
     )
-
+    print("Endill 340")
     display.print_header()
-
+    print("Endill 350")
     interrupted = False
     error = None
     try:
+        print("Endill 360")
         execute_in_tmp_dir(run, lit_config)
+        print("Endill 370")
     except KeyboardInterrupt:
         interrupted = True
         error = "  interrupted by user"
@@ -286,10 +290,13 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         error = "warning: reached maximum number of test failures"
     except lit.run.TimeoutError:
         error = "warning: reached timeout"
+    print("Endill 380")
 
     display.clear(interrupted)
+        print("Endill 390")
     if error:
         sys.stderr.write("%s, skipping remaining tests\n" % error)
+    print("Endill 3100")
 
 
 def execute_in_tmp_dir(run, lit_config):
