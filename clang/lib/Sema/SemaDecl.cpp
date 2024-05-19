@@ -8928,7 +8928,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     llvm::StringMap<bool> CallerFeatureMap;
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
-                        CallerFeatureMap);
+                                CallerFeatureMap);
   }
 }
 

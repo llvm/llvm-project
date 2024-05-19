@@ -30,7 +30,7 @@ public:
 
   bool CheckLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
-                                     CallExpr *TheCall);
+                                CallExpr *TheCall);
   void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
                            const llvm::StringMap<bool> &FeatureMap);
 

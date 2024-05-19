@@ -170,7 +170,6 @@ private:
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
-
   // Create RVVIntrinsicDef.
   void InitRVVIntrinsic(const RVVIntrinsicRecord &Record, StringRef SuffixStr,
                         StringRef OverloadedSuffixStr, bool IsMask,
@@ -346,7 +345,7 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
                            /*IsMask=*/true, *PolicyTypes, MaskedHasPolicy, P);
         }
       } // End for different LMUL
-    }   // End for different TypeRange
+    } // End for different TypeRange
   }
 }
 
@@ -354,8 +353,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
 
   if (S.RISCV().DeclareRVVBuiltins && !ConstructedRISCVVBuiltins) {
     ConstructedRISCVVBuiltins = true;
-    ConstructRVVIntrinsics(RVVIntrinsicRecords,
-                           IntrinsicKind::RVV);
+    ConstructRVVIntrinsics(RVVIntrinsicRecords, IntrinsicKind::RVV);
   }
   if (S.RISCV().DeclareSiFiveVectorBuiltins &&
       !ConstructedRISCVSiFiveVectorBuiltins) {
@@ -550,7 +548,8 @@ static bool CheckInvalidVLENandLMUL(const TargetInfo &TI, CallExpr *TheCall,
   std::string RequiredExt = "zvl" + std::to_string(MinRequiredVLEN) + "b";
   if (!TI.hasFeature(RequiredExt))
     return S.Diag(TheCall->getBeginLoc(),
-        diag::err_riscv_type_requires_extension) << Type << RequiredExt;
+                  diag::err_riscv_type_requires_extension)
+           << Type << RequiredExt;
 
   return false;
 }
@@ -728,8 +727,10 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "zvknb";
 
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, ElemSize * 4) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type, ElemSize * 4) ||
+    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type,
+                                   ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type,
+                                   ElemSize * 4) ||
            CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op3Type, ElemSize * 4);
   }
 
@@ -1355,7 +1356,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     ExprResult ValArg = TheCall->getArg(1);
     InitializedEntity Entity = InitializedEntity::InitializeParameter(
         Context, ValType, /*consume*/ false);
-    ValArg = SemaRef.PerformCopyInitialization(Entity, SourceLocation(), ValArg);
+    ValArg =
+        SemaRef.PerformCopyInitialization(Entity, SourceLocation(), ValArg);
     if (ValArg.isInvalid())
       return true;
 
@@ -1368,7 +1370,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
 }
 
 void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
-                               const llvm::StringMap<bool> &FeatureMap) {
+                                    const llvm::StringMap<bool> &FeatureMap) {
   ASTContext::BuiltinVectorTypeInfo Info =
       SemaRef.Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
   unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
@@ -1420,6 +1422,6 @@ bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
          ValidScalableConversion(destTy, srcTy);
 }
 
-SemaRISCV::SemaRISCV(Sema& S) : SemaBase(S) {}
+SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}
 
 } // namespace clang

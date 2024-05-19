@@ -2051,7 +2051,7 @@ public:
   bool checkArgCountAtLeast(CallExpr *Call, unsigned MinArgCount);
   bool checkArgCountAtMost(CallExpr *Call, unsigned MaxArgCount);
   bool checkArgCountRange(CallExpr *Call, unsigned MinArgCount,
-                               unsigned MaxArgCount);
+                          unsigned MaxArgCount);
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
 
 private:

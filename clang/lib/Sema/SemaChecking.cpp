@@ -121,8 +121,7 @@ static constexpr unsigned short combineFAPK(Sema::FormatArgumentPassingKind A,
 /// Checks that a call expression's argument count is at least the desired
 /// number. This is useful when doing custom type-checking on a variadic
 /// function. Returns true on error.
-bool Sema::checkArgCountAtLeast(CallExpr *Call,
-                                 unsigned MinArgCount) {
+bool Sema::checkArgCountAtLeast(CallExpr *Call, unsigned MinArgCount) {
   unsigned ArgCount = Call->getNumArgs();
   if (ArgCount >= MinArgCount)
     return false;
@@ -139,8 +138,7 @@ bool Sema::checkArgCountAtMost(CallExpr *Call, unsigned MaxArgCount) {
   unsigned ArgCount = Call->getNumArgs();
   if (ArgCount <= MaxArgCount)
     return false;
-  return Diag(Call->getEndLoc(),
-                diag::err_typecheck_call_too_many_args_at_most)
+  return Diag(Call->getEndLoc(), diag::err_typecheck_call_too_many_args_at_most)
          << 0 /*function call*/ << MaxArgCount << ArgCount
          << /*is non object*/ 0 << Call->getSourceRange();
 }
@@ -149,7 +147,7 @@ bool Sema::checkArgCountAtMost(CallExpr *Call, unsigned MaxArgCount) {
 /// is useful when doing custom type-checking on a variadic function. Returns
 /// true on error.
 bool Sema::checkArgCountRange(CallExpr *Call, unsigned MinArgCount,
-                               unsigned MaxArgCount) {
+                              unsigned MaxArgCount) {
   return checkArgCountAtLeast(Call, MinArgCount) ||
          checkArgCountAtMost(Call, MaxArgCount);
 }
@@ -2626,7 +2624,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_classify_type:
-    if (checkArgCount(TheCall, 1)) return true;
+    if (checkArgCount(TheCall, 1))
+      return true;
     TheCall->setType(Context.IntTy);
     break;
   case Builtin::BI__builtin_complex:
@@ -2634,7 +2633,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_constant_p: {
-    if (checkArgCount(TheCall, 1)) return true;
+    if (checkArgCount(TheCall, 1))
+      return true;
     ExprResult Arg = DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
     if (Arg.isInvalid()) return true;
     TheCall->setArg(0, Arg.get());
