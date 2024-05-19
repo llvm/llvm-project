@@ -774,6 +774,37 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
+static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
+                            bool IsSigned) {
+  unsigned BitWidth = LHS.getBitWidth();
+  LHS = IsSigned ? LHS.sext(BitWidth + 1) : LHS.zext(BitWidth + 1);
+  RHS = IsSigned ? RHS.sext(BitWidth + 1) : RHS.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+  LHS = KnownBits::computeForAddCarry(LHS, RHS, Carry);
+  LHS = LHS.extractBits(BitWidth, 1);
+  return LHS;
+}
+
+KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ false,
+                    /* IsSigned */ true);
+}
+
+KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ false,
+                    /* IsSigned */ false);
+}
+
+KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ true,
+                    /* IsSigned */ true);
+}
+
+KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ true,
+                    /* IsSigned */ false);
+}
+
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
                          bool NoUndefSelfMultiply) {
   unsigned BitWidth = LHS.getBitWidth();

@@ -5,7 +5,7 @@
 // RUN: cp %llvm_src/include/llvm/ProfileData/CtxInstrContextNode.h %t_include/
 //
 // Compile with ctx instrumentation "on". We treat "theRoot" as callgraph root.
-// RUN: %clangxx %s -lclang_rt.ctx_profile -I%t_include -O2 -o %t.bin -mllvm -profile-context-root=theRoot
+// RUN: %clangxx %s %ctxprofilelib -I%t_include -O2 -o %t.bin -mllvm -profile-context-root=theRoot
 //
 // Run the binary, and observe the profile fetch handler's output.
 // RUN: %t.bin | FileCheck %s
