@@ -13023,8 +13023,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //  backedge count as:
       //  RHSStart >= Start ? (RHSStart - Start)/(Stride - RHSStride) ? 0 
 
-      // check if Stride-RHSStride will not overflow
-      if (willNotOverflow(llvm::Instruction::Sub, true, Stride, RHSStride)) {
+      // check if RHSStride<0 and Stride-RHSStride will not overflow 
+      // FIXME: Can RHSStride be positive?
+      if (isKnownNegative(RHSStride) && 
+        willNotOverflow(llvm::Instruction::Sub, true, Stride, RHSStride)) {
+          
         const SCEV *Denominator = getMinusSCEV(Stride, RHSStride); 
         if (isKnownPositive(Denominator)) {
           End = IsSigned ? getSMaxExpr(RHSStart, Start) : 
