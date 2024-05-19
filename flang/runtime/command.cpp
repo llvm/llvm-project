@@ -239,4 +239,23 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
   return StatOk;
 }
 
+std::int32_t RTNAME(GetCwd)(
+    const Descriptor &cwd, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  RUNTIME_CHECK(terminator, IsValidCharDescriptor(&cwd));
+
+  char *buf = (char *)std::malloc(FILENAME_MAX);
+  if (!buf) {
+    return StatMemAllocation;
+  }
+
+  if (!getcwd(buf, FILENAME_MAX)) {
+    return StatMissingCurrentWorkDirectory;
+  }
+
+  std::int64_t strLen = StringLength(buf);
+  return CopyCharsToDescriptor(cwd, buf, strLen);
+}
+
 } // namespace Fortran::runtime

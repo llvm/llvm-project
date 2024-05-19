@@ -280,6 +280,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getcwd",
+     &I::genGetCwd,
+     {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"getpid", &I::genGetPID},
     {"iachar", &I::genIchar},
     {"iall",
@@ -3463,6 +3467,38 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
+}
+
+// GETCWD
+fir::ExtendedValue
+IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+
+  auto cwd = fir::getBase(args[0]);
+  const fir::ExtendedValue &status = args[1];
+
+  auto statusValue = fir::runtime::genGetCwd(builder, loc, cwd);
+
+  // Handle optional status argument.
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen(
+            [&]() { builder.createStoreWithConvert(loc, statusValue, statusAddr); })
+        .end();
+  }
+
+  // Function form, return status.
+  if (resultType.has_value()) {
+    return statusValue;
+  }
+
+  // Subroutine form, return none.
+  return {};
 }
 
 // GET_COMMAND
