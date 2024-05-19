@@ -81,7 +81,7 @@ def _execute(test, lit_config):
     result.elapsed = time.time() - start
     print("Endill: worker 2-4")
     result.start = start
-    print("Endill: worker 2-5")
+    print("Endill: worker 2-5 {}".format(test.path_in_suite))
     result.pid = os.getpid()
     print("Endill: worker 2-6")
     return result
