@@ -256,7 +256,8 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
-  E->Profile(ID, Context, true);
+  if (E)
+    E->Profile(ID, Context, true);
 }
 
 DependentVectorType::DependentVectorType(QualType ElementType,
@@ -629,6 +630,16 @@ bool Type::isStructureType() const {
   if (const auto *RT = getAs<RecordType>())
     return RT->getDecl()->isStruct();
   return false;
+}
+
+bool Type::isStructureTypeWithFlexibleArrayMember() const {
+  const auto *RT = getAs<RecordType>();
+  if (!RT)
+    return false;
+  const auto *Decl = RT->getDecl();
+  if (!Decl->isStruct())
+    return false;
+  return Decl->hasFlexibleArrayMember();
 }
 
 bool Type::isObjCBoxableRecordType() const {

@@ -238,7 +238,8 @@ fir::FortranVariableOpInterface
 genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
-           fir::CUDADataAttributeAttr cudaAttr = {});
+           mlir::Value dummyScope = nullptr,
+           cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are

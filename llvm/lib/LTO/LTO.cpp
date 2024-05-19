@@ -207,14 +207,20 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
+  std::vector<std::pair<uint64_t, uint8_t>> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-    for (auto &[GUID, ImportType] : Entry.getFunctions()) {
+
+    ImportedGUIDs.clear();
+    for (auto &[Fn, ImportType] : Entry.getFunctions())
+      ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
+    llvm::sort(ImportedGUIDs);
+    for (auto &[GUID, Type]: ImportedGUIDs) {
       AddUint64(GUID);
-      AddUint8(ImportType);
+      AddUint8(Type);
     }
   }
 

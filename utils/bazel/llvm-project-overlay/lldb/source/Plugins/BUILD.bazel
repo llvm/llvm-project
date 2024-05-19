@@ -270,6 +270,7 @@ cc_library(
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PlatformMacOSXProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -280,7 +281,6 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
@@ -291,6 +291,7 @@ cc_library(
         "@platforms//os:macos": [
             ":PluginPlatformMacOSXObjCXX",
             ":PluginPlatformMacOSXObjCXXHeaders",
+            "//lldb:HostMacOSXPrivateHeaders",
         ],
         "//conditions:default": [],
     }),
@@ -1264,6 +1265,7 @@ cc_library(
     name = "PluginDynamicLoaderDarwinKernel",
     srcs = glob(["DynamicLoader/Darwin-Kernel/*.cpp"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":DynamicLoaderDarwinKernelProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -2145,6 +2147,7 @@ cc_library(
     srcs = glob(["Process/mach-core/*.cpp"]),
     hdrs = glob(["Process/mach-core/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginDynamicLoaderMacOSXDYLD",

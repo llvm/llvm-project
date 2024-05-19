@@ -26,6 +26,9 @@ class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 public:
+  // Redeclaration of the version in OpenACCClause.h.
+  using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+
   /// A type to represent all the data for an OpenACC Clause that has been
   /// parsed, but not yet created/semantically analyzed. This is effectively a
   /// discriminated union on the 'Clause Kind', with all of the individual
@@ -54,8 +57,18 @@ public:
       bool IsZero;
     };
 
+    struct WaitDetails {
+      Expr *DevNumExpr;
+      SourceLocation QueuesLoc;
+      SmallVector<Expr *> QueueIdExprs;
+    };
+
+    struct DeviceTypeDetails {
+      SmallVector<DeviceTypeArgument> Archs;
+    };
+
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
-                 IntExprDetails, VarListDetails>
+                 IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails>
         Details = std::monostate{};
 
   public:
@@ -101,16 +114,55 @@ public:
     unsigned getNumIntExprs() const {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
+
+      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Wait) &&
+          std::holds_alternative<std::monostate>(Details))
+        return 0;
       return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    SourceLocation getQueuesLoc() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queues location");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return SourceLocation{};
+
+      return std::get<WaitDetails>(Details).QueuesLoc;
+    }
+
+    Expr *getDevNumExpr() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a device number expr");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
+      return std::get<WaitDetails>(Details).DevNumExpr;
+    }
+
+    ArrayRef<Expr *> getQueueIdExprs() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queue id expr list");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return ArrayRef<Expr *>{std::nullopt};
+
+      return std::get<WaitDetails>(Details).QueueIdExprs;
     }
 
     ArrayRef<Expr *> getIntExprs() {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
+
       return std::get<IntExprDetails>(Details).IntExprs;
     }
 
@@ -164,6 +216,13 @@ public:
       return std::get<VarListDetails>(Details).IsZero;
     }
 
+    ArrayRef<DeviceTypeArgument> getDeviceTypeArchitectures() const {
+      assert((ClauseKind == OpenACCClauseKind::DeviceType ||
+              ClauseKind == OpenACCClauseKind::DType) &&
+             "Only 'device_type'/'dtype' has a device-type-arg list");
+      return std::get<DeviceTypeDetails>(Details).Archs;
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -190,6 +249,7 @@ public:
     void setIntExprDetails(ArrayRef<Expr *> IntExprs) {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -197,6 +257,7 @@ public:
     void setIntExprDetails(llvm::SmallVector<Expr *> &&IntExprs) {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
@@ -271,6 +332,20 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
              "zero: tag only valid on copyout/create");
       Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
+    }
+
+    void setWaitDetails(Expr *DevNum, SourceLocation QueuesLoc,
+                        llvm::SmallVector<Expr *> &&IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a wait-details");
+      Details = WaitDetails{DevNum, QueuesLoc, std::move(IntExprs)};
+    }
+
+    void setDeviceTypeDetails(llvm::SmallVector<DeviceTypeArgument> &&Archs) {
+      assert((ClauseKind == OpenACCClauseKind::DeviceType ||
+              ClauseKind == OpenACCClauseKind::DType) &&
+             "Only 'device_type'/'dtype' has a device-type-arg list");
+      Details = DeviceTypeDetails{std::move(Archs)};
     }
   };
 
