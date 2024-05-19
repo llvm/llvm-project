@@ -1036,6 +1036,20 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
+#ifdef LLPC_BUILD_GFX12
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
+>;
+
+def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
+  "DynamicVGPRBlockSize32",
+  "true",
+  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
+>;
+
+#endif /* LLPC_BUILD_GFX12 */
 def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
@@ -1533,6 +1547,14 @@ def FeatureISAVersion11_5_1 : FeatureSet<
      FeatureVGPRSingleUseHintInsts,
      Feature1_5xVGPRs])>;
 
+#ifdef LLPC_BUILD_GFX12
+def FeatureISAVersion11_5_2 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureVGPRSingleUseHintInsts])>;
+
+#endif /* LLPC_BUILD_GFX12 */
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureLDSBankCount32,
@@ -1565,7 +1587,12 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
+#ifdef LLPC_BUILD_GFX12
+   FeatureDPPSrc1SGPR,
+   Feature1_5xVGPRs]>;
+#else /* LLPC_BUILD_GFX12 */
    FeatureDPPSrc1SGPR]>;
+#endif /* LLPC_BUILD_GFX12 */
 
 //===----------------------------------------------------------------------===//
 
