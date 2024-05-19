@@ -54643,7 +54643,7 @@ static SDValue combineX86SubCmpToCcmpCtestHelper(
   X86::CondCode OppositeCC1 = X86::GetOppositeBranchCondition(CC1);
   X86::CondCode CFlagsCC = IsOR ? CC1 : OppositeCC1;
   SDValue CFlags = DAG.getTargetConstant(
-      X86::getCondFlagsFromCondCode(CFlagsCC), SDLoc(BrCond), MVT::i8);
+      X86::getCCMPCondFlagsFromCondCode(CFlagsCC), SDLoc(BrCond), MVT::i8);
   SDValue CCMP = (NewOpc == X86ISD::CCMP)
                      ? DAG.getNode(X86ISD::CCMP, SDLoc(N), Flag.getValueType(),
                                    {Sub.getOperand(0), Sub.getOperand(1),

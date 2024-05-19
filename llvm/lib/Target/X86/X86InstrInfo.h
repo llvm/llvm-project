@@ -75,7 +75,7 @@ CondCode getCondFromCFCMov(const MachineInstr &MI);
 CondCode getCondFromCCMP(const MachineInstr &MI);
 
 // Turn condition code into condition flags for CCMP/CTEST.
-int getCondFlagsFromCondCode(CondCode CC);
+int getCCMPCondFlagsFromCondCode(CondCode CC);
 
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.

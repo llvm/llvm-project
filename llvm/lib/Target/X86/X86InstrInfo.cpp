@@ -3164,7 +3164,7 @@ X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
              : X86::COND_INVALID;
 }
 
-int X86::getCondFlagsFromCondCode(X86::CondCode CC) {
+int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   // CCMP/CTEST has two conditional operands:
   // - SCC: source conditonal code (same as CMOV)
   // - DCF: destination conditional flags, which has 4 valid bits
