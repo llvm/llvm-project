@@ -214,6 +214,16 @@ class GoogleTest(TestFormat):
 
         if exitCode == 0:
             print("Endill gt-5-3")
+            print("Endill: shard header: {}".format(get_shard_header(shard_env)))
+            with open(test.gtest_json_file, encoding="utf-8") as f:
+                print("Endill gt-5-6")
+                jf = json.load(f)
+                print("Endill gt-5-7")
+                for testcase in jf["testsuites"]:
+                    for testinfo in testcase["testsuite"]:
+                        testname = testcase["name"] + "." + testinfo["name"]
+                        print("Endill: testnamae: {}".format(testname))
+
             return lit.Test.PASS, ""
 
         def get_test_stdout(test_name):
