@@ -1,8 +1,6 @@
 # This reproduces a bug with dynostats when trying to compute branch stats
 # at a block with two tails calls (one conditional and one unconditional).
 
-# REQUIRES: system-linux
-
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 # RUN:   %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
@@ -13,7 +11,7 @@
 # CHECK-NOT: Assertion `BranchInfo.size() == 2 && "could only be called for blocks with 2 successors"' failed.
 # Two tail calls in the same basic block after SCTC:
 # CHECK:         {{.*}}:   ja      {{.*}} # TAILCALL # Offset: 7 # CTCTakenCount: 4
-# CHECK-NEXT:    {{.*}}:   jmp     {{.*}} # TAILCALL # Offset: 12
+# CHECK-NEXT:    {{.*}}:   jmp     {{.*}} # TAILCALL # Offset: 13
 
   .globl _start
 _start:
@@ -23,7 +21,9 @@ a:  ja b
 x:  ret
 # FDATA: 1 _start #a# 1 _start #b# 2 4
 b:  jmp e
-c:  jmp f
+c:
+    .nops 1
+    jmp f
 
   .globl e
 e:
