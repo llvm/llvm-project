@@ -33,3 +33,15 @@ config.suffixes = [".c", ".cpp", ".test"]
 config.substitutions.append(
     ("%clangxx ", " ".join([config.clang] + config.cxx_mode_flags) + " -ldl -lpthread ")
 )
+
+config.substitutions.append(
+    (
+        "%libctxprof",
+        " ".join(
+            [
+                f"-lclang_rt.ctx_profile{config.target_suffix}",
+                f"-L{config.compiler_rt_libdir}",
+            ]
+        ),
+    )
+)
