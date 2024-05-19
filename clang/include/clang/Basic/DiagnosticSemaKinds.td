@@ -6533,10 +6533,8 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
 
 def err_flexible_array_count_not_in_same_struct : Error<
   "'counted_by' field %0 isn't within the same struct as the flexible array">;
-def err_counted_by_attr_not_on_ptr_or_flexible_array_member : Error<
-  "'counted_by' only applies to pointers or C99 flexible array members">;
-def err_counted_by_attr_on_array_not_flexible_array_member : Error<
-  "'counted_by' on arrays only applies to C99 flexible array members">;
+def err_counted_by_attr_not_on_flexible_array_member : Error<
+  "'counted_by' only applies to C99 flexible array members">;
 def err_counted_by_attr_refer_to_itself : Error<
   "'counted_by' cannot refer to the flexible array member %0">;
 def err_counted_by_must_be_in_structure : Error<
@@ -6551,17 +6549,6 @@ def err_counted_by_attr_refer_to_union : Error<
   "'counted_by' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
-def err_counted_by_attr_pointee_unknown_size : Error<
-  "'counted_by' cannot be applied to %select{"
-    "a pointer with pointee|" // pointer
-    "an array with element}0" // array
-  " of unknown size because %1 is %select{"
-    "an incomplete type|"  // CountedByInvalidPointeeTypeKind::INCOMPLETE
-    "a sizeless type|"     // CountedByInvalidPointeeTypeKind::SIZELESS
-    "a function type|"     // CountedByInvalidPointeeTypeKind::FUNCTION
-    // CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER
-    "a struct type with a flexible array member"
-  "}2">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

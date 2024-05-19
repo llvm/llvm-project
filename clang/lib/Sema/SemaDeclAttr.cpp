@@ -8633,82 +8633,31 @@ static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   return RD;
 }
 
-enum class CountedByInvalidPointeeTypeKind {
-  INCOMPLETE,
-  SIZELESS,
-  FUNCTION,
-  FLEXIBLE_ARRAY_MEMBER,
-  VALID,
-};
-
-static bool CheckCountedByAttrOnField(
-    Sema &S, FieldDecl *FD, Expr *E,
-    llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
-  // Check the context the attribute is used in
-
+static bool
+CheckCountExpr(Sema &S, FieldDecl *FD, Expr *E,
+               llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
   if (FD->getParent()->isUnion()) {
     S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_in_union)
         << FD->getSourceRange();
     return true;
   }
 
-  const auto FieldTy = FD->getType();
-  if (!FieldTy->isArrayType() && !FieldTy->isPointerType()) {
-    S.Diag(FD->getBeginLoc(),
-           diag::err_counted_by_attr_not_on_ptr_or_flexible_array_member)
-        << FD->getLocation();
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    S.Diag(E->getBeginLoc(), diag::err_counted_by_attr_argument_not_integer)
+        << E->getSourceRange();
     return true;
   }
 
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
-  if (FieldTy->isArrayType() &&
-      !Decl::isFlexibleArrayMemberLike(S.getASTContext(), FD, FieldTy,
+
+  if (!Decl::isFlexibleArrayMemberLike(S.getASTContext(), FD, FD->getType(),
                                        StrictFlexArraysLevel, true)) {
-    S.Diag(FD->getBeginLoc(),
-           diag::err_counted_by_attr_on_array_not_flexible_array_member)
-        << FD->getLocation();
-    return true;
-  }
-
-  CountedByInvalidPointeeTypeKind InvalidTypeKind =
-      CountedByInvalidPointeeTypeKind::VALID;
-  QualType PointeeTy;
-  int SelectPtrOrArr = 0;
-  if (FieldTy->isPointerType()) {
-    PointeeTy = FieldTy->getPointeeType();
-    SelectPtrOrArr = 0;
-  } else {
-    assert(FieldTy->isArrayType());
-    const ArrayType *AT = S.getASTContext().getAsArrayType(FieldTy);
-    PointeeTy = AT->getElementType();
-    SelectPtrOrArr = 1;
-  }
-  // Note: The `Decl::isFlexibleArrayMemberLike` check earlier on means
-  // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
-  // when `FieldTy->isArrayType()`.
-  if (PointeeTy->isIncompleteType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
-  } else if (PointeeTy->isSizelessType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
-  } else if (PointeeTy->isFunctionType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
-  } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
-  }
-
-  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
-    S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_pointee_unknown_size)
-        << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
-        << FD->getSourceRange();
-    return true;
-  }
-
-  // Check the expression
-
-  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    S.Diag(E->getBeginLoc(), diag::err_counted_by_attr_argument_not_integer)
-        << E->getSourceRange();
+    // The "counted_by" attribute must be on a flexible array member.
+    SourceRange SR = FD->getLocation();
+    S.Diag(SR.getBegin(),
+           diag::err_counted_by_attr_not_on_flexible_array_member)
+        << SR;
     return true;
   }
 
@@ -8771,11 +8720,10 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
-  if (CheckCountedByAttrOnField(S, FD, CountExpr, Decls))
+  if (CheckCountExpr(S, FD, CountExpr, Decls))
     return;
 
-  QualType CAT =
-      S.BuildCountAttributedArrayOrPointerType(FD->getType(), CountExpr);
+  QualType CAT = S.BuildCountAttributedArrayType(FD->getType(), CountExpr);
   FD->setType(CAT);
 }
 

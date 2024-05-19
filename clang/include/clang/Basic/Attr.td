@@ -2229,8 +2229,7 @@ def TypeNullUnspecified : TypeAttr {
 def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
-  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
-  let LateParsed = LateAttrParseExperimentalExt;
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel">];
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
   let LangOpts = [COnly];

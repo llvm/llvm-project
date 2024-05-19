@@ -9345,9 +9345,9 @@ BuildTypeCoupledDecls(Expr *E,
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
 }
 
-QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                      Expr *CountExpr) {
-  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
+QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
+                                             Expr *CountExpr) {
+  assert(WrappedTy->isIncompleteArrayType());
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);
