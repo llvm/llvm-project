@@ -214,6 +214,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (CI->isMustTailCall() && Fn->isVarArg())
             MF->getFrameInfo().setHasMustTailInVarArgFunc(true);
         }
+
+        // Determine if there is a call to setjmp in the machine function.
+        if (Call->hasFnAttr(Attribute::ReturnsTwice))
+          MF->setExposesReturnsTwice(true);
       }
 
       // Mark values used outside their block as exported, by allocating
