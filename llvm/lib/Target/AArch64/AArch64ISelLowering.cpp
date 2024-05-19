@@ -5842,15 +5842,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::experimental_cttz_elts: {
     SDValue CttzOp = Op.getOperand(1);
     EVT VT = CttzOp.getValueType();
+    assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
 
-    if (!VT.isScalableVector()) {
-      // Retrieve original fixed-width vector from ISD::TRUNCATE Node.
-      assert(CttzOp.getOpcode() == ISD::TRUNCATE && "Expected ISD::TRUNCATE!");
-      SDValue FixedWidthVec = CttzOp.getOperand(0);
-
+    if (VT.isFixedLengthVector()) {
       // We can use SVE instructions to lower this intrinsic by first creating
       // an SVE predicate register mask from the fixed-width vector.
-      CttzOp = convertFixedMaskToScalableVector(FixedWidthVec, DAG);
+      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, NewVT, CttzOp);
+      CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
     }
 
     SDValue NewCttzElts =
