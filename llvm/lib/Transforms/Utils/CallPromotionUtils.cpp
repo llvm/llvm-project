@@ -187,24 +187,6 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
     U->replaceUsesOfWith(&CB, Cast);
 }
 
-// Returns the or result of all icmp instructions.
-static Value *getOrs(const SmallVector<Value *, 2> &ICmps,
-                     IRBuilder<> &Builder) {
-  assert(!ICmps.empty() && "Must have at least one icmp instructions");
-  if (ICmps.size() == 1)
-    return ICmps[0];
-
-  SmallVector<Value *, 2> OrResults;
-  int i = 0, NumICmp = ICmps.size();
-  for (i = 0; i + 1 < NumICmp; i += 2)
-    OrResults.push_back(Builder.CreateOr(ICmps[i], ICmps[i + 1], "icmp-or"));
-
-  if (i < NumICmp)
-    OrResults.push_back(ICmps[i]);
-
-  return getOrs(OrResults, Builder);
-}
-
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
@@ -599,6 +581,7 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   for (auto &AddressPoint : AddressPoints)
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
 
+  // TODO: Perform tree height reduction if the number of ICmps is high.
   Value *Cond = Builder.CreateOr(ICmps);
 
   // Version the indirect call site. If Cond is true, 'NewInst' will be
