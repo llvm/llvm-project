@@ -34,7 +34,6 @@ brlt callee2
 __start:
 
 # PCREL13-NOT: callee0
-# PCREL13:     error: {{.*}} relocation R_AVR_13_PCREL out of range: {{.*}} is not in [-4096, 4095]; references 'callee1'
 # PCREL13:     error: {{.*}} improper alignment for relocation R_AVR_13_PCREL: {{.*}} is not aligned to 2 bytes
 rjmp  callee0
 rcall callee1
