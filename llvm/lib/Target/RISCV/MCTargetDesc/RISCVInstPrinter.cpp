@@ -216,62 +216,44 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   RISCVVType::printVType(Imm, O);
 }
 
+// Print a Zcmp RList. If we are printing architectural register names rather
+// than ABI register names, we need to print "{x1, x8-x9, x18-x27}" for all
+// registers. Otherwise, we print "{ra, s0-s11}".
 void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   O << "{";
-  switch (Imm) {
-  case RISCVZC::RLISTENCODE::RA:
-    printRegName(O, RISCV::X1);
-    break;
-  case RISCVZC::RLISTENCODE::RA_S0:
-    printRegName(O, RISCV::X1);
+  printRegName(O, RISCV::X1);
+
+  if (Imm >= RISCVZC::RLISTENCODE::RA_S0) {
     O << ", ";
     printRegName(O, RISCV::X8);
-    break;
-  case RISCVZC::RLISTENCODE::RA_S0_S1:
-    printRegName(O, RISCV::X1);
-    O << ", ";
-    printRegName(O, RISCV::X8);
-    O << '-';
-    printRegName(O, RISCV::X9);
-    break;
-  case RISCVZC::RLISTENCODE::RA_S0_S2:
-    printRegName(O, RISCV::X1);
-    O << ", ";
-    printRegName(O, RISCV::X8);
-    O << '-';
-    if (ArchRegNames) {
-      printRegName(O, RISCV::X9);
-      O << ", ";
-    }
-    printRegName(O, RISCV::X18);
-    break;
-  case RISCVZC::RLISTENCODE::RA_S0_S3:
-  case RISCVZC::RLISTENCODE::RA_S0_S4:
-  case RISCVZC::RLISTENCODE::RA_S0_S5:
-  case RISCVZC::RLISTENCODE::RA_S0_S6:
-  case RISCVZC::RLISTENCODE::RA_S0_S7:
-  case RISCVZC::RLISTENCODE::RA_S0_S8:
-  case RISCVZC::RLISTENCODE::RA_S0_S9:
-  case RISCVZC::RLISTENCODE::RA_S0_S11:
-    printRegName(O, RISCV::X1);
-    O << ", ";
-    printRegName(O, RISCV::X8);
-    O << '-';
-    if (ArchRegNames) {
-      printRegName(O, RISCV::X9);
-      O << ", ";
-      printRegName(O, RISCV::X18);
-      O << '-';
-    }
-    printRegName(O, RISCV::X19 + (Imm == RISCVZC::RLISTENCODE::RA_S0_S11
-                                      ? 8
-                                      : Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
-    break;
-  default:
-    llvm_unreachable("invalid register list");
   }
+
+  if (Imm >= RISCVZC::RLISTENCODE::RA_S0_S1) {
+    O << '-';
+    if (Imm == RISCVZC::RLISTENCODE::RA_S0_S1 || ArchRegNames)
+      printRegName(O, RISCV::X9);
+  }
+
+  if (Imm >= RISCVZC::RLISTENCODE::RA_S0_S2) {
+    if (ArchRegNames)
+      O << ", ";
+    if (Imm == RISCVZC::RLISTENCODE::RA_S0_S2 || ArchRegNames)
+      printRegName(O, RISCV::X18);
+  }
+
+  if (Imm >= RISCVZC::RLISTENCODE::RA_S0_S3) {
+    if (ArchRegNames)
+      O << '-';
+    unsigned Offset = (Imm - RISCVZC::RLISTENCODE::RA_S0_S3);
+    // Encodings for S3-S9 are contiguous. There is no encoding for S10, so we
+    // must skip to S11(X27).
+    if (Imm == RISCVZC::RLISTENCODE::RA_S0_S11)
+      ++Offset;
+    printRegName(O, RISCV::X19 + Offset);
+  }
+
   O << "}";
 }
 

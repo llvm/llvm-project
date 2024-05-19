@@ -42,6 +42,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -202,6 +203,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       CurScope(nullptr), Ident_super(nullptr),
+      CodeCompletionPtr(
+          std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       ObjCPtr(std::make_unique<SemaObjC>(*this)),
@@ -225,8 +228,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context),
-      CodeCompleter(CodeCompleter) {
+      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -1409,7 +1411,7 @@ void Sema::ActOnEndOfTranslationUnit() {
         SourceRange DiagRange = DiagD->getLocation();
         if (const auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(DiagD)) {
           if (const ASTTemplateArgumentListInfo *ASTTAL =
-                  VTSD->getTemplateArgsInfo())
+                  VTSD->getTemplateArgsAsWritten())
             DiagRange.setEnd(ASTTAL->RAngleLoc);
         }
         if (DiagD->isReferenced()) {
@@ -2057,9 +2059,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
-          !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-        Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
+        if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
+          Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+        else if (!IsArmStreamingFunction(FD,
+                                         /*IncludeLocallyStreaming=*/true)) {
+          Diag(D->getLocation(), diag::err_sve_vector_in_non_streaming_function)
+              << Ty;
+        }
+      }
     }
   };
 
@@ -2459,7 +2467,7 @@ bool Sema::tryExprAsCall(Expr &E, QualType &ZeroArgCallReturnTy,
   const OverloadExpr *Overloads = nullptr;
   bool IsMemExpr = false;
   if (E.getType() == Context.OverloadTy) {
-    OverloadExpr::FindResult FR = OverloadExpr::find(const_cast<Expr*>(&E));
+    OverloadExpr::FindResult FR = OverloadExpr::find(&E);
 
     // Ignore overloads that are pointer-to-member constants.
     if (FR.HasFormOfMemberPointer)

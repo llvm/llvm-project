@@ -27,6 +27,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -218,7 +219,8 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
         break;
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteAttribute(AttributeCommonInfo::Syntax::AS_GNU);
+        Actions.CodeCompletion().CodeCompleteAttribute(
+            AttributeCommonInfo::Syntax::AS_GNU);
         break;
       }
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
@@ -895,7 +897,8 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteAttribute(AttributeCommonInfo::AS_Declspec);
+        Actions.CodeCompletion().CodeCompleteAttribute(
+            AttributeCommonInfo::AS_Declspec);
         return;
       }
 
@@ -2304,7 +2307,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // Check to see if we have a function *definition* which must have a body.
     if (Tok.is(tok::equal) && NextToken().is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompleteAfterFunctionEquals(D);
+      Actions.CodeCompletion().CodeCompleteAfterFunctionEquals(D);
       return nullptr;
     }
     // We're at the point where the parsing of function declarator is finished.
@@ -2740,7 +2743,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteInitializer(getCurScope(), ThisDecl);
+        Actions.CodeCompletion().CodeCompleteInitializer(getCurScope(),
+                                                         ThisDecl);
         Actions.FinalizeDeclaration(ThisDecl);
         return nullptr;
       }
@@ -2785,10 +2789,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
     auto ThisVarDecl = dyn_cast_or_null<VarDecl>(ThisDecl);
     auto RunSignatureHelp = [&]() {
-      QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-          ThisVarDecl->getType()->getCanonicalTypeInternal(),
-          ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
-          /*Braced=*/false);
+      QualType PreferredType =
+          Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+              ThisVarDecl->getType()->getCanonicalTypeInternal(),
+              ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
+              /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -2809,7 +2814,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
     if (SawError) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
-        Actions.ProduceConstructorSignatureHelp(
+        Actions.CodeCompletion().ProduceConstructorSignatureHelp(
             ThisVarDecl->getType()->getCanonicalTypeInternal(),
             ThisDecl->getLocation(), Exprs, T.getOpenLocation(),
             /*Braced=*/false);
@@ -2863,10 +2868,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
     AccessSpecifier AS, DeclSpecContext DSC) {
+  ParsedTemplateInfo TemplateInfo;
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS, DSC, nullptr,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
                              AllowImplicitTypename);
 
   // Validate declspec for type-name.
@@ -2945,7 +2951,7 @@ static bool isValidAfterIdentifierInDeclarator(const Token &T) {
 /// other pieces of declspec after it, it returns true.
 ///
 bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
-                              const ParsedTemplateInfo &TemplateInfo,
+                              ParsedTemplateInfo &TemplateInfo,
                               AccessSpecifier AS, DeclSpecContext DSC,
                               ParsedAttributes &Attrs) {
   assert(Tok.is(tok::identifier) && "should have identifier");
@@ -3507,7 +3513,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 ///       'friend': [C++ dcl.friend]
 ///       'constexpr': [C++0x dcl.constexpr]
 void Parser::ParseDeclarationSpecifiers(
-    DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+    DeclSpec &DS, ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
     DeclSpecContext DSContext, LateParsedAttrList *LateAttrs,
     ImplicitTypenameContext AllowImplicitTypename) {
   if (DS.getSourceRange().isInvalid()) {
@@ -3652,7 +3658,8 @@ void Parser::ParseDeclarationSpecifiers(
       continue;
 
     case tok::code_completion: {
-      Sema::ParserCompletionContext CCC = Sema::PCC_Namespace;
+      SemaCodeCompletion::ParserCompletionContext CCC =
+          SemaCodeCompletion::PCC_Namespace;
       if (DS.hasTypeSpecifier()) {
         bool AllowNonIdentifiers
           = (getCurScope()->getFlags() & (Scope::ControlScope |
@@ -3665,25 +3672,25 @@ void Parser::ParseDeclarationSpecifiers(
             (DSContext == DeclSpecContext::DSC_class && DS.isFriendSpecified());
 
         cutOffParsing();
-        Actions.CodeCompleteDeclSpec(getCurScope(), DS,
-                                     AllowNonIdentifiers,
-                                     AllowNestedNameSpecifiers);
+        Actions.CodeCompletion().CodeCompleteDeclSpec(
+            getCurScope(), DS, AllowNonIdentifiers, AllowNestedNameSpecifiers);
         return;
       }
 
       // Class context can appear inside a function/block, so prioritise that.
       if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate)
-        CCC = DSContext == DeclSpecContext::DSC_class ? Sema::PCC_MemberTemplate
-                                                      : Sema::PCC_Template;
+        CCC = DSContext == DeclSpecContext::DSC_class
+                  ? SemaCodeCompletion::PCC_MemberTemplate
+                  : SemaCodeCompletion::PCC_Template;
       else if (DSContext == DeclSpecContext::DSC_class)
-        CCC = Sema::PCC_Class;
+        CCC = SemaCodeCompletion::PCC_Class;
       else if (getCurScope()->getFnParent() || getCurScope()->getBlockParent())
-        CCC = Sema::PCC_LocalDeclarationSpecifiers;
+        CCC = SemaCodeCompletion::PCC_LocalDeclarationSpecifiers;
       else if (CurParsedObjCImpl)
-        CCC = Sema::PCC_ObjCImplementation;
+        CCC = SemaCodeCompletion::PCC_ObjCImplementation;
 
       cutOffParsing();
-      Actions.CodeCompleteOrdinaryName(getCurScope(), CCC);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), CCC);
       return;
     }
 
@@ -5093,7 +5100,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   if (Tok.is(tok::code_completion)) {
     // Code completion for an enum name.
     cutOffParsing();
-    Actions.CodeCompleteTag(getCurScope(), DeclSpec::TST_enum);
+    Actions.CodeCompletion().CodeCompleteTag(getCurScope(), DeclSpec::TST_enum);
     DS.SetTypeSpecError(); // Needed by ActOnUsingDeclaration.
     return;
   }
@@ -6283,7 +6290,7 @@ void Parser::ParseTypeQualifierListOpt(
       if (CodeCompletionHandler)
         (*CodeCompletionHandler)();
       else
-        Actions.CodeCompleteTypeQualifiers(DS);
+        Actions.CodeCompletion().CodeCompleteTypeQualifiers(DS);
       return;
 
     case tok::kw_const:
@@ -7420,12 +7427,12 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // with the pure-specifier in the same way.
 
       // Parse cv-qualifier-seq[opt].
-      ParseTypeQualifierListOpt(DS, AR_NoAttributesParsed,
-                                /*AtomicAllowed*/ false,
-                                /*IdentifierRequired=*/false,
-                                llvm::function_ref<void()>([&]() {
-                                  Actions.CodeCompleteFunctionQualifiers(DS, D);
-                                }));
+      ParseTypeQualifierListOpt(
+          DS, AR_NoAttributesParsed,
+          /*AtomicAllowed*/ false,
+          /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
+            Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
+          }));
       if (!DS.getSourceRange().getEnd().isInvalid()) {
         EndLoc = DS.getSourceRange().getEnd();
       }
@@ -7754,8 +7761,9 @@ void Parser::ParseParameterDeclarationClause(
         Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
     }
 
-    ParseDeclarationSpecifiers(DS, /*TemplateInfo=*/ParsedTemplateInfo(),
-                               AS_none, DeclSpecContext::DSC_normal,
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
+                               DeclSpecContext::DSC_normal,
                                /*LateAttrs=*/nullptr, AllowImplicitTypename);
 
     DS.takeAttributesFrom(ArgDeclSpecAttrs);
@@ -7987,7 +7995,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     return;
   } else if (Tok.getKind() == tok::code_completion) {
     cutOffParsing();
-    Actions.CodeCompleteBracketDeclarator(getCurScope());
+    Actions.CodeCompletion().CodeCompleteBracketDeclarator(getCurScope());
     return;
   }
 

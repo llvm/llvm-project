@@ -39,6 +39,10 @@ class Extension<
     // not doing so.
     string MArchName = TargetFeatureName;
 
+    // An alias that can be used on the command line, if the extension has one.
+    // Used for correcting historical names while remaining backwards compatible.
+    string MArchAlias = "";
+
     // Function MultiVersioning (FMV) properties
 
     // A C++ expression giving the number of the bit in the FMV ABI.
@@ -163,6 +167,7 @@ def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics"
 def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
   "Enable Function Multi Versioning support.">;
 
+let MArchAlias = "rdma" in
 def FeatureRDM : Extension<"rdm", "RDM",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)",
   [FeatureNEON],
@@ -787,90 +792,104 @@ def FeatureTLBIW : Extension<"tlbiw", "TLBIW",
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
-def HasV8_0aOps : SubtargetFeature<"v8a", "HasV8_0aOps", "true",
-  "Support ARM v8.0a instructions", [FeatureEL2VMSA, FeatureEL3]>;
+class Architecture64<
+  int major, int minor, string profile,
+  string target_feature_name,
+  list<SubtargetFeature> implied_features,
+  list<Extension> default_extensions
+> : SubtargetFeature<target_feature_name,
+    "HasV" # major # "_" # minor # profile # "Ops", "true",
+    "Support ARM " # target_feature_name # " architecture",
+    implied_features
+> {
+  int Major = major;
+  int Minor = minor;
+  string Profile = profile;
 
-def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
-  "Support ARM v8.1a instructions", [HasV8_0aOps, FeatureCRC, FeatureLSE,
-  FeatureRDM, FeaturePAN, FeatureLOR, FeatureVH]>;
+  // Extensions enabled by default. Not the same as implied SubtargetFeatures.
+  list<Extension> DefaultExts = default_extensions;
+}
 
-def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
-  "Support ARM v8.2a instructions", [HasV8_1aOps, FeaturePsUAO,
-  FeaturePAN_RWV, FeatureRAS, FeatureCCPP]>;
-
-def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
-  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC, FeaturePAuth,
-  FeatureJS, FeatureCCIDX, FeatureComplxNum]>;
-
-def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
-  "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd,
-  FeatureNV, FeatureMPAM, FeatureDIT,
-  FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI,
-  FeatureFlagM, FeatureRCPC_IMMO, FeatureLSE2]>;
-
-def HasV8_5aOps : SubtargetFeature<
-  "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
+def HasV8_0aOps : Architecture64<8, 0, "a", "v8a",
+  [FeatureEL2VMSA, FeatureEL3],
+  [FeatureFPARMv8, FeatureNEON]>;
+def HasV8_1aOps : Architecture64<8, 1, "a", "v8.1a",
+  [HasV8_0aOps, FeatureCRC, FeatureLSE, FeatureRDM, FeaturePAN, FeatureLOR,
+   FeatureVH],
+  !listconcat(HasV8_0aOps.DefaultExts, [FeatureCRC, FeatureLSE, FeatureRDM])>;
+def HasV8_2aOps : Architecture64<8, 2, "a", "v8.2a",
+  [HasV8_1aOps, FeaturePsUAO, FeaturePAN_RWV, FeatureRAS, FeatureCCPP],
+  !listconcat(HasV8_1aOps.DefaultExts, [FeatureRAS])>;
+def HasV8_3aOps : Architecture64<8, 3, "a", "v8.3a",
+  [HasV8_2aOps, FeatureRCPC, FeaturePAuth, FeatureJS, FeatureCCIDX,
+    FeatureComplxNum],
+  !listconcat(HasV8_2aOps.DefaultExts, [FeatureComplxNum, FeatureJS,
+    FeaturePAuth, FeatureRCPC])>;
+def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
+  [HasV8_3aOps, FeatureDotProd, FeatureNV, FeatureMPAM, FeatureDIT,
+    FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM,
+    FeatureRCPC_IMMO, FeatureLSE2],
+  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd])>;
+def HasV8_5aOps : Architecture64<8, 5, "a", "v8.5a",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-   FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
-   FeatureBranchTargetId]>;
-
-def HasV8_6aOps : SubtargetFeature<
-  "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
+    FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
+    FeatureBranchTargetId],
+  !listconcat(HasV8_4aOps.DefaultExts, [])>;
+def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
-   FeatureEnhancedCounterVirtualization, FeatureMatMulInt8]>;
-
-def HasV8_7aOps : SubtargetFeature<
-  "v8.7a", "HasV8_7aOps", "true", "Support ARM v8.7a instructions",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX]>;
-
-def HasV8_8aOps : SubtargetFeature<
-  "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
-  [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI]>;
-
-def HasV8_9aOps : SubtargetFeature<
-  "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
+    FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
+  !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
+def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  !listconcat(HasV8_6aOps.DefaultExts, [])>;
+def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
+  [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
+  !listconcat(HasV8_7aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
+def HasV8_9aOps : Architecture64<8, 9, "a", "v8.9a",
   [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeatureSPECRES2,
-   FeatureCSSC, FeatureRASv2, FeatureCHK]>;
-
-def HasV9_0aOps : SubtargetFeature<
-  "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
-  [HasV8_5aOps, FeatureMEC, FeatureSVE2]>;
-
-def HasV9_1aOps : SubtargetFeature<
-  "v9.1a", "HasV9_1aOps", "true", "Support ARM v9.1a instructions",
-  [HasV8_6aOps, HasV9_0aOps]>;
-
-def HasV9_2aOps : SubtargetFeature<
-  "v9.2a", "HasV9_2aOps", "true", "Support ARM v9.2a instructions",
-  [HasV8_7aOps, HasV9_1aOps]>;
-
-def HasV9_3aOps : SubtargetFeature<
-  "v9.3a", "HasV9_3aOps", "true", "Support ARM v9.3a instructions",
-  [HasV8_8aOps, HasV9_2aOps]>;
-
-def HasV9_4aOps : SubtargetFeature<
-  "v9.4a", "HasV9_4aOps", "true", "Support ARM v9.4a instructions",
-  [HasV8_9aOps, HasV9_3aOps]>;
-
-def HasV9_5aOps : SubtargetFeature<
-  "v9.5a", "HasV9_5aOps", "true", "Support ARM v9.5a instructions",
-  [HasV9_4aOps, FeatureCPA]>;
-
-def HasV8_0rOps : SubtargetFeature<
-  "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",
-  [//v8.1
-  FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
-  //v8.2
-  FeatureRAS, FeaturePsUAO, FeatureCCPP, FeaturePAN_RWV,
-  //v8.3
-  FeatureCCIDX, FeaturePAuth, FeatureRCPC,
-  //v8.4
-  FeatureTRACEV8_4, FeatureTLB_RMI, FeatureFlagM, FeatureDIT, FeatureSEL2,
-  FeatureRCPC_IMMO,
-  // Not mandatory in v8.0-R, but included here on the grounds that it
-  // only enables names of system registers
-  FeatureSpecRestrict
-  ]>;
+   FeatureCSSC, FeatureRASv2, FeatureCHK],
+  !listconcat(HasV8_8aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
+    FeatureRASv2])>;
+def HasV9_0aOps : Architecture64<9, 0, "a", "v9a",
+  [HasV8_5aOps, FeatureMEC, FeatureSVE2],
+  !listconcat(HasV8_5aOps.DefaultExts, [FeatureFullFP16, FeatureSVE,
+    FeatureSVE2])>;
+def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
+  [HasV8_6aOps, HasV9_0aOps],
+  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
+def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
+  [HasV8_7aOps, HasV9_1aOps],
+  !listconcat(HasV9_1aOps.DefaultExts, [])>;
+def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
+  [HasV8_8aOps, HasV9_2aOps],
+  !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
+def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
+  [HasV8_9aOps, HasV9_3aOps],
+  !listconcat(HasV9_3aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
+    FeatureRASv2])>;
+def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
+  [HasV9_4aOps, FeatureCPA],
+  !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA])>;
+def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
+  [ //v8.1
+    FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
+    //v8.2
+    FeatureRAS, FeaturePsUAO, FeatureCCPP, FeaturePAN_RWV,
+    //v8.3
+    FeatureCCIDX, FeaturePAuth, FeatureRCPC,
+    //v8.4
+    FeatureTRACEV8_4, FeatureTLB_RMI, FeatureFlagM, FeatureDIT, FeatureSEL2,
+    FeatureRCPC_IMMO,
+    // Not mandatory in v8.0-R, but included here on the grounds that it
+    // only enables names of system registers
+    FeatureSpecRestrict
+  ],
+  // For v8-R, we do not enable crypto and align with GCC that enables a more
+  // minimal set of optional architecture extensions.
+  !listconcat(
+    !listremove(HasV8_5aOps.DefaultExts, [FeatureLSE]),
+    [FeatureSSBS, FeatureFullFP16, FeatureFP16FML, FeatureSB]
+  )>;
 
 //===----------------------------------------------------------------------===//
 // Access to privileged registers

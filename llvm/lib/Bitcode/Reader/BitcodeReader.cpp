@@ -306,7 +306,8 @@ static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
         return error("Invalid section name record");
       // Check for the i386 and other (x86_64, ARM) conventions
       if (S.find("__DATA,__objc_catlist") != std::string::npos ||
-          S.find("__OBJC,__category") != std::string::npos)
+          S.find("__OBJC,__category") != std::string::npos ||
+          S.find("__TEXT,__swift") != std::string::npos)
         return true;
       break;
     }

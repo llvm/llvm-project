@@ -1858,13 +1858,13 @@ defm apinotes : BoolOption<"f", "apinotes",
     LangOpts<"APINotes">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Enable">,
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
-    BothFlags<[], [ClangOption, CC1Option], "external API notes support">>,
+    BothFlags<[], [ClangOption, CC1Option], " external API notes support">>,
     Group<f_clang_Group>;
 defm apinotes_modules : BoolOption<"f", "apinotes-modules",
     LangOpts<"APINotesModules">, DefaultFalse,
     PosFlag<SetTrue, [], [ClangOption], "Enable">,
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
-    BothFlags<[], [ClangOption, CC1Option], "module-based external API notes support">>,
+    BothFlags<[], [ClangOption, CC1Option], " module-based external API notes support">>,
     Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -5491,7 +5491,10 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  Visibility<[ClangOption, CLOption]>;
+  HelpTextForVariants<[FlangOption],
+                      "Print the resource directory pathname that contains lib and "
+                      "include directories with the runtime libraries and MODULE files.">,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
@@ -6547,6 +6550,10 @@ def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
 
+def flang_experimental_integer_overflow : Flag<["-"], "flang-experimental-integer-overflow">,
+  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Add nsw flag to internal operations such as do-variable increment (experimental)">;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
@@ -6644,7 +6651,9 @@ def fdebug_unparse : Flag<["-"], "fdebug-unparse">, Group<Action_Group>,
   DocBrief<[{Run the parser and the semantic checks. Then unparse the
 parse-tree and output the generated Fortran source file.}]>;
 def fdebug_unparse_with_symbols : Flag<["-"], "fdebug-unparse-with-symbols">, Group<Action_Group>,
-  HelpText<"Unparse and stop.">;
+  HelpText<"Unparse with symbols and stop.">;
+def fdebug_unparse_with_modules : Flag<["-"], "fdebug-unparse-with-modules">, Group<Action_Group>,
+  HelpText<"Unparse with dependent modules and stop.">;
 def fdebug_dump_symbols : Flag<["-"], "fdebug-dump-symbols">, Group<Action_Group>,
   HelpText<"Dump symbols after the semantic analysis">;
 def fdebug_dump_parse_tree : Flag<["-"], "fdebug-dump-parse-tree">, Group<Action_Group>,

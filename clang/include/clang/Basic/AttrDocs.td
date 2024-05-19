@@ -8092,3 +8092,17 @@ requirement:
   }
   }];
 }
+
+def ClspvLibclcBuiltinDoc : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify functions coming from `libclc`_ (OpenCL-C builtin library).
+
+.. code-block:: c
+
+  void __attribute__((clspv_libclc_builtin)) libclc_builtin() {}
+
+.. _`clspv`: https://github.com/google/clspv
+.. _`libclc`: https://libclc.llvm.org
+}];
+}

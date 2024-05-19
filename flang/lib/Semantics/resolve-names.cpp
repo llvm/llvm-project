@@ -3797,6 +3797,26 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         subp->set_cudaSubprogramAttrs(attr);
       }
     }
+    if (auto attrs{subp->cudaSubprogramAttrs()}) {
+      if (*attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Device) {
+        const Scope &scope{currScope()};
+        const Scope *mod{FindModuleContaining(scope)};
+        if (mod && mod->GetName().value() == "cudadevice") {
+          return false;
+        }
+        // Implicitly USE the cudadevice module by copying its symbols in the
+        // current scope.
+        const Scope &cudaDeviceScope{context().GetCUDADeviceScope()};
+        for (auto sym : cudaDeviceScope.GetSymbols()) {
+          if (!currScope().FindSymbol(sym->name())) {
+            auto &localSymbol{MakeSymbol(
+                sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
+            localSymbol.flags() = sym->flags();
+          }
+        }
+      }
+    }
   }
   return false;
 }
@@ -5013,8 +5033,7 @@ bool DeclarationVisitor::HasCycle(
     if (procsInCycle.count(*interface) > 0) {
       for (const auto &procInCycle : procsInCycle) {
         Say(procInCycle->name(),
-            "The interface for procedure '%s' is recursively "
-            "defined"_err_en_US,
+            "The interface for procedure '%s' is recursively defined"_err_en_US,
             procInCycle->name());
         context().SetError(*procInCycle);
       }
@@ -8941,7 +8960,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
   FinishSpecificationParts(root);
   ResolveExecutionParts(root);
   FinishExecutionParts(root);
-  ResolveAccParts(context(), x);
+  ResolveAccParts(context(), x, /*topScope=*/nullptr);
   ResolveOmpParts(context(), x);
   return false;
 }
