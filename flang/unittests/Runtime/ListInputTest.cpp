@@ -155,35 +155,35 @@ using ParamTy = std::tuple<std::string, std::vector<int>>;
 
 struct SimpleListInputTest : testing::TestWithParam<ParamTy> {};
 
-// TEST_P(SimpleListInputTest, TestListInput) {
-//   auto [formatBuffer, expectedOutput] = GetParam();
-//   constexpr int numBuffers{1};
+TEST_P(SimpleListInputTest, TestListInput) {
+  auto [formatBuffer, expectedOutput] = GetParam();
+  constexpr int numBuffers{1};
 
-//   StaticDescriptor<1> staticDescriptor;
-//   Descriptor &whole{staticDescriptor.descriptor()};
-//   SubscriptValue extent[]{numBuffers};
-//   whole.Establish(TypeCode{CFI_type_char}, formatBuffer.size(),
-//       formatBuffer.data(), 1, extent, CFI_attribute_pointer);
-//   whole.Check();
-//   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
+  StaticDescriptor<1> staticDescriptor;
+  Descriptor &whole{staticDescriptor.descriptor()};
+  SubscriptValue extent[]{numBuffers};
+  whole.Establish(TypeCode{CFI_type_char}, formatBuffer.size(),
+      formatBuffer.data(), 1, extent, CFI_attribute_pointer);
+  whole.Check();
+  auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
 
-//   const auto listInputLength{expectedOutput.size()};
-//   std::vector<std::int64_t> actualOutput(listInputLength);
-//   for (std::size_t j = 0; j < listInputLength; ++j) {
-//     IONAME(InputInteger)(cookie, actualOutput[j]);
-//   }
+  const auto listInputLength{expectedOutput.size()};
+  std::vector<std::int64_t> actualOutput(listInputLength);
+  for (std::size_t j = 0; j < listInputLength; ++j) {
+    IONAME(InputInteger)(cookie, actualOutput[j]);
+  }
 
-//   const auto status{IONAME(EndIoStatement)(cookie)};
-//   ASSERT_EQ(status, 0) << "list-directed input failed, status "
-//                        << static_cast<int>(status) << '\n';
+  const auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, 0) << "list-directed input failed, status "
+                       << static_cast<int>(status) << '\n';
 
-//   // Verify the calls to _InputInteger_ resulted in _expectedOutput_
-//   for (std::size_t j = 0; j < listInputLength; ++j) {
-//     ASSERT_EQ(actualOutput[j], expectedOutput[j])
-//         << "wanted actualOutput[" << j << "]==" << expectedOutput[j] << ", got "
-//         << actualOutput[j] << '\n';
-//   }
-// }
+  // Verify the calls to _InputInteger_ resulted in _expectedOutput_
+  for (std::size_t j = 0; j < listInputLength; ++j) {
+    ASSERT_EQ(actualOutput[j], expectedOutput[j])
+        << "wanted actualOutput[" << j << "]==" << expectedOutput[j] << ", got "
+        << actualOutput[j] << '\n';
+  }
+}
 
 INSTANTIATE_TEST_SUITE_P(SimpleListInputTestInstantiation, SimpleListInputTest,
     testing::Values(std::make_tuple("", std::vector<int>{}),

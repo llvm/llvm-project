@@ -32,24 +32,24 @@ TEST(TestProgramEnd, StopTestNoStopMessage) {
       RTNAME(StopStatement)(), testing::ExitedWithCode(EXIT_SUCCESS), "");
 }
 
-// TEST(TestProgramEnd, StopMessageTest) {
-//   static const char *message{"bye bye"};
-//   EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
-//                   /*isErrorStop=*/false, /*quiet=*/false),
-//       testing::ExitedWithCode(EXIT_SUCCESS), "Fortran STOP: bye bye");
+TEST(TestProgramEnd, StopMessageTest) {
+  static const char *message{"bye bye"};
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/false, /*quiet=*/false),
+      testing::ExitedWithCode(EXIT_SUCCESS), "Fortran STOP: bye bye");
 
-//   EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
-//                   /*isErrorStop=*/false, /*quiet=*/true),
-//       testing::ExitedWithCode(EXIT_SUCCESS), "");
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/false, /*quiet=*/true),
+      testing::ExitedWithCode(EXIT_SUCCESS), "");
 
-//   EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
-//                   /*isErrorStop=*/true, /*quiet=*/false),
-//       testing::ExitedWithCode(EXIT_FAILURE), "Fortran ERROR STOP: bye bye");
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/true, /*quiet=*/false),
+      testing::ExitedWithCode(EXIT_FAILURE), "Fortran ERROR STOP: bye bye");
 
-//   EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
-//                   /*isErrorStop=*/true, /*quiet=*/true),
-//       testing::ExitedWithCode(EXIT_FAILURE), "");
-// }
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/true, /*quiet=*/true),
+      testing::ExitedWithCode(EXIT_FAILURE), "");
+}
 
 TEST(TestProgramEnd, NoStopMessageTest) {
   putenv(const_cast<char *>("NO_STOP_MESSAGE=1"));

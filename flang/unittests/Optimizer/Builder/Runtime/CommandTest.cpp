@@ -10,12 +10,12 @@
 #include "RuntimeCallTestBase.h"
 #include "gtest/gtest.h"
 
-// TEST_F(RuntimeCallTest, genCommandArgumentCountTest) {
-//   mlir::Location loc = firBuilder->getUnknownLoc();
-//   mlir::Value result = fir::runtime::genCommandArgumentCount(*firBuilder, loc);
-//   checkCallOp(result.getDefiningOp(), "_FortranAArgumentCount", /*nbArgs=*/0,
-//       /*addLocArgs=*/false);
-// }
+TEST_F(RuntimeCallTest, genCommandArgumentCountTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value result = fir::runtime::genCommandArgumentCount(*firBuilder, loc);
+  checkCallOp(result.getDefiningOp(), "_FortranAArgumentCount", /*nbArgs=*/0,
+      /*addLocArgs=*/false);
+}
 
 TEST_F(RuntimeCallTest, genGetCommandArgument) {
   mlir::Location loc = firBuilder->getUnknownLoc();

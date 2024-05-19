@@ -113,17 +113,17 @@ TEST_F(RuntimeCallTest, genIndexTest) {
   checkGenIndex(*firBuilder, "_FortranAIndex4", 4);
 }
 
-// TEST_F(RuntimeCallTest, genIndexDescriptorTest) {
-//   auto loc = firBuilder->getUnknownLoc();
-//   mlir::Value resultBox = firBuilder->create<fir::UndefOp>(loc, boxTy);
-//   mlir::Value stringBox = firBuilder->create<fir::UndefOp>(loc, boxTy);
-//   mlir::Value substringBox = firBuilder->create<fir::UndefOp>(loc, boxTy);
-//   mlir::Value backOpt = firBuilder->create<fir::UndefOp>(loc, boxTy);
-//   mlir::Value kind = firBuilder->create<fir::UndefOp>(loc, i32Ty);
-//   fir::runtime::genIndexDescriptor(
-//       *firBuilder, loc, resultBox, stringBox, substringBox, backOpt, kind);
-//   checkCallOpFromResultBox(resultBox, "_FortranAIndex", 5);
-// }
+TEST_F(RuntimeCallTest, genIndexDescriptorTest) {
+  auto loc = firBuilder->getUnknownLoc();
+  mlir::Value resultBox = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value stringBox = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value substringBox = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value backOpt = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value kind = firBuilder->create<fir::UndefOp>(loc, i32Ty);
+  fir::runtime::genIndexDescriptor(
+      *firBuilder, loc, resultBox, stringBox, substringBox, backOpt, kind);
+  checkCallOpFromResultBox(resultBox, "_FortranAIndex", 5);
+}
 
 TEST_F(RuntimeCallTest, genRepeatTest) {
   auto loc = firBuilder->getUnknownLoc();

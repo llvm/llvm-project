@@ -52,15 +52,15 @@ TEST_F(RuntimeCallTest, genCountTest) {
   checkCallOp(count.getDefiningOp(), "_FortranACount", 2);
 }
 
-// TEST_F(RuntimeCallTest, genCountDimTest) {
-//   mlir::Location loc = firBuilder->getUnknownLoc();
-//   mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-//   mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-//   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-//   mlir::Value kind = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-//   fir::runtime::genCountDim(*firBuilder, loc, result, mask, dim, kind);
-//   checkCallOpFromResultBox(result, "_FortranACountDim", 4);
-// }
+TEST_F(RuntimeCallTest, genCountDimTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  mlir::Value kind = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  fir::runtime::genCountDim(*firBuilder, loc, result, mask, dim, kind);
+  checkCallOpFromResultBox(result, "_FortranACountDim", 4);
+}
 
 void testGenMaxVal(
     fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
@@ -120,14 +120,14 @@ TEST_F(RuntimeCallTest, genParityTest) {
   checkCallOp(parity.getDefiningOp(), "_FortranAParity", 2);
 }
 
-// TEST_F(RuntimeCallTest, genParityDescriptorTest) {
-//   mlir::Location loc = firBuilder->getUnknownLoc();
-//   mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-//   mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
-//   mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-//   fir::runtime::genParityDescriptor(*firBuilder, loc, result, mask, dim);
-//   checkCallOpFromResultBox(result, "_FortranAParityDim", 3);
-// }
+TEST_F(RuntimeCallTest, genParityDescriptorTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  fir::runtime::genParityDescriptor(*firBuilder, loc, result, mask, dim);
+  checkCallOpFromResultBox(result, "_FortranAParityDim", 3);
+}
 
 void testGenSum(
     fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
@@ -349,10 +349,10 @@ TEST_F(RuntimeCallTest, genMaxvalCharTest) {
       *firBuilder, fir::runtime::genMaxvalChar, "_FortranAMaxvalCharacter", 3);
 }
 
-// TEST_F(RuntimeCallTest, genMinvalCharTest) {
-//   checkGenMxxvalChar(
-//       *firBuilder, fir::runtime::genMinvalChar, "_FortranAMinvalCharacter", 3);
-// }
+TEST_F(RuntimeCallTest, genMinvalCharTest) {
+  checkGenMxxvalChar(
+      *firBuilder, fir::runtime::genMinvalChar, "_FortranAMinvalCharacter", 3);
+}
 
 void checkGen4argsDim(fir::FirOpBuilder &builder,
     void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,

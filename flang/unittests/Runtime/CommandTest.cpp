@@ -308,21 +308,21 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 
-// TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
-//   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
-//   bool wait{true};
-//   OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
-//   OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor()};
-//   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
-//   RTNAME(ExecuteCommandLine)
-//   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
-//   std::string spaces(cmdMsg->ElementBytes(), ' ');
-//   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
-//   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
-//   CheckDescriptorEqStr(cmdMsg.get(), "No change");
-// }
+  std::string spaces(cmdMsg->ElementBytes(), ' ');
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
 
 TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
@@ -404,14 +404,14 @@ TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
-// TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectSync) {
-//   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
 
-//   EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-//       *command.get(), false, nullptr, nullptr, nullptr));
-//   EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-//       *command.get(), true, nullptr, nullptr, nullptr));
-// }
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), true, nullptr, nullptr, nullptr));
+}
 
 TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectAsync) {
   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
@@ -560,18 +560,18 @@ TEST_F(SeveralArguments, GetCommand) {
   CheckMissingCommandValue("Missing argument");
 }
 
-// TEST_F(SeveralArguments, CommandErrMsgTooShort) {
-//   OwningPtr<Descriptor> value{CreateEmptyCharDescriptor()};
-//   OwningPtr<Descriptor> length{EmptyIntDescriptor()};
-//   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
+TEST_F(SeveralArguments, CommandErrMsgTooShort) {
+  OwningPtr<Descriptor> value{CreateEmptyCharDescriptor()};
+  OwningPtr<Descriptor> length{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
 
-//   EXPECT_GT(RTNAME(GetCommand)(value.get(), length.get(), errMsg.get()), 0);
+  EXPECT_GT(RTNAME(GetCommand)(value.get(), length.get(), errMsg.get()), 0);
 
-//   std::string spaces(value->ElementBytes(), ' ');
-//   CheckDescriptorEqStr(value.get(), spaces);
-//   CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
-//   CheckDescriptorEqStr(errMsg.get(), "Mis");
-// }
+  std::string spaces(value->ElementBytes(), ' ');
+  CheckDescriptorEqStr(value.get(), spaces);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
+  CheckDescriptorEqStr(errMsg.get(), "Mis");
+}
 
 TEST_F(SeveralArguments, GetCommandCanTakeNull) {
   EXPECT_GT(RTNAME(GetCommand)(nullptr, nullptr, nullptr), 0);
@@ -700,11 +700,11 @@ TEST_F(EnvironmentVariables, NoTrim) {
   }
 }
 
-// TEST_F(EnvironmentVariables, Empty) {
-//   if (EnableFineGrainedTests()) {
-//     CheckEnvVarValue("", "EMPTY");
-//   }
-// }
+TEST_F(EnvironmentVariables, Empty) {
+  if (EnableFineGrainedTests()) {
+    CheckEnvVarValue("", "EMPTY");
+  }
+}
 
 TEST_F(EnvironmentVariables, NoValueOrErrmsg) {
   ASSERT_EQ(std::getenv("DOESNT_EXIST"), nullptr)

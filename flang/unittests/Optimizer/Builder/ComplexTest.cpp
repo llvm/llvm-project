@@ -62,30 +62,30 @@ public:
   mlir::Value rFour;
 };
 
-// TEST_F(ComplexTest, verifyTypes) {
-//   mlir::Value cVal1 = helper->createComplex(complexTy1, rOne, rTwo);
-//   mlir::Value cVal2 = helper->createComplex(4, rOne, rTwo);
-//   EXPECT_TRUE(fir::isa_complex(cVal1.getType()));
-//   EXPECT_TRUE(fir::isa_complex(cVal2.getType()));
-//   EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal1)));
-//   EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal2)));
+TEST_F(ComplexTest, verifyTypes) {
+  mlir::Value cVal1 = helper->createComplex(complexTy1, rOne, rTwo);
+  mlir::Value cVal2 = helper->createComplex(4, rOne, rTwo);
+  EXPECT_TRUE(fir::isa_complex(cVal1.getType()));
+  EXPECT_TRUE(fir::isa_complex(cVal2.getType()));
+  EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal1)));
+  EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal2)));
 
-//   mlir::Value real1 = helper->extractComplexPart(cVal1, /*isImagPart=*/false);
-//   mlir::Value imag1 = helper->extractComplexPart(cVal1, /*isImagPart=*/true);
-//   mlir::Value real2 = helper->extractComplexPart(cVal2, /*isImagPart=*/false);
-//   mlir::Value imag2 = helper->extractComplexPart(cVal2, /*isImagPart=*/true);
-//   EXPECT_EQ(realTy1, real1.getType());
-//   EXPECT_EQ(realTy1, imag1.getType());
-//   EXPECT_EQ(realTy1, real2.getType());
-//   EXPECT_EQ(realTy1, imag2.getType());
+  mlir::Value real1 = helper->extractComplexPart(cVal1, /*isImagPart=*/false);
+  mlir::Value imag1 = helper->extractComplexPart(cVal1, /*isImagPart=*/true);
+  mlir::Value real2 = helper->extractComplexPart(cVal2, /*isImagPart=*/false);
+  mlir::Value imag2 = helper->extractComplexPart(cVal2, /*isImagPart=*/true);
+  EXPECT_EQ(realTy1, real1.getType());
+  EXPECT_EQ(realTy1, imag1.getType());
+  EXPECT_EQ(realTy1, real2.getType());
+  EXPECT_EQ(realTy1, imag2.getType());
 
-//   mlir::Value cVal3 =
-//       helper->insertComplexPart(cVal1, rThree, /*isImagPart=*/false);
-//   mlir::Value cVal4 =
-//       helper->insertComplexPart(cVal3, rFour, /*isImagPart=*/true);
-//   EXPECT_TRUE(fir::isa_complex(cVal4.getType()));
-//   EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal4)));
-// }
+  mlir::Value cVal3 =
+      helper->insertComplexPart(cVal1, rThree, /*isImagPart=*/false);
+  mlir::Value cVal4 =
+      helper->insertComplexPart(cVal3, rFour, /*isImagPart=*/true);
+  EXPECT_TRUE(fir::isa_complex(cVal4.getType()));
+  EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal4)));
+}
 
 TEST_F(ComplexTest, verifyConvertWithSemantics) {
   auto loc = firBuilder->getUnknownLoc();

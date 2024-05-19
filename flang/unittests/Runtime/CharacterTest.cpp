@@ -199,32 +199,32 @@ struct CharacterComparisonTests : public ::testing::Test {
 
 TYPED_TEST_SUITE(CharacterComparisonTests, CharacterTypes, );
 
-// TYPED_TEST(CharacterComparisonTests, CompareCharacters) {
-//   for (auto &[x, y, xBytes, yBytes, expect] : this->parameters) {
-//     int cmp{this->characterComparisonFunc(x, y, xBytes, yBytes)};
-//     TypeParam buf[2][8];
-//     std::memset(buf, 0, sizeof buf);
-//     std::memcpy(buf[0], x, xBytes);
-//     std::memcpy(buf[1], y, yBytes);
-//     ASSERT_EQ(cmp, expect) << "compare '" << x << "'(" << xBytes << ") to '"
-//                            << y << "'(" << yBytes << "), got " << cmp
-//                            << ", should be " << expect << '\n';
+TYPED_TEST(CharacterComparisonTests, CompareCharacters) {
+  for (auto &[x, y, xBytes, yBytes, expect] : this->parameters) {
+    int cmp{this->characterComparisonFunc(x, y, xBytes, yBytes)};
+    TypeParam buf[2][8];
+    std::memset(buf, 0, sizeof buf);
+    std::memcpy(buf[0], x, xBytes);
+    std::memcpy(buf[1], y, yBytes);
+    ASSERT_EQ(cmp, expect) << "compare '" << x << "'(" << xBytes << ") to '"
+                           << y << "'(" << yBytes << "), got " << cmp
+                           << ", should be " << expect << '\n';
 
-//     // Perform the same test with the parameters reversed and the difference
-//     // negated
-//     std::swap(x, y);
-//     std::swap(xBytes, yBytes);
-//     expect = -expect;
+    // Perform the same test with the parameters reversed and the difference
+    // negated
+    std::swap(x, y);
+    std::swap(xBytes, yBytes);
+    expect = -expect;
 
-//     cmp = this->characterComparisonFunc(x, y, xBytes, yBytes);
-//     std::memset(buf, 0, sizeof buf);
-//     std::memcpy(buf[0], x, xBytes);
-//     std::memcpy(buf[1], y, yBytes);
-//     ASSERT_EQ(cmp, expect) << "compare '" << x << "'(" << xBytes << ") to '"
-//                            << y << "'(" << yBytes << "'), got " << cmp
-//                            << ", should be " << expect << '\n';
-//   }
-// }
+    cmp = this->characterComparisonFunc(x, y, xBytes, yBytes);
+    std::memset(buf, 0, sizeof buf);
+    std::memcpy(buf[0], x, xBytes);
+    std::memcpy(buf[1], y, yBytes);
+    ASSERT_EQ(cmp, expect) << "compare '" << x << "'(" << xBytes << ") to '"
+                           << y << "'(" << yBytes << "'), got " << cmp
+                           << ", should be " << expect << '\n';
+  }
+}
 
 // Test MIN() and MAX()
 struct ExtremumTestCase {
@@ -275,14 +275,14 @@ TYPED_TEST(ExtremumTests, MinTests) {
   RunExtremumTests<TypeParam>("MIN", RTNAME(CharacterMin), tests);
 }
 
-// TYPED_TEST(ExtremumTests, MaxTests) {
-//   static std::vector<ExtremumTestCase> tests{
-//       {{}, {"a"}, {"z"}, {"z"}},
-//       {{1}, {"zaa"}, {"aaaaa"}, {"zaa  "}},
-//       {{1, 1, 1}, {"aaaaa"}, {"aazaa"}, {"aazaa"}},
-//   };
-//   RunExtremumTests<TypeParam>("MAX", RTNAME(CharacterMax), tests);
-// }
+TYPED_TEST(ExtremumTests, MaxTests) {
+  static std::vector<ExtremumTestCase> tests{
+      {{}, {"a"}, {"z"}, {"z"}},
+      {{1}, {"zaa"}, {"aaaaa"}, {"zaa  "}},
+      {{1, 1, 1}, {"aaaaa"}, {"aazaa"}, {"aazaa"}},
+  };
+  RunExtremumTests<TypeParam>("MAX", RTNAME(CharacterMax), tests);
+}
 
 template <typename CHAR>
 void RunAllocationTest(const char *xRaw, const char *yRaw) {
@@ -373,20 +373,20 @@ TYPED_TEST(SearchTests, ScanTests) {
   RunSearchTests("SCAN", tests, std::get<SearchFunction<TypeParam>>(functions));
 }
 
-// TYPED_TEST(SearchTests, VerifyTests) {
-//   static SearchFunctions functions{
-//       RTNAME(Verify1), RTNAME(Verify2), RTNAME(Verify4)};
-//   static std::vector<SearchTestCase> tests{
-//       {"abc", "abc", false, 0},
-//       {"abc", "abc", true, 0},
-//       {"abc", "cde", false, 1},
-//       {"abc", "cde", true, 2},
-//       {"abc", "x", false, 1},
-//       {"", "x", false, 0},
-//   };
-//   RunSearchTests(
-//       "VERIFY", tests, std::get<SearchFunction<TypeParam>>(functions));
-// }
+TYPED_TEST(SearchTests, VerifyTests) {
+  static SearchFunctions functions{
+      RTNAME(Verify1), RTNAME(Verify2), RTNAME(Verify4)};
+  static std::vector<SearchTestCase> tests{
+      {"abc", "abc", false, 0},
+      {"abc", "abc", true, 0},
+      {"abc", "cde", false, 1},
+      {"abc", "cde", true, 2},
+      {"abc", "x", false, 1},
+      {"", "x", false, 0},
+  };
+  RunSearchTests(
+      "VERIFY", tests, std::get<SearchFunction<TypeParam>>(functions));
+}
 
 // Test REPEAT()
 template <typename CHAR> struct RepeatTests : public ::testing::Test {};

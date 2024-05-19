@@ -42,29 +42,29 @@ public:
   std::unique_ptr<mlir::OpBuilder> builder;
 };
 
-// TEST_F(FortranVariableTest, SimpleScalar) {
-//   mlir::Location loc = getLoc();
-//   mlir::Type eleType = mlir::FloatType::getF32(&context);
-//   mlir::Value addr = builder->create<fir::AllocaOp>(loc, eleType);
-//   auto name = mlir::StringAttr::get(&context, "x");
-//   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
-//       /*shape=*/mlir::Value{}, /*typeParams=*/std::nullopt,
-//       /*dummy_scope=*/nullptr, name,
-//       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-//       /*data_attr=*/cuf::DataAttributeAttr{});
+TEST_F(FortranVariableTest, SimpleScalar) {
+  mlir::Location loc = getLoc();
+  mlir::Type eleType = mlir::FloatType::getF32(&context);
+  mlir::Value addr = builder->create<fir::AllocaOp>(loc, eleType);
+  auto name = mlir::StringAttr::get(&context, "x");
+  auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
+      /*shape=*/mlir::Value{}, /*typeParams=*/std::nullopt,
+      /*dummy_scope=*/nullptr, name,
+      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
+      /*data_attr=*/cuf::DataAttributeAttr{});
 
-//   fir::FortranVariableOpInterface fortranVariable = declare;
-//   EXPECT_FALSE(fortranVariable.isArray());
-//   EXPECT_FALSE(fortranVariable.isCharacter());
-//   EXPECT_FALSE(fortranVariable.isPointer());
-//   EXPECT_FALSE(fortranVariable.isAllocatable());
-//   EXPECT_FALSE(fortranVariable.hasExplicitCharLen());
-//   EXPECT_EQ(fortranVariable.getElementType(), eleType);
-//   EXPECT_EQ(fortranVariable.getElementOrSequenceType(),
-//       fortranVariable.getElementType());
-//   EXPECT_NE(fortranVariable.getBase(), addr);
-//   EXPECT_EQ(fortranVariable.getBase().getType(), addr.getType());
-// }
+  fir::FortranVariableOpInterface fortranVariable = declare;
+  EXPECT_FALSE(fortranVariable.isArray());
+  EXPECT_FALSE(fortranVariable.isCharacter());
+  EXPECT_FALSE(fortranVariable.isPointer());
+  EXPECT_FALSE(fortranVariable.isAllocatable());
+  EXPECT_FALSE(fortranVariable.hasExplicitCharLen());
+  EXPECT_EQ(fortranVariable.getElementType(), eleType);
+  EXPECT_EQ(fortranVariable.getElementOrSequenceType(),
+      fortranVariable.getElementType());
+  EXPECT_NE(fortranVariable.getBase(), addr);
+  EXPECT_EQ(fortranVariable.getBase().getType(), addr.getType());
+}
 
 TEST_F(FortranVariableTest, CharacterScalar) {
   mlir::Location loc = getLoc();

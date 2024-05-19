@@ -53,15 +53,15 @@ TEST(TestTerminator, CheckFailedTest) {
 //------------------------------------------------------------------------------
 struct TestIOCrash : CrashHandlerFixture {};
 
-// TEST(TestIOCrash, InvalidFormatCharacterTest) {
-//   static constexpr int bufferSize{1};
-//   static char buffer[bufferSize];
-//   static const char *format{"(C1)"};
-//   auto *cookie{IONAME(BeginInternalFormattedOutput)(
-//       buffer, bufferSize, format, std::strlen(format))};
-//   ASSERT_DEATH(IONAME(OutputInteger64)(cookie, 0xfeedface),
-//       "Unknown 'C' edit descriptor in FORMAT");
-// }
+TEST(TestIOCrash, InvalidFormatCharacterTest) {
+  static constexpr int bufferSize{1};
+  static char buffer[bufferSize];
+  static const char *format{"(C1)"};
+  auto *cookie{IONAME(BeginInternalFormattedOutput)(
+      buffer, bufferSize, format, std::strlen(format))};
+  ASSERT_DEATH(IONAME(OutputInteger64)(cookie, 0xfeedface),
+      "Unknown 'C' edit descriptor in FORMAT");
+}
 
 //------------------------------------------------------------------------------
 /// Test buffer overwrites with Output* functions
