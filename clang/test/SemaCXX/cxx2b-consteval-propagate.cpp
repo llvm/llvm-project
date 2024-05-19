@@ -420,3 +420,29 @@ int f = *fn().value + fn2();  // expected-error {{call to consteval function 'lv
                               // expected-note {{pointer to heap-allocated object}}
 }
 #endif
+
+
+#if __cplusplus >= 202302L
+
+namespace GH91509 {
+
+consteval int f(int) { return 0; }
+
+template<typename T>
+constexpr int g(int x) {
+    if consteval {
+        return f(x);
+    }
+    if !consteval {}
+    else {
+        return f(x);
+    }
+    return 1;
+}
+
+int h(int x) {
+    return g<void>(x);
+}
+}
+
+#endif

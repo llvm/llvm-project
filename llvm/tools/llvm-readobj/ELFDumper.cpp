@@ -3857,7 +3857,7 @@ static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
           "Value  Symbol's Name";
   else
     OS << " Offset     Info    Type                Sym. Value  Symbol's Name";
-  if (IsRela || (SType == ELF::SHT_CREL && (CrelHdr & 4)))
+  if (IsRela || (SType == ELF::SHT_CREL && (CrelHdr & CREL_HDR_ADDEND)))
     OS << " + Addend";
   OS << "\n";
 }

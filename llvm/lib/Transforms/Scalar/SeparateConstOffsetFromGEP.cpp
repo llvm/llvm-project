@@ -1001,14 +1001,14 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
     auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
     IsChainInBounds &= KnownGEPIdx.isNonNegative();
     if (IsChainInBounds) {
-      auto PtrGEPIdx = GEP->indices().begin();
+      auto PtrGEPIdx = PtrGEP->indices().begin();
       auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
       IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
     }
   }
 
   IRBuilder<> Builder(GEP);
-  // For trivial GEP chains, we can swap the indicies.
+  // For trivial GEP chains, we can swap the indices.
   Value *NewSrc = Builder.CreateGEP(
       GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
       SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);

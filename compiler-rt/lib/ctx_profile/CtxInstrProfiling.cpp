@@ -132,6 +132,10 @@ __thread ContextNode **volatile __llvm_ctx_profile_callsite[2] = {0, 0};
 __thread ContextRoot *volatile __llvm_ctx_profile_current_context_root =
     nullptr;
 
+Arena::Arena(uint32_t Size) : Size(Size) {
+  __sanitizer::internal_memset(start(), 0, Size);
+}
+
 // FIXME(mtrofin): use malloc / mmap instead of sanitizer common APIs to reduce
 // the dependency on the latter.
 Arena *Arena::allocateNewArena(size_t Size, Arena *Prev) {
@@ -224,8 +228,9 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
       Ret->counters_size() != NrCounters)
     __sanitizer::Printf("[ctxprof] Returned ctx differs from what's asked: "
                         "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
-                        Ret, Guid, NrCallsites, NrCounters, Ret->guid(),
-                        Ret->callsites_size(), Ret->counters_size());
+                        reinterpret_cast<void *>(Ret), Guid, NrCallsites,
+                        NrCounters, Ret->guid(), Ret->callsites_size(),
+                        Ret->counters_size());
   onContextEnter(*Ret);
   return Ret;
 }

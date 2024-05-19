@@ -13,31 +13,57 @@ entry:
 }
 
 define float @frem2_nsz(float %x) {
-; CHECK-LABEL: frem2_nsz:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, #2.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem2_nsz:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, #2.00000000
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_nsz:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %fmod = frem nsz float %x, 2.0
   ret float %fmod
 }
 
 define float @frem2_fast(float %x) {
-; CHECK-LABEL: frem2_fast:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, #2.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem2_fast:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, #0.50000000
+; CHECK-SD-NEXT:    fmov s2, #-2.00000000
+; CHECK-SD-NEXT:    fmul s1, s0, s1
+; CHECK-SD-NEXT:    frintz s1, s1
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_fast:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %fmod = frem fast float %x, 2.0
   ret float %fmod
 }
 
 define float @frem2_abs(float %x) {
-; CHECK-LABEL: frem2_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    fmov s1, #2.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem2_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    fmov s1, #2.00000000
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 2.0
@@ -47,14 +73,11 @@ entry:
 define half @hrem2_nsz(half %x) {
 ; CHECK-SD-LABEL: hrem2_nsz:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    fcvt s0, h0
-; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    fcvt h0, s0
-; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    fmov h1, #2.00000000
+; CHECK-SD-NEXT:    fmov h2, #-2.00000000
+; CHECK-SD-NEXT:    fdiv h1, h0, h1
+; CHECK-SD-NEXT:    frintz h1, h1
+; CHECK-SD-NEXT:    fmadd h0, h1, h2, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: hrem2_nsz:
@@ -75,10 +98,18 @@ entry:
 }
 
 define double @drem2_nsz(double %x) {
-; CHECK-LABEL: drem2_nsz:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d1, #2.00000000
-; CHECK-NEXT:    b fmod
+; CHECK-SD-LABEL: drem2_nsz:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov d1, #2.00000000
+; CHECK-SD-NEXT:    fdiv d2, d0, d1
+; CHECK-SD-NEXT:    frintz d2, d2
+; CHECK-SD-NEXT:    fmsub d0, d2, d1, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: drem2_nsz:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d1, #2.00000000
+; CHECK-GI-NEXT:    b fmod
 entry:
   %fmod = frem nsz double %x, 2.0
   ret double %fmod
@@ -105,10 +136,16 @@ entry:
 }
 
 define float @frem1_nsz(float %x) {
-; CHECK-LABEL: frem1_nsz:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem1_nsz:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    frintz s1, s0
+; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem1_nsz:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s1, #1.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %fmod = frem nsz float %x, 1.0
   ret float %fmod
@@ -125,21 +162,38 @@ entry:
 }
 
 define float @fremm2_nsz(float %x) {
-; CHECK-LABEL: fremm2_nsz:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, #-2.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: fremm2_nsz:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, #-2.00000000
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fremm2_nsz:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s1, #-2.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %fmod = frem nsz float %x, -2.0
   ret float %fmod
 }
 
 define float @frem4_abs(float %x) {
-; CHECK-LABEL: frem4_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    fmov s1, #4.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem4_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    fmov s1, #4.00000000
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem4_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    fmov s1, #4.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 4.0
@@ -147,11 +201,20 @@ entry:
 }
 
 define float @frem16_abs(float %x) {
-; CHECK-LABEL: frem16_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    fmov s1, #16.00000000
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem16_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    fmov s1, #16.00000000
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem16_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    fmov s1, #16.00000000
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 16.0
@@ -159,12 +222,22 @@ entry:
 }
 
 define float @frem4294967296_abs(float %x) {
-; CHECK-LABEL: frem4294967296_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    mov w8, #1333788672 // =0x4f800000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem4294967296_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-SD-NEXT:    fmov s1, w8
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem4294967296_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 4294967296.0
@@ -172,12 +245,22 @@ entry:
 }
 
 define float @frem1152921504606846976_abs(float %x) {
-; CHECK-LABEL: frem1152921504606846976_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    mov w8, #1568669696 // =0x5d800000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem1152921504606846976_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    mov w8, #1568669696 // =0x5d800000
+; CHECK-SD-NEXT:    fmov s1, w8
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem1152921504606846976_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    mov w8, #1568669696 // =0x5d800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 1152921504606846976.0
@@ -185,12 +268,22 @@ entry:
 }
 
 define float @frem4611686018427387904_abs(float %x) {
-; CHECK-LABEL: frem4611686018427387904_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    mov w8, #1585446912 // =0x5e800000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem4611686018427387904_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    mov w8, #1585446912 // =0x5e800000
+; CHECK-SD-NEXT:    fmov s1, w8
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem4611686018427387904_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    mov w8, #1585446912 // =0x5e800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 4611686018427387904.0
@@ -198,11 +291,20 @@ entry:
 }
 
 define float @frem9223372036854775808_abs(float %x) {
-; CHECK-LABEL: frem9223372036854775808_abs:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs s0, s0
-; CHECK-NEXT:    movi v1.2s, #95, lsl #24
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem9223372036854775808_abs:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v1.2s, #95, lsl #24
+; CHECK-SD-NEXT:    fabs s0, s0
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem9223372036854775808_abs:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fabs s0, s0
+; CHECK-GI-NEXT:    movi v1.2s, #95, lsl #24
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)
   %fmod = frem float %a, 9223372036854775808.0
@@ -212,42 +314,10 @@ entry:
 define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem2_nsz_vec:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    mov s0, v0.s[2]
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    mov v1.s[3], v0.s[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    add sp, sp, #48
+; CHECK-SD-NEXT:    movi v1.4s, #64, lsl #24
+; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
+; CHECK-SD-NEXT:    fmls v0.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_nsz_vec:
@@ -302,48 +372,12 @@ entry:
 define <4 x float> @frem1152921504606846976_absv(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem1152921504606846976_absv:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str d8, [sp, #32] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #40] // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset b8, -16
-; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    mov w8, #1568669696 // =0x5d800000
-; CHECK-SD-NEXT:    fmov s8, w8
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    mov s0, v0.s[1]
-; CHECK-SD-NEXT:    fmov s1, s8
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    fmov s1, s8
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-SD-NEXT:    fmov s1, s8
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    mov s0, v0.s[2]
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    mov s0, v0.s[3]
-; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    fmov s1, s8
-; CHECK-SD-NEXT:    bl fmodf
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-SD-NEXT:    ldr x30, [sp, #40] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    ldr d8, [sp, #32] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    mov v1.s[3], v0.s[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    add sp, sp, #48
+; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
+; CHECK-SD-NEXT:    dup v1.4s, w8
+; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
+; CHECK-SD-NEXT:    fmls v0.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem1152921504606846976_absv:
@@ -401,12 +435,22 @@ entry:
 }
 
 define float @frem2_nsz_sitofp(float %x, i32 %sa) {
-; CHECK-LABEL: frem2_nsz_sitofp:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    lsl w8, w8, w0
-; CHECK-NEXT:    scvtf s1, w8
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem2_nsz_sitofp:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    lsl w8, w8, w0
+; CHECK-SD-NEXT:    scvtf s1, w8
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_nsz_sitofp:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    lsl w8, w8, w0
+; CHECK-GI-NEXT:    scvtf s1, w8
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %s = shl i32 1, %sa
   %y = sitofp i32 %s to float
@@ -415,12 +459,22 @@ entry:
 }
 
 define float @frem2_nsz_uitofp(float %x, i32 %sa) {
-; CHECK-LABEL: frem2_nsz_uitofp:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    lsl w8, w8, w0
-; CHECK-NEXT:    ucvtf s1, w8
-; CHECK-NEXT:    b fmodf
+; CHECK-SD-LABEL: frem2_nsz_uitofp:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    lsl w8, w8, w0
+; CHECK-SD-NEXT:    ucvtf s1, w8
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_nsz_uitofp:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    lsl w8, w8, w0
+; CHECK-GI-NEXT:    ucvtf s1, w8
+; CHECK-GI-NEXT:    b fmodf
 entry:
   %s = shl i32 1, %sa
   %y = uitofp i32 %s to float
@@ -432,10 +486,13 @@ define float @frem2_const_sitofp(float %x, i32 %sa) {
 ; CHECK-SD-LABEL: frem2_const_sitofp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    fmov s0, #12.50000000
+; CHECK-SD-NEXT:    fmov s1, #12.50000000
 ; CHECK-SD-NEXT:    lsl w8, w8, w0
-; CHECK-SD-NEXT:    scvtf s1, w8
-; CHECK-SD-NEXT:    b fmodf
+; CHECK-SD-NEXT:    scvtf s0, w8
+; CHECK-SD-NEXT:    fdiv s2, s1, s0
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s0, s1
+; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_const_sitofp:
 ; CHECK-GI:       // %bb.0: // %entry

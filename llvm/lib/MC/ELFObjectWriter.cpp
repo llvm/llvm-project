@@ -948,10 +948,10 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &os) {
   uint OffsetMask = 8, Offset = 0, Addend = 0;
   uint32_t Symidx = 0, Type = 0;
   // hdr & 4 indicates 3 flag bits in delta offset and flags members.
-  for (unsigned i = 0, e = Relocs.size(); i != e; ++i)
+  for (size_t i = 0, e = Relocs.size(); i != e; ++i)
     OffsetMask |= Relocs[i].Offset;
   const int Shift = llvm::countr_zero(OffsetMask);
-  encodeULEB128(Relocs.size() * 8 + /*addend_bit=*/4 + Shift, os);
+  encodeULEB128(Relocs.size() * 8 + ELF::CREL_HDR_ADDEND + Shift, os);
   for (const ELFRelocationEntry &Entry : Relocs) {
     // The delta offset and flags member may be larger than uint64_t. Special
     // case the first byte (3 flag bits and 4 offset bits). Other ULEB128 bytes

@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUHSAMetadataStreamer.h"
-#include "AMDGPUTargetMachine.h"
-#include "GCNSubtarget.h"
 #include "SIProgramInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -25,9 +24,8 @@ using namespace llvm;
 
 class SIProgramInfoMCExprsTest : public testing::Test {
 protected:
-  std::unique_ptr<GCNTargetMachine> TM;
+  std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<LLVMContext> Ctx;
-  std::unique_ptr<GCNSubtarget> ST;
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<Module> M;
@@ -49,7 +47,7 @@ protected:
     const Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
     TargetOptions Options;
 
-    TM.reset(static_cast<GCNTargetMachine *>(TheTarget->createTargetMachine(
+    TM.reset(static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
         Triple, CPU, FS, Options, std::nullopt, std::nullopt)));
 
     Ctx = std::make_unique<LLVMContext>();
@@ -59,11 +57,10 @@ protected:
     auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", *M);
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
-    ST = std::make_unique<GCNSubtarget>(TM->getTargetTriple(),
-                                        TM->getTargetCPU(),
-                                        TM->getTargetFeatureString(), *TM);
+    auto *ST = TM->getSubtargetImpl(*F);
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *ST, 1, *MMI);
+    MF->initTargetMachineFunctionInfo(*ST);
     PI.reset(*MF.get());
   }
 };
@@ -76,6 +73,11 @@ TEST_F(SIProgramInfoMCExprsTest, TestDeathHSAKernelEmit) {
   auto &Func = MF->getFunction();
   Func.setCallingConv(CallingConv::AMDGPU_KERNEL);
   AMDGPU::HSAMD::MetadataStreamerMsgPackV4 MD;
-  EXPECT_DEATH(MD.emitKernel(*MF, PI),
-               "could not resolve expression when required.");
+
+  testing::internal::CaptureStderr();
+  MD.emitKernel(*MF, PI);
+  std::string err = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(
+      err, "<unknown>:0: error: could not resolve expression when required.\n");
+  EXPECT_TRUE(Ctx.hadError());
 }

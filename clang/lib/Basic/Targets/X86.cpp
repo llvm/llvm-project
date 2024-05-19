@@ -458,6 +458,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasNDD = true;
     } else if (Feature == "+ccmp") {
       HasCCMP = true;
+    } else if (Feature == "+nf") {
+      HasNF = true;
     } else if (Feature == "+cf") {
       HasCF = true;
     }
@@ -969,6 +971,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__NDD__");
   if (HasCCMP)
     Builder.defineMacro("__CCMP__");
+  if (HasNF)
+    Builder.defineMacro("__NF__");
   if (HasCF)
     Builder.defineMacro("__CF__");
   // Condition here is aligned with the feature set of mapxf in Options.td
@@ -1174,6 +1178,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("ppx", true)
       .Case("ndd", true)
       .Case("ccmp", true)
+      .Case("nf", true)
       .Case("cf", true)
       .Default(false);
 }
@@ -1296,6 +1301,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("ppx", HasPPX)
       .Case("ndd", HasNDD)
       .Case("ccmp", HasCCMP)
+      .Case("nf", HasNF)
       .Case("cf", HasCF)
       .Default(false);
 }

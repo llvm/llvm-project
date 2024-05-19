@@ -1936,6 +1936,8 @@ enum {
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
 
+constexpr unsigned CREL_HDR_ADDEND = 4;
+
 /// Convert an architecture name into ELF's e_machine value.
 uint16_t convertArchNameToEMachine(StringRef Arch);
 

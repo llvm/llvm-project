@@ -5,7 +5,7 @@
 # RUN: %if aarch64-registered-target %{ llvm-readelf -r %t.be.o | FileCheck %s --check-prefix=A64BE %}
 
 # CHECK:      [ 4] .data             PROGBITS      0000000000000000 {{.*}} 000008 00  WA  0   0  1
-# CHECK-NEXT: [ 5] .crel.data        CREL          0000000000000000 {{.*}} 00002a 01   I 14   4  1
+# CHECK-NEXT: [ 5] .crel.data        CREL          0000000000000000 {{.*}} 00002c 01   I 14   4  1
 # CHECK-NEXT: [ 6] .rodata           PROGBITS      0000000000000000 {{.*}} 00002b 00   A  0   0  1
 # CHECK-NEXT: [ 7] .crel.rodata      CREL          0000000000000000 {{.*}} 000010 01   I 14   6  1
 # CHECK-NEXT: [ 8] rodata2           PROGBITS      0000000000000000 {{.*}} 000008 00   A  0   0  1
@@ -16,15 +16,16 @@
 # CHECK-NEXT: [13] .crelnoalloc      CREL          0000000000000000 {{.*}} 000005 01   I 14  12  1
 # CHECK-NEXT: [14] .symtab           SYMTAB
 
-# CHECK:      Relocation section '.crel.data' at offset {{.*}} contains 7 entries:
+# CHECK:      Relocation section '.crel.data' at offset {{.*}} contains 8 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  {{.*}}           R_X86_64_NONE          0000000000000000 a0 + 0
 # CHECK-NEXT: 0000000000000001  {{.*}}           R_X86_64_NONE          0000000000000000 a1 - 1
 # CHECK-NEXT: 0000000000000002  {{.*}}           R_X86_64_NONE          0000000000000000 a2 - 1
-# CHECK-NEXT: 0000000000000003  {{.*}}           R_X86_64_32            0000000000000000 a3 + 4000
-# CHECK-NEXT: 0000000000000004  {{.*}}           R_X86_64_64            0000000000000000 a0 - 8000000000000000
+# CHECK-NEXT: 0000000000000004  {{.*}}           R_X86_64_32            0000000000000000 a3 + 4000
+# CHECK-NEXT: 0000000000000005  {{.*}}           R_X86_64_64            0000000000000000 a3 - 8000000000000000
 # CHECK-NEXT: 0000000000000005  {{.*}}           R_X86_64_64            0000000000000000 a1 + 7fffffffffffffff
 # CHECK-NEXT: 0000000000000005  {{.*}}           R_X86_64_32            0000000000000000 a1 - 1
+# CHECK-NEXT: 0000000000000005  {{.*}}           R_X86_64_64            0000000000000000 a2 - 1
 # CHECK-EMPTY:
 # CHECK-NEXT: Relocation section '.crel.rodata' at offset {{.*}} contains 4 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
@@ -56,10 +57,12 @@
 # A64BE:      0000000000000000  {{.*}}           R_AARCH64_NONE         0000000000000000 a0 + 0
 # A64BE-NEXT: 0000000000000001  {{.*}}           R_AARCH64_NONE         0000000000000000 a1 - 1
 # A64BE-NEXT: 0000000000000002  {{.*}}           R_AARCH64_NONE         0000000000000000 a2 - 1
-# A64BE-NEXT: 0000000000000003  {{.*}}           R_AARCH64_ABS32        0000000000000000 a3 + 4000
-# A64BE-NEXT: 0000000000000004  {{.*}}           R_AARCH64_ABS64        0000000000000000 a0 - 8000000000000000
+# A64BE-NEXT: 0000000000000004  {{.*}}           R_AARCH64_ABS32        0000000000000000 a3 + 4000
+# A64BE-NEXT: 0000000000000005  {{.*}}           R_AARCH64_ABS64        0000000000000000 a3 - 8000000000000000
 # A64BE-NEXT: 0000000000000005  {{.*}}           R_AARCH64_ABS64        0000000000000000 a1 + 7fffffffffffffff
 # A64BE-NEXT: 0000000000000005  {{.*}}           R_AARCH64_ABS32        0000000000000000 a1 - 1
+# A64BE-NEXT: 0000000000000005  {{.*}}           R_AARCH64_ABS64        0000000000000000 a2 - 1
+# A64BE-EMPTY:
 
 .globl _start
 _start:
@@ -68,14 +71,17 @@ _start:
 .section .text.1,"ax"
   ret
 
+## Test various combinations of delta offset and flags, delta symbol index
+## (if present), delta type (if present), delta addend (if present).
 .data
 .reloc .+0, BFD_RELOC_NONE, a0
-.reloc .+1, BFD_RELOC_NONE, a1-1
-.reloc .+2, BFD_RELOC_NONE, a2-1
-.reloc .+3, BFD_RELOC_32, a3+0x4000
-.reloc .+4, BFD_RELOC_64, a0-0x8000000000000000
-.reloc .+5, BFD_RELOC_64, a1+0x7fffffffffffffff
-.reloc .+5, BFD_RELOC_32, a1-1
+.reloc .+1, BFD_RELOC_NONE, a1-1  // same type
+.reloc .+2, BFD_RELOC_NONE, a2-1  // same type and addend
+.reloc .+4, BFD_RELOC_32, a3+0x4000
+.reloc .+5, BFD_RELOC_64, a3-0x8000000000000000  // same symbol index
+.reloc .+5, BFD_RELOC_64, a1+0x7fffffffffffffff  // same offset and type; addend+=UINT64_MAX
+.reloc .+5, BFD_RELOC_32, a1-1  // same offset and symbol index
+.reloc .+5, BFD_RELOC_64, a2-1  // same offset and addend
 .quad 0
 
 .section .rodata,"a"

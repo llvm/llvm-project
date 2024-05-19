@@ -409,10 +409,11 @@ ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
   DataExtractor Data(Content, true, 8); // endian/class is irrelevant
   DataExtractor::Cursor Cur(0);
   const uint64_t Hdr = Data.getULEB128(Cur);
-  const size_t Count = Hdr / 8, FlagBits = Hdr & 4 ? 3 : 2, Shift = Hdr % 4;
+  const size_t Count = Hdr / 8, FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2,
+               Shift = Hdr % ELF::CREL_HDR_ADDEND;
   std::vector<Elf_Rel> Rels;
   std::vector<Elf_Rela> Relas;
-  if (Hdr & 4)
+  if (Hdr & ELF::CREL_HDR_ADDEND)
     Relas.resize(Count);
   else
     Rels.resize(Count);
@@ -433,7 +434,7 @@ ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
       Type += Data.getSLEB128(Cur);
     if (B & 4 & Hdr)
       Addend += Data.getSLEB128(Cur);
-    if (Hdr & 4) {
+    if (Hdr & ELF::CREL_HDR_ADDEND) {
       Relas[I].r_offset = Offset << Shift;
       Relas[I].setSymbolAndType(Symidx, Type, false);
       Relas[I].r_addend = Addend;
