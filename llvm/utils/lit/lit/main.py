@@ -300,6 +300,7 @@ def run_tests(tests, lit_config, opts, discovered_tests):
 
 
 def execute_in_tmp_dir(run, lit_config):
+    print("Endill 3600")
     # Create a temp directory inside the normal temp directory so that we can
     # try to avoid temporary test file leaks. The user can avoid this behavior
     # by setting LIT_PRESERVES_TMP in the environment, so they can easily use
@@ -308,26 +309,36 @@ def execute_in_tmp_dir(run, lit_config):
     tmp_dir = None
     if "LIT_PRESERVES_TMP" not in os.environ:
         import tempfile
-
+        print("Endill 3610")
         # z/OS linker does not support '_' in paths, so use '-'.
         tmp_dir = tempfile.mkdtemp(prefix="lit-tmp-")
+        print("Endill 3620")
         tmp_dir_envs = {k: tmp_dir for k in ["TMP", "TMPDIR", "TEMP", "TEMPDIR"]}
         os.environ.update(tmp_dir_envs)
+        print("Endill 3630")
         for cfg in {t.config for t in run.tests}:
             cfg.environment.update(tmp_dir_envs)
+        print("Endill 3640")
     try:
+        print("Endill 3650")
         run.execute()
+        print("Endill 3660")
     finally:
+        print("Endill 3670")
         if tmp_dir:
             try:
+                print("Endill 3680")
                 import shutil
-
+                print("Endill 3690") 
                 shutil.rmtree(tmp_dir)
+                print("Endill 36100") 
             except Exception as e:
+                print("Endill 36110") 
                 lit_config.warning(
                     "Failed to delete temp directory '%s', try upgrading your version of Python to fix this"
                     % tmp_dir
                 )
+    print("Endill 36120")
 
 
 def print_histogram(tests):
