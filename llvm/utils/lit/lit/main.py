@@ -118,33 +118,55 @@ def main(builtin_params={}):
 
     mark_xfail(discovered_tests, opts)
 
+    print("Endill 10")
+
     mark_excluded(discovered_tests, selected_tests)
 
+    print("Endill 20")
+
     start = time.time()
+    print("Endill 30")
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
+    print("Endill 40")
     elapsed = time.time() - start
 
+    print("Endill 50")
+
     record_test_times(selected_tests, lit_config)
+
+    print("Endill 60")
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
         selected_tests, discovered_tests
     )
 
+    print("Endill 70")
+
     if opts.time_tests:
         print_histogram(discovered_tests)
 
+    print("Endill 80")
+
     print_results(discovered_tests, elapsed, opts)
+
+    print("Endill 90")
 
     tests_for_report = selected_tests if opts.shard else discovered_tests
     for report in opts.reports:
         report.write_results(tests_for_report, elapsed)
 
+    print("Endill 100")
+
     if lit_config.numErrors:
         sys.stderr.write("\n%d error(s) in tests\n" % lit_config.numErrors)
         sys.exit(2)
+    
+    print("Endill 110")
 
     if lit_config.numWarnings:
         sys.stderr.write("\n%d warning(s) in tests\n" % lit_config.numWarnings)
+
+    print("Endill 120")
 
     has_failure = any(t.isFailure() for t in discovered_tests)
     if has_failure:
