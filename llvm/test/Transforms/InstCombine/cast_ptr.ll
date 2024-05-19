@@ -281,6 +281,54 @@ define i32 @ptr_add_in_int_nneg(i32 %x, i32 %y) {
   ret i32 %r
 }
 
+define i64 @ptr_add_in_int_different_type_1(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i64
+  ret i64 %r
+}
+
+define i16 @ptr_add_in_int_different_type_2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i16
+  ret i16 %r
+}
+
+define i32 @ptr_add_in_int_different_type_3(i16 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i16 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_different_type_4(i64 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i64 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
 define i32 @ptr_add_in_int_not_inbounds(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_not_inbounds(
 ; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
