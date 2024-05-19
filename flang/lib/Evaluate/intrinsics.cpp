@@ -512,7 +512,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"getcwd",
         {{"c", DefaultChar, Rank::scalar, Optionality::required,
             common::Intent::Out}},
-        AnyInt, Rank::scalar},
+        DefaultInt},
     {"getpid", {}, DefaultInt},
     {"huge",
         {{"x", SameIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
