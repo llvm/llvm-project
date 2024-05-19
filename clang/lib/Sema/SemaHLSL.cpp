@@ -341,7 +341,7 @@ class DiagnoseHLSLAvailability
   unsigned CurrentShaderStageBit;
 
   // True if scanning a function that was already scanned in a different
-  // shader stage context, and therefore we should not report issues that 
+  // shader stage context, and therefore we should not report issues that
   // depend only on shader model version because they would be duplicate.
   bool ReportOnlyShaderStageIssues;
 
