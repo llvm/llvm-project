@@ -11,9 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/remove_cv.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,40 +19,12 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct __libcpp_is_member_pointer {
-  enum { __is_member = false, __is_func = false, __is_obj = false };
-};
-template <class _Tp, class _Up>
-struct __libcpp_is_member_pointer<_Tp _Up::*> {
-  enum {
-    __is_member = true,
-    __is_func   = is_function<_Tp>::value,
-    __is_obj    = !__is_func,
-  };
-};
-
-#if __has_builtin(__is_member_function_pointer)
-
-template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer : _BoolConstant<__is_member_function_pointer(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_member_function_pointer_v = __is_member_function_pointer(_Tp);
 #  endif
-
-#else // __has_builtin(__is_member_function_pointer)
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer
-    : public _BoolConstant<__libcpp_is_member_pointer<__remove_cv_t<_Tp> >::__is_func> {};
-
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<_Tp>::value;
-#  endif
-
-#endif // __has_builtin(__is_member_function_pointer)
 
 _LIBCPP_END_NAMESPACE_STD
 
