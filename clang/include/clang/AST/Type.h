@@ -2515,7 +2515,6 @@ public:
   bool isRecordType() const;
   bool isClassType() const;
   bool isStructureType() const;
-  bool isStructureTypeWithFlexibleArrayMember() const;
   bool isObjCBoxableRecordType() const;
   bool isInterfaceType() const;
   bool isStructureOrClassType() const;
