@@ -45,8 +45,11 @@ void lld::unlinkAsync(StringRef path) {
   if (!sys::fs::exists(path) || !sys::fs::is_regular_file(path))
     return;
 
+// If threads are disabled, remove the file synchronously.
+#if !LLVM_ENABLE_THREADS
+  sys::fs::remove(path);
 // Removing a file is async on windows.
-#if defined(_WIN32)
+#elif defined(_WIN32)
   // On Windows co-operative programs can be expected to open LLD's
   // output in FILE_SHARE_DELETE mode. This allows us to delete the
   // file (by moving it to a temporary filename and then deleting
