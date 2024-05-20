@@ -43,11 +43,11 @@ void SetGlobalStackTraceFormat() {
 using namespace __radsan;
 void __radsan::PrintStackTrace() {
 
-  BufferedStackTrace Stack{};
+  BufferedStackTrace stack{};
 
   GET_CURRENT_PC_BP;
-  Stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
 
   SetGlobalStackTraceFormat();
-  Stack.Print();
+  stack.Print();
 }

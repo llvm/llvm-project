@@ -13,58 +13,58 @@
 
 #include "radsan_context.h"
 
-TEST(TestRadsanContext, CanCreateContext) { __radsan::Context Context{}; }
+TEST(TestRadsanContext, CanCreateContext) { __radsan::Context context{}; }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
-  __radsan::Context Context{};
-  Context.ExpectNotRealtime("do_some_stuff");
+  __radsan::Context context{};
+  context.ExpectNotRealtime("do_some_stuff");
 }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
-  __radsan::Context Context{};
-  Context.RealtimePush();
-  Context.RealtimePop();
-  Context.ExpectNotRealtime("do_some_stuff");
+  __radsan::Context context{};
+  context.RealtimePush();
+  context.RealtimePop();
+  context.ExpectNotRealtime("do_some_stuff");
 }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
-  __radsan::Context Context{};
+  __radsan::Context context{};
 
-  Context.RealtimePush();
-  EXPECT_DEATH(Context.ExpectNotRealtime("do_some_stuff"), "");
+  context.RealtimePush();
+  EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
 }
 
 TEST(TestRadsanContext,
      ExpectNotRealtimeDiesAfterRealtimeAfterMorePushesThanPops) {
-  __radsan::Context Context{};
+  __radsan::Context context{};
 
-  Context.RealtimePush();
-  Context.RealtimePush();
-  Context.RealtimePush();
-  Context.RealtimePop();
-  Context.RealtimePop();
-  EXPECT_DEATH(Context.ExpectNotRealtime("do_some_stuff"), "");
+  context.RealtimePush();
+  context.RealtimePush();
+  context.RealtimePush();
+  context.RealtimePop();
+  context.RealtimePop();
+  EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
 }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
-  __radsan::Context Context{};
+  __radsan::Context context{};
 
-  Context.RealtimePush();
-  Context.BypassPush();
-  Context.ExpectNotRealtime("do_some_stuff");
+  context.RealtimePush();
+  context.BypassPush();
+  context.ExpectNotRealtime("do_some_stuff");
 }
 
 TEST(TestRadsanContext,
      ExpectNotRealtimeDoesNotDieIfBypassDepthIsGreaterThanZero) {
-  __radsan::Context Context{};
+  __radsan::Context context{};
 
-  Context.RealtimePush();
-  Context.BypassPush();
-  Context.BypassPush();
-  Context.BypassPush();
-  Context.BypassPop();
-  Context.BypassPop();
-  Context.ExpectNotRealtime("do_some_stuff");
-  Context.BypassPop();
-  EXPECT_DEATH(Context.ExpectNotRealtime("do_some_stuff"), "");
+  context.RealtimePush();
+  context.BypassPush();
+  context.BypassPush();
+  context.BypassPush();
+  context.BypassPop();
+  context.BypassPop();
+  context.ExpectNotRealtime("do_some_stuff");
+  context.BypassPop();
+  EXPECT_DEATH(context.ExpectNotRealtime("do_some_stuff"), "");
 }

@@ -116,8 +116,8 @@ TEST(TestRadsanInterceptors, FreeSurvivesWhenRealtimeIfArgumentIsNull) {
 
 TEST(TestRadsanInterceptors, PosixMemalignDiesWhenRealtime) {
   auto Func = []() {
-    void *Mem;
-    posix_memalign(&Mem, 4, 4);
+    void *ptr;
+    posix_memalign(&ptr, 4, 4);
   };
   ExpectRealtimeDeath(Func, "posix_memalign");
   ExpectNonRealtimeSurvival(Func);
@@ -203,8 +203,8 @@ TEST(TestRadsanInterceptors, CloseDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, FopenDiesWhenRealtime) {
   auto Func = []() {
-    FILE *Fd = fopen(TemporaryFilePath(), "w");
-    EXPECT_THAT(Fd, Ne(nullptr));
+    FILE *fd = fopen(TemporaryFilePath(), "w");
+    EXPECT_THAT(fd, Ne(nullptr));
   };
   ExpectRealtimeDeath(Func, "fopen");
   ExpectNonRealtimeSurvival(Func);
@@ -212,32 +212,32 @@ TEST(TestRadsanInterceptors, FopenDiesWhenRealtime) {
 }
 
 TEST(TestRadsanInterceptors, FreadDiesWhenRealtime) {
-  FILE *Fd = fopen(TemporaryFilePath(), "w");
-  auto Func = [Fd]() {
+  FILE *fd = fopen(TemporaryFilePath(), "w");
+  auto Func = [fd]() {
     char c{};
-    fread(&c, 1, 1, Fd);
+    fread(&c, 1, 1, fd);
   };
   ExpectRealtimeDeath(Func, "fread");
   ExpectNonRealtimeSurvival(Func);
-  if (Fd != nullptr)
-    fclose(Fd);
+  if (fd != nullptr)
+    fclose(fd);
   std::remove(TemporaryFilePath());
 }
 
 TEST(TestRadsanInterceptors, FwriteDiesWhenRealtime) {
-  FILE *Fd = fopen(TemporaryFilePath(), "w");
-  ASSERT_NE(nullptr, Fd);
-  const char *Message = "Hello, world!";
-  auto Func = [&]() { fwrite(&Message, 1, 4, Fd); };
+  FILE *fd = fopen(TemporaryFilePath(), "w");
+  ASSERT_NE(nullptr, fd);
+  const char *message = "Hello, world!";
+  auto Func = [&]() { fwrite(&message, 1, 4, fd); };
   ExpectRealtimeDeath(Func, "fwrite");
   ExpectNonRealtimeSurvival(Func);
   std::remove(TemporaryFilePath());
 }
 
 TEST(TestRadsanInterceptors, FcloseDiesWhenRealtime) {
-  FILE *Fd = fopen(TemporaryFilePath(), "w");
-  EXPECT_THAT(Fd, Ne(nullptr));
-  auto Func = [Fd]() { fclose(Fd); };
+  FILE *fd = fopen(TemporaryFilePath(), "w");
+  EXPECT_THAT(fd, Ne(nullptr));
+  auto Func = [fd]() { fclose(fd); };
   ExpectRealtimeDeath(Func, "fclose");
   ExpectNonRealtimeSurvival(Func);
   std::remove(TemporaryFilePath());
@@ -250,13 +250,13 @@ TEST(TestRadsanInterceptors, PutsDiesWhenRealtime) {
 }
 
 TEST(TestRadsanInterceptors, FputsDiesWhenRealtime) {
-  FILE *Fd = fopen(TemporaryFilePath(), "w");
-  ASSERT_THAT(Fd, Ne(nullptr)) << errno;
-  auto Func = [Fd]() { fputs("Hello, world!\n", Fd); };
+  FILE *fd = fopen(TemporaryFilePath(), "w");
+  ASSERT_THAT(fd, Ne(nullptr)) << errno;
+  auto Func = [fd]() { fputs("Hello, world!\n", fd); };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
-  if (Fd != nullptr)
-    fclose(Fd);
+  if (fd != nullptr)
+    fclose(fd);
   std::remove(TemporaryFilePath());
 }
 
@@ -266,10 +266,10 @@ TEST(TestRadsanInterceptors, FputsDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadCreateDiesWhenRealtime) {
   auto Func = []() {
-    pthread_t Thread{};
-    const pthread_attr_t Attr{};
-    struct thread_info *ThreadInfo;
-    pthread_create(&Thread, &Attr, &FakeThreadEntryPoint, ThreadInfo);
+    pthread_t thread{};
+    const pthread_attr_t attr{};
+    struct thread_info *thread_info;
+    pthread_create(&thread, &attr, &FakeThreadEntryPoint, thread_info);
   };
   ExpectRealtimeDeath(Func, "pthread_create");
   ExpectNonRealtimeSurvival(Func);
@@ -277,8 +277,8 @@ TEST(TestRadsanInterceptors, PthreadCreateDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadMutexLockDiesWhenRealtime) {
   auto Func = []() {
-    pthread_mutex_t Mutex{};
-    pthread_mutex_lock(&Mutex);
+    pthread_mutex_t mutex{};
+    pthread_mutex_lock(&mutex);
   };
 
   ExpectRealtimeDeath(Func, "pthread_mutex_lock");
@@ -287,8 +287,8 @@ TEST(TestRadsanInterceptors, PthreadMutexLockDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadMutexUnlockDiesWhenRealtime) {
   auto Func = []() {
-    pthread_mutex_t Mutex{};
-    pthread_mutex_unlock(&Mutex);
+    pthread_mutex_t mutex{};
+    pthread_mutex_unlock(&mutex);
   };
 
   ExpectRealtimeDeath(Func, "pthread_mutex_unlock");
@@ -297,8 +297,8 @@ TEST(TestRadsanInterceptors, PthreadMutexUnlockDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadMutexJoinDiesWhenRealtime) {
   auto Func = []() {
-    pthread_t Thread{};
-    pthread_join(Thread, nullptr);
+    pthread_t thread{};
+    pthread_join(thread, nullptr);
   };
 
   ExpectRealtimeDeath(Func, "pthread_join");
@@ -312,8 +312,8 @@ TEST(TestRadsanInterceptors, PthreadMutexJoinDiesWhenRealtime) {
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 TEST(TestRadsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   auto Func = []() {
-    OSSpinLock SpinLock{};
-    OSSpinLockLock(&SpinLock);
+    OSSpinLock spin_lock{};
+    OSSpinLockLock(&spin_lock);
   };
   ExpectRealtimeDeath(Func, "OSSpinLockLock");
   ExpectNonRealtimeSurvival(Func);
@@ -322,8 +322,8 @@ TEST(TestRadsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   auto Func = []() {
-    os_unfair_lock_s UnfairLock{};
-    os_unfair_lock_lock(&UnfairLock);
+    os_unfair_lock_s unfair_lock{};
+    os_unfair_lock_lock(&unfair_lock);
   };
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
   ExpectNonRealtimeSurvival(Func);
@@ -332,9 +332,9 @@ TEST(TestRadsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
 
 #if SANITIZER_LINUX
 TEST(TestRadsanInterceptors, SpinLockLockDiesWhenRealtime) {
-  pthread_spinlock_t SpinLock;
-  pthread_spin_init(&SpinLock, PTHREAD_PROCESS_SHARED);
-  auto Func = [&]() { pthread_spin_lock(&SpinLock); };
+  pthread_spinlock_t spin_lock;
+  pthread_spin_init(&spin_lock, PTHREAD_PROCESS_SHARED);
+  auto Func = [&]() { pthread_spin_lock(&spin_lock); };
   ExpectRealtimeDeath(Func, "pthread_spin_lock");
   ExpectNonRealtimeSurvival(Func);
 }
@@ -342,8 +342,8 @@ TEST(TestRadsanInterceptors, SpinLockLockDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
   auto Func = []() {
-    pthread_cond_t Cond{};
-    pthread_cond_signal(&Cond);
+    pthread_cond_t cond{};
+    pthread_cond_signal(&cond);
   };
   ExpectRealtimeDeath(Func, "pthread_cond_signal");
   ExpectNonRealtimeSurvival(Func);
@@ -351,19 +351,19 @@ TEST(TestRadsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadCondBroadcastDiesWhenRealtime) {
   auto Func = []() {
-    pthread_cond_t Cond;
-    pthread_cond_broadcast(&Cond);
+    pthread_cond_t cond;
+    pthread_cond_broadcast(&cond);
   };
   ExpectRealtimeDeath(Func, "pthread_cond_broadcast");
   ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRadsanInterceptors, PthreadCondWaitDiesWhenRealtime) {
-  pthread_cond_t Cond;
-  pthread_mutex_t Mutex;
-  ASSERT_EQ(0, pthread_cond_init(&Cond, nullptr));
-  ASSERT_EQ(0, pthread_mutex_init(&Mutex, nullptr));
-  auto Func = [&]() { pthread_cond_wait(&Cond, &Mutex); };
+  pthread_cond_t cond;
+  pthread_mutex_t mutex;
+  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
+  ASSERT_EQ(0, pthread_mutex_init(&mutex, nullptr));
+  auto Func = [&]() { pthread_cond_wait(&cond, &mutex); };
   ExpectRealtimeDeath(Func, "pthread_cond_wait");
   // It's very difficult to test the success case here without doing some
   // sleeping, which is at the mercy of the scheduler. What's really important
@@ -372,8 +372,8 @@ TEST(TestRadsanInterceptors, PthreadCondWaitDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadRwlockRdlockDiesWhenRealtime) {
   auto Func = []() {
-    pthread_rwlock_t RwLock;
-    pthread_rwlock_rdlock(&RwLock);
+    pthread_rwlock_t rw_lock;
+    pthread_rwlock_rdlock(&rw_lock);
   };
   ExpectRealtimeDeath(Func, "pthread_rwlock_rdlock");
   ExpectNonRealtimeSurvival(Func);
@@ -381,8 +381,8 @@ TEST(TestRadsanInterceptors, PthreadRwlockRdlockDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadRwlockUnlockDiesWhenRealtime) {
   auto Func = []() {
-    pthread_rwlock_t RwLock;
-    pthread_rwlock_unlock(&RwLock);
+    pthread_rwlock_t rw_lock;
+    pthread_rwlock_unlock(&rw_lock);
   };
   ExpectRealtimeDeath(Func, "pthread_rwlock_unlock");
   ExpectNonRealtimeSurvival(Func);
@@ -390,8 +390,8 @@ TEST(TestRadsanInterceptors, PthreadRwlockUnlockDiesWhenRealtime) {
 
 TEST(TestRadsanInterceptors, PthreadRwlockWrlockDiesWhenRealtime) {
   auto Func = []() {
-    pthread_rwlock_t RwLock;
-    pthread_rwlock_wrlock(&RwLock);
+    pthread_rwlock_t rw_lock;
+    pthread_rwlock_wrlock(&rw_lock);
   };
   ExpectRealtimeDeath(Func, "pthread_rwlock_wrlock");
   ExpectNonRealtimeSurvival(Func);
@@ -413,16 +413,16 @@ TEST(TestRadsanInterceptors, SendToASocketDiesWhenRealtime) {
 }
 
 TEST(TestRadsanInterceptors, SendmsgToASocketDiesWhenRealtime) {
-  msghdr Msg{};
-  auto Func = [&]() { sendmsg(0, &Msg, 0); };
+  msghdr msg{};
+  auto Func = [&]() { sendmsg(0, &msg, 0); };
   ExpectRealtimeDeath(Func, "sendmsg");
   ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRadsanInterceptors, SendtoToASocketDiesWhenRealtime) {
-  sockaddr Addr{};
-  socklen_t Len{};
-  auto Func = [&]() { sendto(0, nullptr, 0, 0, &Addr, Len); };
+  sockaddr addr{};
+  socklen_t len{};
+  auto Func = [&]() { sendto(0, nullptr, 0, 0, &addr, len); };
   ExpectRealtimeDeath(Func, "sendto");
   ExpectNonRealtimeSurvival(Func);
 }
@@ -434,16 +434,16 @@ TEST(TestRadsanInterceptors, RecvFromASocketDiesWhenRealtime) {
 }
 
 TEST(TestRadsanInterceptors, RecvfromOnASocketDiesWhenRealtime) {
-  sockaddr Addr{};
-  socklen_t Len{};
-  auto Func = [&]() { recvfrom(0, nullptr, 0, 0, &Addr, &Len); };
+  sockaddr addr{};
+  socklen_t len{};
+  auto Func = [&]() { recvfrom(0, nullptr, 0, 0, &addr, &len); };
   ExpectRealtimeDeath(Func, "recvfrom");
   ExpectNonRealtimeSurvival(Func);
 }
 
 TEST(TestRadsanInterceptors, RecvmsgOnASocketDiesWhenRealtime) {
-  msghdr Msg{};
-  auto Func = [&]() { recvmsg(0, &Msg, 0); };
+  msghdr msg{};
+  auto Func = [&]() { recvmsg(0, &msg, 0); };
   ExpectRealtimeDeath(Func, "recvmsg");
   ExpectNonRealtimeSurvival(Func);
 }

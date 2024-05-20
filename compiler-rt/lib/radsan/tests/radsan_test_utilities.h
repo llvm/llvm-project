@@ -29,7 +29,7 @@ void ExpectRealtimeDeath(Function &&Func,
 
   using namespace testing;
 
-  auto ExpectedErrorSubstring = [&]() -> std::string {
+  auto GetExpectedErrorSubstring = [&]() -> std::string {
     return intercepted_method_name != nullptr
                ? "Real-time violation: intercepted call to real-time unsafe "
                  "function `" +
@@ -38,7 +38,7 @@ void ExpectRealtimeDeath(Function &&Func,
   };
 
   EXPECT_EXIT(RealtimeInvoke(std::forward<Function>(Func)),
-              ExitedWithCode(EXIT_FAILURE), ExpectedErrorSubstring());
+              ExitedWithCode(EXIT_FAILURE), GetExpectedErrorSubstring());
 }
 
 template <typename Function> void ExpectNonRealtimeSurvival(Function &&Func) {

@@ -13,4 +13,4 @@
 
 namespace __radsan {
 void InitializeInterceptors();
-}
+} // namespace __radsan

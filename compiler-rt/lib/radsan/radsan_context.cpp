@@ -24,28 +24,28 @@ using namespace __sanitizer;
 
 namespace detail {
 
-static pthread_key_t Key;
-static pthread_once_t KeyOnce = PTHREAD_ONCE_INIT;
-void internalFree(void *Ptr) { __sanitizer::InternalFree(Ptr); }
+static pthread_key_t key;
+static pthread_once_t key_once = PTHREAD_ONCE_INIT;
+void internalFree(void *ptr) { __sanitizer::InternalFree(ptr); }
 
 using __radsan::Context;
 
 Context &GetContextForThisThreadImpl() {
-  auto MakeTlsKey = []() {
-    CHECK_EQ(pthread_key_create(&detail::Key, detail::internalFree), 0);
+  auto make_tls_key = []() {
+    CHECK_EQ(pthread_key_create(&detail::key, detail::internalFree), 0);
   };
 
-  pthread_once(&detail::KeyOnce, MakeTlsKey);
-  Context *CurrentThreadContext =
-      static_cast<Context *>(pthread_getspecific(detail::Key));
-  if (CurrentThreadContext == nullptr) {
-    CurrentThreadContext =
+  pthread_once(&detail::key_once, make_tls_key);
+  Context *current_thread_context =
+      static_cast<Context *>(pthread_getspecific(detail::key));
+  if (current_thread_context == nullptr) {
+    current_thread_context =
         static_cast<Context *>(InternalAlloc(sizeof(Context)));
-    new (CurrentThreadContext) Context();
-    pthread_setspecific(detail::Key, CurrentThreadContext);
+    new (current_thread_context) Context();
+    pthread_setspecific(detail::key, current_thread_context);
   }
 
-  return *CurrentThreadContext;
+  return *current_thread_context;
 }
 
 /*
@@ -70,32 +70,32 @@ namespace __radsan {
 
 Context::Context() = default;
 
-void Context::RealtimePush() { RealtimeDepth++; }
+void Context::RealtimePush() { realtime_depth++; }
 
-void Context::RealtimePop() { RealtimeDepth--; }
+void Context::RealtimePop() { realtime_depth--; }
 
-void Context::BypassPush() { BypassDepth++; }
+void Context::BypassPush() { bypass_depth++; }
 
-void Context::BypassPop() { BypassDepth--; }
+void Context::BypassPop() { bypass_depth--; }
 
-void Context::ExpectNotRealtime(const char *InterceptedFunctionName) {
+void Context::ExpectNotRealtime(const char *intercepted_function_name) {
   if (InRealtimeContext() && !IsBypassed()) {
     BypassPush();
-    PrintDiagnostics(InterceptedFunctionName);
+    PrintDiagnostics(intercepted_function_name);
     detail::InvokeViolationDetectedAction();
     BypassPop();
   }
 }
 
-bool Context::InRealtimeContext() const { return RealtimeDepth > 0; }
+bool Context::InRealtimeContext() const { return realtime_depth > 0; }
 
-bool Context::IsBypassed() const { return BypassDepth > 0; }
+bool Context::IsBypassed() const { return bypass_depth > 0; }
 
-void Context::PrintDiagnostics(const char *InterceptedFunctionName) {
+void Context::PrintDiagnostics(const char *intercepted_function_name) {
   fprintf(stderr,
           "Real-time violation: intercepted call to real-time unsafe function "
           "`%s` in real-time context! Stack trace:\n",
-          InterceptedFunctionName);
+          intercepted_function_name);
   __radsan::PrintStackTrace();
 }
 

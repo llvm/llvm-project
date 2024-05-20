@@ -22,15 +22,15 @@ public:
   void BypassPush();
   void BypassPop();
 
-  void ExpectNotRealtime(const char *InterceptedFunctionName);
+  void ExpectNotRealtime(const char *intercepted_function_name);
 
 private:
   bool InRealtimeContext() const;
   bool IsBypassed() const;
-  void PrintDiagnostics(const char *InterceptedFunctionName);
+  void PrintDiagnostics(const char *intercepted_function_name);
 
-  int RealtimeDepth{0};
-  int BypassDepth{0};
+  int realtime_depth{0};
+  int bypass_depth{0};
 };
 
 Context &GetContextForThisThread();

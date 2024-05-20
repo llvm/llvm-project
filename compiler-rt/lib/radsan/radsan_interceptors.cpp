@@ -41,8 +41,8 @@
 using namespace __sanitizer;
 
 namespace __radsan {
-void ExpectNotRealtime(const char *InterceptedFunctionName) {
-  GetContextForThisThread().ExpectNotRealtime(InterceptedFunctionName);
+void ExpectNotRealtime(const char *intercepted_function_name) {
+  GetContextForThisThread().ExpectNotRealtime(intercepted_function_name);
 }
 } // namespace __radsan
 
