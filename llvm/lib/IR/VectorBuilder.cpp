@@ -101,8 +101,8 @@ Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
     }
   };
   auto VPID = GetForRecurKind(Kind);
-  if (VPID == Intrinsic::not_intrinsic)
-    return returnWithError<Value *>("No VPIntrinsic for this reduction");
+  assert(VPID != Intrinsic::not_intrinsic &&
+         "No VPIntrinsic for this reduction");
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
 }
 
