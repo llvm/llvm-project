@@ -197,10 +197,6 @@ public:
     return (BranchParams != nullptr);
   }
 
-  const auto &getMCDCBranchParams() const {
-    return mcdc::getParams<const mcdc::BranchParameters>(MCDCParams);
-  }
-
   bool isMCDCDecision() const {
     return std::holds_alternative<mcdc::DecisionParameters>(MCDCParams);
   }
