@@ -67,6 +67,7 @@
 ; RUN: llvm-lto2 run \
 ; RUN:   -debug-only=function-import \
 ; RUN:   -save-temps \
+; RUN:   -thinlto-threads=1 \
 ; RUN:   -import-instr-limit=7 \
 ; RUN:   -import-declaration \
 ; RUN:   -r=main.bc,main,px \
