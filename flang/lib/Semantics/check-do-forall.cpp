@@ -88,8 +88,8 @@ class DoConcurrentBodyEnforce {
 public:
   DoConcurrentBodyEnforce(
       SemanticsContext &context, parser::CharBlock doConcurrentSourcePosition)
-      : context_{context}, doConcurrentSourcePosition_{
-                               doConcurrentSourcePosition} {}
+      : context_{context},
+        doConcurrentSourcePosition_{doConcurrentSourcePosition} {}
   std::set<parser::Label> labels() { return labels_; }
   template <typename T> bool Pre(const T &x) {
     if (const auto *expr{GetExpr(context_, x)}) {
@@ -683,86 +683,61 @@ private:
     }
   }
 
-  void CheckReduce(
-      const parser::LocalitySpec::Reduce &reduce) const {
-    const parser::ReduceOperation &reduceOperation =
-        std::get<parser::ReduceOperation>(reduce.t);
+  void CheckReduce(const parser::LocalitySpec::Reduce &reduce) const {
+    const parser::ReductionOperator &reductionOperator{
+        std::get<parser::ReductionOperator>(reduce.t)};
     // F'2023 C1132, reduction variables should have suitable intrinsic type
-    bool supported_identifier = true;
-    common::visit(
-        common::visitors{
-            [&](const parser::DefinedOperator &dOpr) {
-              const auto &intrinsicOp{
-                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)
-              };
-              for (const Fortran::parser::Name &x :
-                       std::get<std::list<Fortran::parser::Name>>(reduce.t)) {
-                const auto *type{x.symbol->GetType()};
-                bool suitable_type = false;
-                switch (intrinsicOp) {
-                case parser::DefinedOperator::IntrinsicOperator::Add:
-                case parser::DefinedOperator::IntrinsicOperator::Multiply:
-                  if (type->IsNumeric(TypeCategory::Integer) ||
-                      type->IsNumeric(TypeCategory::Real) ||
-                      type->IsNumeric(TypeCategory::Complex)) {
-                    // TODO: check composite type.
-                    suitable_type = true;
-                  }
-                  break;
-                case parser::DefinedOperator::IntrinsicOperator::AND:
-                case parser::DefinedOperator::IntrinsicOperator::OR:
-                case parser::DefinedOperator::IntrinsicOperator::EQV:
-                case parser::DefinedOperator::IntrinsicOperator::NEQV:
-                  if (type->category() == DeclTypeSpec::Category::Logical) {
-                    suitable_type = true;
-                  }
-                  break;
-                default:
-                  supported_identifier = false;
-                  return;
-                }
-                if (!suitable_type) {
-                  context_.Say(currentStatementSourcePosition_,
-                               "Reduction variable '%s' does not have a "
-                               "suitable type."_err_en_US, x.symbol->name());
-                }
-              }
-            },
-            [&](const parser::ProcedureDesignator &procD) {
-              const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
-              if (!(name && name->symbol)) {
-                supported_identifier = false;
-                return;
-              }
-              const SourceName &realName{name->symbol->GetUltimate().name()};
-              for (const Fortran::parser::Name &x : std::get<std::list<
-                       Fortran::parser::Name>>(reduce.t)) {
-                const auto *type{x.symbol->GetType()};
-                bool suitable_type = false;
-                if (realName == "max" || realName == "min") {
-                  if (type->IsNumeric(TypeCategory::Integer) ||
-                      type->IsNumeric(TypeCategory::Real))
-                    suitable_type = true;
-                } else if (realName == "iand" || realName == "ior" ||
-                           realName == "ieor") {
-                  if (type->IsNumeric(TypeCategory::Integer))
-                    suitable_type = true;
-                } else {
-                  supported_identifier = false;
-                  return;
-                }
-                if (!suitable_type) {
-                  context_.Say(currentStatementSourcePosition_,
-                      "Reduction variable '%s' does not have a "
-                      "suitable type."_err_en_US, x.symbol->name());
-                }
-              }
-            }
-        },
-        reduceOperation.u);
-    if (!supported_identifier) {
-      context_.Say(currentStatementSourcePosition_,
-          "Invalid reduction identifier in REDUCE clause."_err_en_US);
+    for (const parser::Name &x : std::get<std::list<parser::Name>>(reduce.t)) {
+      bool supported_identifier{false};
+      if (x.symbol && x.symbol->GetType()) {
+        const auto *type{x.symbol->GetType()};
+        auto type_mismatch = [&](const char *suitable_types) {
+          context_.Say(currentStatementSourcePosition_,
+              "Reduction variable '%s' ('%s') does not have a "
+              "suitable type ('%s')."_err_en_US,
+              x.symbol->name(), type->AsFortran(), suitable_types);
+        };
+        supported_identifier = true;
+        switch (reductionOperator.v) {
+        case parser::ReductionOperator::Operator::Plus:
+        case parser::ReductionOperator::Operator::Multiply:
+          if (!(type->IsNumeric(TypeCategory::Complex) ||
+                  type->IsNumeric(TypeCategory::Integer) ||
+                  type->IsNumeric(TypeCategory::Real))) {
+            type_mismatch("COMPLEX', 'INTEGER', 'REAL");
+          }
+          break;
+        case parser::ReductionOperator::Operator::And:
+        case parser::ReductionOperator::Operator::Or:
+        case parser::ReductionOperator::Operator::Eqv:
+        case parser::ReductionOperator::Operator::Neqv:
+          if (type->category() != DeclTypeSpec::Category::Logical) {
+            type_mismatch("LOGICAL");
+          }
+          break;
+        case parser::ReductionOperator::Operator::Max:
+        case parser::ReductionOperator::Operator::Min:
+          if (!(type->IsNumeric(TypeCategory::Integer) ||
+                  type->IsNumeric(TypeCategory::Real))) {
+            type_mismatch("INTEGER', 'REAL");
+          }
+          break;
+        case parser::ReductionOperator::Operator::Iand:
+        case parser::ReductionOperator::Operator::Ior:
+        case parser::ReductionOperator::Operator::Ieor:
+          if (!type->IsNumeric(TypeCategory::Integer)) {
+            type_mismatch("INTEGER");
+          }
+          break;
+        default:
+          supported_identifier = false;
+          break;
+        }
+      }
+      if (!supported_identifier) {
+        context_.Say(currentStatementSourcePosition_,
+            "Invalid identifier in REDUCE clause."_err_en_US);
+      }
     }
   }
 

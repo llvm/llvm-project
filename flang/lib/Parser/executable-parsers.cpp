@@ -252,12 +252,6 @@ TYPE_PARSER(parenthesized(construct<ConcurrentHeader>(
 TYPE_PARSER(construct<ConcurrentControl>(name / "=", scalarIntExpr / ":",
     scalarIntExpr, maybe(":" >> scalarIntExpr)))
 
-// F'2023 R1131 reduce-operation ->
-//                + | * | .AND. | .OR. | .EQV. | .NEQV. |
-//                MAX | MIN | IAND | IOR | IEOR
-TYPE_PARSER(construct<ReduceOperation>(Parser<DefinedOperator>{}) ||
-    construct<ReduceOperation>(Parser<ProcedureDesignator>{}))
-
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
 //         REDUCE ( reduce-operation : variable-name-list ) |
@@ -267,7 +261,7 @@ TYPE_PARSER(construct<LocalitySpec>(construct<LocalitySpec::Local>(
     construct<LocalitySpec>(construct<LocalitySpec::LocalInit>(
         "LOCAL_INIT"_sptok >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(construct<LocalitySpec::Reduce>(
-        "REDUCE"_sptok >> "("_tok >> Parser<ReduceOperation>{} / ":",
+        "REDUCE (" >> Parser<LocalitySpec::Reduce::Operator>{} / ":",
         listOfNames / ")")) ||
     construct<LocalitySpec>(construct<LocalitySpec::Shared>(
         "SHARED" >> parenthesized(listOfNames))) ||
