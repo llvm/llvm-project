@@ -297,7 +297,7 @@ A code snippet for such a walk looks like this:
   MemoryDef *Def;  // find who's optimized or defining for this MemoryDef
   for (auto &U : Def->uses()) {
     MemoryAccess *MA = cast<MemoryAccess>(U.getUser());
-    if (auto *DefUser = cast_of_null<MemoryDef>(MA))
+    if (auto *DefUser = cast_or_null<MemoryDef>(MA))
       if (DefUser->isOptimized() && DefUser->getOptimized() == Def) {
         // User who is optimized to Def
       } else {
@@ -314,7 +314,7 @@ the store.
   checkUses(MemoryAccess *Def) { // Def can be a MemoryDef or a MemoryPhi.
     for (auto &U : Def->uses()) {
       MemoryAccess *MA = cast<MemoryAccess>(U.getUser());
-      if (auto *MU = cast_of_null<MemoryUse>(MA)) {
+      if (auto *MU = cast_or_null<MemoryUse>(MA)) {
         // Process MemoryUse as needed.
       } else {
         // Process MemoryDef or MemoryPhi as needed.
