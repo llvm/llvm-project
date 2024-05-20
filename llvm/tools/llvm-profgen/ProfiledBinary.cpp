@@ -56,6 +56,10 @@ static cl::list<std::string> DisassembleFunctions(
     cl::desc("List of functions to print disassembly for. Accept demangled "
              "names only. Only work with show-disassembly-only"));
 
+static cl::opt<bool>
+    KernelBinary("kernel",
+                 cl::desc("Generate the profile for Linux kernel binary."));
+
 extern cl::opt<bool> ShowDetailedWarning;
 extern cl::opt<bool> InferMissingFrames;
 
@@ -220,6 +224,9 @@ void ProfiledBinary::load() {
   TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
+
+  // Mark the binary as a kernel image;
+  IsKernel = KernelBinary;
 
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
