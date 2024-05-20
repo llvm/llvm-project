@@ -41,16 +41,14 @@ def execute(test):
     Arguments and results of this function are pickled, so they should be cheap
     to copy.
     """
-    print("Endill: worker 1")
+    print("Endill: worker 1 {}".format(test.path_in_suite))
     with _get_parallelism_semaphore(test):
-        print("Endill: worker 2")
-        print("Endill: worker test.file_path: {}".format(test.file_path))
-        print("Endill: worker test.path_in_suite: {}".format(test.path_in_suite))
+        print("Endill: worker 2 {}".format(test.path_in_suite))
         result = _execute(test, _lit_config)
-        print("Endill: worker 3")
+        print("Endill: worker 3 {}".format(test.path_in_suite))
 
     test.setResult(result)
-    print("Endill: worker 4")
+    print("Endill: worker 4 {}".format(test.path_in_suite))
     return test
 
 
@@ -61,48 +59,48 @@ def NopSemaphore():
 
 
 def _get_parallelism_semaphore(test):
-    print("Endill: worker 1-1")
+    print("Endill: worker 1-1 {}".format(test.path_in_suite))
     pg = test.config.parallelism_group
     if callable(pg):
-        print("Endill: worker 1-2")
+        print("Endill: worker 1-2 {}".format(test.path_in_suite))
         pg = pg(test)
-        print("Endill: worker 1-3")
+        print("Endill: worker 1-3 {}".format(test.path_in_suite))
     print("Endill: pg in _parallelism_semaphores: {}".format(pg in _parallelism_semaphores))
     return _parallelism_semaphores.get(pg, NopSemaphore())
 
 
 # Do not inline! Directly used by LitTestCase.py
 def _execute(test, lit_config):
-    print("Endill: worker 2-1")
+    print("Endill: worker 2-1 {}".format(test.path_in_suite))
     start = time.time()
-    print("Endill: worker 2-2")
+    print("Endill: worker 2-2 {}".format(test.path_in_suite))
     result = _execute_test_handle_errors(test, lit_config)
-    print("Endill: worker 2-3")
+    print("Endill: worker 2-3 {}".format(test.path_in_suite))
     result.elapsed = time.time() - start
-    print("Endill: worker 2-4")
+    print("Endill: worker 2-4 {}".format(test.path_in_suite))
     result.start = start
     print("Endill: worker 2-5 {}".format(test.path_in_suite))
     result.pid = os.getpid()
-    print("Endill: worker 2-6")
+    print("Endill: worker 2-6 {}".format(test.path_in_suite))
     return result
 
 
 def _execute_test_handle_errors(test, lit_config):
-    print("Endill: worker 2-2-1")
+    print("Endill: worker 2-2-1 {}".format(test.path_in_suite))
     try:
-        print("Endill: worker 2-2-2")
+        print("Endill: worker 2-2-2 {}".format(test.path_in_suite))
         result = test.config.test_format.execute(test, lit_config)
-        print("Endill: worker 2-2-3")
+        print("Endill: worker 2-2-3 {}".format(test.path_in_suite))
         return _adapt_result(result)
     except:
-        print("Endill: worker 2-2-4")
+        print("Endill: worker 2-2-4 {}".format(test.path_in_suite))
         if lit_config.debug:
-            print("Endill: worker 2-2-5")
+            print("Endill: worker 2-2-5 {}".format(test.path_in_suite))
             raise
         output = "Exception during script execution:\n"
         output += traceback.format_exc()
         output += "\n"
-        print("Endill: worker 2-2-5")
+        print("Endill: worker 2-2-5 {}".format(test.path_in_suite))
         return lit.Test.Result(lit.Test.UNRESOLVED, output)
     
 

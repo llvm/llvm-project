@@ -2161,10 +2161,12 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
 
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
+    print("Endill _runShTest 1 {}".format(test.path_in_suite))
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
     ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
+        print("Endill runOnce 1 {}".format(test.path_in_suite))
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
@@ -2172,12 +2174,15 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         scriptCopy = script[:]
         # Set unique LLVM_PROFILE_FILE for each run command
         if litConfig.per_test_coverage:
+            print("Endill runOnce 2 {}".format(test.path_in_suite))
             # Extract the test case name from the test object, and remove the
             # file extension.
             test_case_name = test.path_in_suite[-1]
             test_case_name = test_case_name.rsplit(".", 1)[0]
             coverage_index = 0  # Counter for coverage file index
+            print("Endill runOnce 3 {}".format(test.path_in_suite))
             for i, ln in enumerate(scriptCopy):
+                print("Endill runOnce 4 i={} {}".format(i, test.path_in_suite))
                 match = re.fullmatch(kPdbgRegex, ln)
                 if match:
                     dbg = match.group(1)
@@ -2188,16 +2193,22 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                 coverage_index += 1
                 command = f"export LLVM_PROFILE_FILE={profile}; {command}"
                 if match:
+                    print("Endill runOnce 5 i={} {}".format(i, test.path_in_suite))
                     command = buildPdbgCommand(dbg, command)
                 scriptCopy[i] = command
+                print("Endill runOnce 6 i={} {}".format(i, test.path_in_suite))
 
         try:
             if useExternalSh:
+                print("Endill runOnce 7 {}".format(test.path_in_suite))
                 res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
+                print("Endill runOnce 8 {}".format(test.path_in_suite))
             else:
+                print("Endill runOnce 9 {}".format(test.path_in_suite))
                 res = executeScriptInternal(
                     test, litConfig, tmpBase, scriptCopy, execdir
                 )
+                print("Endill runOnce 10 {}".format(test.path_in_suite))
         except ScriptFatal as e:
             out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
             return out, "", 1, None, Test.UNRESOLVED
@@ -2214,14 +2225,18 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
 
     # Create the output directory if it does not already exist.
     lit.util.mkdir_p(os.path.dirname(tmpBase))
-
+    print("Endill _runShTest 2 {}".format(test.path_in_suite))
     # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
+    print("Endill _runShTest 3 {}".format(test.path_in_suite))
     attempts = test.allowed_retries + 1
     for i in range(attempts):
+        print("Endill _runShTest 4 try {} {}".format(i, test.path_in_suite))
         res = runOnce(execdir)
+        print("Endill _runShTest 5 {}".format(test.path_in_suite))
         out, err, exitCode, timeoutInfo, status = res
         if status != Test.FAIL:
+            print("Endill _runShTest 6 {}".format(test.path_in_suite))
             break
 
     # If we had to run the test more than once, count it as a flaky pass. These
@@ -2248,31 +2263,42 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
 def executeShTest(
     test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
 ):
+    print("Endill executeShTest 1 {}".format(test.path_in_suite))
     if test.config.unsupported:
         return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
+    print("Endill executeShTest 2 {}".format(test.path_in_suite))
 
     script = list(preamble_commands)
     script = [buildPdbgCommand(f"preamble command line", ln) for ln in script]
+    print("Endill executeShTest 3 {}".format(test.path_in_suite))
 
     parsed = parseIntegratedTestScript(test, require_script=not script)
+    print("Endill executeShTest 4 {}".format(test.path_in_suite))
     if isinstance(parsed, lit.Test.Result):
         return parsed
     script += parsed
+    print("Endill executeShTest 5 {}".format(test.path_in_suite))
 
     if litConfig.noExecute:
         return lit.Test.Result(Test.PASS)
+    print("Endill executeShTest 6 {}".format(test.path_in_suite))
 
     tmpDir, tmpBase = getTempPaths(test)
+    print("Endill executeShTest 7 {}".format(test.path_in_suite))
     substitutions = list(extra_substitutions)
     substitutions += getDefaultSubstitutions(
         test, tmpDir, tmpBase, normalize_slashes=useExternalSh
     )
     conditions = {feature: True for feature in test.config.available_features}
+    print("Endill executeShTest 8 {}".format(test.path_in_suite))
     script = applySubstitutions(
         script,
         substitutions,
         conditions,
         recursion_limit=test.config.recursiveExpansionLimit,
     )
+    print("Endill executeShTest 9 {}".format(test.path_in_suite))
+    r = _runShTest(test, litConfig, useExternalSh, script, tmpBase)
+    print("Endill executeShTest 10 {}".format(test.path_in_suite))
 
-    return _runShTest(test, litConfig, useExternalSh, script, tmpBase)
+    return r 

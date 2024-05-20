@@ -26,6 +26,7 @@ class ShTest(FileBasedTest):
         self.preamble_commands = preamble_commands
 
     def execute(self, test, litConfig):
+        print("Endill shtest 1")
         return lit.TestRunner.executeShTest(
             test,
             litConfig,
