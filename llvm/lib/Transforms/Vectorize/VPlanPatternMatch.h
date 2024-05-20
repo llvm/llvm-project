@@ -274,6 +274,10 @@ m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
 }
 
+/// Match a binary OR operation. Note that while conceptually the perands can
+/// be matched commutatively, \p Commutative defaults to false in line with the
+/// IR-based pattern matching infrastructure. Use m_c_BinaryOr for a commutative
+/// version of the matcher.
 template <typename Op0_t, typename Op1_t, bool Commutative = false>
 inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or, Commutative>
 m_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
