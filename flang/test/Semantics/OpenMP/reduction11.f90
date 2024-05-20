@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols -o - %s 2>&1 | FileCheck %s
 ! Check intrinsic reduction symbols (in this case "max" are marked as INTRINSIC
 

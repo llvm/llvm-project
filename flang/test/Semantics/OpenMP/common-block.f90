@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols %s | FileCheck %s
 
 program main

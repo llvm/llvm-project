@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: not %flang_fc1 -fdebug-unparse-with-symbols -fopenmp %s 2>&1 | FileCheck %s
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct

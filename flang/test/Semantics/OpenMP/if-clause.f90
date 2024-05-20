@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! Check OpenMP 'if' clause validity for all directives that can have it
 

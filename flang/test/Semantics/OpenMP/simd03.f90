@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
 ! XFAIL: *
 

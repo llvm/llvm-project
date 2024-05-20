@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 
 ! Test to check that no errors are present when allocate statements
