@@ -6,11 +6,20 @@
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus == 199711L
-// expected-no-diagnostics
-#endif
+namespace std {
+struct type_info{};
+} // namespace std
 
 // cwg2504 is in cwg2504.cpp
+
+namespace cwg2512 { // cwg2512: 2.7
+struct A; // #cwg2512-A
+void foo(A* p) {
+  typeid(*p);
+  // expected-error@-1 {{'typeid' of incomplete type 'A'}}
+  //   expected-note@#cwg2512-A {{forward declaration of 'cwg2512::A'}}
+}
+} // namespace cwg2512
 
 namespace cwg2516 { // cwg2516: 3.0
                    // NB: reusing 1482 test

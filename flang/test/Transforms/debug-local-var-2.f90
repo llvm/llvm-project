@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
@@ -89,3 +90,5 @@ contains
     res2 = a2 + b2
   end function
 end program
+
+LINEONLY-NOT: DILocalVariable

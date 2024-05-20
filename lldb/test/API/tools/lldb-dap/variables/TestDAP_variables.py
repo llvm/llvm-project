@@ -254,18 +254,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "pt": {
                 "equals": {"type": "PointType"},
                 "startswith": {
-                    "result": "{x:11, y:22, buffer:{...}}"
-                    if enableAutoVariableSummaries
-                    else "PointType @ 0x"
+                    "result": (
+                        "{x:11, y:22, buffer:{...}}"
+                        if enableAutoVariableSummaries
+                        else "PointType @ 0x"
+                    )
                 },
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
                 "equals": {"type": "int[16]"},
                 "startswith": {
-                    "result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
-                    if enableAutoVariableSummaries
-                    else "int[16] @ 0x"
+                    "result": (
+                        "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
+                        if enableAutoVariableSummaries
+                        else "int[16] @ 0x"
+                    )
                 },
                 "hasVariablesReference": True,
             },
@@ -528,9 +532,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "watch": {
                     "equals": {"type": "PointType"},
                     "startswith": {
-                        "result": "{x:11, y:22, buffer:{...}}"
-                        if enableAutoVariableSummaries
-                        else "PointType @ 0x"
+                        "result": (
+                            "{x:11, y:22, buffer:{...}}"
+                            if enableAutoVariableSummaries
+                            else "PointType @ 0x"
+                        )
                     },
                     "missing": ["indexedVariables"],
                     "hasVariablesReference": True,
@@ -538,9 +544,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "variables": {
                     "equals": {"type": "PointType"},
                     "startswith": {
-                        "result": "{x:11, y:22, buffer:{...}}"
-                        if enableAutoVariableSummaries
-                        else "PointType @ 0x"
+                        "result": (
+                            "{x:11, y:22, buffer:{...}}"
+                            if enableAutoVariableSummaries
+                            else "PointType @ 0x"
+                        )
                     },
                     "missing": ["indexedVariables"],
                     "hasVariablesReference": True,
@@ -777,20 +785,20 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Verify locals value format decimal
         is_hex = False
         var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
-        self.assertEquals(var_pt_x["value"], "11")
+        self.assertEqual(var_pt_x["value"], "11")
         var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
-        self.assertEquals(var_pt_y["value"], "22")
+        self.assertEqual(var_pt_y["value"], "22")
 
         # Verify locals value format hexical
         is_hex = True
         var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
-        self.assertEquals(var_pt_x["value"], "0x0000000b")
+        self.assertEqual(var_pt_x["value"], "0x0000000b")
         var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
-        self.assertEquals(var_pt_y["value"], "0x00000016")
+        self.assertEqual(var_pt_y["value"], "0x00000016")
 
         # Toggle and verify locals value format decimal again
         is_hex = False
         var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
-        self.assertEquals(var_pt_x["value"], "11")
+        self.assertEqual(var_pt_x["value"], "11")
         var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
-        self.assertEquals(var_pt_y["value"], "22")
+        self.assertEqual(var_pt_y["value"], "22")

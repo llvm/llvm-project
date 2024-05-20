@@ -40,7 +40,11 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
 
 MCObjectStreamer::~MCObjectStreamer() = default;
 
-MCAssembler *MCObjectStreamer::getAssemblerPtr() { return Assembler.get(); }
+MCAssembler *MCObjectStreamer::getAssemblerPtr() {
+  if (getUseAssemblerInfoForParsing())
+    return Assembler.get();
+  return nullptr;
+}
 
 void MCObjectStreamer::addPendingLabel(MCSymbol* S) {
   MCSection *CurSection = getCurrentSectionOnly();
