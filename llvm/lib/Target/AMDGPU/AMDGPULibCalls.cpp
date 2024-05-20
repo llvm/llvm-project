@@ -1156,17 +1156,13 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
 bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                 const FuncInfo &FInfo) {
-  // skip vector function
-  if (getVecSize(FInfo) != 1)
-    return false;
-
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
 
-  ConstantInt *CINT = dyn_cast<ConstantInt>(opr1);
-  if (!CINT) {
+  const APInt *CINT = nullptr;
+  if (!match(opr1, m_APIntAllowPoison(CINT)))
     return false;
-  }
+
   int ci_opr1 = (int)CINT->getSExtValue();
   if (ci_opr1 == 1) {  // rootn(x, 1) = x
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
