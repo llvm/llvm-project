@@ -444,9 +444,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel &&
         Clause.getIntExprs().size() > 1) {
       auto *Parallel =
-          llvm::find_if(ExistingClauses, [](const OpenACCClause *C) {
-            return C->getClauseKind() == OpenACCClauseKind::Reduction;
-          });
+          llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
 
       if (Parallel != ExistingClauses.end()) {
         Diag(Clause.getBeginLoc(), diag::err_acc_reduction_num_gangs_conflict)
@@ -747,10 +745,8 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // A reduction clause may not appear on a parallel construct with a
     // num_gangs clause that has more than one argument.
     if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel) {
-      auto NumGangsClauses =
-          llvm::make_filter_range(ExistingClauses, [](const OpenACCClause *C) {
-            return C->getClauseKind() == OpenACCClauseKind::NumGangs;
-          });
+      auto NumGangsClauses = llvm::make_filter_range(
+          ExistingClauses, llvm::IsaPred<OpenACCNumGangsClause>);
 
       for (auto *NGC : NumGangsClauses) {
         unsigned NumExprs =
@@ -823,7 +819,8 @@ ExprResult SemaOpenACC::CheckReductionVar(Expr *VarExpr) {
           << /*incomplete*/ 1 << VarExpr->getType();
       return ExprError();
     }
-    if (isa<CXXRecordDecl>(RD) && !cast<CXXRecordDecl>(RD)->isAggregate()) {
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        CXXRD && !CXXRD->isAggregate()) {
       Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
           << /*aggregate*/ 2 << VarExpr->getType();
       return ExprError();
