@@ -6092,8 +6092,10 @@ CanQualType ASTContext::getCanonicalParamType(QualType T) const {
   return CanQualType::CreateUnsafe(Result);
 }
 
-QualType ASTContext::getUnqualifiedArrayType(QualType type,
-                                             Qualifiers &quals) const {
+namespace {
+template <bool RemoveAtomic>
+QualType getUnqualifiedArrayType(const ASTContext &C, QualType type,
+                                 Qualifiers &quals, bool *WasAtomic = nullptr) {
   SplitQualType splitType = type.getSplitUnqualifiedType();
 
   // FIXME: getSplitUnqualifiedType() actually walks all the way to
@@ -6106,12 +6108,22 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
   // If we don't have an array, just use the results in splitType.
   if (!AT) {
     quals = splitType.Quals;
-    return QualType(splitType.Ty, 0);
+    QualType Unqual(splitType.Ty, 0);
+    if constexpr (RemoveAtomic) {
+      if (const auto *AtT = Unqual->getAs<AtomicType>()) {
+        *WasAtomic = true;
+        Unqual = AtT->getValueType();
+      } else {
+        *WasAtomic = false;
+      }
+    }
+    return Unqual;
   }
 
   // Otherwise, recurse on the array's element type.
   QualType elementType = AT->getElementType();
-  QualType unqualElementType = getUnqualifiedArrayType(elementType, quals);
+  QualType unqualElementType =
+      getUnqualifiedArrayType<RemoveAtomic>(C, elementType, quals, WasAtomic);
 
   // If that didn't change the element type, AT has no qualifiers, so we
   // can just use the results in splitType.
@@ -6126,26 +6138,38 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
   quals.addConsistentQualifiers(splitType.Quals);
 
   if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-    return getConstantArrayType(unqualElementType, CAT->getSize(),
-                                CAT->getSizeExpr(), CAT->getSizeModifier(), 0);
+    return C.getConstantArrayType(unqualElementType, CAT->getSize(),
+                                  CAT->getSizeExpr(), CAT->getSizeModifier(),
+                                  0);
   }
 
   if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT)) {
-    return getIncompleteArrayType(unqualElementType, IAT->getSizeModifier(), 0);
+    return C.getIncompleteArrayType(unqualElementType, IAT->getSizeModifier(),
+                                    0);
   }
 
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
-    return getVariableArrayType(unqualElementType,
-                                VAT->getSizeExpr(),
-                                VAT->getSizeModifier(),
-                                VAT->getIndexTypeCVRQualifiers(),
-                                VAT->getBracketsRange());
+    return C.getVariableArrayType(
+        unqualElementType, VAT->getSizeExpr(), VAT->getSizeModifier(),
+        VAT->getIndexTypeCVRQualifiers(), VAT->getBracketsRange());
   }
 
   const auto *DSAT = cast<DependentSizedArrayType>(AT);
-  return getDependentSizedArrayType(unqualElementType, DSAT->getSizeExpr(),
-                                    DSAT->getSizeModifier(), 0,
-                                    SourceRange());
+  return C.getDependentSizedArrayType(unqualElementType, DSAT->getSizeExpr(),
+                                      DSAT->getSizeModifier(), 0,
+                                      SourceRange());
+}
+} // namespace
+
+QualType ASTContext::getUnqualifiedArrayType(QualType Type,
+                                             Qualifiers &Quals) const {
+  return ::getUnqualifiedArrayType<false>(*this, Type, Quals);
+}
+
+QualType ASTContext::getAtomicUnqualifiedArrayType(QualType Type,
+                                                   Qualifiers &Quals,
+                                                   bool &WasAtomic) const {
+  return ::getUnqualifiedArrayType<true>(*this, Type, Quals, &WasAtomic);
 }
 
 /// Attempt to unwrap two types that may both be array types with the same bound

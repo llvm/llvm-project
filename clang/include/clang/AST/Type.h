@@ -1608,7 +1608,7 @@ public:
   ///
   /// Like getUnqualifiedType(), the type may still be qualified if it is a
   /// sugared array type.  To strip qualifiers even from within a sugared array
-  /// type, use ASTContext::getUnqualifiedArrayType.
+  /// type, use ASTContext::getAtomicUnqualifiedArrayType.
   QualType getAtomicUnqualifiedType() const;
 
 private:

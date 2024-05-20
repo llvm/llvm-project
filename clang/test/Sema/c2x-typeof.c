@@ -117,3 +117,10 @@ extern typeof(arpi) arpi;
 extern typeof_unqual(arpi) api;
 extern typeof(arpii) arpii;
 extern typeof_unqual(arpii) apii;
+
+extern int _Atomic aAi[2];
+extern int _Atomic aAii[2][2];
+extern typeof(aAi) aAi;
+extern typeof_unqual(aAi) ai;
+extern typeof(aAii) aAii;
+extern typeof_unqual(aAii) aii;
