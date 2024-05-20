@@ -72,7 +72,7 @@ public:
           *sema.LateParsedTemplateMap.find(FD)->second;
       sema.LateTemplateParser(sema.OpaqueParser, LPT);
       llvm::errs() << "late-parsed-decl: \"" << FD->getNameAsString() << "\"\n";
-    }   
+    }
   }
 };
 
