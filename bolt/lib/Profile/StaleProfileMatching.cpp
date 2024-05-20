@@ -30,8 +30,8 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
 #include <queue>
@@ -707,8 +707,8 @@ void assignProfile(BinaryFunction &BF,
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
 
-  NamedRegionTimer T( "inferStaleProfile", "inferring from stale profile", "rewrite",
-                      "Rewrite passes", opts::InferStaleProfile);
+  NamedRegionTimer T("inferStaleProfile", "inferring from stale profile",
+                     "rewrite", "Rewrite passes", opts::InferStaleProfile);
 
   if (!BF.hasCFG())
     return false;
