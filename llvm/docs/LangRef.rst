@@ -296,9 +296,9 @@ linkage:
 
     Formally, use the following definition: when an ``odr`` function is
     called, one of the definitions is non-deterministically chosen to run. For
-    ``odr`` variables, if the value any byte is not equal in all initializers,
-    that byte is a :ref:`poison value <poisonvalues>`. For aliases and ifuncs,
-    apply the rule for the underlying function or variable.
+    ``odr`` variables, if any byte in the value is not equal in all
+    initializers, that byte is a :ref:`poison value <poisonvalues>`. For
+    aliases and ifuncs, apply the rule for the underlying function or variable.
 
     These linkage types are otherwise the same as their non-``odr`` versions.
 ``external``
