@@ -117,12 +117,13 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
     mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl) {
   mlir::MLIRContext *context = &getContext();
   mlir::LLVM::DIModuleAttr modAttr;
-  if (auto iter{moduleMap.find(name)}; iter != moduleMap.end())
+  if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
-  else {
+  } else {
     modAttr = mlir::LLVM::DIModuleAttr::get(
         context, fileAttr, scope, mlir::StringAttr::get(context, name),
-        mlir::StringAttr(), mlir::StringAttr(), mlir::StringAttr(), line, decl);
+        /* configMacros */ mlir::StringAttr(), /* includePath */mlir::StringAttr(),
+        /* apinotes */ mlir::StringAttr(), line, decl);
     moduleMap[name] = modAttr;
   }
   return modAttr;
@@ -136,7 +137,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   fir::DebugTypeGenerator typeGen(module);
   mlir::OpBuilder builder(context);
 
-  auto result = fir::NameUniquer::deconstruct(globalOp.getSymName());
+  std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
 
@@ -161,7 +162,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
                                 line - 1, !globalOp.isInitialized());
 
-  auto diType = typeGen.convertType(globalOp.getType(), fileAttr, scope,
+  mlir::LLVM::DITypeAttr diType = typeGen.convertType(globalOp.getType(), fileAttr, scope,
                                     globalOp.getLoc());
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
