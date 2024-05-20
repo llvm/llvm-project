@@ -45,8 +45,8 @@ define zeroext i1 @g(i32 %x) optsize {
 define i64 @PR46237(i64 %x, i64 %y, i64 %z) optsize {
 ; CHECK-LABEL: PR46237:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    shll $6, %eax
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    shlq $6, %rax
 ; CHECK-NEXT:    movzbl %al, %ecx
 ; CHECK-NEXT:    andl $7, %esi
 ; CHECK-NEXT:    andl $7, %edx

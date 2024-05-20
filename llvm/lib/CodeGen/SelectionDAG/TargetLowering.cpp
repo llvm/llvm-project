@@ -599,7 +599,11 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   for (unsigned SmallVTBits = llvm::bit_ceil(DemandedSize);
        SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
     EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), SmallVTBits);
-    if (TLI.isTruncateFree(VT, SmallVT) && TLI.isZExtFree(SmallVT, VT)) {
+    // Types of LHS and RHS may differ before legalization (e.g., shl), so we
+    // need to check both.
+    if (TLI.isTruncateFree(Op.getOperand(0).getValueType(), SmallVT) &&
+        TLI.isTruncateFree(Op.getOperand(1).getValueType(), SmallVT) &&
+        TLI.isZExtFree(SmallVT, VT)) {
       // We found a type with free casts.
       SDValue X = DAG.getNode(
           Op.getOpcode(), dl, SmallVT,

@@ -13,7 +13,7 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP-LABEL: test1:
 ; ILP:       # %bb.0:
 ; ILP-NEXT:    movq %rdi, %rax
-; ILP-NEXT:    leal (%rsi,%rsi), %ecx
+; ILP-NEXT:    leaq (%rsi,%rsi), %rcx
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -43,7 +43,7 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP-NEXT:    shlq %cl, %rsi
 ; ILP-NEXT:    notb %cl
 ; ILP-NEXT:    shrq %rdx
-; ILP-NEXT:    # kill: def $cl killed $cl killed $ecx
+; ILP-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; ILP-NEXT:    shrq %cl, %rdx
 ; ILP-NEXT:    orq %rsi, %rdx
 ; ILP-NEXT:    movq %rdx, 16(%rax)
@@ -60,7 +60,7 @@ define i256 @test1(i256 %a) nounwind {
 ; HYBRID-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; HYBRID-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; HYBRID-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; HYBRID-NEXT:    addl %esi, %esi
+; HYBRID-NEXT:    addq %rsi, %rsi
 ; HYBRID-NEXT:    addb $3, %sil
 ; HYBRID-NEXT:    movl %esi, %ecx
 ; HYBRID-NEXT:    andb $7, %cl
@@ -97,7 +97,7 @@ define i256 @test1(i256 %a) nounwind {
 ; BURR-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; BURR-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; BURR-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
-; BURR-NEXT:    addl %esi, %esi
+; BURR-NEXT:    addq %rsi, %rsi
 ; BURR-NEXT:    addb $3, %sil
 ; BURR-NEXT:    movl %esi, %ecx
 ; BURR-NEXT:    andb $7, %cl
@@ -126,7 +126,7 @@ define i256 @test1(i256 %a) nounwind {
 ; SRC-LABEL: test1:
 ; SRC:       # %bb.0:
 ; SRC-NEXT:    movq %rdi, %rax
-; SRC-NEXT:    addl %esi, %esi
+; SRC-NEXT:    addq %rsi, %rsi
 ; SRC-NEXT:    addb $3, %sil
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; SRC-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -167,7 +167,7 @@ define i256 @test1(i256 %a) nounwind {
 ; LIN-LABEL: test1:
 ; LIN:       # %bb.0:
 ; LIN-NEXT:    movq %rdi, %rax
-; LIN-NEXT:    leal (%rsi,%rsi), %edx
+; LIN-NEXT:    leaq (%rsi,%rsi), %rdx
 ; LIN-NEXT:    addb $3, %dl
 ; LIN-NEXT:    movl %edx, %ecx
 ; LIN-NEXT:    shrb $3, %cl

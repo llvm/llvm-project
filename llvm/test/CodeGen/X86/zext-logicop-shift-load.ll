@@ -15,7 +15,7 @@ define i64 @test1(ptr %data) {
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    shll $2, %eax
+; X64-NEXT:    shlq $2, %rax
 ; X64-NEXT:    andl $60, %eax
 ; X64-NEXT:    retq
 entry:

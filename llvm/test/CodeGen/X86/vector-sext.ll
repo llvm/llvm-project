@@ -3615,13 +3615,10 @@ define <4 x i32> @sext_4i17_to_4i32(ptr %ptr) {
 ; SSE2-NEXT:    movd %ecx, %xmm1
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movl 8(%rdi), %ecx
-; SSE2-NEXT:    shll $28, %ecx
-; SSE2-NEXT:    movq %rax, %rdx
-; SSE2-NEXT:    shrq $51, %rdx
-; SSE2-NEXT:    shll $15, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    sarl $15, %edx
-; SSE2-NEXT:    movd %edx, %xmm1
+; SSE2-NEXT:    shldq $13, %rax, %rcx
+; SSE2-NEXT:    shll $15, %ecx
+; SSE2-NEXT:    sarl $15, %ecx
+; SSE2-NEXT:    movd %ecx, %xmm1
 ; SSE2-NEXT:    shrq $34, %rax
 ; SSE2-NEXT:    shll $15, %eax
 ; SSE2-NEXT:    sarl $15, %eax
@@ -3644,13 +3641,10 @@ define <4 x i32> @sext_4i17_to_4i32(ptr %ptr) {
 ; SSSE3-NEXT:    movd %ecx, %xmm1
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSSE3-NEXT:    movl 8(%rdi), %ecx
-; SSSE3-NEXT:    shll $28, %ecx
-; SSSE3-NEXT:    movq %rax, %rdx
-; SSSE3-NEXT:    shrq $51, %rdx
-; SSSE3-NEXT:    shll $15, %edx
-; SSSE3-NEXT:    orl %ecx, %edx
-; SSSE3-NEXT:    sarl $15, %edx
-; SSSE3-NEXT:    movd %edx, %xmm1
+; SSSE3-NEXT:    shldq $13, %rax, %rcx
+; SSSE3-NEXT:    shll $15, %ecx
+; SSSE3-NEXT:    sarl $15, %ecx
+; SSSE3-NEXT:    movd %ecx, %xmm1
 ; SSSE3-NEXT:    shrq $34, %rax
 ; SSSE3-NEXT:    shll $15, %eax
 ; SSSE3-NEXT:    sarl $15, %eax
@@ -3662,53 +3656,47 @@ define <4 x i32> @sext_4i17_to_4i32(ptr %ptr) {
 ; SSE41-LABEL: sext_4i17_to_4i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq (%rdi), %rax
-; SSE41-NEXT:    movq %rax, %rcx
-; SSE41-NEXT:    shrq $17, %rcx
+; SSE41-NEXT:    movl %eax, %ecx
+; SSE41-NEXT:    movq %rax, %rdx
+; SSE41-NEXT:    movl 8(%rdi), %esi
+; SSE41-NEXT:    shldq $13, %rax, %rsi
+; SSE41-NEXT:    shrq $17, %rax
+; SSE41-NEXT:    shll $15, %eax
+; SSE41-NEXT:    sarl $15, %eax
 ; SSE41-NEXT:    shll $15, %ecx
 ; SSE41-NEXT:    sarl $15, %ecx
-; SSE41-NEXT:    movl %eax, %edx
+; SSE41-NEXT:    movd %ecx, %xmm0
+; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    shrq $34, %rdx
 ; SSE41-NEXT:    shll $15, %edx
 ; SSE41-NEXT:    sarl $15, %edx
-; SSE41-NEXT:    movd %edx, %xmm0
-; SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
-; SSE41-NEXT:    movq %rax, %rcx
-; SSE41-NEXT:    shrq $34, %rcx
-; SSE41-NEXT:    shll $15, %ecx
-; SSE41-NEXT:    sarl $15, %ecx
-; SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
-; SSE41-NEXT:    movl 8(%rdi), %ecx
-; SSE41-NEXT:    shll $28, %ecx
-; SSE41-NEXT:    shrq $51, %rax
-; SSE41-NEXT:    shll $15, %eax
-; SSE41-NEXT:    orl %ecx, %eax
-; SSE41-NEXT:    sarl $15, %eax
-; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE41-NEXT:    pinsrd $2, %edx, %xmm0
+; SSE41-NEXT:    shll $15, %esi
+; SSE41-NEXT:    sarl $15, %esi
+; SSE41-NEXT:    pinsrd $3, %esi, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: sext_4i17_to_4i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    shrq $17, %rcx
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    movl 8(%rdi), %esi
+; AVX-NEXT:    shldq $13, %rax, %rsi
+; AVX-NEXT:    shrq $17, %rax
+; AVX-NEXT:    shll $15, %eax
+; AVX-NEXT:    sarl $15, %eax
 ; AVX-NEXT:    shll $15, %ecx
 ; AVX-NEXT:    sarl $15, %ecx
-; AVX-NEXT:    movl %eax, %edx
+; AVX-NEXT:    vmovd %ecx, %xmm0
+; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    shrq $34, %rdx
 ; AVX-NEXT:    shll $15, %edx
 ; AVX-NEXT:    sarl $15, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    shrq $34, %rcx
-; AVX-NEXT:    shll $15, %ecx
-; AVX-NEXT:    sarl $15, %ecx
-; AVX-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; AVX-NEXT:    movl 8(%rdi), %ecx
-; AVX-NEXT:    shll $28, %ecx
-; AVX-NEXT:    shrq $51, %rax
-; AVX-NEXT:    shll $15, %eax
-; AVX-NEXT:    orl %ecx, %eax
-; AVX-NEXT:    sarl $15, %eax
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX-NEXT:    shll $15, %esi
+; AVX-NEXT:    sarl $15, %esi
+; AVX-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: sext_4i17_to_4i32:
