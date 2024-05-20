@@ -225,7 +225,6 @@ struct DfsPathFinder : public ICFGPathFinder {
 
     std::vector<int> path;
     std::stack<int> callStack; // 部分平衡的括号匹配
-    std::set<int> callSites;
 
     class PathFoundException : public std::exception {
       public:
@@ -258,7 +257,7 @@ struct DfsPathFinder : public ICFGPathFinder {
         std::reverse(this->targets.begin(), this->targets.end());
 
         try {
-            dfs(source);
+            dfs(source, 0);
         } catch (const PathFoundException &e) {
             // path found
             // TODO: 把 this->path 扩展成完整的路径
@@ -294,7 +293,7 @@ struct DfsPathFinder : public ICFGPathFinder {
         }
     }
 
-    void dfs(const int u) {
+    void dfs(const int u, int callDepth) {
         path.push_back(u);
 
         bool foundOneTarget = (u == targets.back());
@@ -316,7 +315,7 @@ struct DfsPathFinder : public ICFGPathFinder {
         if (currentFid == targetFid) {
             // 过程内
             if (bfs.reachable(target)) {
-                dfs(target);
+                dfs(target, callDepth);
             }
         } else {
             /**
@@ -370,7 +369,6 @@ struct DfsPathFinder : public ICFGPathFinder {
                 const auto &e = node.edge;
 
                 std::stack<int> oldCallStack = callStack;
-                std::set<int> oldCallSites = callSites;
 
                 if (e.type == ICFG::Edge::Type::CALL_EDGE) { // 左括号
                     callStack.push(e.callSiteId);
@@ -380,25 +378,21 @@ struct DfsPathFinder : public ICFGPathFinder {
                         callStack.pop();
                     }
                 }
-                // TODO: 调用边集合可能会导致无限递归
-                // 感觉可以直接用 callStack 的大小来限制
-                callSites.insert(e.callSiteId);
 
-                if (callSites.size() <= maxCallDepth) {
+                if (callDepth <= maxCallDepth) {
                     if (node.v == u) {
                         // node.v 和 u 相同时，意味着可以直接从 u 出发，
                         // 走一步 node.e 到达新的函数
-                        dfs(node.edge.target);
+                        dfs(node.edge.target, callDepth + 1);
                     } else {
                         // 需要先过程内从 u 走到 node.v
                         // 然后再走一步 node.e 到达新的函数
                         path.push_back(node.v);
-                        dfs(node.edge.target);
+                        dfs(node.edge.target, callDepth + 1);
                         path.pop_back();
                     }
                 }
 
-                callSites = oldCallSites;
                 callStack = oldCallStack;
             }
         }
