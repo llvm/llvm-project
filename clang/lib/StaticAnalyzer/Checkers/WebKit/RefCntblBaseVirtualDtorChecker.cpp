@@ -208,8 +208,8 @@ public:
         return true;
       }
 
-      llvm::SetVector<const CXXRecordDecl*> Decls;
-      llvm::DenseSet<const CXXRecordDecl*> CRTPs;
+      llvm::SetVector<const CXXRecordDecl *> Decls;
+      llvm::DenseSet<const CXXRecordDecl *> CRTPs;
     };
 
     LocalVisitor visitor(this);
@@ -276,16 +276,18 @@ public:
       auto HasSpecializedDelete = isClassWithSpecializedDelete(C, RD);
       if (!HasSpecializedDelete || *HasSpecializedDelete)
         continue;
-      if (C->lookupInBases([&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-        auto *T = Base->getType().getTypePtrOrNull();
-        if (!T)
-          return false;
-        auto *R = T->getAsCXXRecordDecl();
-        if (!R)
-          return false;
-        auto Result = isClassWithSpecializedDelete(R, RD);
-        return Result && *Result;
-        }, Paths, /*LookupInDependent =*/true))
+      if (C->lookupInBases(
+              [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
+                auto *T = Base->getType().getTypePtrOrNull();
+                if (!T)
+                  return false;
+                auto *R = T->getAsCXXRecordDecl();
+                if (!R)
+                  return false;
+                auto Result = isClassWithSpecializedDelete(R, RD);
+                return Result && *Result;
+              },
+              Paths, /*LookupInDependent =*/true))
         continue;
 
       const auto *Dtor = C->getDestructor();
