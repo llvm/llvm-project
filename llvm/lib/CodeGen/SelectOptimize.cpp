@@ -204,7 +204,7 @@ public:
     /// is returned.
     Value *getTrueValue(bool HonorInverts = true) const {
       if (Inverted && HonorInverts)
-        return getFalseValue(false);
+        return getFalseValue(/*HonorInverts=*/false);
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getTrueValue();
       // Or(zext) case - The true value is Or(X), so return nullptr as the value
@@ -220,7 +220,7 @@ public:
     /// `select(c, x|1, x)`)
     Value *getFalseValue(bool HonorInverts = true) const {
       if (Inverted && HonorInverts)
-        return getTrueValue(false);
+        return getTrueValue(/*HonorInverts=*/false);
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getFalseValue();
       // Or(zext) case - return the operand which is not the zext.
@@ -658,8 +658,8 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
-    // Move any debug/pseudo instructions that were in-between the select
-    // group to the newly-created end block.
+    // Move any debug/pseudo instructions and not's that were in-between the
+    // select group to the newly-created end block.
     SmallVector<Instruction *, 2> SinkInstrs;
     auto DIt = SI.getI()->getIterator();
     while (&*DIt != LastSI.getI()) {
@@ -793,7 +793,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
           continue;
         }
 
-        // Skip not(select, if the not is part of the same select group
+        // Skip not(select(..)), if the not is part of the same select group
         if (match(NI, m_Not(m_Specific(SI.getCondition())))) {
           ++BBIt;
           continue;
