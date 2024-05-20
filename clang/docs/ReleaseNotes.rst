@@ -744,6 +744,8 @@ Bug Fixes to C++ Support
   explicit object argument member functions. Fixes (#GH92188).
 - Fix a C++11 crash when a non-const non-static member function is defined out-of-line with
   the ``constexpr`` specifier. Fixes (#GH61004).
+- Clang no longer transforms dependent qualified names into implicit class member access expressions
+  until it can be determined whether the name is that of a non-static member.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

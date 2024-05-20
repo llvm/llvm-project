@@ -3478,11 +3478,11 @@ public:
     SS.Adopt(QualifierLoc);
 
     if (TemplateArgs || TemplateKWLoc.isValid())
-      return getSema().BuildQualifiedTemplateIdExpr(SS, TemplateKWLoc, NameInfo,
-                                                    TemplateArgs);
+      return getSema().BuildQualifiedTemplateIdExpr(
+          SS, TemplateKWLoc, NameInfo, TemplateArgs, IsAddressOfOperand);
 
     return getSema().BuildQualifiedDeclarationNameExpr(
-        SS, NameInfo, IsAddressOfOperand, /*S*/nullptr, RecoveryTSI);
+        SS, NameInfo, IsAddressOfOperand, RecoveryTSI);
   }
 
   /// Build a new template-id expression.

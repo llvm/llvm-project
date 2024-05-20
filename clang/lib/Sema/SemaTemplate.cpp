@@ -726,44 +726,22 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  const DeclarationNameInfo &NameInfo,
                                  bool isAddressOfOperand,
                            const TemplateArgumentListInfo *TemplateArgs) {
-  DeclContext *DC = getFunctionLevelDeclContext();
-
-  // C++11 [expr.prim.general]p12:
-  //   An id-expression that denotes a non-static data member or non-static
-  //   member function of a class can only be used:
-  //   (...)
-  //   - if that id-expression denotes a non-static data member and it
-  //     appears in an unevaluated operand.
-  //
-  // If this might be the case, form a DependentScopeDeclRefExpr instead of a
-  // CXXDependentScopeMemberExpr. The former can instantiate to either
-  // DeclRefExpr or MemberExpr depending on lookup results, while the latter is
-  // always a MemberExpr.
-  bool MightBeCxx11UnevalField =
-      getLangOpts().CPlusPlus11 && isUnevaluatedContext();
-
-  // Check if the nested name specifier is an enum type.
-  bool IsEnum = false;
-  if (NestedNameSpecifier *NNS = SS.getScopeRep())
-    IsEnum = isa_and_nonnull<EnumType>(NNS->getAsType());
-
-  if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
-      isa<CXXMethodDecl>(DC) &&
-      cast<CXXMethodDecl>(DC)->isImplicitObjectMemberFunction()) {
-    QualType ThisType =
-        cast<CXXMethodDecl>(DC)->getThisType().getNonReferenceType();
-
-    // Since the 'this' expression is synthesized, we don't need to
-    // perform the double-lookup check.
-    NamedDecl *FirstQualifierInScope = nullptr;
+  if (SS.isEmpty()) {
+    // FIXME: This codepath is only used by dependent unqualified names
+    // (e.g. a dependent conversion-function-id, or operator= once we support
+    // it). It doesn't quite do the right thing, and it will silently fail if
+    // getCurrentThisType() returns null.
+    QualType ThisType = getCurrentThisType();
+    if (ThisType.isNull())
+      return ExprError();
 
     return CXXDependentScopeMemberExpr::Create(
-        Context, /*This=*/nullptr, ThisType,
+        Context, /*Base=*/nullptr, ThisType,
         /*IsArrow=*/!Context.getLangOpts().HLSL,
-        /*Op=*/SourceLocation(), SS.getWithLocInContext(Context), TemplateKWLoc,
-        FirstQualifierInScope, NameInfo, TemplateArgs);
+        /*OperatorLoc=*/SourceLocation(),
+        /*QualifierLoc=*/NestedNameSpecifierLoc(), TemplateKWLoc,
+        /*FirstQualifierFoundInScope=*/nullptr, NameInfo, TemplateArgs);
   }
-
   return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 }
 
@@ -772,13 +750,15 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                 SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
                                 const TemplateArgumentListInfo *TemplateArgs) {
-  // DependentScopeDeclRefExpr::Create requires a valid QualifierLoc
-  NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
-  if (!QualifierLoc)
-    return ExprError();
+  // DependentScopeDeclRefExpr::Create requires a valid NestedNameSpecifierLoc
+  if (!SS.isValid())
+    return CreateRecoveryExpr(
+        SS.getBeginLoc(),
+        TemplateArgs ? TemplateArgs->getRAngleLoc() : NameInfo.getEndLoc(), {});
 
   return DependentScopeDeclRefExpr::Create(
-      Context, QualifierLoc, TemplateKWLoc, NameInfo, TemplateArgs);
+      Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
+      TemplateArgs);
 }
 
 
@@ -5747,50 +5727,36 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
 }
 
 // We actually only call this from template instantiation.
-ExprResult
-Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
-                                   SourceLocation TemplateKWLoc,
-                                   const DeclarationNameInfo &NameInfo,
-                             const TemplateArgumentListInfo *TemplateArgs) {
-
+ExprResult Sema::BuildQualifiedTemplateIdExpr(
+    CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &NameInfo,
+    const TemplateArgumentListInfo *TemplateArgs, bool IsAddressOfOperand) {
   assert(TemplateArgs || TemplateKWLoc.isValid());
-  DeclContext *DC;
-  if (!(DC = computeDeclContext(SS, false)) ||
-      DC->isDependentContext() ||
-      RequireCompleteDeclContext(SS, DC))
-    return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 
   LookupResult R(*this, NameInfo, LookupOrdinaryName);
-  if (LookupTemplateName(R, (Scope *)nullptr, SS, QualType(),
-                         /*Entering*/ false, TemplateKWLoc))
+  if (LookupTemplateName(R, /*S=*/nullptr, SS, /*ObjectType=*/QualType(),
+                         /*EnteringContext=*/false, TemplateKWLoc))
     return ExprError();
 
   if (R.isAmbiguous())
     return ExprError();
 
+  if (R.wasNotFoundInCurrentInstantiation() || SS.isInvalid())
+    return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
+
   if (R.empty()) {
+    DeclContext *DC = computeDeclContext(SS);
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();
     return ExprError();
   }
 
-  auto DiagnoseTypeTemplateDecl = [&](TemplateDecl *Temp,
-                                      bool isTypeAliasTemplateDecl) {
-    Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
-        << SS.getScopeRep() << NameInfo.getName().getAsString() << SS.getRange()
-        << isTypeAliasTemplateDecl;
-    Diag(Temp->getLocation(), diag::note_referenced_type_template)
-        << isTypeAliasTemplateDecl;
-    return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {});
-  };
+  // If necessary, build an implicit class member access.
+  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
+    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
+                                           /*S=*/nullptr);
 
-  if (ClassTemplateDecl *Temp = R.getAsSingle<ClassTemplateDecl>())
-    return DiagnoseTypeTemplateDecl(Temp, false);
-
-  if (TypeAliasTemplateDecl *Temp = R.getAsSingle<TypeAliasTemplateDecl>())
-    return DiagnoseTypeTemplateDecl(Temp, true);
-
-  return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*ADL*/ false, TemplateArgs);
+  return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*ADL=*/false, TemplateArgs);
 }
 
 /// Form a template name from a name that is syntactically required to name a
@@ -5982,8 +5948,7 @@ bool Sema::CheckTemplateTypeArgument(
       LookupParsedName(Result, CurScope, &SS, /*ObjectType=*/QualType());
 
       if (Result.getAsSingle<TypeDecl>() ||
-          Result.getResultKind() ==
-              LookupResult::NotFoundInCurrentInstantiation) {
+          Result.wasNotFoundInCurrentInstantiation()) {
         assert(SS.getScopeRep() && "dependent scope expr must has a scope!");
         // Suggest that the user add 'typename' before the NNS.
         SourceLocation Loc = AL.getSourceRange().getBegin();
