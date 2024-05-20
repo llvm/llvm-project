@@ -416,7 +416,6 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-  CodeGenPasses.add(createObjCARCContractPass());
   if (Conf.PreCodeGenPassesHook)
     Conf.PreCodeGenPassesHook(CodeGenPasses);
   if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,

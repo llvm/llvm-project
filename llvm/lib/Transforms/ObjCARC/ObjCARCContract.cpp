@@ -97,6 +97,7 @@ class ObjCARCContract {
 
 public:
   bool init(Module &M);
+  bool moduleUsesARCIntrinsics();
   bool run(Function &F, AAResults *AA, DominatorTree *DT);
   bool hasCFGChanged() const { return CFGChanged; }
 };
@@ -535,6 +536,10 @@ bool ObjCARCContract::init(Module &M) {
   return false;
 }
 
+bool ObjCARCContract::moduleUsesARCIntrinsics() {
+  return EP.moduleContainsARCEntryPoints();
+}
+
 bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   if (!EnableARCOpts)
     return false;
@@ -739,6 +744,8 @@ Pass *llvm::createObjCARCContractPass() {
 bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
   ObjCARCContract OCARCC;
   OCARCC.init(*F.getParent());
+  if (!OCARCC.moduleUsesARCIntrinsics())
+    return false;
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return OCARCC.run(F, AA, DT);
@@ -748,6 +755,8 @@ PreservedAnalyses ObjCARCContractPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   ObjCARCContract OCAC;
   OCAC.init(*F.getParent());
+  if (!OCAC.moduleUsesARCIntrinsics())
+    return PreservedAnalyses::all();
 
   bool Changed = OCAC.run(F, &AM.getResult<AAManager>(F),
                           &AM.getResult<DominatorTreeAnalysis>(F));

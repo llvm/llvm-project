@@ -1466,6 +1466,11 @@ bool Intrinsic::isOverloaded(ID id) {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
 
+Function *Intrinsic::lookupDeclaration(Module *M, ID id, ArrayRef<Type *> Tys) {
+  auto *FT = getType(M->getContext(), id, Tys);
+  return M->getFunction(Tys.empty() ? getName(id) : getName(id, Tys, M, FT));
+}
+
 Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.

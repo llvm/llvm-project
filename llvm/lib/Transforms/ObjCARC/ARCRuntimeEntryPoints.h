@@ -101,6 +101,19 @@ public:
     llvm_unreachable("Switch should be a covered switch.");
   }
 
+  bool moduleContainsARCEntryPoints() {
+    assert(TheModule != nullptr && "Not initialized.");
+
+    for (auto ARCInstricID :
+         enum_seq_inclusive(Intrinsic::objc_arc_annotation_bottomup_bbend,
+                            Intrinsic::objc_unsafeClaimAutoreleasedReturnValue,
+                            force_iteration_on_noniterable_enum)) {
+      if (Intrinsic::lookupDeclaration(TheModule, ARCInstricID))
+        return true;
+    }
+    return false;
+  }
+
 private:
   /// Cached reference to the module which we will insert declarations into.
   Module *TheModule = nullptr;
