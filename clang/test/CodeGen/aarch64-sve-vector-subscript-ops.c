@@ -98,3 +98,15 @@ svfloat32_t subscript_write_float32(svfloat32_t a, size_t b) {
   a[b] = 1.0f;
   return a;
 }
+
+// CHECK-LABEL: @subscript_read_write_float32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <vscale x 4 x float> [[A:%.*]], i64 [[B:%.*]]
+// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[VECEXT]], 1.000000e+00
+// CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 4 x float> [[A]], float [[ADD]], i64 [[B]]
+// CHECK-NEXT:    ret <vscale x 4 x float> [[VECINS]]
+//
+svfloat32_t subscript_read_write_float32(svfloat32_t a, size_t b) {
+  a[b] += 1.0f;
+  return a;
+}
