@@ -7930,6 +7930,7 @@ def ext_default_init_const : ExtWarn<
   "is a Microsoft extension">,
   InGroup<MicrosoftConstInit>;
 def err_delete_operand : Error<"cannot delete expression of type %0">;
+def warn_delete_array : Warning<"deleting array of type %0">, InGroup<DeleteArray>;
 def ext_delete_void_ptr_operand : ExtWarn<
   "cannot delete expression with pointer-to-'void' type %0">,
   InGroup<DeleteIncomplete>;

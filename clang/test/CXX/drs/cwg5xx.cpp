@@ -1230,11 +1230,11 @@ namespace cwg598 { // cwg598: yes
   int &t = h(N::i);
 }
 
-namespace cwg599 { // cwg599: partial
+namespace cwg599 { // cwg599: 19
   typedef int Fn();
   struct S { operator void*(); };
   struct T { operator Fn*(); };
-  struct U { operator int*(); operator void*(); }; // #cwg599-U
+  struct U { operator int*(); operator void*(); };
   struct V { operator int*(); operator Fn*(); };
   void f(void *p, void (*q)(), S s, T t, U u, V v) {
     delete p;
@@ -1245,12 +1245,7 @@ namespace cwg599 { // cwg599: partial
     // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
     delete t;
     // expected-error@-1 {{cannot delete expression of type 'T'}}
-    // FIXME: This is valid, but is rejected due to a non-conforming GNU
-    // extension allowing deletion of pointers to void.
     delete u;
-    // expected-error@-1 {{ambiguous conversion of delete expression of type 'U' to a pointer}}
-    //   expected-note@#cwg599-U {{conversion to pointer type 'int *'}}
-    //   expected-note@#cwg599-U {{conversion to pointer type 'void *'}}
     delete v;
   }
 }

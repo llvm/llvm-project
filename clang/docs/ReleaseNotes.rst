@@ -749,6 +749,10 @@ Bug Fixes to C++ Support
 - Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
 - Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
   as implicitly ``const`` in language modes after C++11.
+- Fix delete-expression operand not undergoing array-to-pointer conversion. Now warn ``-Wdelete-array`` when
+  trying to delete an array object.
+- Fix GNU extension that allows deleting ``void *`` making some deletes of class type ambiguous when there
+  is an object pointer and void pointer conversion operator. Now chooses the object pointer conversion.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
