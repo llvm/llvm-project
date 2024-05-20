@@ -173,6 +173,11 @@ template <typename... Ts>
 using AFoo = Foo<Ts...>;
 
 auto b = AFoo{};
+AFoo a(1, 2);
+
+template <typename T>
+using BFoo = Foo<T, T>;
+BFoo b2(1.0, 2.0);
 } // namespace test13
 
 namespace test14 {
