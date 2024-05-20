@@ -869,7 +869,6 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   bool InBounds = GEP->isInBounds();
 
   Type *SrcElemTy = GEP->getSourceElementType();
-  Type *ResElemTy = GEP->getResultElementType();
   Type *ResTy = GEP->getType();
   if (!SrcElemTy->isSized() || isa<ScalableVectorType>(SrcElemTy))
     return nullptr;
@@ -944,43 +943,18 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     return ConstantExpr::getIntToPtr(C, ResTy);
   }
 
-  // Otherwise form a regular getelementptr. Recompute the indices so that
-  // we eliminate over-indexing of the notional static type array bounds.
-  // This makes it easy to determine if the getelementptr is "inbounds".
-
-  // For GEPs of GlobalValues, use the value type, otherwise use an i8 GEP.
-  if (auto *GV = dyn_cast<GlobalValue>(Ptr))
-    SrcElemTy = GV->getValueType();
-  else
-    SrcElemTy = Type::getInt8Ty(Ptr->getContext());
-
-  if (!SrcElemTy->isSized())
-    return nullptr;
-
-  Type *ElemTy = SrcElemTy;
-  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(ElemTy, Offset);
-  if (Offset != 0)
-    return nullptr;
-
-  // Try to add additional zero indices to reach the desired result element
-  // type.
-  // TODO: Should we avoid extra zero indices if ResElemTy can't be reached and
-  // we'll have to insert a bitcast anyway?
-  while (ElemTy != ResElemTy) {
-    Type *NextTy = GetElementPtrInst::getTypeAtIndex(ElemTy, (uint64_t)0);
-    if (!NextTy)
-      break;
-
-    Indices.push_back(APInt::getZero(isa<StructType>(ElemTy) ? 32 : BitWidth));
-    ElemTy = NextTy;
+  // Try to infer inbounds for GEPs of globals.
+  if (!InBounds && Offset.isNonNegative()) {
+    bool CanBeNull, CanBeFreed;
+    uint64_t DerefBytes =
+        Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+    InBounds = DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes);
   }
 
-  SmallVector<Constant *, 32> NewIdxs;
-  for (const APInt &Index : Indices)
-    NewIdxs.push_back(ConstantInt::get(
-        Type::getIntNTy(Ptr->getContext(), Index.getBitWidth()), Index));
-
-  return ConstantExpr::getGetElementPtr(SrcElemTy, Ptr, NewIdxs, InBounds,
+  // Otherwise canonicalize this to a single ptradd.
+  LLVMContext &Ctx = Ptr->getContext();
+  return ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Ptr,
+                                        ConstantInt::get(Ctx, Offset), InBounds,
                                         InRange);
 }
 

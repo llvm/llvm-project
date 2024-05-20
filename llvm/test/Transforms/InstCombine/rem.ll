@@ -522,7 +522,7 @@ define i32 @pr27968_0(i1 %c0, ptr %p) {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
+; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds (i8, ptr @a, i64 8), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       rem.is.unsafe:
@@ -591,7 +591,7 @@ define i32 @pr27968_2(i1 %c0, ptr %p) {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
+; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds (i8, ptr @a, i64 8), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       rem.is.unsafe:
