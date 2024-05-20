@@ -1412,7 +1412,6 @@ public:
     if (EC)
       return errorCodeToError(EC);
 
-    // TODO: Serialize declaration bits to bitcode.
     writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
                      &DeclarationSummaries);
 

@@ -15,7 +15,7 @@
 ;   and the other one is larger. Both callees of 'small_func' are defined in lib.ll.
 ; - Given the import limit, in main's combined summary, the import type of 'small_func'
 ;   and 'small_indirect_callee' will be 'definition', and the import type of
-;   'large_func' and 'large_indirect_callee' will be 'declaration'.
+;   large* functions and their aliasees will be 'declaration'.
 ;
 ; The test will disassemble combined summaries and check the import type is
 ; correct. Right now postlink optimizer pipeline doesn't do anything (e.g.,
@@ -35,23 +35,27 @@
 ; RUN:   -r=main.bc,large_func, \
 ; RUN:   -r=lib.bc,callee,pl \
 ; RUN:   -r=lib.bc,large_indirect_callee,px \
+; RUN:   -r=lib.bc,large_indirect_callee_bar,px \
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
-; RUN:   -r=lib.bc,calleeAddrs,px -o summary main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:   -r=lib.bc,large_indirect_callee_alias_bar,px \
+; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o summary main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
 ;
 ; RUN: llvm-lto -thinlto-action=thinlink -import-declaration -import-instr-limit=7  -o combined.index.bc main.bc lib.bc
 ; RUN: llvm-lto -thinlto-action=distributedindexes -debug-only=function-import -import-declaration -import-instr-limit=7 -thinlto-index combined.index.bc main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
 
-; DUMP: - 2 function definitions and 3 function declarations imported from lib.bc
+; DUMP: - 2 function definitions and 4 function declarations imported from lib.bc
 
 ; First disassemble per-module summary and find out the GUID for {large_func, large_indirect_callee}.
 ;
 ; RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=LIB-DIS
-; LIB-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
-; LIB-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (name: "large_func", summaries: {{.*}}) ; guid = 2418497564662708935
+; LIB-DIS: module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
+; LIB-DIS: [[LARGEINDIRECTCALLEE_BAR:\^[0-9]+]] = gv: (name: "large_indirect_callee_bar", summaries: {{.*}}) ; guid = 829371064702429204
+; LIB-DIS: gv: (name: "large_func", summaries: {{.*}}) ; guid = 2418497564662708935
+; LIB-DIS: gv: (name: "large_indirect_callee_alias_bar", summaries: {{.*}}, aliasee: [[LARGEINDIRECTCALLEE_BAR]]{{.*}}guid = 11962421489375846222
 ; LIB-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (name: "large_indirect_callee", summaries: {{.*}}) ; guid = 14343440786664691134
-; LIB-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (name: "large_indirect_callee_alias", summaries: {{.*}}, aliasee: [[LARGEINDIRECT]]
+; LIB-DIS: gv: (name: "large_indirect_callee_alias", summaries: {{.*}}, aliasee: [[LARGEINDIRECT]]{{.*}}guid = 16730173943625350469
 ;
 ; Secondly disassemble main's combined summary and verify the import type of
 ; these two GUIDs are declaration.
@@ -59,18 +63,21 @@
 ; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
 ;
 ; MAIN-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
-; MAIN-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; MAIN-DIS: gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; FIXME: The aliasee shouldn't be null.
+; MAIN-DIS: gv: (guid: 11962421489375846222, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: null)))
 ; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
-; MAIN-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
+; MAIN-DIS: gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
 
 ; Run in-process ThinLTO and tests that
 ; 1. `callee` remains internalized even if the symbols of its callers
-; (large_func and large_indirect_callee) are exported as declarations and visible to main module.
+; (large_func, large_indirect_callee, large_indirect_callee_bar_alias) are exported as declarations and visible to main module.
 ; 2. the debugging logs from `function-import` pass are expected.
 
 ; RUN: llvm-lto2 run \
 ; RUN:   -debug-only=function-import \
 ; RUN:   -save-temps \
+; RUN:   -thinlto-threads=1 \
 ; RUN:   -import-instr-limit=7 \
 ; RUN:   -import-declaration \
 ; RUN:   -r=main.bc,main,px \
@@ -78,10 +85,12 @@
 ; RUN:   -r=main.bc,large_func, \
 ; RUN:   -r=lib.bc,callee,pl \
 ; RUN:   -r=lib.bc,large_indirect_callee,px \
+; RUN:   -r=lib.bc,large_indirect_callee_bar,px \
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
-; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
+; RUN:   -r=lib.bc,large_indirect_callee_alias_bar,px \
+; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
 
 ; TODO: Extend this test case to test IR once postlink optimizer makes use of
 ; the import type for declarations.
@@ -125,7 +134,12 @@ source_filename = "lib.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+; Both large_indirect_callee and large_indirect_callee_alias are referenced
+; and visible to main.ll.
 @calleeAddrs = global [3 x ptr] [ptr @large_indirect_callee, ptr @small_indirect_callee, ptr @large_indirect_callee_alias]
+
+; large_indirect_callee_alias_bar is visible to main.ll but its aliasee isn't.
+@calleeAddrs2 = global [1 x ptr] [ptr @large_indirect_callee_alias_bar]
 
 define void @callee() #1 {
   ret void
@@ -142,11 +156,27 @@ define void @large_indirect_callee()#2 {
   ret void
 }
 
+define void @large_indirect_callee_bar()#2 {
+  call void @callee()
+  call void @callee()
+  call void @callee()
+  call void @callee()
+  call void @callee()
+  call void @callee()
+  call void @callee()
+  ret void
+}
+
 define internal void @small_indirect_callee() #0 {
+entry:
+  %0 = load ptr, ptr @calleeAddrs2
+  call void %0(), !prof !3
   ret void
 }
 
 @large_indirect_callee_alias = alias void(), ptr @large_indirect_callee
+
+@large_indirect_callee_alias_bar = alias void(), ptr @large_indirect_callee_bar
 
 define void @small_func() {
 entry:
@@ -180,3 +210,4 @@ attributes #2 = { norecurse }
 !0 = !{!"VP", i32 0, i64 1, i64 14343440786664691134, i64 1}
 !1 = !{!"VP", i32 0, i64 1, i64 13568239288960714650, i64 1}
 !2 = !{!"VP", i32 0, i64 1, i64 16730173943625350469, i64 1}
+!3 = !{!"VP", i32 0, i64 1, i64 11962421489375846222, i64 1}
