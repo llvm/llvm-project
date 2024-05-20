@@ -152,6 +152,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
       a = adev ! transfer device to host
       bdev = adev ! transfer device to device
     ```
+    
+    When the data transfer is done on data hold by descriptors, the LHS data
+    hold by the descriptor are updated. When required, the LHS decriptor is also
+    updated.
   }];
 
   let arguments = (ins Arg<AnyRefOrBoxType, "", [MemWrite]>:$src,
