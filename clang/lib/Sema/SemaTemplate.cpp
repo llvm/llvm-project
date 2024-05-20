@@ -10255,15 +10255,20 @@ bool Sema::CheckFunctionTemplateSpecialization(
                                 Ovl->getDeclContext()->getRedeclContext()))
         continue;
 
+      QualType FT = FD->getType();
+      // C++11 [dcl.constexpr]p8:
+      //   A constexpr specifier for a non-static member function that is not
+      //   a constructor declares that member function to be const.
+      //
       // When matching a constexpr member function template specialization
       // against the primary template, we don't yet know whether the
       // specialization has an implicit 'const' (because we don't know whether
       // it will be a static member function until we know which template it
-      // specializes), so adjust it now assuming it specializes this template.
-      QualType FT = FD->getType();
-      if (FD->isConstexpr()) {
-        CXXMethodDecl *OldMD =
-          dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
+      // specializes). This rule was removed in C++14.
+      if (auto *NewMD = dyn_cast<CXXMethodDecl>(FD);
+          !getLangOpts().CPlusPlus14 && NewMD && NewMD->isConstexpr() &&
+          !isa<CXXConstructorDecl, CXXDestructorDecl>(NewMD)) {
+        auto *OldMD = dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
         if (OldMD && OldMD->isConst()) {
           const FunctionProtoType *FPT = FT->castAs<FunctionProtoType>();
           FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();

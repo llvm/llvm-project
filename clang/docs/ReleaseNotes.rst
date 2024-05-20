@@ -747,6 +747,8 @@ Bug Fixes to C++ Support
 - Clang no longer transforms dependent qualified names into implicit class member access expressions
   until it can be determined whether the name is that of a non-static member.
 - Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
+- Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
+  as implicitly ``const`` in language modes after C++11.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
