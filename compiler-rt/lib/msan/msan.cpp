@@ -99,10 +99,10 @@ bool msan_init_is_running;
 int msan_report_count = 0;
 
 // Array of stack origins.
-// FIXME: make it resizable.
-static const uptr kNumStackOriginDescrs = 1024 * 1024;
-static const char *StackOriginDescr[kNumStackOriginDescrs];
-static uptr StackOriginPC[kNumStackOriginDescrs];
+// This is resized dynamically by ResizeStackOriginMetadata
+static uptr kNumStackOriginDescrs = 0;
+static char **StackOriginDescr = nullptr;
+static uptr *StackOriginPC = nullptr;
 static atomic_uint32_t NumStackOriginDescrs;
 
 void Flags::SetDefaults() {
@@ -282,7 +282,27 @@ void ScopedThreadLocalStateBackup::Restore() {
 void UnpoisonThreadLocalState() {
 }
 
+// Grow stack origin metadata structures exponentially if out of space
+static void ResizeStackOriginMetadata(u32 id) {
+  if (id >= kNumStackOriginDescrs) {
+    if (kNumStackOriginDescrs == 0)
+      kNumStackOriginDescrs = 1;
+    else
+      kNumStackOriginDescrs = kNumStackOriginDescrs * 2;
+
+    VReport(2, "Resized stack origin metadata to %lu entries\n",
+            kNumStackOriginDescrs);
+  }
+
+  StackOriginDescr = (char **)InternalRealloc(
+      StackOriginDescr, kNumStackOriginDescrs * sizeof(char *));
+  StackOriginPC = (uptr *)InternalRealloc(StackOriginPC,
+                                          kNumStackOriginDescrs * sizeof(uptr));
+  // No checks needed - InternalRealloc() will die if out of memory
+}
+
 const char *GetStackOriginDescr(u32 id, uptr *pc) {
+  ResizeStackOriginMetadata(id);
   CHECK_LT(id, kNumStackOriginDescrs);
   if (pc) *pc = StackOriginPC[id];
   return StackOriginDescr[id];
@@ -312,6 +332,7 @@ static inline void SetAllocaOrigin(void *a, uptr size, u32 *id_ptr, char *descr,
   u32 id = *id_ptr;
   if (id == 0 || id == first_timer) {
     u32 idx = atomic_fetch_add(&NumStackOriginDescrs, 1, memory_order_relaxed);
+    ResizeStackOriginMetadata(idx);
     CHECK_LT(idx, kNumStackOriginDescrs);
     StackOriginDescr[idx] = descr;
     StackOriginPC[idx] = pc;
