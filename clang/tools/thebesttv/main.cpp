@@ -433,7 +433,7 @@ int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
     }
 
     auto pFinder = DfsPathFinder(icfg);
-    pFinder.search(u, v, pointsToPass, pointsToAvoid, 6);
+    pFinder.search(u, v, pointsToPass, pointsToAvoid, Global.callDepth);
 
     saveAsJson(fromLine, toLine, pFinder.results, type, jResults);
     return pFinder.results.size();
@@ -627,6 +627,8 @@ int main(int argc, const char **argv) {
     args::ValueFlag<int> argPoolSize(
         argParser, "N",
         "AST Pool size (max number of ASTs in memory), default 10", {'p'});
+    args::ValueFlag<int> argCallDepth(
+        argParser, "N", "Max call depth in path-finding, default 4", {'d'});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -657,6 +659,16 @@ int main(int argc, const char **argv) {
         }
         logger.info("AST pool size: {}", ASTPoolSize);
         Global.ASTPoolSize = ASTPoolSize;
+    }
+
+    {
+        int callDepth = 4;
+        if (argCallDepth) {
+            callDepth = args::get(argCallDepth);
+            requireTrue(callDepth >= 1, "Call depth must be greater than 0");
+        }
+        logger.info("Max call depth: {}", callDepth);
+        Global.callDepth = callDepth;
     }
 
     setClangPath(argv[0]);

@@ -211,6 +211,7 @@ struct GlobalStat {
     std::map<int, bool> functionReturnsNull; // fid -> whether func returns null
 
     int ASTPoolSize;
+    int callDepth;
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
