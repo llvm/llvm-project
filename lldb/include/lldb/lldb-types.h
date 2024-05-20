@@ -62,12 +62,14 @@ typedef void *thread_arg_t;             // Host thread argument type
 typedef void *thread_result_t;          // Host thread result type
 typedef void *(*thread_func_t)(void *); // Host thread function type
 typedef int pipe_t;                     // Host pipe type
+typedef int callback_token_t;
 
 #endif // _WIN32
 
 #define LLDB_INVALID_PROCESS ((lldb::process_t)-1)
 #define LLDB_INVALID_HOST_THREAD ((lldb::thread_t)NULL)
 #define LLDB_INVALID_PIPE ((lldb::pipe_t)-1)
+#define LLDB_INVALID_CALLBACK_TOKEN ((lldb::callback_token_t) - 1)
 
 typedef void (*LogOutputCallback)(const char *, void *baton);
 typedef bool (*CommandOverrideCallback)(void *baton, const char **argv);
