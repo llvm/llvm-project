@@ -4818,14 +4818,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     TemplateArgumentLoc In = *First;
 
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
-      // When building the deduction guides, we rewrite the argument packs
-      // instead of unpacking.
-      if (getSema().CodeSynthesisContexts.back().Kind ==
-          Sema::CodeSynthesisContext::BuildingDeductionGuides) {
-        if (getDerived().TransformTemplateArgument(In, Out, Uneval))
-          return true;
-        continue;
-      }
       // Unpack argument packs, which we translate them into separate
       // arguments.
       // FIXME: We could do much better if we could guarantee that the
@@ -7344,7 +7336,7 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
     // Currently, CountAttributedType can only wrap incomplete array types.
-    Result = SemaRef.BuildCountAttributedArrayOrPointerType(InnerTy, NewCount);
+    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
   }
 
   TLB.push<CountAttributedTypeLoc>(Result);

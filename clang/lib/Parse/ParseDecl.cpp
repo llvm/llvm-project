@@ -1256,6 +1256,7 @@ void Parser::ParseAvailabilityAttribute(
   enum { Introduced, Deprecated, Obsoleted, Unknown };
   AvailabilityChange Changes[Unknown];
   ExprResult MessageExpr, ReplacementExpr;
+  IdentifierLoc *EnvironmentLoc = nullptr;
 
   // Opening '('.
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -1303,6 +1304,7 @@ void Parser::ParseAvailabilityAttribute(
     Ident_message = PP.getIdentifierInfo("message");
     Ident_strict = PP.getIdentifierInfo("strict");
     Ident_replacement = PP.getIdentifierInfo("replacement");
+    Ident_environment = PP.getIdentifierInfo("environment");
   }
 
   // Parse the optional "strict", the optional "replacement" and the set of
@@ -1350,6 +1352,13 @@ void Parser::ParseAvailabilityAttribute(
       continue;
     }
 
+    if (Keyword == Ident_environment) {
+      if (EnvironmentLoc != nullptr) {
+        Diag(KeywordLoc, diag::err_availability_redundant)
+            << Keyword << SourceRange(EnvironmentLoc->Loc);
+      }
+    }
+
     if (Tok.isNot(tok::equal)) {
       Diag(Tok, diag::err_expected_after) << Keyword << tok::equal;
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -1370,6 +1379,15 @@ void Parser::ParseAvailabilityAttribute(
         ReplacementExpr = ParseUnevaluatedStringLiteralExpression();
         continue;
       }
+    }
+    if (Keyword == Ident_environment) {
+      if (Tok.isNot(tok::identifier)) {
+        Diag(Tok, diag::err_availability_expected_environment);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return;
+      }
+      EnvironmentLoc = ParseIdentifierLoc();
+      continue;
     }
 
     // Special handling of 'NA' only when applied to introduced or
@@ -1452,7 +1470,7 @@ void Parser::ParseAvailabilityAttribute(
                SourceRange(AvailabilityLoc, T.getCloseLocation()), ScopeName,
                ScopeLoc, Platform, Changes[Introduced], Changes[Deprecated],
                Changes[Obsoleted], UnavailableLoc, MessageExpr.get(), Form,
-               StrictLoc, ReplacementExpr.get());
+               StrictLoc, ReplacementExpr.get(), EnvironmentLoc);
 }
 
 /// Parse the contents of the "external_source_symbol" attribute.
@@ -3288,19 +3306,6 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   }
 }
 
-void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
-                                        LateParsedAttrList *LateAttrs) {
-  assert(Dcl && "Dcl cannot be null");
-
-  if (!LateAttrs)
-    return;
-
-  for (auto *LateAttr : *LateAttrs) {
-    if (LateAttr->Decls.empty())
-      LateAttr->addDecl(Dcl);
-  }
-}
-
 /// Bounds attributes (e.g., counted_by):
 ///   AttrName '(' expression ')'
 void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
@@ -4838,14 +4843,13 @@ static void DiagnoseCountAttributedTypeInUnnamedAnon(ParsingDeclSpec &DS,
 ///
 void Parser::ParseStructDeclaration(
     ParsingDeclSpec &DS,
-    llvm::function_ref<Decl *(ParsingFieldDeclarator &)> FieldsCallback,
-    LateParsedAttrList *LateFieldAttrs) {
+    llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback) {
 
   if (Tok.is(tok::kw___extension__)) {
     // __extension__ silences extension warnings in the subexpression.
     ExtensionRAIIObject O(Diags);  // Use RAII to do this.
     ConsumeToken();
-    return ParseStructDeclaration(DS, FieldsCallback, LateFieldAttrs);
+    return ParseStructDeclaration(DS, FieldsCallback);
   }
 
   // Parse leading attributes.
@@ -4910,12 +4914,10 @@ void Parser::ParseStructDeclaration(
     }
 
     // If attributes exist after the declarator, parse them.
-    MaybeParseGNUAttributes(DeclaratorInfo.D, LateFieldAttrs);
+    MaybeParseGNUAttributes(DeclaratorInfo.D);
 
     // We're done with this declarator;  invoke the callback.
-    Decl *Field = FieldsCallback(DeclaratorInfo);
-    if (Field)
-      DistributeCLateParsedAttrs(Field, LateFieldAttrs);
+    FieldsCallback(DeclaratorInfo);
 
     // If we don't have a comma, it is either the end of the list (a ';')
     // or an error, bail out.
@@ -4923,69 +4925,6 @@ void Parser::ParseStructDeclaration(
       return;
 
     FirstDeclarator = false;
-  }
-}
-
-/// Finish parsing an attribute for which parsing was delayed.
-/// This will be called at the end of parsing a class declaration
-/// for each LateParsedAttribute. We consume the saved tokens and
-/// create an attribute with the arguments filled in. We add this
-/// to the Attribute list for the decl.
-void Parser::ParseLexedCAttribute(LateParsedAttribute &LA,
-                                  ParsedAttributes *OutAttrs) {
-  // Create a fake EOF so that attribute parsing won't go off the end of the
-  // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LA.Toks.data());
-  LA.Toks.push_back(AttrEnd);
-
-  // Append the current token at the end of the new token stream so that it
-  // doesn't get lost.
-  LA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LA.Toks, /*DisableMacroExpansion=*/true,
-                      /*IsReinject=*/true);
-  // Drop the current token and bring the first cached one. It's the same token
-  // as when we entered this function.
-  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
-
-  ParsedAttributes Attrs(AttrFactory);
-
-  assert(LA.Decls.size() <= 1 &&
-         "late field attribute expects to have at most one declaration.");
-
-  // Dispatch based on the attribute and parse it
-  const AttributeCommonInfo::Form ParsedForm = ParsedAttr::Form::GNU();
-  IdentifierInfo *ScopeName = nullptr;
-  const ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(&LA.AttrName, /*ScopeName=*/ScopeName,
-                                /*SyntaxUsed=*/ParsedForm.getSyntax());
-  switch (AttrKind) {
-  case ParsedAttr::Kind::AT_CountedBy:
-    ParseBoundsAttribute(LA.AttrName, LA.AttrNameLoc, Attrs,
-                         /*ScopeName=*/ScopeName, SourceLocation(),
-                         /*Form=*/ParsedForm);
-    break;
-  default:
-    llvm_unreachable("Unhandled late parsed attribute");
-  }
-
-  for (auto *D : LA.Decls)
-    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
-
-  // Due to a parsing error, we either went over the cached tokens or
-  // there are still cached tokens left, so we skip the leftover tokens.
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  // Consume the fake EOF token if it's there
-  if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
-    ConsumeAnyToken();
-
-  if (OutAttrs) {
-    OutAttrs->takeAllFrom(Attrs);
   }
 }
 
@@ -5011,11 +4950,6 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
   Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
-
-  // `LateAttrParseExperimentalExtOnly=true` requests that only attributes
-  // marked with `LateAttrParseExperimentalExt` are late parsed.
-  LateParsedAttrList LateFieldAttrs(/*PSoon=*/false,
-                                    /*LateAttrParseExperimentalExtOnly=*/true);
 
   // While we still have something to read, read the declarations in the struct.
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
@@ -5067,19 +5001,18 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     if (!Tok.is(tok::at)) {
-      auto CFieldCallback = [&](ParsingFieldDeclarator &FD) -> Decl * {
+      auto CFieldCallback = [&](ParsingFieldDeclarator &FD) {
         // Install the declarator into the current TagDecl.
         Decl *Field =
             Actions.ActOnField(getCurScope(), TagDecl,
                                FD.D.getDeclSpec().getSourceRange().getBegin(),
                                FD.D, FD.BitfieldSize);
         FD.complete(Field);
-        return Field;
       };
 
       // Parse all the comma separated declarators.
       ParsingDeclSpec DS(*this);
-      ParseStructDeclaration(DS, CFieldCallback, &LateFieldAttrs);
+      ParseStructDeclaration(DS, CFieldCallback);
     } else { // Handle @defs
       ConsumeToken();
       if (!Tok.isObjCAtKeyword(tok::objc_defs)) {
@@ -5120,12 +5053,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
   ParsedAttributes attrs(AttrFactory);
   // If attributes exist after struct contents, parse them.
-  MaybeParseGNUAttributes(attrs, &LateFieldAttrs);
-
-  // Late parse field attributes if necessary.
-  assert(!getLangOpts().CPlusPlus);
-  for (auto *LateAttr : LateFieldAttrs)
-    ParseLexedCAttribute(*LateAttr);
+  MaybeParseGNUAttributes(attrs);
 
   SmallVector<Decl *, 32> FieldDecls(TagDecl->fields());
 
