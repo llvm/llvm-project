@@ -1331,7 +1331,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Then, convert blocks one by one in topological order to ensure defs are
   // converted before uses.
-  auto blocks = getTopologicallySortedBlocks(func.getBody());
+  auto blocks = getBlocksSortedByDominance(func.getBody());
   for (Block *bb : blocks) {
     CapturingIRBuilder builder(llvmContext);
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,

@@ -47,7 +47,8 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
       OS << Prefix;
       NewLine = false;
     }
-    OS << I->Tok->Tok.getName() << "[" << "T=" << (unsigned)I->Tok->getType()
+    OS << I->Tok->Tok.getName() << "["
+       << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
     for (SmallVectorImpl<UnwrappedLine>::const_iterator
@@ -4007,8 +4008,6 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   };
 
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
-    if (FormatTok->is(tok::colon))
-      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -4016,9 +4015,13 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       else if (FormatTok->is(tok::greater))
         --AngleNestingLevel;
 
-      if (AngleNestingLevel == 0 && FormatTok->is(tok::l_paren) &&
-          IsNonMacroIdentifier(FormatTok->Previous)) {
-        break;
+      if (AngleNestingLevel == 0) {
+        if (FormatTok->is(tok::colon)) {
+          IsDerived = true;
+        } else if (FormatTok->is(tok::l_paren) &&
+                   IsNonMacroIdentifier(FormatTok->Previous)) {
+          break;
+        }
       }
       if (FormatTok->is(tok::l_brace)) {
         if (AngleNestingLevel == 0 && IsListInitialization())

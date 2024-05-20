@@ -145,7 +145,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
-    std::string name = getFuncArgName(source.u.get<mlir::Value>());
+    std::string name = getFuncArgName(source.origin.u.get<mlir::Value>());
     if (!name.empty())
       tag = state.getFuncTree(func).dummyArgDataTree.getTag(name);
     else
@@ -155,8 +155,9 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
     // TBAA for global variables
   } else if (enableGlobals &&
-             source.kind == fir::AliasAnalysis::SourceKind::Global) {
-    mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
+             source.kind == fir::AliasAnalysis::SourceKind::Global &&
+             !source.isBoxData()) {
+    mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
                                       << " at " << *op << "\n");
@@ -164,9 +165,10 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
     // TBAA for SourceKind::Direct
   } else if (enableDirect &&
-             source.kind == fir::AliasAnalysis::SourceKind::Direct) {
-    if (source.u.is<mlir::SymbolRefAttr>()) {
-      mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
+             source.kind == fir::AliasAnalysis::SourceKind::Global &&
+             source.isBoxData()) {
+    if (source.origin.u.is<mlir::SymbolRefAttr>()) {
+      mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
@@ -182,7 +184,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableLocalAllocs &&
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
-    mlir::Operation *sourceOp = source.u.get<mlir::Value>().getDefiningOp();
+    mlir::Operation *sourceOp =
+        source.origin.u.get<mlir::Value>().getDefiningOp();
     if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
       name = alloc.getUniqName();
     else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
@@ -223,8 +226,4 @@ void AddAliasTagsPass::runOnOperation() {
       [&](fir::FirAliasTagOpInterface op) { runOnAliasInterface(op, state); });
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createAliasTagsPass() {
-  return std::make_unique<AddAliasTagsPass>();
 }

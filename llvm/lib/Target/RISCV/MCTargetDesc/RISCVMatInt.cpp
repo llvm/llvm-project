@@ -115,29 +115,30 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     Val >>= ShiftAmount;
 
     // If the remaining bits don't fit in 12 bits, we might be able to reduce
-    // the shift amount in order to use LUI which will zero the lower 12 bits.
+    // the // shift amount in order to use LUI which will zero the lower 12
+    // bits.
     if (ShiftAmount > 12 && !isInt<12>(Val)) {
-      if (isInt<32>(Val << 12)) {
+      if (isInt<32>((uint64_t)Val << 12)) {
         // Reduce the shift amount and add zeros to the LSBs so it will match
         // LUI.
         ShiftAmount -= 12;
-        Val = Val << 12;
-      } else if (isUInt<32>(Val << 12) &&
+        Val = (uint64_t)Val << 12;
+      } else if (isUInt<32>((uint64_t)Val << 12) &&
                  STI.hasFeature(RISCV::FeatureStdExtZba)) {
         // Reduce the shift amount and add zeros to the LSBs so it will match
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
-        Val = SignExtend64<32>(Val << 12);
+        Val = ((uint64_t)Val << 12) | (0xffffffffull << 32);
         Unsigned = true;
       }
     }
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>(Val) && !isInt<32>(Val) &&
+    if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
-      // Use LUI+ADDI(W) or LUI to compose, then clear the upper 32 bits with
+      // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
-      Val = SignExtend64<32>(Val);
+      Val = ((uint64_t)Val) | (0xffffffffull << 32);
       Unsigned = true;
     }
   }

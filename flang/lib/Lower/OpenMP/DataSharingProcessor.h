@@ -37,67 +37,70 @@ private:
   mlir::OpBuilder::InsertPoint insPt;
   mlir::Value loopIV;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
-  llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> implicitSymbols;
-  llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::omp::PrivateClauseOp>
+  llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
+  llvm::SetVector<const semantics::Symbol *> defaultSymbols;
+  llvm::SetVector<const semantics::Symbol *> implicitSymbols;
+  llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
+  llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
+
+  llvm::DenseMap<const semantics::Symbol *, mlir::omp::PrivateClauseOp>
       symToPrivatizer;
-  Fortran::lower::AbstractConverter &converter;
-  Fortran::semantics::SemanticsContext &semaCtx;
+  lower::AbstractConverter &converter;
+  semantics::SemanticsContext &semaCtx;
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
-  Fortran::lower::pft::Evaluation &eval;
+  lower::pft::Evaluation &eval;
+  bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  Fortran::lower::SymMap *symTable;
+  lower::SymMap *symTable;
 
   bool needBarrier();
-  void
-  collectSymbols(Fortran::semantics::Symbol::Flag flag,
-                 llvm::SetVector<const Fortran::semantics::Symbol *> &symbols);
+  void collectSymbols(semantics::Symbol::Flag flag,
+                      llvm::SetVector<const semantics::Symbol *> &symbols);
   void collectSymbolsInNestedRegions(
-      Fortran::lower::pft::Evaluation &eval,
-      Fortran::semantics::Symbol::Flag flag,
-      llvm::SetVector<const Fortran::semantics::Symbol *>
-          &symbolsInNestedRegions);
+      lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
+      llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions);
   void collectOmpObjectListSymbol(
       const omp::ObjectList &objects,
-      llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet);
+      llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
   void insertBarrier();
   void collectDefaultSymbols();
   void collectImplicitSymbols();
-  void privatize(
-      mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
+  void collectPreDeterminedSymbols();
+  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
+                 llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void defaultPrivatize(
       mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
+      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void implicitPrivatize(
       mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
-  void doPrivatize(
-      const Fortran::semantics::Symbol *sym,
-      mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
+      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
+  void
+  doPrivatize(const semantics::Symbol *sym,
+              mlir::omp::PrivateClauseOps *clauseOps,
+              llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
-  void cloneSymbol(const Fortran::semantics::Symbol *sym);
+  void cloneSymbol(const semantics::Symbol *sym);
   void
-  copyFirstPrivateSymbol(const Fortran::semantics::Symbol *sym,
+  copyFirstPrivateSymbol(const semantics::Symbol *sym,
                          mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr);
-  void copyLastPrivateSymbol(const Fortran::semantics::Symbol *sym,
+  void copyLastPrivateSymbol(const semantics::Symbol *sym,
                              mlir::OpBuilder::InsertPoint *lastPrivIP);
   void insertDeallocs();
 
 public:
-  DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
-                       Fortran::semantics::SemanticsContext &semaCtx,
+  DataSharingProcessor(lower::AbstractConverter &converter,
+                       semantics::SemanticsContext &semaCtx,
                        const List<Clause> &clauses,
-                       Fortran::lower::pft::Evaluation &eval,
+                       lower::pft::Evaluation &eval,
+                       bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization = false,
-                       Fortran::lower::SymMap *symTable = nullptr)
+                       lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
         firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
+        shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.
@@ -111,9 +114,9 @@ public:
   // Step2 performs the copying for lastprivates and requires knowledge of the
   // MLIR operation to insert the last private update. Step2 adds
   // dealocation code as well.
-  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr,
-                    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                        *privateSyms = nullptr);
+  void processStep1(
+      mlir::omp::PrivateClauseOps *clauseOps = nullptr,
+      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms = nullptr);
   void processStep2(mlir::Operation *op, bool isLoop);
 
   void setLoopIV(mlir::Value iv) {

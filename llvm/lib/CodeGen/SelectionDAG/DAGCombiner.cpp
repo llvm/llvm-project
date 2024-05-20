@@ -5211,18 +5211,9 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
 
-  if (VT.isVector()) {
+  if (VT.isVector())
     if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
       return FoldedVOp;
-
-    // fold (avgfloor x, 0) -> x >> 1
-    if (ISD::isConstantSplatVectorAllZeros(N1.getNode())) {
-      if (Opcode == ISD::AVGFLOORS)
-        return DAG.getNode(ISD::SRA, DL, VT, N0, DAG.getConstant(1, DL, VT));
-      if (Opcode == ISD::AVGFLOORU)
-        return DAG.getNode(ISD::SRL, DL, VT, N0, DAG.getConstant(1, DL, VT));
-    }
-  }
 
   // fold (avg x, undef) -> x
   if (N0.isUndef())
@@ -5230,11 +5221,18 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
   if (N1.isUndef())
     return N0;
 
-  // Fold (avg x, x) --> x
+  // fold (avg x, x) --> x
   if (N0 == N1 && Level >= AfterLegalizeTypes)
     return N0;
 
-  // TODO If we use avg for scalars anywhere, we can add (avgfl x, 0) -> x >> 1
+  // fold (avgfloor x, 0) -> x >> 1
+  SDValue X;
+  if (sd_match(N, m_c_BinOp(ISD::AVGFLOORS, m_Value(X), m_Zero())))
+    return DAG.getNode(ISD::SRA, DL, VT, X,
+                       DAG.getShiftAmountConstant(1, VT, DL));
+  if (sd_match(N, m_c_BinOp(ISD::AVGFLOORU, m_Value(X), m_Zero())))
+    return DAG.getNode(ISD::SRL, DL, VT, X,
+                       DAG.getShiftAmountConstant(1, VT, DL));
 
   return SDValue();
 }
@@ -5255,23 +5253,24 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(Opcode, DL, N->getVTList(), N1, N0);
 
-  if (VT.isVector()) {
+  if (VT.isVector())
     if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
       return FoldedVOp;
-
-    // fold (abds x, 0) -> abs x
-    // fold (abdu x, 0) -> x
-    if (ISD::isConstantSplatVectorAllZeros(N1.getNode())) {
-      if (Opcode == ISD::ABDS)
-        return DAG.getNode(ISD::ABS, DL, VT, N0);
-      if (Opcode == ISD::ABDU)
-        return N0;
-    }
-  }
 
   // fold (abd x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
+
+  SDValue X;
+
+  // fold (abds x, 0) -> abs x
+  if (sd_match(N, m_c_BinOp(ISD::ABDS, m_Value(X), m_Zero())) &&
+      (!LegalOperations || hasOperation(ISD::ABS, VT)))
+    return DAG.getNode(ISD::ABS, DL, VT, X);
+
+  // fold (abdu x, 0) -> x
+  if (sd_match(N, m_c_BinOp(ISD::ABDU, m_Value(X), m_Zero())))
+    return X;
 
   // fold (abds x, y) -> (abdu x, y) iff both args are known positive
   if (Opcode == ISD::ABDS && hasOperation(ISD::ABDU, VT) &&
@@ -12142,8 +12141,11 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
     SDValue N2Elt = N2.getOperand(i);
     if (N1Elt.isUndef() || N2Elt.isUndef())
       continue;
-    if (N1Elt.getValueType() != N2Elt.getValueType())
-      continue;
+    if (N1Elt.getValueType() != N2Elt.getValueType()) {
+      AllAddOne = false;
+      AllSubOne = false;
+      break;
+    }
 
     const APInt &C1 = N1Elt->getAsAPIntVal();
     const APInt &C2 = N2Elt->getAsAPIntVal();
@@ -17383,15 +17385,20 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
       TLI.isOperationLegalOrCustom(ISD::FMUL, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FDIV, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
-      DAG.isKnownToBeAPowerOfTwoFP(N1) &&
-      (Flags.hasNoSignedZeros() || DAG.cannotBeOrderedNegativeFP(N0))) {
+      DAG.isKnownToBeAPowerOfTwoFP(N1)) {
+    bool NeedsCopySign =
+        !Flags.hasNoSignedZeros() && !DAG.cannotBeOrderedNegativeFP(N0);
     SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
     SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
-    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT))
-      return DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, Rnd),
-                         N1, N0);
-    SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
-    return DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
+    SDValue MLA;
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+      MLA = DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, Rnd),
+                        N1, N0);
+    } else {
+      SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
+      MLA = DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
+    }
+    return NeedsCopySign ? DAG.getNode(ISD::FCOPYSIGN, DL, VT, MLA, N0) : MLA;
   }
 
   return SDValue();
