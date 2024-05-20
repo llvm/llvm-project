@@ -56,7 +56,7 @@ protected:
 };
 
 template <typename X, typename T>
-class ExoticRefCounted : RefCountedBase {
+class ExoticRefCounted : public RefCountedBase {
 public:
   void deref() const {
     if (derefBase())
@@ -239,6 +239,12 @@ class DerivedClass4c : public WTF::BadBase<DerivedClass4cSub, DerivedClass4c> { 
 // expected-warning@-1{{Class 'WTF::BadBase<DerivedClass4cSub, DerivedClass4c>' is used as a base of class 'DerivedClass4c' but doesn't have virtual destructor}}
 class DerivedClass4cSub : public DerivedClass4c { };
 void UseDerivedClass4c(DerivedClass4c &obj) { obj.deref(); }
+
+class DerivedClass4d : public WTF::RefCounted<DerivedClass4d> {
+public:
+  virtual ~DerivedClass4d() { }
+};
+class DerivedClass4dSub : public DerivedClass4d { };
 
 class DerivedClass5 : public DerivedClass4 { };
 // expected-warning@-1{{Class 'DerivedClass4' is used as a base of class 'DerivedClass5' but doesn't have virtual destructor}}

@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include <optional>
 
 using namespace clang;
@@ -168,13 +169,56 @@ public:
       bool shouldVisitImplicitCode() const { return false; }
 
       bool VisitCXXRecordDecl(const CXXRecordDecl *RD) {
-        Checker->visitCXXRecordDecl(RD);
+        if (!RD->hasDefinition())
+          return true;
+
+        Decls.insert(RD);
+
+        for (auto &Base : RD->bases()) {
+          const auto AccSpec = Base.getAccessSpecifier();
+          if (AccSpec == AS_protected || AccSpec == AS_private ||
+              (AccSpec == AS_none && RD->isClass()))
+            continue;
+
+          QualType T = Base.getType();
+          if (T.isNull())
+            continue;
+
+          const CXXRecordDecl *C = T->getAsCXXRecordDecl();
+          if (!C)
+            continue;
+
+          if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
+            auto &Args = CTSD->getTemplateArgs();
+            for (unsigned i = 0; i < Args.size(); ++i) {
+              if (Args[i].getKind() != TemplateArgument::Type)
+                continue;
+              auto TemplT = Args[i].getAsType();
+              if (TemplT.isNull())
+                continue;
+
+              bool IsCRTP = TemplT->getAsCXXRecordDecl() == RD;
+              if (!IsCRTP)
+                continue;
+              CRTPs.insert(C);
+            }
+          }
+        }
+
         return true;
       }
+
+      llvm::SetVector<const CXXRecordDecl*> Decls;
+      llvm::DenseSet<const CXXRecordDecl*> CRTPs;
     };
 
     LocalVisitor visitor(this);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
+    for (auto *RD : visitor.Decls) {
+      if (visitor.CRTPs.contains(RD))
+        continue;
+      visitCXXRecordDecl(RD);
+    }
   }
 
   void visitCXXRecordDecl(const CXXRecordDecl *RD) const {
@@ -231,6 +275,17 @@ public:
 
       auto HasSpecializedDelete = isClassWithSpecializedDelete(C, RD);
       if (!HasSpecializedDelete || *HasSpecializedDelete)
+        continue;
+      if (C->lookupInBases([&](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto *T = Base->getType().getTypePtrOrNull();
+        if (!T)
+          return false;
+        auto *R = T->getAsCXXRecordDecl();
+        if (!R)
+          return false;
+        auto Result = isClassWithSpecializedDelete(R, RD);
+        return Result && *Result;
+        }, Paths, /*LookupInDependent =*/true))
         continue;
 
       const auto *Dtor = C->getDestructor();
