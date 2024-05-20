@@ -516,7 +516,7 @@ constexpr void test_swap_sfinae() {
   }
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void test_swap_noexcept() {
+TEST_CONSTEXPR_CXX20 void test_swap_noexcept() {
   {
     using V = std::variant<int, NothrowMoveable>;
     static_assert(std::is_swappable_v<V> && has_swap_member<V>(), "");
