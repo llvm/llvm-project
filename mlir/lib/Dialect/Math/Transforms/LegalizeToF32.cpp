@@ -19,6 +19,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir::math {
 #define GEN_PASS_DEF_MATHLEGALIZETOF32
@@ -37,6 +38,8 @@ struct LegalizeToF32RewritePattern final : ConversionPattern {
 
 struct LegalizeToF32Pass final
     : mlir::math::impl::MathLegalizeToF32Base<LegalizeToF32Pass> {
+  LegalizeToF32Pass() = default;
+  LegalizeToF32Pass(const mlir::math::MathLegalizeToF32Options &options) {}
   void runOnOperation() override;
 };
 } // namespace
@@ -97,6 +100,29 @@ void mlir::math::populateLegalizeToF32Patterns(RewritePatternSet &patterns,
                                             patterns.getContext());
 }
 
+struct CanonicalizeF32PromotionRewritePattern final
+    : OpRewritePattern<arith::ExtFOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    if (auto innertruncop = op.getOperand().getDefiningOp<arith::TruncFOp>()) {
+      if (auto truncinput = innertruncop.getOperand()) {
+        auto outterTy = getElementTypeOrSelf(op.getType());
+        auto intermediateTy = getElementTypeOrSelf(innertruncop.getType());
+        auto innerTy = getElementTypeOrSelf(truncinput.getType());
+        if (outterTy.isF32() &&
+            (intermediateTy.isF16() || intermediateTy.isBF16()) &&
+            innerTy.isF32()) {
+          rewriter.replaceOp(op, {truncinput});
+        }
+      } else
+        return failure();
+    } else
+      return failure();
+    return success();
+  }
+};
+
 void LegalizeToF32Pass::runOnOperation() {
   Operation *op = getOperation();
   MLIRContext &ctx = getContext();
@@ -109,4 +135,14 @@ void LegalizeToF32Pass::runOnOperation() {
   math::populateLegalizeToF32Patterns(patterns, typeConverter);
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     return signalPassFailure();
+  
+  if (useCanonicalizeF32Promotion) {
+    RewritePatternSet cano_patterns(&getContext());
+    cano_patterns.insert<CanonicalizeF32PromotionRewritePattern>(&getContext());
+    FrozenRewritePatternSet cano_patternSet(std::move(cano_patterns));
+    op->walk([cano_patternSet](arith::ExtFOp extop) {
+      if (failed(applyOpPatternsAndFold({extop}, cano_patternSet)))
+        extop->emitError("fail to do implicit rounding removement");
+    });
+  }
 }

@@ -34,6 +34,14 @@ def MathLegalizeToF32 : Pass<"math-legalize-to-f32"> {
     that is an operation frequently implemented at low precisions.
   }];
   let dependentDialects = ["math::MathDialect", "arith::ArithDialect"];
+  let options = [
+    Option<"useCanonicalizeF32Promotion", "use-canonicalize-f32-promotion", "bool",
+            /*default=*/"true",
+            "Eliminate the redundant truncf/extf pairs to improve performance,"
+            "while may introduce numerical difference as the f32->bf16 rounding is"
+            "eliminated.">
+  ];
+
 }
 
 def MathCanonicalizeF32Promotion : Pass<"math-canonicalize-f32-promotion"> {
