@@ -26,6 +26,7 @@ void LogMessageOnPrintf(const char *str) {}
 void WriteToSyslog(const char *buffer) {}
 void Abort() { internal__exit(1); }
 bool CreateDir(const char *pathname) { return false; }
+// TODO: Revisit using insecure by default approach for no-libc binaries.
 bool ShouldTreatRuntimeSecurely() { return false; }
 #endif // !SANITIZER_WINDOWS
 
