@@ -1229,7 +1229,13 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   KernelCode.amd_machine_version_minor = Version.Minor;
   KernelCode.amd_machine_version_stepping = Version.Stepping;
   KernelCode.kernel_code_entry_byte_offset = sizeof(amd_kernel_code_t);
-  KernelCode.wavefront_size = 6;
+  if (Version.Major >= 10 &&
+      STI->getFeatureBits().test(FeatureWavefrontSize32)) {
+    KernelCode.wavefront_size = 5;
+    KernelCode.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
+  } else {
+    KernelCode.wavefront_size = 6;
+  }
 
   // If the code object does not support indirect functions, then the value must
   // be 0xffffffff.
@@ -1242,10 +1248,6 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   KernelCode.private_segment_alignment = 4;
 
   if (Version.Major >= 10) {
-    if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
-      KernelCode.wavefront_size = 5;
-      KernelCode.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-    }
     KernelCode.compute_pgm_resource_registers |=
         S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
         S_00B848_MEM_ORDERED(1);

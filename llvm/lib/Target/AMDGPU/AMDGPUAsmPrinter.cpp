@@ -1340,12 +1340,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
       CurrentProgramInfo.getComputePGMRSrc2(Ctx);
   Out.code_properties |= AMD_CODE_PROPERTY_IS_PTR64;
 
-  {
-    const MCExpr *Shift = MCConstantExpr::create(
-        AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT, Ctx);
-    Out.is_dynamic_callstack = MCBinaryExpr::createShl(
-        CurrentProgramInfo.DynamicCallStack, Shift, Ctx);
-  }
+  Out.is_dynamic_callstack = CurrentProgramInfo.DynamicCallStack;
 
   AMD_HSA_BITS_SET(Out.code_properties, AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE,
                    getElementByteSizeValue(STM.getMaxPrivateElementSize(true)));
