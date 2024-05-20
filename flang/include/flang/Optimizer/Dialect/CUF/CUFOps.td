@@ -154,13 +154,15 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
     ```
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
-                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemWrite]>:$src,
+                       Arg<AnyRefOrBoxType, "", [MemRead]>:$dst,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
   let assemblyFormat = [{
     $src `to` $dst attr-dict `:` type(operands)
   }];
+
+  let hasVerifier = 1;
 }
 
 def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
