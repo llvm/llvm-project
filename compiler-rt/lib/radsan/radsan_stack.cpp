@@ -8,6 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "radsan_stack.h"
+
 #include <sanitizer_common/sanitizer_flags.h>
 #include <sanitizer_common/sanitizer_stacktrace.h>
 
@@ -28,7 +30,6 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 } // namespace __sanitizer
 
 namespace __radsan {
-
 void SetGlobalStackTraceFormat() {
   SetCommonFlagsDefaults();
   CommonFlags cf;
@@ -37,8 +38,10 @@ void SetGlobalStackTraceFormat() {
   cf.external_symbolizer_path = GetEnv("RADSAN_SYMBOLIZER_PATH");
   OverrideCommonFlags(cf);
 }
+} // namespace __radsan
 
-void PrintStackTrace() {
+using namespace __radsan;
+void __radsan::PrintStackTrace() {
 
   BufferedStackTrace Stack{};
 
@@ -48,4 +51,3 @@ void PrintStackTrace() {
   SetGlobalStackTraceFormat();
   Stack.Print();
 }
-} // namespace __radsan
