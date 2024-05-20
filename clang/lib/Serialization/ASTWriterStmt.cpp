@@ -473,7 +473,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      Record.AddStmt(const_cast<Expr *>(DetailRecord.first));
+      Record.writeStmtRef(DetailRecord.first);
       auto *E = DetailRecord.second.dyn_cast<Expr *>();
       Record.push_back(E == nullptr);
       if (E)
@@ -880,16 +880,21 @@ void ASTStmtWriter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Code = serialization::EXPR_ARRAY_SUBSCRIPT;
 }
 
-void ASTStmtWriter::VisitOMPArraySectionExpr(OMPArraySectionExpr *E) {
+void ASTStmtWriter::VisitArraySectionExpr(ArraySectionExpr *E) {
   VisitExpr(E);
+  Record.writeEnum(E->ASType);
   Record.AddStmt(E->getBase());
   Record.AddStmt(E->getLowerBound());
   Record.AddStmt(E->getLength());
-  Record.AddStmt(E->getStride());
+  if (E->isOMPArraySection())
+    Record.AddStmt(E->getStride());
   Record.AddSourceLocation(E->getColonLocFirst());
-  Record.AddSourceLocation(E->getColonLocSecond());
+
+  if (E->isOMPArraySection())
+    Record.AddSourceLocation(E->getColonLocSecond());
+
   Record.AddSourceLocation(E->getRBracketLoc());
-  Code = serialization::EXPR_OMP_ARRAY_SECTION;
+  Code = serialization::EXPR_ARRAY_SECTION;
 }
 
 void ASTStmtWriter::VisitOMPArrayShapingExpr(OMPArrayShapingExpr *E) {

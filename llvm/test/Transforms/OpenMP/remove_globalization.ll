@@ -21,11 +21,11 @@ target triple = "nvptx64"
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 ;.
-; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @S = external local_unnamed_addr global ptr
+; CHECK: @kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
-; CHECK-DISABLED: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK-DISABLED: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK-DISABLED: @S = external local_unnamed_addr global ptr
+; CHECK-DISABLED: @kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 define weak i32 @__kmpc_target_init(ptr %0, ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
@@ -226,10 +226,8 @@ exit:
   ret void
 }
 
-; CHECK: declare noalias ptr @__kmpc_alloc_shared(i64)
 declare ptr @__kmpc_alloc_shared(i64)
 
-; CHECK: declare void @__kmpc_free_shared(ptr allocptr nocapture, i64)
 declare void @__kmpc_free_shared(ptr, i64)
 
 declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
@@ -271,30 +269,30 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-DISABLED: attributes #[[ATTR5]] = { nosync nounwind memory(write) }
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "remove_globalization.c", directory: "/tmp/remove_globalization.c")
-; CHECK: [[META2:![0-9]+]] = !{}
+; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+; CHECK: [[META1]] = !DIFile(filename: "remove_globalization.c", directory: {{.*}})
+; CHECK: [[META2]] = !{}
 ; CHECK: [[META3:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK: [[META7:![0-9]+]] = !{ptr @kernel, !"kernel", i32 1}
-; CHECK: [[DBG8]] = !DILocation(line: 4, column: 2, scope: !9)
-; CHECK: [[META9:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-; CHECK: [[META10:![0-9]+]] = !DISubroutineType(types: !2)
+; CHECK: [[DBG8]] = !DILocation(line: 4, column: 2, scope: [[META9:![0-9]+]])
+; CHECK: [[META9]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 1, type: [[META10:![0-9]+]], scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[META10]] = !DISubroutineType(types: [[META2]])
 ;.
-; CHECK-DISABLED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
-; CHECK-DISABLED: [[META1:![0-9]+]] = !DIFile(filename: "remove_globalization.c", directory: "/tmp/remove_globalization.c")
-; CHECK-DISABLED: [[META2:![0-9]+]] = !{}
+; CHECK-DISABLED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+; CHECK-DISABLED: [[META1]] = !DIFile(filename: "remove_globalization.c", directory: {{.*}})
+; CHECK-DISABLED: [[META2]] = !{}
 ; CHECK-DISABLED: [[META3:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK-DISABLED: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK-DISABLED: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK-DISABLED: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK-DISABLED: [[META7:![0-9]+]] = !{ptr @kernel, !"kernel", i32 1}
-; CHECK-DISABLED: [[DBG8]] = !DILocation(line: 4, column: 2, scope: !9)
-; CHECK-DISABLED: [[META9:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-; CHECK-DISABLED: [[META10:![0-9]+]] = !DISubroutineType(types: !2)
-; CHECK-DISABLED: [[DBG11]] = !DILocation(line: 6, column: 2, scope: !9)
+; CHECK-DISABLED: [[DBG8]] = !DILocation(line: 4, column: 2, scope: [[META9:![0-9]+]])
+; CHECK-DISABLED: [[META9]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 1, type: [[META10:![0-9]+]], scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK-DISABLED: [[META10]] = !DISubroutineType(types: [[META2]])
+; CHECK-DISABLED: [[DBG11]] = !DILocation(line: 6, column: 2, scope: [[META9]])
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-REMARKS: {{.*}}

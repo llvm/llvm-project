@@ -201,3 +201,113 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            test_idx_undef
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_idx_undef
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RET_ReallyLR
+    %3:_(s8) = G_CONSTANT i8 127
+    %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %4:_(s8) = G_CONSTANT i8 -128
+    %5:_(s64) = G_IMPLICIT_DEF
+    %0:_(p0) = COPY $x0
+    %1:_(<32 x s8>) = G_INSERT_VECTOR_ELT %2, %4(s8), %5(s64)
+    G_STORE %1(<32 x s8>), %0(p0) :: (store (<32 x s8>))
+    RET_ReallyLR
+
+...
+---
+name:            test_elt_undef
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_elt_undef
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 127
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[DEF]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<32 x s8>), [[COPY]](p0) :: (store (<32 x s8>))
+    ; CHECK-NEXT: RET_ReallyLR
+    %3:_(s8) = G_CONSTANT i8 127
+    %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %4:_(s8) = G_IMPLICIT_DEF
+    %5:_(s64) = G_CONSTANT i64 3
+    %0:_(p0) = COPY $x0
+    %1:_(<32 x s8>) = G_INSERT_VECTOR_ELT %2, %4(s8), %5(s64)
+    G_STORE %1(<32 x s8>), %0(p0) :: (store (<32 x s8>))
+    RET_ReallyLR
+
+...
+---
+name:            test_elt_undef_with_freeze
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_elt_undef_with_freeze
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 127
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<32 x s8>) = G_FREEZE [[BUILD_VECTOR]]
+    ; CHECK-NEXT: G_STORE [[FREEZE]](<32 x s8>), [[COPY]](p0) :: (store (<32 x s8>))
+    ; CHECK-NEXT: RET_ReallyLR
+    %3:_(s8) = G_CONSTANT i8 127
+    %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %4:_(s8) = G_IMPLICIT_DEF
+    %5:_(s64) = G_CONSTANT i64 3
+    %0:_(p0) = COPY $x0
+    %9:_(<32 x s8>) = G_FREEZE %2
+    %1:_(<32 x s8>) = G_INSERT_VECTOR_ELT %9, %4(s8), %5(s64)
+    G_STORE %1(<32 x s8>), %0(p0) :: (store (<32 x s8>))
+    RET_ReallyLR
+
+...
+---
+name:            test_insert_extract
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_insert_extract
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 127
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<32 x s8>), [[COPY]](p0) :: (store (<32 x s8>))
+    ; CHECK-NEXT: RET_ReallyLR
+    %3:_(s8) = G_CONSTANT i8 127
+    %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %5:_(s64) = G_CONSTANT i64 3
+    %4:_(s8) = G_EXTRACT_VECTOR_ELT %2, %5
+    %0:_(p0) = COPY $x0
+    %1:_(<32 x s8>) = G_INSERT_VECTOR_ELT %2, %4(s8), %5(s64)
+    G_STORE %1(<32 x s8>), %0(p0) :: (store (<32 x s8>))
+    RET_ReallyLR
+
+...
+---
+name:            test_idx_oob
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_idx_oob
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RET_ReallyLR
+    %3:_(s8) = G_CONSTANT i8 127
+    %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %4:_(s8) = G_CONSTANT i8 -128
+    %5:_(s64) = G_CONSTANT i64 1024
+    %0:_(p0) = COPY $x0
+    %1:_(<32 x s8>) = G_INSERT_VECTOR_ELT %2, %4(s8), %5(s64)
+    G_STORE %1(<32 x s8>), %0(p0) :: (store (<32 x s8>))
+    RET_ReallyLR
+
+...

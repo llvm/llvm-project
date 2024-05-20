@@ -366,7 +366,7 @@ define i32 @test26(i32 %A) {
   ret i32 %D
 }
 
-define i1 @test27(i32 %x) nounwind {
+define i1 @test27(i32 %x) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ne i32 [[TMP1]], 0
@@ -605,7 +605,7 @@ define <2 x i32> @shl_nuw_nsw_splat_vec(<2 x i8> %x) {
   ret <2 x i32> %t3
 }
 
-define i32 @test38(i32 %x) nounwind readnone {
+define i32 @test38(i32 %x) {
 ; CHECK-LABEL: @test38(
 ; CHECK-NEXT:    [[REM1:%.*]] = and i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[REM1]]
@@ -616,7 +616,7 @@ define i32 @test38(i32 %x) nounwind readnone {
   ret i32 %shl
 }
 
-define <2 x i32> @test38_uniform(<2 x i32> %x) nounwind readnone {
+define <2 x i32> @test38_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @test38_uniform(
 ; CHECK-NEXT:    [[REM1:%.*]] = and <2 x i32> [[X:%.*]], <i32 31, i32 31>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[REM1]]
@@ -627,7 +627,7 @@ define <2 x i32> @test38_uniform(<2 x i32> %x) nounwind readnone {
   ret <2 x i32> %shl
 }
 
-define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
+define <3 x i32> @test38_nonuniform(<3 x i32> %x) {
 ; CHECK-LABEL: @test38_nonuniform(
 ; CHECK-NEXT:    [[REM1:%.*]] = and <3 x i32> [[X:%.*]], <i32 31, i32 15, i32 0>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <3 x i32> <i32 1, i32 1, i32 1>, [[REM1]]
@@ -638,7 +638,7 @@ define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
   ret <3 x i32> %shl
 }
 
-define <2 x i32> @test38_poison(<2 x i32> %x) nounwind readnone {
+define <2 x i32> @test38_poison(<2 x i32> %x) {
 ; CHECK-LABEL: @test38_poison(
 ; CHECK-NEXT:    ret <2 x i32> poison
 ;
@@ -658,8 +658,8 @@ define i8 @test39(i32 %a0) {
 ; CHECK-NEXT:    [[I51:%.*]] = xor i8 [[I50]], [[I5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr exact i8 [[I5]], 3
 ; CHECK-NEXT:    [[I54:%.*]] = and i8 [[TMP0]], 16
-; CHECK-NEXT:    [[I551:%.*]] = or disjoint i8 [[I54]], [[I51]]
-; CHECK-NEXT:    ret i8 [[I551]]
+; CHECK-NEXT:    [[I55:%.*]] = or disjoint i8 [[I54]], [[I51]]
+; CHECK-NEXT:    ret i8 [[I55]]
 ;
 entry:
   %i4 = trunc i32 %a0 to i8
@@ -675,7 +675,7 @@ entry:
   ret i8 %i55
 }
 
-define i32 @test42(i32 %a, i32 %b) nounwind {
+define i32 @test42(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[DIV:%.*]] = lshr exact i32 4096, [[B:%.*]]
 ; CHECK-NEXT:    [[DIV2:%.*]] = udiv i32 [[A:%.*]], [[DIV]]
@@ -697,7 +697,7 @@ define <2 x i32> @test42vec(<2 x i32> %a, <2 x i32> %b) {
   ret <2 x i32> %div2
 }
 
-define i32 @test43(i32 %a, i32 %b) nounwind {
+define i32 @test43(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test43(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], 12
 ; CHECK-NEXT:    [[DIV21:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
@@ -708,7 +708,7 @@ define i32 @test43(i32 %a, i32 %b) nounwind {
   ret i32 %div2
 }
 
-define i32 @test44(i32 %a) nounwind {
+define i32 @test44(i32 %a) {
 ; CHECK-LABEL: @test44(
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[A:%.*]], 5
 ; CHECK-NEXT:    ret i32 [[Y]]
@@ -718,12 +718,38 @@ define i32 @test44(i32 %a) nounwind {
   ret i32 %z
 }
 
-define i32 @test45(i32 %a) nounwind {
+define i32 @test44_multiuse(i32 %a) {
+; CHECK-LABEL: @test44_multiuse(
+; CHECK-NEXT:    [[Y:%.*]] = shl nuw i32 [[A:%.*]], 1
+; CHECK-NEXT:    call void @use_i32(i32 [[Y]])
+; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[A]], 5
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %y = shl nuw i32 %a, 1
+  call void @use_i32(i32 %y)
+  %z = shl i32 %y, 4
+  ret i32 %z
+}
+
+define i32 @test45(i32 %a) {
 ; CHECK-LABEL: @test45(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 [[A:%.*]], 5
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %y = lshr exact i32 %a, 1
+  %z = lshr i32 %y, 4
+  ret i32 %z
+}
+
+define i32 @test45_multiuse(i32 %a) {
+; CHECK-LABEL: @test45_multiuse(
+; CHECK-NEXT:    [[Y:%.*]] = lshr exact i32 [[A:%.*]], 1
+; CHECK-NEXT:    call void @use_i32(i32 [[Y]])
+; CHECK-NEXT:    [[Z:%.*]] = lshr i32 [[A]], 5
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %y = lshr exact i32 %a, 1
+  call void @use_i32(i32 %y)
   %z = lshr i32 %y, 4
   ret i32 %z
 }
@@ -1751,14 +1777,14 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_FROZEN:%.*]] = freeze i177 [[L]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i177 [[L_FROZEN]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -24
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i177 [[L_FROZEN]], -1
-; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP5]], i177 0, i177 [[L_FROZEN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[L_FROZEN]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -24
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP1]] to i64
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i177 [[L_FROZEN]], -1
+; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP6]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -2055,7 +2081,7 @@ define <2 x i8> @shl1_cttz_vec_poison(<2 x i8> %x) {
 
 define i32 @shl1_cttz_extra_use(i32 %x) {
 ; CHECK-LABEL: @shl1_cttz_extra_use(
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    call void @use_i32(i32 [[TZ]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[TZ]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
@@ -2070,7 +2096,7 @@ define i32 @shl1_cttz_extra_use(i32 %x) {
 
 define i32 @shl2_cttz(i32 %x) {
 ; CHECK-LABEL: @shl2_cttz(
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;

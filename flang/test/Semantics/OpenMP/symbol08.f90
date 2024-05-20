@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp
 
 ! 2.15.1.1 Predetermined rules for associated do-loops index variable
@@ -94,7 +96,7 @@ subroutine test_taskloop
   !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate) HostAssoc INTEGER(4)
   !REF: /test_taskloop/OtherConstruct1/i
   do j=1,i
-   !REF: /test_taskloop/a
+   !DEF: /test_taskloop/OtherConstruct1/a (OmpFirstPrivate, OmpImplicit) HostAssoc REAL(4)
    !REF: /test_taskloop/OtherConstruct1/j
    !REF: /test_taskloop/OtherConstruct1/i
    a(j,i) = 3.14

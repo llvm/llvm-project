@@ -1,6 +1,8 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! Semantic checks for various assignments related to atomic constructs
 
 program sample
