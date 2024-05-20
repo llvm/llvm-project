@@ -51,8 +51,17 @@
 ! We'd like to check that the default is sane, but until we have the ability
 ! to *always* semantically analyze OpenMP without always generating runtime
 ! calls (in the event of an unsupported runtime), we don't have a good way to
-! test the CC1 invocation. Instead, just ensure we do eventually link *some*
+! test the FC1 invocation. Instead, just ensure we do eventually link *some*
 ! OpenMP runtime.
+!
+! RUN: %flang -target x86_64-linux-gnu -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-darwin -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-freebsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-netbsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-openbsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-dragonfly -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target i386-pc-solaris2.11 -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+! RUN: %flang -target x86_64-windows-gnu -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANYMD
 !
 ! CHECK-LD-ANY: "{{.*}}ld{{(.exe)?}}"
 ! CHECK-LD-ANY: "-l{{(omp|gomp|iomp5)}}"
