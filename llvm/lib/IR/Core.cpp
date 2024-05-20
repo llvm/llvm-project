@@ -3138,15 +3138,24 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
 }
 
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
-                         LLVMValueRef Instr, LLVMBool BeforeDbgRecords) {
+                         LLVMValueRef Instr) {
+  return LLVMPositionBuilder2(Builder, Block, Instr, false);
+}
+
+void LLVMPositionBuilder2(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
+                          LLVMValueRef Instr, LLVMBool BeforeDbgRecords) {
   BasicBlock *BB = unwrap(Block);
   auto I = Instr ? unwrap<Instruction>(Instr)->getIterator() : BB->end();
   I.setHeadBit(BeforeDbgRecords);
   unwrap(Builder)->SetInsertPoint(BB, I);
 }
 
-void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr,
-                               LLVMBool BeforeDbgRecords) {
+void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr) {
+  return LLVMPositionBuilderBefore2(Builder, Instr, false);
+}
+
+void LLVMPositionBuilderBefore2(LLVMBuilderRef Builder, LLVMValueRef Instr,
+                                LLVMBool BeforeDbgRecords) {
   Instruction *I = unwrap<Instruction>(Instr);
   BasicBlock::iterator It = I->getIterator();
   It.setHeadBit(BeforeDbgRecords);

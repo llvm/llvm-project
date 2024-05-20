@@ -3946,21 +3946,27 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst);
  * An instruction builder represents a point within a basic block and is
  * the exclusive means of building instructions using the C interface.
  *
- * Some insertion-position-setting methods have a "BeforeDbgRecords"
+ * Some insertion-position-setting functions have a "BeforeDbgRecords"
  * parameter. Set to true if the insertion point should be in front of debug
  * records, for example when inserting a phi. If you are trying to insert at the
  * start of a block, or purposfully skip debug intrinsics to determine the
  * insertion point for any other reason, then set it to true. Otherwise set it
- * to false.
+ * to false. Insertion-position-setting functions without the parameter always
+ * set the position after any attached debug records (i.e., as if
+ * "BeforeDbgRecords" is false).
+ *
  * @{
  */
 
 LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
 LLVMBuilderRef LLVMCreateBuilder(void);
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
-                         LLVMValueRef Instr, LLVMBool BeforeDbgRecords);
-void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr,
-                               LLVMBool BeforeDbgRecords);
+                         LLVMValueRef Instr);
+void LLVMPositionBuilder2(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
+                          LLVMValueRef Instr, LLVMBool BeforeDbgRecords);
+void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr);
+void LLVMPositionBuilderBefore2(LLVMBuilderRef Builder, LLVMValueRef Instr,
+                                LLVMBool BeforeDbgRecords);
 void LLVMPositionBuilderAtEnd(LLVMBuilderRef Builder, LLVMBasicBlockRef Block);
 LLVMBasicBlockRef LLVMGetInsertBlock(LLVMBuilderRef Builder);
 void LLVMClearInsertionPosition(LLVMBuilderRef Builder);

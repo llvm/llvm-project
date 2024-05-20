@@ -36,7 +36,7 @@ For a more in-depth overview of how to update existing code to support debug rec
 
 # C-API changes
 
-All the functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
+Some new functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
 
 ```
 New functions (all to be deprecated)
@@ -61,16 +61,18 @@ LLVMDIBuilderInsertDeclareAtEnd    # Same as above.
 LLVMDIBuilderInsertDbgValueBefore  # Same as above.
 LLVMDIBuilderInsertDbgValueAtEnd   # Same as above.
 
-Existing functions (new parameter)
+New functions (no plans to deprecate)
 ----------------------------------
-LLVMPositionBuilder               # Added BeforeDbgRecords parameter. See info below.
-LLVMPositionBuilderBefore         # Same as above.
+LLVMPositionBuilder2               # LLVMPositionBuilder but with BeforeDbgRecords parameter. See info below.
+LLVMPositionBuilderBefore2         # Same as above.
 ```
 
-`LLVMPositionBuilder` and `LLVMPositionBuilderBefore` have gained a parameter `BeforeDbgRecords` which indicates whether or not the insertion position should also be before the debug records that precede the instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
+`LLVMPositionBuilder2` and `LLVMPositionBuilderBefore2` have a parameter `BeforeDbgRecords` which indicates whether or not the insertion position should also be before the debug records that precede the instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
 
 If you don't know whether it should be true or false then follow this rule:
 If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then set it to true. Otherwise set it to false.
+
+`LLVMPositionBuilder` and `LLVMPositionBuilderBefore` are unchanged. They insert before the indicated instruction but after any attached debug records (equivalent to calling the new variants with `BeforeDbgRecords` set to `false`).
 
 # The new "Debug Record" model
 
