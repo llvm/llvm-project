@@ -2660,17 +2660,11 @@ bool Sema::isCurrentClassNameTypo(IdentifierInfo *&II, const CXXScopeSpec *SS) {
 ///
 /// \returns a new CXXBaseSpecifier if well-formed, emits diagnostics
 /// and returns NULL otherwise.
-CXXBaseSpecifier *
-Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
-                         SourceRange SpecifierRange,
-                         bool Virtual, AccessSpecifier Access,
-                         TypeSourceInfo *TInfo,
-                         SourceLocation EllipsisLoc) {
-  // In HLSL, unspecified class access is public rather than private.
-  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
-      Access == AS_none)
-    Access = AS_public;
-
+CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
+                                           SourceRange SpecifierRange,
+                                           bool Virtual, AccessSpecifier Access,
+                                           TypeSourceInfo *TInfo,
+                                           SourceLocation EllipsisLoc) {
   QualType BaseType = TInfo->getType();
   SourceLocation BaseLoc = TInfo->getTypeLoc().getBeginLoc();
   if (BaseType->containsErrors()) {
@@ -2715,6 +2709,50 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       Class->setInvalidDecl();
       return nullptr;
     }
+
+    BaseDecl = BaseDecl->getDefinition();
+    assert(BaseDecl && "Base type is not incomplete, but has no definition");
+
+    // Microsoft docs say:
+    // "If a base-class has a code_seg attribute, derived classes must have the
+    // same attribute."
+    const auto *BaseCSA = BaseDecl->getAttr<CodeSegAttr>();
+    const auto *DerivedCSA = Class->getAttr<CodeSegAttr>();
+    if ((DerivedCSA || BaseCSA) &&
+        (!BaseCSA || !DerivedCSA ||
+         BaseCSA->getName() != DerivedCSA->getName())) {
+      Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
+      Diag(BaseDecl->getLocation(), diag::note_base_class_specified_here)
+          << BaseDecl;
+      return nullptr;
+    }
+
+    // A class which contains a flexible array member is not suitable for use as
+    // a base class:
+    //   - If the layout determines that a base comes before another base,
+    //     the flexible array member would index into the subsequent base.
+    //   - If the layout determines that base comes before the derived class,
+    //     the flexible array member would index into the derived class.
+    if (BaseDecl->hasFlexibleArrayMember()) {
+      Diag(BaseLoc, diag::err_base_class_has_flexible_array_member)
+          << BaseDecl->getDeclName();
+      return nullptr;
+    }
+
+    // C++ [class]p3:
+    //   If a class is marked final and it appears as a base-type-specifier in
+    //   base-clause, the program is ill-formed.
+    if (FinalAttr *FA = BaseDecl->getAttr<FinalAttr>()) {
+      Diag(BaseLoc, diag::err_class_marked_final_used_as_base)
+          << BaseDecl->getDeclName() << FA->isSpelledAsSealed();
+      Diag(BaseDecl->getLocation(), diag::note_entity_declared_at)
+          << BaseDecl->getDeclName() << FA->getRange();
+      return nullptr;
+    }
+
+    // If the base class is invalid the derived class is as well.
+    if (BaseDecl->isInvalidDecl())
+      Class->setInvalidDecl();
   } else if (BaseType->isDependentType()) {
     // Make sure that we don't make an ill-formed AST where the type of the
     // Class is non-dependent and its attached base class specifier is an
@@ -2724,55 +2762,16 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     // emitted.
     if (!Class->isDependentContext())
       Class->setInvalidDecl();
-    return new (Context) CXXBaseSpecifier(
-        SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
-        Access, TInfo, EllipsisLoc);
   } else {
+    // The base class is some non-dependent non-class type.
     Diag(BaseLoc, diag::err_base_must_be_class) << SpecifierRange;
     return nullptr;
   }
 
-  BaseDecl = BaseDecl->getDefinition();
-  assert(BaseDecl && "Base type is not incomplete, but has no definition");
-
-  // Microsoft docs say:
-  // "If a base-class has a code_seg attribute, derived classes must have the
-  // same attribute."
-  const auto *BaseCSA = BaseDecl->getAttr<CodeSegAttr>();
-  const auto *DerivedCSA = Class->getAttr<CodeSegAttr>();
-  if ((DerivedCSA || BaseCSA) &&
-      (!BaseCSA || !DerivedCSA || BaseCSA->getName() != DerivedCSA->getName())) {
-    Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
-    Diag(BaseDecl->getLocation(), diag::note_base_class_specified_here)
-        << BaseDecl;
-    return nullptr;
-  }
-
-  // A class which contains a flexible array member is not suitable for use as a
-  // base class:
-  //   - If the layout determines that a base comes before another base,
-  //     the flexible array member would index into the subsequent base.
-  //   - If the layout determines that base comes before the derived class,
-  //     the flexible array member would index into the derived class.
-  if (BaseDecl->hasFlexibleArrayMember()) {
-    Diag(BaseLoc, diag::err_base_class_has_flexible_array_member)
-        << BaseDecl->getDeclName();
-    return nullptr;
-  }
-
-  // C++ [class]p3:
-  //   If a class is marked final and it appears as a base-type-specifier in
-  //   base-clause, the program is ill-formed.
-  if (FinalAttr *FA = BaseDecl->getAttr<FinalAttr>()) {
-    Diag(BaseLoc, diag::err_class_marked_final_used_as_base)
-        << BaseDecl->getDeclName() << FA->isSpelledAsSealed();
-    Diag(BaseDecl->getLocation(), diag::note_entity_declared_at)
-        << BaseDecl->getDeclName() << FA->getRange();
-    return nullptr;
-  }
-
-  if (BaseDecl->isInvalidDecl())
-    Class->setInvalidDecl();
+  // In HLSL, unspecified class access is public rather than private.
+  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
+      Access == AS_none)
+    Access = AS_public;
 
   // Create the base specifier.
   return new (Context) CXXBaseSpecifier(
