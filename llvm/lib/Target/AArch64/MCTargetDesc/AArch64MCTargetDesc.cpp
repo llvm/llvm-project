@@ -456,10 +456,8 @@ public:
       // bits of a register, the upper bits are zero extended on a write. For
       // SIMD vector registers smaller than 128-bits, the upper 64-bits of the
       // register are zero extended on a write.
-      if (FPR8RC.contains(RegID) || FPR16RC.contains(RegID) ||
-          FPR32RC.contains(RegID) || FPR64RC.contains(RegID))
-        return true;
-      return false;
+      return FPR8RC.contains(RegID) || FPR16RC.contains(RegID) ||
+             FPR32RC.contains(RegID) || FPR64RC.contains(RegID);
     };
 
     Mask.clearAllBits();
