@@ -17,6 +17,8 @@
 
 #ifdef _WIN32
 #include "flang/Common/windows-include.h"
+#include <direct.h>
+#define getcwd _getcwd
 
 // On Windows GetCurrentProcessId returns a DWORD aka uint32_t
 #include <processthreadsapi.h>
@@ -245,17 +247,16 @@ std::int32_t RTNAME(GetCwd)(
 
   RUNTIME_CHECK(terminator, IsValidCharDescriptor(&cwd));
 
-  char *buf = (char *)std::malloc(FILENAME_MAX);
+  char *buf = getcwd(nullptr, 0);
   if (!buf) {
-    return StatMemAllocation;
-  }
-
-  if (!getcwd(buf, FILENAME_MAX)) {
     return StatMissingCurrentWorkDirectory;
   }
 
   std::int64_t strLen = StringLength(buf);
-  return CopyCharsToDescriptor(cwd, buf, strLen);
+  std::int32_t status = CopyCharsToDescriptor(cwd, buf, strLen);
+
+  std::free(buf);
+  return status;
 }
 
 } // namespace Fortran::runtime
