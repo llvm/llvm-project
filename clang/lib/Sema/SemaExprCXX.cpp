@@ -5217,10 +5217,18 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsFloatingPoint:
     return T->isFloatingType();
   case UTT_IsArray:
+    // Zero-sized arrays aren't considered arrays in partial specializations,
+    // so __is_array shouldn't consider them arrays either.
+    if (const auto *CAT = C.getAsConstantArrayType(T))
+      return CAT->getSize() != 0;
     return T->isArrayType();
   case UTT_IsBoundedArray:
     if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_bounded_array))
       return false;
+    // Zero-sized arrays aren't considered arrays in partial specializations,
+    // so __is_bounded_array shouldn't consider them arrays either.
+    if (const auto *CAT = C.getAsConstantArrayType(T))
+      return CAT->getSize() != 0;
     return T->isArrayType() && !T->isIncompleteArrayType();
   case UTT_IsUnboundedArray:
     if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_unbounded_array))

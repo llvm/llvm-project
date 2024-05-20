@@ -4788,23 +4788,11 @@ void RewriteInstance::updateELFSymbolTable(
     if (!IsDynSym && shouldStrip(Symbol))
       continue;
 
-    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
-    assert(SymbolName && "cannot get symbol name");
-
     const BinaryFunction *Function =
         BC->getBinaryFunctionAtAddress(Symbol.st_value);
     // Ignore false function references, e.g. when the section address matches
     // the address of the function.
     if (Function && Symbol.getType() == ELF::STT_SECTION)
-      Function = nullptr;
-
-    // Ignore input hot markers as function aliases.
-    // If hot markers are treated as function aliases, we may create
-    // non-sensical __hot_start.cold symbols which would not have a parent
-    // when read by BOLT as we don't register them as function aliases
-    // (explicitly ignored in parsing symbol table in discoverFileObjects).
-    if (Function &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end"))
       Function = nullptr;
 
     // For non-dynamic symtab, make sure the symbol section matches that of
@@ -4820,6 +4808,31 @@ void RewriteInstance::updateELFSymbolTable(
 
     // Create a new symbol based on the existing symbol.
     ELFSymTy NewSymbol = Symbol;
+
+    // Handle special symbols based on their name.
+    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
+    assert(SymbolName && "cannot get symbol name");
+
+    auto updateSymbolValue = [&](const StringRef Name,
+                                 std::optional<uint64_t> Value = std::nullopt) {
+      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
+      NewSymbol.st_shndx = ELF::SHN_ABS;
+      BC->outs() << "BOLT-INFO: setting " << Name << " to 0x"
+                 << Twine::utohexstr(NewSymbol.st_value) << '\n';
+    };
+
+    if (*SymbolName == "__hot_start" || *SymbolName == "__hot_end") {
+      if (opts::HotText) {
+        updateSymbolValue(*SymbolName);
+        ++NumHotTextSymsUpdated;
+      }
+      // Ignore input hot markers as function aliases.
+      // If hot markers are treated as function aliases, we may create
+      // non-sensical __hot_start.cold symbols which would not have a parent
+      // when read by BOLT as we don't register them as function aliases
+      // (explicitly ignored in parsing symbol table in discoverFileObjects).
+      goto registerSymbol;
+    }
 
     if (Function) {
       // If the symbol matched a function that was not emitted, update the
@@ -4918,21 +4931,6 @@ void RewriteInstance::updateELFSymbolTable(
     }
 
     // Handle special symbols based on their name.
-
-    auto updateSymbolValue = [&](const StringRef Name,
-                                 std::optional<uint64_t> Value = std::nullopt) {
-      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
-      NewSymbol.st_shndx = ELF::SHN_ABS;
-      BC->outs() << "BOLT-INFO: setting " << Name << " to 0x"
-                 << Twine::utohexstr(NewSymbol.st_value) << '\n';
-    };
-
-    if (opts::HotText &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end")) {
-      updateSymbolValue(*SymbolName);
-      ++NumHotTextSymsUpdated;
-    }
-
     if (opts::HotData && (*SymbolName == "__hot_data_start" ||
                           *SymbolName == "__hot_data_end")) {
       updateSymbolValue(*SymbolName);
@@ -4942,6 +4940,7 @@ void RewriteInstance::updateELFSymbolTable(
     if (*SymbolName == "_end" && NextAvailableAddress > Symbol.st_value)
       updateSymbolValue(*SymbolName, NextAvailableAddress);
 
+registerSymbol:
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *
                 sizeof(ELFSymTy),

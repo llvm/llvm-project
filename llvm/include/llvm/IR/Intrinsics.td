@@ -1371,7 +1371,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
 
 // The result of eh.typeid.for depends on the enclosing function, but inside a
 // given function it is 'const' and may be CSE'd etc.
-def int_eh_typeid_for : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
+def int_eh_typeid_for : Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty], [IntrNoMem]>;
 
 def int_eh_return_i32 : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty]>;
 def int_eh_return_i64 : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty]>;
@@ -1730,7 +1730,7 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
 
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
-// TODO: We should introduce a new memory kind fo traps (and other side effects 
+// TODO: We should introduce a new memory kind fo traps (and other side effects
 //       we only model to keep things alive).
 def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrInaccessibleMemOnly,
                IntrWriteMem]>, ClangBuiltin<"__builtin_trap">;

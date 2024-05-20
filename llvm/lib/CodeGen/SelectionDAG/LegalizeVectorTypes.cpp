@@ -3033,6 +3033,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
                        "operand!\n");
 
   case ISD::VP_SETCC:
+  case ISD::STRICT_FSETCC:
   case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
   case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
@@ -3997,14 +3998,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
+  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC;
   assert(N->getValueType(0).isVector() &&
-         N->getOperand(0).getValueType().isVector() &&
+         N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
          "Operand types must be vectors");
   // The result has a legal vector type, but the input needs splitting.
   SDValue Lo0, Hi0, Lo1, Hi1, LoRes, HiRes;
   SDLoc DL(N);
-  GetSplitVector(N->getOperand(0), Lo0, Hi0);
-  GetSplitVector(N->getOperand(1), Lo1, Hi1);
+  GetSplitVector(N->getOperand(isStrict ? 1 : 0), Lo0, Hi0);
+  GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
+
   auto PartEltCnt = Lo0.getValueType().getVectorElementCount();
 
   LLVMContext &Context = *DAG.getContext();
@@ -4014,6 +4017,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   if (N->getOpcode() == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
+  } else if (N->getOpcode() == ISD::STRICT_FSETCC) {
+    LoRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
+                        DAG.getVTList(PartResVT, N->getValueType(1)),
+                        N->getOperand(0), Lo0, Lo1, N->getOperand(3));
+    HiRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
+                        DAG.getVTList(PartResVT, N->getValueType(1)),
+                        N->getOperand(0), Hi0, Hi1, N->getOperand(3));
+    SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                   LoRes.getValue(1), HiRes.getValue(1));
+    ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
     assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
     SDValue MaskLo, MaskHi, EVLLo, EVLHi;
