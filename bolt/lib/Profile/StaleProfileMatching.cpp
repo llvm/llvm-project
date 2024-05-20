@@ -707,8 +707,8 @@ void assignProfile(BinaryFunction &BF,
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
 
-  NamedRegionTimer T("inferStaleProfile", "inferring from stale profile",
-                     "rewrite", "Rewrite passes", opts::InferStaleProfile);
+  NamedRegionTimer T("inferStaleProfile", "stale profile inference",
+                     "rewrite", "Rewrite passes", opts::TimeRewrite);
 
   if (!BF.hasCFG())
     return false;
