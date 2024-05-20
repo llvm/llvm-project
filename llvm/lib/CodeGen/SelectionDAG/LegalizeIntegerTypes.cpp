@@ -1511,8 +1511,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VPFunnelShift(SDNode *N) {
       !TLI.isOperationLegalOrCustom(Opcode, VT)) {
     SDValue HiShift = DAG.getConstant(OldBits, DL, VT);
     Hi = DAG.getNode(ISD::VP_SHL, DL, VT, Hi, HiShift, Mask, EVL);
-    // FIXME: Replace it by vp operations.
-    Lo = DAG.getZeroExtendInReg(Lo, DL, OldVT);
+    APInt Imm = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                     OldVT.getScalarSizeInBits());
+    Lo = DAG.getNode(ISD::VP_AND, DL, VT, Lo, DAG.getConstant(Imm, DL, VT),
+                     Mask, EVL);
     SDValue Res = DAG.getNode(ISD::VP_OR, DL, VT, Hi, Lo, Mask, EVL);
     Res = DAG.getNode(IsFSHR ? ISD::VP_LSHR : ISD::VP_SHL, DL, VT, Res, Amt,
                       Mask, EVL);
