@@ -832,6 +832,15 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       break;
+    case SHT_LLVM_LTO:
+      // When doing a relocatable link with FatLTO objects, if we're not using
+      // the bitcode, discard it, since it will be concatenated together when
+      // handling orphan sections, and which will be an invalid bitcode object.
+      if (config->relocatable && !config->fatLTOObjects) {
+        sections[i] = &InputSection::discarded;
+        break;
+      }
+      LLVM_FALLTHROUGH;
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
