@@ -33,18 +33,18 @@ def Polynomial_Dialect : Dialect {
     ```mlir
     // A constant polynomial in a ring with i32 coefficients and no polynomial modulus
     #ring = #polynomial.ring<coefficientType=i32>
-    %a = polynomial.constant {value=#polynomial.int_polynomial<1 + x**2 - 3x**3>} : polynomial.polynomial<#ring>
+    %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
 
     // A constant polynomial in a ring with i32 coefficients, modulo (x^1024 + 1)
     #modulus = #polynomial.int_polynomial<1 + x**1024>
     #ring = #polynomial.ring<coefficientType=i32, polynomialModulus=#modulus>
-    %a = polynomial.constant {value=#polynomial.int_polynomial<1 + x**2 - 3x**3>} : polynomial.polynomial<#ring>
+    %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
 
     // A constant polynomial in a ring with i32 coefficients, with a polynomial
     // modulus of (x^1024 + 1) and a coefficient modulus of 17.
     #modulus = #polynomial.int_polynomial<1 + x**1024>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=17:i32, polynomialModulus=#modulus>
-    %a = polynomial.constant {value=#polynomial.int_polynomial<1 + x**2 - 3x**3>} : polynomial.polynomial<#ring>
+    %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
     ```
   }];
 
