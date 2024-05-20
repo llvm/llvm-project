@@ -3074,6 +3074,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc)
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);
 
+  // DAG.getPass() returns nullptr when using new pass manager.
+  // TODO: Use DAG.getMFAM() to access analysis result.
   if (DAG.getPass()) {
     auto &ArgUsageInfo = DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
     ArgUsageInfo.setFuncArgInfo(Fn, Info->getArgInfo());
@@ -3289,6 +3291,8 @@ void SITargetLowering::passSpecialInputs(
   const AMDGPUFunctionArgInfo *CalleeArgInfo
     = &AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
   if (const Function *CalleeFunc = CLI.CB->getCalledFunction()) {
+    // DAG.getPass() returns nullptr when using new pass manager.
+    // TODO: Use DAG.getMFAM() to access analysis result.
     if (DAG.getPass()) {
       auto &ArgUsageInfo =
           DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
