@@ -235,16 +235,16 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
   // will come before the `phi` (and be absorbed onto it) which is an invalid
   // state.
   LLVMValueRef InsertPos = LLVMGetFirstInstruction(FooVarBlock);
-  LLVMPositionBuilderBefore(Builder, InsertPos, true);
+  LLVMPositionBuilderBefore2(Builder, InsertPos, true);
   LLVMValueRef Phi1 = LLVMBuildPhi(Builder, I64, "p1");
   LLVMAddIncoming(Phi1, &Zero, &FooEntryBlock, 1);
   // Do the same again using the other position-setting function.
-  LLVMPositionBuilder(Builder, FooVarBlock, InsertPos, true);
+  LLVMPositionBuilder2(Builder, FooVarBlock, InsertPos, true);
   LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
   LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
   // Insert a non-phi before the `ret` but not before the debug records to
   // test that works as expected.
-  LLVMPositionBuilder(Builder, FooVarBlock, Ret, false);
+  LLVMPositionBuilder2(Builder, FooVarBlock, Ret, false);
   LLVMBuildAdd(Builder, Phi1, Phi2, "a");
 
   char *MStr = LLVMPrintModuleToString(M);
