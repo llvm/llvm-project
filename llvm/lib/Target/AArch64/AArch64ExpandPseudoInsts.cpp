@@ -168,6 +168,19 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::ORRWrs:
+    case AArch64::ORRXrs: {
+      Register DstReg = MI.getOperand(0).getReg();
+      bool DstIsDead = MI.getOperand(0).isDead();
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addReg(DstReg)
+              .addReg(DstReg)
+              .addImm(I->Op2));
+    } break;
     case AArch64::ANDXri:
     case AArch64::EORXri:
       if (I->Op1 == 0) {

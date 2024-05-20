@@ -6,8 +6,7 @@ define i64 @test0x1234567812345678() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #22136 // =0x5678
 ; CHECK-NEXT:    movk x0, #4660, lsl #16
-; CHECK-NEXT:    movk x0, #22136, lsl #32
-; CHECK-NEXT:    movk x0, #4660, lsl #48
+; CHECK-NEXT:    orr x0, x0, x0, lsl #32
 ; CHECK-NEXT:    ret
   ret i64 u0x1234567812345678
 }
@@ -17,8 +16,7 @@ define i64 @test0xff3456ffff3456ff() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #22271 // =0x56ff
 ; CHECK-NEXT:    movk x0, #65332, lsl #16
-; CHECK-NEXT:    movk x0, #22271, lsl #32
-; CHECK-NEXT:    movk x0, #65332, lsl #48
+; CHECK-NEXT:    orr x0, x0, x0, lsl #32
 ; CHECK-NEXT:    ret
   ret i64 u0xff3456ffff3456ff
 }
