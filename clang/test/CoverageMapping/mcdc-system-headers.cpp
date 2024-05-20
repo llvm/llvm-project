@@ -19,8 +19,8 @@ int func0(int a) {
   // W_SYS: Expansion,File 0, [[@LINE+2]]:11 -> [[@LINE+2]]:16 = #0 (Expanded file = 1)
   // X_SYS: Branch,File 0, [[@LINE+1]]:11 -> [[@LINE+1]]:11 = 0, 0 [1,2,0]
   return (CONST && a);
-  // W_SYS: Branch,File 1, [[@LINE-15]]:15 -> [[@LINE-15]]:17 = 0, 0 [1,2,0]
-  // X_SYS: Branch,File 0, [[@LINE-2]]:20 -> [[@LINE-2]]:21 = #2, (#1 - #2) [2,0,0]
+  // CHECK: Branch,File 0, [[@LINE-1]]:20 -> [[@LINE-1]]:21 = #2, (#1 - #2) [2,0,0]
+  // W_SYS: Branch,File 1, [[@LINE-16]]:15 -> [[@LINE-16]]:17 = 0, 0 [1,2,0]
 }
 
 // CHECK: _Z5func1ii:
