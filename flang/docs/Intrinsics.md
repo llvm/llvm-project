@@ -968,3 +968,33 @@ program test_etime
     print *, tarray(2)
 end program test_etime
 ```
+
+### Non-Standard Intrinsics: GETCWD
+
+#### Description
+`GETCWD(C, STATUS)` returns current working directory.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | Current work directory. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind that greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL GETCWD(C, STATUS)`, `STATUS = GETCWD(C)`
+
+#### Example
+Here is an example usage from [Gfortran GETCWD](https://gcc.gnu.org/onlinedocs/gfortran/GETCWD.html)
+```Fortran
+PROGRAM test_getcwd
+  CHARACTER(len=255) :: cwd
+  CALL getcwd(cwd)
+  WRITE(*,*) TRIM(cwd)
+END PROGRAM
+```
