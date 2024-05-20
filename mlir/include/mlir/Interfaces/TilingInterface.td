@@ -150,7 +150,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           return failure();
         }]
       >,
-      InterfaceMethod<
+      StaticInterfaceMethod<
         /*desc=*/[{
           Method to generate the tiled implementation of an operation from
           operand tile position.
@@ -177,6 +177,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*retType=*/"FailureOr<::mlir::TilingResult>",
         /*methodName=*/"getTiledImplementationFromOperandTile",
         /*args=*/(ins
+          "Operation*":$op,
           "OpBuilder &":$b,
           "unsigned":$operandNumber,
           "ArrayRef<OpFoldResult>":$offsets,

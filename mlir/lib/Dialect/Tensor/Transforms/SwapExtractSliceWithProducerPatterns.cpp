@@ -56,8 +56,8 @@ FailureOr<TilingResult> tensor::replaceInsertSliceWithTiledConsumer(
 
   FailureOr<TilingResult> tiledResult =
       consumerOp.getTiledImplementationFromOperandTile(
-          builder, consumer.getOperandNumber(), sliceOp.getMixedOffsets(),
-          sliceOp.getMixedSizes());
+          consumerOp, builder, consumer.getOperandNumber(),
+          sliceOp.getMixedOffsets(), sliceOp.getMixedSizes());
   if (failed(tiledResult))
     return failure();
 

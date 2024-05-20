@@ -217,9 +217,9 @@ struct LinalgOpTilingInterface
 
   /// Method to generate the tiled implementation of an operation from operand
   /// tile position.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
+  static FailureOr<TilingResult> getTiledImplementationFromOperandTile(
       Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) {
     SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
     auto tilingInterfaceOp = cast<TilingInterface>(op);
     if (failed(tilingInterfaceOp.getIterationDomainTileFromOperandTile(
