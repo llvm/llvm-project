@@ -17,6 +17,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
@@ -336,16 +337,26 @@ public:
 
     llvm::SmallSet<FileID, 8> Visited;
     SmallVector<std::pair<SourceLocation, unsigned>, 8> FileLocs;
-    for (const auto &Region : SourceRegions) {
+    for (auto &Region : SourceRegions) {
       SourceLocation Loc = Region.getBeginLoc();
+
+      // Replace Loc with FileLoc if it is expanded with system headers.
+      if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
+        auto BeginLoc = SM.getSpellingLoc(Loc);
+        auto EndLoc = SM.getSpellingLoc(Region.getEndLoc());
+        if (SM.isWrittenInSameFile(BeginLoc, EndLoc)) {
+          Loc = SM.getFileLoc(Loc);
+          Region.setStartLoc(Loc);
+          Region.setEndLoc(SM.getFileLoc(Region.getEndLoc()));
+        }
+      }
+
       FileID File = SM.getFileID(Loc);
       if (!Visited.insert(File).second)
         continue;
 
-      // Do not map FileID's associated with system headers unless collecting
-      // coverage from system headers is explicitly enabled.
-      if (!SystemHeadersCoverage && SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
-        continue;
+      assert(SystemHeadersCoverage ||
+             !SM.isInSystemHeader(SM.getSpellingLoc(Loc)));
 
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);
@@ -818,6 +829,10 @@ struct CounterCoverageMappingBuilder
   /// A stack of currently live regions.
   llvm::SmallVector<SourceMappingRegion> RegionStack;
 
+  /// Set if the Expr should be handled as a leaf even if it is kind of binary
+  /// logical ops (&&, ||).
+  llvm::DenseSet<const Stmt *> LeafExprSet;
+
   /// An object to manage MCDC regions.
   MCDCCoverageBuilder MCDCBuilder;
 
@@ -1040,7 +1055,10 @@ struct CounterCoverageMappingBuilder
     // region onto RegionStack but immediately pop it (which adds it to the
     // function's SourceRegions) because it doesn't apply to any other source
     // code other than the Condition.
-    if (CodeGenFunction::isInstrumentedCondition(C)) {
+    // With !SystemHeadersCoverage, binary logical ops in system headers may be
+    // treated as instrumentable conditions.
+    if (CodeGenFunction::isInstrumentedCondition(C) ||
+        LeafExprSet.count(CodeGenFunction::stripCond(C))) {
       mcdc::Parameters BranchParams;
       mcdc::ConditionID ID = MCDCBuilder.getCondID(C);
       if (ID >= 0)
@@ -2070,7 +2088,20 @@ struct CounterCoverageMappingBuilder
     createDecisionRegion(E, DecisionParams);
   }
 
+  /// Check if E belongs to system headers.
+  bool isExprInSystemHeader(const BinaryOperator *E) const {
+    return (!SystemHeadersCoverage &&
+            SM.isInSystemHeader(SM.getSpellingLoc(E->getOperatorLoc())) &&
+            SM.isInSystemHeader(SM.getSpellingLoc(E->getBeginLoc())) &&
+            SM.isInSystemHeader(SM.getSpellingLoc(E->getEndLoc())));
+  }
+
   void VisitBinLAnd(const BinaryOperator *E) {
+    if (isExprInSystemHeader(E)) {
+      LeafExprSet.insert(E);
+      return;
+    }
+
     bool IsRootNode = MCDCBuilder.isIdle();
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
@@ -2125,6 +2156,11 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitBinLOr(const BinaryOperator *E) {
+    if (isExprInSystemHeader(E)) {
+      LeafExprSet.insert(E);
+      return;
+    }
+
     bool IsRootNode = MCDCBuilder.isIdle();
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
