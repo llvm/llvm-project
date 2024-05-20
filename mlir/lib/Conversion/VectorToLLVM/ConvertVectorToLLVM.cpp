@@ -631,8 +631,7 @@ static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
                                     Type vectorType) {
   const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
   auto value = getMaskNeutralValue(MaskNeutral{}, floatSemantics);
-  auto denseValue =
-      DenseElementsAttr::get(vectorType.cast<ShapedType>(), value);
+  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
   return rewriter.create<LLVM::ConstantOp>(loc, vectorType, denseValue);
 }
 
@@ -1739,7 +1738,7 @@ struct VectorInterleaveOpLowering
                                          "InterleaveOp not rank 1");
     // If the result is rank 1, then this directly maps to LLVM.
     if (resultType.isScalable()) {
-      rewriter.replaceOpWithNewOp<LLVM::experimental_vector_interleave2>(
+      rewriter.replaceOpWithNewOp<LLVM::vector_interleave2>(
           interleaveOp, typeConverter->convertType(resultType),
           adaptor.getLhs(), adaptor.getRhs());
       return success();

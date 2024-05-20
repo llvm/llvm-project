@@ -19,11 +19,11 @@ TpiStream:
   # (int, char **)                                  [Index: 0x1003]
   - Kind:            LF_ARGLIST
     ArgList:
-      ArgIndicies:  [ 116, 0x1002 ]
+      ArgIndices:  [ 116, 0x1002 ]
   # (int, double)                                   [Index: 0x1004]
   - Kind:            LF_ARGLIST
     ArgList:
-      ArgIndicies:  [ 116, 65 ]       # (int, double)
+      ArgIndices:  [ 116, 65 ]       # (int, double)
   # int main(int argc, char **argv)                 [Index: 0x1005]
   - Kind:            LF_PROCEDURE
     Procedure:

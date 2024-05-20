@@ -46,9 +46,8 @@ def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::ml
   ];
 }
 
-def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics", "::mlir::func::FuncOp"> {
+def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
   let summary = "Simplify HLFIR intrinsic operations that don't need to result in runtime calls";
-  let constructor = "hlfir::createSimplifyHLFIRIntrinsicsPass()";
 }
 
 def InlineElementals : Pass<"inline-elementals", "::mlir::func::FuncOp"> {

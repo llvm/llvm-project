@@ -56,6 +56,12 @@ class TargetInfo;
 /// The preprocessor keeps track of this information for each
 /// file that is \#included.
 struct HeaderFileInfo {
+  // TODO: Whether the file was included is not a property of the file itself.
+  // It's a preprocessor state, move it there.
+  /// True if this file has been included (or imported) **locally**.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsLocallyIncluded : 1;
+
   // TODO: Whether the file was imported is not a property of the file itself.
   // It's a preprocessor state, move it there.
   /// True if this is a \#import'd file.
@@ -135,10 +141,10 @@ struct HeaderFileInfo {
   StringRef Framework;
 
   HeaderFileInfo()
-      : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User),
-        External(false), isModuleHeader(false), isTextualModuleHeader(false),
-        isCompilingModuleHeader(false), Resolved(false),
-        IndexHeaderMapHeader(false), IsValid(false) {}
+      : IsLocallyIncluded(false), isImport(false), isPragmaOnce(false),
+        DirInfo(SrcMgr::C_User), External(false), isModuleHeader(false),
+        isTextualModuleHeader(false), isCompilingModuleHeader(false),
+        Resolved(false), IndexHeaderMapHeader(false), IsValid(false) {}
 
   /// Retrieve the controlling macro for this header file, if
   /// any.
@@ -547,14 +553,15 @@ public:
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
   SrcMgr::CharacteristicKind getFileDirFlavor(FileEntryRef File) {
-    return (SrcMgr::CharacteristicKind)getFileInfo(File).DirInfo;
+    if (const HeaderFileInfo *HFI = getExistingFileInfo(File))
+      return (SrcMgr::CharacteristicKind)HFI->DirInfo;
+    return (SrcMgr::CharacteristicKind)HeaderFileInfo().DirInfo;
   }
 
   /// Mark the specified file as a "once only" file due to
   /// \#pragma once.
   void MarkFileIncludeOnce(FileEntryRef File) {
-    HeaderFileInfo &FI = getFileInfo(File);
-    FI.isPragmaOnce = true;
+    getFileInfo(File).isPragmaOnce = true;
   }
 
   /// Mark the specified file as a system header, e.g. due to
@@ -834,16 +841,17 @@ public:
 
   unsigned header_file_size() const { return FileInfo.size(); }
 
-  /// Return the HeaderFileInfo structure for the specified FileEntry,
-  /// in preparation for updating it in some way.
+  /// Return the HeaderFileInfo structure for the specified FileEntry, in
+  /// preparation for updating it in some way.
   HeaderFileInfo &getFileInfo(FileEntryRef FE);
 
-  /// Return the HeaderFileInfo structure for the specified FileEntry,
-  /// if it has ever been filled in.
-  /// \param WantExternal Whether the caller wants purely-external header file
-  ///        info (where \p External is true).
-  const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE,
-                                            bool WantExternal = true) const;
+  /// Return the HeaderFileInfo structure for the specified FileEntry, if it has
+  /// ever been filled in (either locally or externally).
+  const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE) const;
+
+  /// Return the headerFileInfo structure for the specified FileEntry, if it has
+  /// ever been filled in locally.
+  const HeaderFileInfo *getExistingLocalFileInfo(FileEntryRef FE) const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
   SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }

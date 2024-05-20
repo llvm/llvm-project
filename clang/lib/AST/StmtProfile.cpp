@@ -61,7 +61,7 @@ namespace {
     virtual void VisitName(DeclarationName Name, bool TreatAsDecl = false) = 0;
 
     /// Visit identifiers that are not in Decl's or Type's.
-    virtual void VisitIdentifierInfo(IdentifierInfo *II) = 0;
+    virtual void VisitIdentifierInfo(const IdentifierInfo *II) = 0;
 
     /// Visit a nested-name-specifier that occurs within an expression
     /// or statement.
@@ -163,7 +163,7 @@ namespace {
       ID.AddPointer(Name.getAsOpaquePtr());
     }
 
-    void VisitIdentifierInfo(IdentifierInfo *II) override {
+    void VisitIdentifierInfo(const IdentifierInfo *II) override {
       ID.AddPointer(II);
     }
 
@@ -211,7 +211,7 @@ namespace {
       }
       Hash.AddDeclarationName(Name, TreatAsDecl);
     }
-    void VisitIdentifierInfo(IdentifierInfo *II) override {
+    void VisitIdentifierInfo(const IdentifierInfo *II) override {
       ID.AddBoolean(II);
       if (II) {
         Hash.AddIdentifierInfo(II);
@@ -1435,7 +1435,7 @@ void StmtProfiler::VisitMatrixSubscriptExpr(const MatrixSubscriptExpr *S) {
   VisitExpr(S);
 }
 
-void StmtProfiler::VisitOMPArraySectionExpr(const OMPArraySectionExpr *S) {
+void StmtProfiler::VisitArraySectionExpr(const ArraySectionExpr *S) {
   VisitExpr(S);
 }
 
@@ -2071,13 +2071,31 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
   }
 
   CXXRecordDecl *Lambda = S->getLambdaClass();
-  ID.AddInteger(Lambda->getODRHash());
-
   for (const auto &Capture : Lambda->captures()) {
     ID.AddInteger(Capture.getCaptureKind());
     if (Capture.capturesVariable())
       VisitDecl(Capture.getCapturedVar());
   }
+
+  // Profiling the body of the lambda may be dangerous during deserialization.
+  // So we'd like only to profile the signature here.
+  ODRHash Hasher;
+  // FIXME: We can't get the operator call easily by
+  // `CXXRecordDecl::getLambdaCallOperator()` if we're in deserialization.
+  // So we have to do something raw here.
+  for (auto *SubDecl : Lambda->decls()) {
+    FunctionDecl *Call = nullptr;
+    if (auto *FTD = dyn_cast<FunctionTemplateDecl>(SubDecl))
+      Call = FTD->getTemplatedDecl();
+    else if (auto *FD = dyn_cast<FunctionDecl>(SubDecl))
+      Call = FD;
+
+    if (!Call)
+      continue;
+
+    Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);
+  }
+  ID.AddInteger(Hasher.CalculateHash());
 }
 
 void
@@ -2445,9 +2463,10 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
 namespace {
 class OpenACCClauseProfiler
     : public OpenACCClauseVisitor<OpenACCClauseProfiler> {
+  StmtProfiler &Profiler;
 
 public:
-  OpenACCClauseProfiler() = default;
+  OpenACCClauseProfiler(StmtProfiler &P) : Profiler(P) {}
 
   void VisitOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses) {
     for (const OpenACCClause *Clause : Clauses) {
@@ -2456,7 +2475,119 @@ public:
       Visit(Clause);
     }
   }
+
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
+
+#include "clang/Basic/OpenACCClauses.def"
 };
+
+/// Nothing to do here, there are no sub-statements.
+void OpenACCClauseProfiler::VisitDefaultClause(
+    const OpenACCDefaultClause &Clause) {}
+
+void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
+  assert(Clause.hasConditionExpr() &&
+         "if clause requires a valid condition expr");
+  Profiler.VisitStmt(Clause.getConditionExpr());
+}
+
+void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+void OpenACCClauseProfiler::VisitCopyInClause(
+    const OpenACCCopyInClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitCopyOutClause(
+    const OpenACCCopyOutClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitCreateClause(
+    const OpenACCCreateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
+  if (Clause.hasConditionExpr())
+    Profiler.VisitStmt(Clause.getConditionExpr());
+}
+
+void OpenACCClauseProfiler::VisitNumGangsClause(
+    const OpenACCNumGangsClause &Clause) {
+  for (auto *E : Clause.getIntExprs())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &Clause) {
+  assert(Clause.hasIntExpr() && "num_workers clause requires a valid int expr");
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitPrivateClause(
+    const OpenACCPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitAttachClause(
+    const OpenACCAttachClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitNoCreateClause(
+    const OpenACCNoCreateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitPresentClause(
+    const OpenACCPresentClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitVectorLengthClause(
+    const OpenACCVectorLengthClause &Clause) {
+  assert(Clause.hasIntExpr() &&
+         "vector_length clause requires a valid int expr");
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitAsyncClause(const OpenACCAsyncClause &Clause) {
+  if (Clause.hasIntExpr())
+    Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitWaitClause(const OpenACCWaitClause &Clause) {
+  if (Clause.hasDevNumExpr())
+    Profiler.VisitStmt(Clause.getDevNumExpr());
+  for (auto *E : Clause.getQueueIdExprs())
+    Profiler.VisitStmt(E);
+}
+/// Nothing to do here, there are no sub-statements.
+void OpenACCClauseProfiler::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &Clause) {}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(
@@ -2464,7 +2595,7 @@ void StmtProfiler::VisitOpenACCComputeConstruct(
   // VisitStmt handles children, so the AssociatedStmt is handled.
   VisitStmt(S);
 
-  OpenACCClauseProfiler P;
+  OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
 }
 

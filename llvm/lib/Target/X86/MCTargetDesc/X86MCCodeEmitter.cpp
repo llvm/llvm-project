@@ -980,7 +980,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     break;
   case X86II::VEX:
     // VEX can be 2 byte or 3 byte, not determined yet if not explicit
-    Prefix.setLowerBound(MI.getFlags() & X86::IP_USE_VEX3 ? VEX3 : VEX2);
+    Prefix.setLowerBound((MI.getFlags() & X86::IP_USE_VEX3) ? VEX3 : VEX2);
     break;
   case X86II::EVEX:
     Prefix.setLowerBound(EVEX);
@@ -1155,6 +1155,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     break;
   }
+  case X86II::MRMXmCC:
   case X86II::MRM0m:
   case X86II::MRM1m:
   case X86II::MRM2m:
@@ -1282,6 +1283,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setRR2(MI, CurOp++);
     break;
   }
+  case X86II::MRMXrCC:
   case X86II::MRM0r:
   case X86II::MRM1r:
   case X86II::MRM2r:

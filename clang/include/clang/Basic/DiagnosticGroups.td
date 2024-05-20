@@ -104,6 +104,7 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                [EnumEnumConversion,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
+def DeprecatedNoRelaxedTemplateTemplateArgs : DiagGroup<"deprecated-no-relaxed-template-template-args">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
@@ -228,6 +229,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedLiteralOperator,
                                           DeprecatedPragma,
                                           DeprecatedRegister,
+                                          DeprecatedNoRelaxedTemplateTemplateArgs,
                                           DeprecatedThisCapture,
                                           DeprecatedType,
                                           DeprecatedVolatile,
@@ -1507,6 +1509,9 @@ def BranchProtection : DiagGroup<"branch-protection">;
 // Warnings for HLSL Clang extensions
 def HLSLExtension : DiagGroup<"hlsl-extensions">;
 
+// Warning for mix packoffset and non-packoffset.
+def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
+
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
@@ -1519,6 +1524,9 @@ def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInCon
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
+
+// Warnings related to _BitInt extension
+def BitIntExtension : DiagGroup<"bit-int-extension">;
 
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;

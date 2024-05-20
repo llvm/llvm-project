@@ -55,8 +55,9 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 
 static bool isMetaInstrGET(unsigned Opcode) {
   return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
-         Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
-         Opcode == SPIRV::GET_vfID;
+         Opcode == SPIRV::GET_pID32 || Opcode == SPIRV::GET_pID64 ||
+         Opcode == SPIRV::GET_vID || Opcode == SPIRV::GET_vfID ||
+         Opcode == SPIRV::GET_vpID32 || Opcode == SPIRV::GET_vpID64;
 }
 
 static bool mayBeInserted(unsigned Opcode) {

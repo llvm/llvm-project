@@ -52,7 +52,13 @@ TEST_F(FormatTest, FormatsUnwrappedLinesAtFirstFormat) {
 }
 
 TEST_F(FormatTest, FormatsNestedBlockStatements) {
-  verifyFormat("{\n  {\n    {}\n  }\n}", "{{{}}}");
+  verifyFormat("{\n"
+               "  {\n"
+               "    {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               "{{{}}}");
 }
 
 TEST_F(FormatTest, FormatsNestedCall) {
@@ -5669,7 +5675,10 @@ TEST_F(FormatTest, LayoutCodeInMacroDefinitions) {
                getLLVMStyleWithColumns(14));
 }
 
-TEST_F(FormatTest, LayoutRemainingTokens) { verifyFormat("{}"); }
+TEST_F(FormatTest, LayoutRemainingTokens) {
+  verifyFormat("{\n"
+               "}");
+}
 
 TEST_F(FormatTest, MacroDefinitionInsideStatement) {
   verifyFormat("int x,\n"
@@ -6577,7 +6586,11 @@ TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
 }
 
 TEST_F(FormatTest, FormatHashIfNotAtStartOfLine) {
-  verifyFormat("{\n  { a #c; }\n}");
+  verifyFormat("{\n"
+               "  {\n"
+               "    a #c;\n"
+               "  }\n"
+               "}");
 }
 
 TEST_F(FormatTest, FormatUnbalancedStructuralElements) {
@@ -6937,13 +6950,13 @@ TEST_F(FormatTest, FormatNestedBlocksInMacros) {
 }
 
 TEST_F(FormatTest, PutEmptyBlocksIntoOneLine) {
-  verifyFormat("{}");
   verifyFormat("enum E {};");
   verifyFormat("enum E {}");
   FormatStyle Style = getLLVMStyle();
   Style.SpaceInEmptyBlock = true;
   verifyFormat("void f() { }", "void f() {}", Style);
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+  verifyFormat("{ }", Style);
   verifyFormat("while (true) { }", "while (true) {}", Style);
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.BeforeElse = false;
@@ -10526,6 +10539,17 @@ TEST_F(FormatTest, KeepStringLabelValuePairsOnALine) {
       "                  bbbbbbbbbbbbbbbbbbbbbbb);");
 }
 
+TEST_F(FormatTest, WrapBeforeInsertionOperatorbetweenStringLiterals) {
+  verifyFormat("QStringList() << \"foo\" << \"bar\";");
+
+  verifyNoChange("QStringList() << \"foo\"\n"
+                 "              << \"bar\";");
+
+  verifyFormat("log_error(log, \"foo\" << \"bar\");",
+               "log_error(log, \"foo\"\n"
+               "                   << \"bar\");");
+}
+
 TEST_F(FormatTest, UnderstandsEquals) {
   verifyFormat(
       "aaaaaaaaaaaaaaaaa =\n"
@@ -11527,10 +11551,18 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "void new (link p);\n"
                "void delete (link p);");
 
-  verifyFormat("{ p->new(); }\n"
-               "{ p->delete(); }",
-               "{ p->new (); }\n"
-               "{ p->delete (); }");
+  verifyFormat("{\n"
+               "  p->new();\n"
+               "}\n"
+               "{\n"
+               "  p->delete();\n"
+               "}",
+               "{\n"
+               "  p->new ();\n"
+               "}\n"
+               "{\n"
+               "  p->delete ();\n"
+               "}");
 
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
@@ -12352,7 +12384,9 @@ TEST_F(FormatTest, FormatsCasts) {
   // FIXME: single value wrapped with paren will be treated as cast.
   verifyFormat("void f(int i = (kValue)*kMask) {}");
 
-  verifyFormat("{ (void)F; }");
+  verifyFormat("{\n"
+               "  (void)F;\n"
+               "}");
 
   // Don't break after a cast's
   verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
@@ -13575,7 +13609,8 @@ TEST_F(FormatTest, IncorrectAccessSpecifier) {
   verifyFormat("public\n"
                "B {}");
   verifyFormat("public\n"
-               "{}");
+               "{\n"
+               "}");
   verifyFormat("public\n"
                "B { int x; }");
 }
@@ -13632,10 +13667,31 @@ TEST_F(FormatTest, DoesNotTouchUnwrappedLinesWithErrors) {
 }
 
 TEST_F(FormatTest, IncorrectCodeErrorDetection) {
-  verifyFormat("{\n  {}", "{\n{\n}");
-  verifyFormat("{\n  {}", "{\n  {\n}");
-  verifyFormat("{\n  {}", "{\n  {\n  }");
-  verifyFormat("{\n  {}\n}\n}", "{\n  {\n    }\n  }\n}");
+  verifyFormat("{\n"
+               "  {\n"
+               "  }",
+               "{\n"
+               "{\n"
+               "}");
+  verifyFormat("{\n"
+               "  {\n"
+               "  }",
+               "{\n"
+               "  {\n"
+               "}");
+  verifyFormat("{\n"
+               "  {\n"
+               "  }");
+  verifyFormat("{\n"
+               "  {\n"
+               "  }\n"
+               "}\n"
+               "}",
+               "{\n"
+               "  {\n"
+               "    }\n"
+               "  }\n"
+               "}");
 
   verifyFormat("{\n"
                "  {\n"
@@ -14080,10 +14136,14 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                "}");
   verifyFormat("void foo() {\n"
                "  { // asdf\n"
-               "    { int a; }\n"
+               "    {\n"
+               "      int a;\n"
+               "    }\n"
                "  }\n"
                "  {\n"
-               "    { int b; }\n"
+               "    {\n"
+               "      int b;\n"
+               "    }\n"
                "  }\n"
                "}");
   verifyFormat("namespace n {\n"
@@ -14095,7 +14155,8 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                "      }\n"
                "    }\n"
                "  }\n"
-               "  {}\n"
+               "  {\n"
+               "  }\n"
                "}\n"
                "} // namespace n");
 
@@ -24457,16 +24518,25 @@ TEST_F(FormatTest, AlternativeOperators) {
   verifyFormat("int a compl(5);");
   verifyFormat("int a not(5);");
 
-  /* FIXME handle alternate tokens
-   * https://en.cppreference.com/w/cpp/language/operator_alternative
-  // alternative tokens
-  verifyFormat("compl foo();");     //  ~foo();
-  verifyFormat("foo() <%%>;");      // foo();
-  verifyFormat("void foo() <%%>;"); // void foo(){}
-  verifyFormat("int a <:1:>;");     // int a[1];[
+  verifyFormat("compl foo();");     // ~foo();
+  verifyFormat("foo() <%%>");       // foo() {}
+  verifyFormat("void foo() <%%>");  // void foo() {}
+  verifyFormat("int a<:1:>;");      // int a[1];
   verifyFormat("%:define ABC abc"); // #define ABC abc
   verifyFormat("%:%:");             // ##
-  */
+
+  verifyFormat("a = v(not;);\n"
+               "b = v(not+);\n"
+               "c = v(not x);\n"
+               "d = v(not 1);\n"
+               "e = v(not 123.f);");
+
+  verifyNoChange("#define ASSEMBLER_INSTRUCTION_LIST(V)  \\\n"
+                 "  V(and)                               \\\n"
+                 "  V(not)                               \\\n"
+                 "  V(not!)                              \\\n"
+                 "  V(other)",
+                 getLLVMStyleWithColumns(40));
 }
 
 TEST_F(FormatTest, STLWhileNotDefineChed) {
@@ -27145,8 +27215,14 @@ TEST_F(FormatTest, RemoveParentheses) {
                "if ((({ a; })))\n"
                "  b;",
                Style);
+  verifyFormat("static_assert((std::is_constructible_v<T, Args &&> && ...));",
+               "static_assert(((std::is_constructible_v<T, Args &&> && ...)));",
+               Style);
   verifyFormat("return (0);", "return (((0)));", Style);
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
+  verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",
+               "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
+               Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);
@@ -27154,6 +27230,9 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);
   verifyFormat("return ({ 0; });", "return ((({ 0; })));", Style);
+  verifyFormat("return (... && std::is_convertible_v<TArgsLocal, TArgs>);",
+               "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
+               Style);
   verifyFormat("inline decltype(auto) f() {\n"
                "  if (a) {\n"
                "    return (a);\n"
@@ -27289,12 +27368,6 @@ TEST_F(FormatTest, PPDirectivesAndCommentsInBracedInit) {
                getLLVMStyleWithColumns(30));
 }
 
-TEST_F(FormatTest, StreamOutputOperator) {
-  verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
-  verifyFormat("std::cout << \"foo\\n\"\n"
-               "          << \"bar\";");
-}
-
 TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   constexpr StringRef Code{
       "return \"Code\" \"\\0\\52\\26\\55\\55\\0\" \"x013\" \"\\02\\xBA\";"};
@@ -27309,6 +27382,46 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   Style.BreakAdjacentStringLiterals = false;
   verifyFormat(Code, Style);
 }
+
+TEST_F(FormatTest, AlignUTFCommentsAndStringLiterals) {
+  verifyFormat(
+      "int rus;      // А теперь комментарии, например, на русском, 2-байта\n"
+      "int long_rus; // Верхний коммент еще не превысил границу в 80, однако\n"
+      "              // уже отодвинут. Перенос, при этом, отрабатывает верно");
+
+  auto Style = getLLVMStyle();
+  Style.ColumnLimit = 15;
+  verifyNoChange("#define test  \\\n"
+                 "  /* 测试 */  \\\n"
+                 "  \"aa\"        \\\n"
+                 "  \"bb\"",
+                 Style);
+
+  Style.ColumnLimit = 25;
+  verifyFormat("struct foo {\n"
+               "  int iiiiii; ///< iiiiii\n"
+               "  int b;      ///< ыыы\n"
+               "  int c;      ///< ыыыы\n"
+               "};",
+               Style);
+
+  Style.ColumnLimit = 35;
+  verifyFormat("#define SENSOR_DESC_1             \\\n"
+               "  \"{\"                             \\\n"
+               "  \"unit_of_measurement: \\\"°C\\\",\"  \\\n"
+               "  \"}\"",
+               Style);
+
+  Style.ColumnLimit = 80;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  verifyFormat("Languages languages = {\n"
+               "    Language{{'e', 'n'}, U\"Test English\" },\n"
+               "    Language{{'l', 'v'}, U\"Test Latviešu\"},\n"
+               "    Language{{'r', 'u'}, U\"Test Русский\" },\n"
+               "};",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

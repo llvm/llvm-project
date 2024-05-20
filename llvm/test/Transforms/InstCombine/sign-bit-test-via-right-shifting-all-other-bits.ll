@@ -322,7 +322,7 @@ define i1 @unsigned_sign_bit_extract_with_trunc_extrause(i64 %x) {
 ; CHECK-LABEL: @unsigned_sign_bit_extract_with_trunc_extrause(
 ; CHECK-NEXT:    [[SIGNBIT:%.*]] = lshr i64 [[X:%.*]], 63
 ; CHECK-NEXT:    call void @use64(i64 [[SIGNBIT]])
-; CHECK-NEXT:    [[SIGNBIT_NARROW:%.*]] = trunc i64 [[SIGNBIT]] to i32
+; CHECK-NEXT:    [[SIGNBIT_NARROW:%.*]] = trunc nuw nsw i64 [[SIGNBIT]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT_NARROW]])
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i64 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
@@ -348,7 +348,7 @@ define i1 @signed_sign_bit_extract_trunc_extrause(i64 %x) {
 ; CHECK-LABEL: @signed_sign_bit_extract_trunc_extrause(
 ; CHECK-NEXT:    [[SIGNSMEAR:%.*]] = ashr i64 [[X:%.*]], 63
 ; CHECK-NEXT:    call void @use64(i64 [[SIGNSMEAR]])
-; CHECK-NEXT:    [[SIGNSMEAR_NARROW:%.*]] = trunc i64 [[SIGNSMEAR]] to i32
+; CHECK-NEXT:    [[SIGNSMEAR_NARROW:%.*]] = trunc nsw i64 [[SIGNSMEAR]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNSMEAR_NARROW]])
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i64 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
