@@ -76,18 +76,20 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                SPIRV::RequirementHandler &Reqs) {
   static AvoidCapabilitiesSet
       AvoidCaps; // contains capabilities to avoid if there is another option
-  unsigned ReqMinVer = getSymbolicOperandMinVersion(Category, i);
-  unsigned ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
-  unsigned TargetVer = ST.getSPIRVVersion();
-  bool MinVerOK = !ReqMinVer || !TargetVer || TargetVer >= ReqMinVer;
-  bool MaxVerOK = !ReqMaxVer || !TargetVer || TargetVer <= ReqMaxVer;
+
+  VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
+  VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
+  VersionTuple SPIRVVersion = ST.getSPIRVVersion();
+  bool MinVerOK = SPIRVVersion.empty() || SPIRVVersion >= ReqMinVer;
+  bool MaxVerOK =
+      ReqMaxVer.empty() || SPIRVVersion.empty() || SPIRVVersion <= ReqMaxVer;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
   if (ReqCaps.empty()) {
     if (ReqExts.empty()) {
       if (MinVerOK && MaxVerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
-      return {false, {}, {}, 0, 0};
+      return {false, {}, {}, VersionTuple(), VersionTuple()};
     }
   } else if (MinVerOK && MaxVerOK) {
     if (ReqCaps.size() == 1) {
@@ -118,9 +120,13 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true, {}, ReqExts, 0, 0}; // TODO: add versions to extensions.
+    return {true,
+            {},
+            ReqExts,
+            VersionTuple(),
+            VersionTuple()}; // TODO: add versions to extensions.
   }
-  return {false, {}, {}, 0, 0};
+  return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
 
 void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
@@ -167,10 +173,21 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     unsigned MajorNum = getMetadataUInt(VersionMD, 0, 2);
     unsigned MinorNum = getMetadataUInt(VersionMD, 1);
     unsigned RevNum = getMetadataUInt(VersionMD, 2);
-    MAI.SrcLangVersion = (MajorNum * 100 + MinorNum) * 1000 + RevNum;
+    // Prevent Major part of OpenCL version to be 0
+    MAI.SrcLangVersion =
+        (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
   } else {
-    MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
-    MAI.SrcLangVersion = 0;
+    // If there is no information about OpenCL version we are forced to generate
+    // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
+    // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
+    // Translator avoids potential issues with run-times in a similar manner.
+    if (ST->isOpenCLEnv()) {
+      MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
+      MAI.SrcLangVersion = 100000;
+    } else {
+      MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
+      MAI.SrcLangVersion = 0;
+    }
   }
 
   if (auto ExtNode = M.getNamedMetadata("opencl.used.extensions")) {
@@ -499,25 +516,25 @@ void SPIRV::RequirementHandler::addRequirements(
 
   addExtensions(Req.Exts);
 
-  if (Req.MinVer) {
-    if (MaxVersion && Req.MinVer > MaxVersion) {
+  if (!Req.MinVer.empty()) {
+    if (!MaxVersion.empty() && Req.MinVer > MaxVersion) {
       LLVM_DEBUG(dbgs() << "Conflicting version requirements: >= " << Req.MinVer
                         << " and <= " << MaxVersion << "\n");
       report_fatal_error("Adding SPIR-V requirements that can't be satisfied.");
     }
 
-    if (MinVersion == 0 || Req.MinVer > MinVersion)
+    if (MinVersion.empty() || Req.MinVer > MinVersion)
       MinVersion = Req.MinVer;
   }
 
-  if (Req.MaxVer) {
-    if (MinVersion && Req.MaxVer < MinVersion) {
+  if (!Req.MaxVer.empty()) {
+    if (!MinVersion.empty() && Req.MaxVer < MinVersion) {
       LLVM_DEBUG(dbgs() << "Conflicting version requirements: <= " << Req.MaxVer
                         << " and >= " << MinVersion << "\n");
       report_fatal_error("Adding SPIR-V requirements that can't be satisfied.");
     }
 
-    if (MaxVersion == 0 || Req.MaxVer < MaxVersion)
+    if (MaxVersion.empty() || Req.MaxVer < MaxVersion)
       MaxVersion = Req.MaxVer;
   }
 }
@@ -528,7 +545,7 @@ void SPIRV::RequirementHandler::checkSatisfiable(
   bool IsSatisfiable = true;
   auto TargetVer = ST.getSPIRVVersion();
 
-  if (MaxVersion && TargetVer && MaxVersion < TargetVer) {
+  if (!MaxVersion.empty() && !TargetVer.empty() && MaxVersion < TargetVer) {
     LLVM_DEBUG(
         dbgs() << "Target SPIR-V version too high for required features\n"
                << "Required max version: " << MaxVersion << " target version "
@@ -536,14 +553,14 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
-  if (MinVersion && TargetVer && MinVersion > TargetVer) {
+  if (!MinVersion.empty() && !TargetVer.empty() && MinVersion > TargetVer) {
     LLVM_DEBUG(dbgs() << "Target SPIR-V version too low for required features\n"
                       << "Required min version: " << MinVersion
                       << " target version " << TargetVer << "\n");
     IsSatisfiable = false;
   }
 
-  if (MinVersion && MaxVersion && MinVersion > MaxVersion) {
+  if (!MinVersion.empty() && !MaxVersion.empty() && MinVersion > MaxVersion) {
     LLVM_DEBUG(
         dbgs()
         << "Version is too low for some features and too high for others.\n"
@@ -621,12 +638,13 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
     addAvailableCaps({Capability::ImageBasic, Capability::LiteralSampler,
                       Capability::Image1D, Capability::SampledBuffer,
                       Capability::ImageBuffer});
-    if (ST.isAtLeastOpenCLVer(20))
+    if (ST.isAtLeastOpenCLVer(VersionTuple(2, 0)))
       addAvailableCaps({Capability::ImageReadWrite});
   }
-  if (ST.isAtLeastSPIRVVer(11) && ST.isAtLeastOpenCLVer(22))
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 1)) &&
+      ST.isAtLeastOpenCLVer(VersionTuple(2, 2)))
     addAvailableCaps({Capability::SubgroupDispatch, Capability::PipeStorage});
-  if (ST.isAtLeastSPIRVVer(13))
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
     addAvailableCaps({Capability::GroupNonUniform,
                       Capability::GroupNonUniformVote,
                       Capability::GroupNonUniformArithmetic,
@@ -634,7 +652,7 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
                       Capability::GroupNonUniformClustered,
                       Capability::GroupNonUniformShuffle,
                       Capability::GroupNonUniformShuffleRelative});
-  if (ST.isAtLeastSPIRVVer(14))
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 4)))
     addAvailableCaps({Capability::DenormPreserve, Capability::DenormFlushToZero,
                       Capability::SignedZeroInfNanPreserve,
                       Capability::RoundingModeRTE,
@@ -1151,7 +1169,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     // SPV_KHR_float_controls is not available until v1.4
-    bool RequireFloatControls = false, VerLower14 = !ST.isAtLeastSPIRVVer(14);
+    bool RequireFloatControls = false,
+         VerLower14 = !ST.isAtLeastSPIRVVer(VersionTuple(1, 4));
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       const MDOperand &MDOp = MDN->getOperand(1);

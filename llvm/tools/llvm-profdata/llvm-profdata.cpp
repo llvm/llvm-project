@@ -305,7 +305,12 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version0),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
-               clEnumValN(memprof::Version1, "1", "version 1")));
+               clEnumValN(memprof::Version1, "1", "version 1"),
+               clEnumValN(memprof::Version2, "2", "version 2")));
+
+cl::opt<bool> MemProfFullSchema(
+    "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Use the full schema for serialization"), cl::init(false));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -599,7 +604,7 @@ struct WriterContext {
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
-               MemProfVersionRequested),
+               MemProfVersionRequested, MemProfFullSchema),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -677,6 +682,18 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       if (!Succeeded)
         return;
     }
+
+    // Add the call stacks into the writer context.
+    const auto &CSIdToCallStacks = Reader->getCallStacks();
+    for (const auto &I : CSIdToCallStacks) {
+      bool Succeeded = WC->Writer.addMemProfCallStack(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the call stacks then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
     for (const auto &[GUID, Record] : FunctionProfileData) {
@@ -1637,7 +1654,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   }
 }
 
-static int merge_main(int argc, const char *argv[]) {
+static int merge_main(StringRef ProgName) {
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
     addWeightedInput(WeightedInputs, {std::string(Filename), 1});
@@ -1650,8 +1667,7 @@ static int merge_main(int argc, const char *argv[]) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("no input files specified. See " +
-                  sys::path::filename(argv[0]) + " " + argv[1] + " -help");
+    exitWithError("no input files specified. See " + ProgName + " merge -help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
@@ -2637,7 +2653,7 @@ void overlapSampleProfile(const std::string &BaseFilename,
   OverlapAggr.dumpFuncSimilarity(OS);
 }
 
-static int overlap_main(int argc, const char *argv[]) {
+static int overlap_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3214,15 +3230,16 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   return 0;
 }
 
-static int show_main(int argc, const char *argv[]) {
+static int show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
         DebugInfoFilename.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
-    errs() << sys::path::filename(argv[0]) << " " << argv[1]
-           << ": Input file name cannot be the same as the output file name!\n";
+    errs() << ProgName
+           << " show: Input file name cannot be the same as the output file "
+              "name!\n";
     return 1;
   }
   if (JsonFormat)
@@ -3246,7 +3263,7 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(SFormat, OS);
 }
 
-static int order_main(int argc, const char *argv[]) {
+static int order_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
@@ -3297,16 +3314,16 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
   if (ShowSubcommand)
-    return show_main(argc, argv);
+    return show_main(ProgName);
 
   if (OrderSubcommand)
-    return order_main(argc, argv);
+    return order_main();
 
   if (OverlapSubcommand)
-    return overlap_main(argc, argv);
+    return overlap_main();
 
   if (MergeSubcommand)
-    return merge_main(argc, argv);
+    return merge_main(ProgName);
 
   errs() << ProgName
          << ": Unknown command. Run llvm-profdata --help for usage.\n";

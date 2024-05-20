@@ -54,11 +54,40 @@ func.func @launch() {
 // CHECK-NEXT: %[[BDIM:.*]] = gpu.block_dim x
 // CHECK-NEXT: = gpu.block_dim y
 // CHECK-NEXT: = gpu.block_dim z
-// CHECK-NEXT: cf.br ^[[BLOCK:.*]]
-// CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[BID]], %[[BDIM]]) : (index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
+
+// -----
+
+// Verify that we can outline a CFG
+// CHECK-LABEL:  gpu.func @launchCFG_kernel(
+// CHECK: cf.br
+// CHECK: gpu.return
+func.func @launchCFG() {
+  %0 = "op"() : () -> (f32)
+  %1 = "op"() : () -> (memref<?xf32, 1>)
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 20 : index
+  %bDimY = arith.constant 24 : index
+  %bDimZ = arith.constant 28 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY,
+                                       %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY,
+                                        %block_z = %bDimZ) {
+    "use"(%0): (f32) -> ()
+    cf.br ^bb1
+  ^bb1:
+    "some_op"(%bx, %block_x) : (index, index) -> ()
+    %42 = memref.load %1[%tx] : memref<?xf32, 1>
+    gpu.terminator
+  }
+  return
+}
+
 
 // -----
 
@@ -475,8 +504,6 @@ func.func @launch_cluster() {
 // CHECK-NEXT: %[[CDIM:.*]] = gpu.cluster_dim x
 // CHECK-NEXT: = gpu.cluster_dim y
 // CHECK-NEXT: = gpu.cluster_dim z
-// CHECK-NEXT: cf.br ^[[BLOCK:.*]]
-// CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[CID]], %[[BID]], %[[BDIM]]) : (index, index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>

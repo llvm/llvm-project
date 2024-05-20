@@ -1067,11 +1067,6 @@ protected:
     /// argument-dependent lookup if this is the operand of a function call.
     LLVM_PREFERRED_TYPE(bool)
     unsigned RequiresADL : 1;
-
-    /// True if these lookup results are overloaded.  This is pretty trivially
-    /// rederivable if we urgently need to kill this field.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Overloaded : 1;
   };
   static_assert(sizeof(UnresolvedLookupExprBitfields) <= 4,
                 "UnresolvedLookupExprBitfields must be <= than 4 bytes to"

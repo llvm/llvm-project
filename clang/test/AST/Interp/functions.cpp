@@ -584,9 +584,36 @@ namespace VariadicOperator {
 namespace WeakCompare {
   [[gnu::weak]]void weak_method();
   static_assert(weak_method != nullptr, ""); // both-error {{not an integral constant expression}} \
-                                         // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+                                             // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
 
   constexpr auto A = &weak_method;
   static_assert(A != nullptr, ""); // both-error {{not an integral constant expression}} \
-                               // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+                                   // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+}
+
+namespace FromIntegral {
+#if __cplusplus >= 202002L
+  typedef double (*DoubleFn)();
+  int a[(int)DoubleFn((void*)-1)()]; // both-error {{not allowed at file scope}} \
+                                    // both-warning {{variable length arrays}}
+  int b[(int)DoubleFn((void*)(-1 + 1))()]; // both-error {{not allowed at file scope}} \
+                                           // expected-note {{evaluates to a null function pointer}} \
+                                           // both-warning {{variable length arrays}}
+#endif
+}
+
+namespace {
+  template <typename T> using id = T;
+  template <typename T>
+  constexpr void g() {
+    constexpr id<void (T)> f;
+  }
+
+  static_assert((g<int>(), true), "");
+}
+
+namespace {
+  /// The InitListExpr here is of void type.
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'annotate' attribute requires parameter 1 to be a constant expression}} \
+                                                      // both-note {{subexpression not valid in a constant expression}}
 }

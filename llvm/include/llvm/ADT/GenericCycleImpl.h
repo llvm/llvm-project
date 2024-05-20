@@ -67,6 +67,21 @@ void GenericCycle<ContextT>::getExitBlocks(
 }
 
 template <typename ContextT>
+void GenericCycle<ContextT>::getExitingBlocks(
+    SmallVectorImpl<BlockT *> &TmpStorage) const {
+  TmpStorage.clear();
+
+  for (BlockT *Block : blocks()) {
+    for (BlockT *Succ : successors(Block)) {
+      if (!contains(Succ)) {
+        TmpStorage.push_back(Block);
+        break;
+      }
+    }
+  }
+}
+
+template <typename ContextT>
 auto GenericCycle<ContextT>::getCyclePreheader() const -> BlockT * {
   BlockT *Predecessor = getCyclePredecessor();
   if (!Predecessor)

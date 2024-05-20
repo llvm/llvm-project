@@ -169,15 +169,15 @@ define <16 x i64> @load_zext_v16i16i64(ptr %ap)  {
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, x9, lsl #1]
-; CHECK-NEXT:    mov x9, #10 // =0xa
 ; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, x10, lsl #1]
-; CHECK-NEXT:    mov x10, #12 // =0xc
+; CHECK-NEXT:    mov x9, #10 // =0xa
 ; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    mov x8, #14 // =0xe
+; CHECK-NEXT:    mov x8, #12 // =0xc
+; CHECK-NEXT:    mov x10, #14 // =0xe
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x9, lsl #1]
-; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0, x10, lsl #1]
-; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x10, lsl #1]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2

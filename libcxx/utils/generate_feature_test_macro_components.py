@@ -398,6 +398,23 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_containers_ranges",
+            "values": {"c++23": 202202},
+            "headers": [
+                "deque",
+                "forward_list",
+                "list",
+                "map",
+                "queue",
+                "set",
+                "stack",
+                "string",
+                "unordered_map",
+                "unordered_set",
+                "vector",
+            ],
+        },
+        {
             "name": "__cpp_lib_copyable_function",
             "values": {"c++26": 202306},  # P2548R6 copyable_function
             "headers": ["functional"],
@@ -751,6 +768,16 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_within_lifetime",
+            # Note this name was changed from "__cpp_lib_within_lifetime" when the paper was adopted
+            # https://github.com/cplusplus/draft/commit/0facada4cadd97e1ba15bfaea76a804f1dc5c309
+            "values": {
+                "c++26": 202306  # P2641R4 Checking if a union alternative is active
+            },
+            "headers": ["type_traits"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
@@ -991,20 +1018,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_ranges_to_container",
             "values": {"c++23": 202202},
-            "headers": [
-                "deque",
-                "forward_list",
-                "list",
-                "map",
-                "queue",
-                "ranges",
-                "set",
-                "stack",
-                "string",
-                "unordered_map",
-                "unordered_set",
-                "vector",
-            ],
+            "headers": ["ranges"],
         },
         {
             "name": "__cpp_lib_ranges_zip",
@@ -1040,7 +1054,6 @@ feature_test_macros = [
             "name": "__cpp_lib_reference_wrapper",
             "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_remove_cvref",
@@ -1338,14 +1351,6 @@ feature_test_macros = [
             "name": "__cpp_lib_void_t",
             "values": {"c++17": 201411},
             "headers": ["type_traits"],
-        },
-        {
-            "name": "__cpp_lib_within_lifetime",
-            "values": {
-                "c++26": 202306  # P2641R4 Checking if a union alternative is active
-            },
-            "headers": ["type_traits"],
-            "unimplemented": True,
         },
     ]
 ]

@@ -1283,6 +1283,18 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
   }
 
+  // C++23 [temp.dep.general]p2:
+  //   The component name of an unqualified-id is dependent if
+  //   - it is a conversion-function-id whose conversion-type-id
+  //     is dependent, or
+  //   - it is operator= and the current class is a templated entity, or
+  //   - the unqualified-id is the postfix-expression in a dependent call.
+  if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+      Name.getCXXNameType()->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return false;
+  }
+
   // Implicitly declare member functions with the name we're looking for, if in
   // fact we are in a scope where it matters.
 
@@ -2446,10 +2458,31 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     }
   } QL(LookupCtx);
 
+  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
+  // FIXME: Per [temp.dep.general]p2, an unqualified name is also dependent
+  // if it's a dependent conversion-function-id or operator= where the current
+  // class is a templated entity. This should be handled in LookupName.
+  if (!InUnqualifiedLookup && !R.isForRedeclaration()) {
+    // C++23 [temp.dep.type]p5:
+    //   A qualified name is dependent if
+    //   - it is a conversion-function-id whose conversion-type-id
+    //     is dependent, or
+    //   - [...]
+    //   - its lookup context is the current instantiation and it
+    //     is operator=, or
+    //   - [...]
+    if (DeclarationName Name = R.getLookupName();
+        Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+        Name.getCXXNameType()->isDependentType()) {
+      R.setNotFoundInCurrentInstantiation();
+      return false;
+    }
+  }
+
   if (LookupDirect(*this, R, LookupCtx)) {
     R.resolveKind();
-    if (isa<CXXRecordDecl>(LookupCtx))
-      R.setNamingClass(cast<CXXRecordDecl>(LookupCtx));
+    if (LookupRec)
+      R.setNamingClass(LookupRec);
     return true;
   }
 
@@ -2471,7 +2504,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
   // If this isn't a C++ class, we aren't allowed to look into base
   // classes, we're done.
-  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   if (!LookupRec || !LookupRec->getDefinition())
     return false;
 
@@ -2718,38 +2750,54 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 ///
 /// @returns True if any decls were found (but possibly ambiguous)
 bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
-                            bool AllowBuiltinCreation, bool EnteringContext) {
-  if (SS && SS->isInvalid()) {
-    // When the scope specifier is invalid, don't even look for
-    // anything.
+                            QualType ObjectType, bool AllowBuiltinCreation,
+                            bool EnteringContext) {
+  // When the scope specifier is invalid, don't even look for anything.
+  if (SS && SS->isInvalid())
     return false;
-  }
 
-  if (SS && SS->isSet()) {
-    NestedNameSpecifier *NNS = SS->getScopeRep();
-    if (NNS->getKind() == NestedNameSpecifier::Super)
+  // Determine where to perform name lookup
+  DeclContext *DC = nullptr;
+  bool IsDependent = false;
+  if (!ObjectType.isNull()) {
+    // This nested-name-specifier occurs in a member access expression, e.g.,
+    // x->B::f, and we are looking into the type of the object.
+    assert((!SS || SS->isEmpty()) &&
+           "ObjectType and scope specifier cannot coexist");
+    DC = computeDeclContext(ObjectType);
+    IsDependent = !DC && ObjectType->isDependentType();
+    assert(((!DC && ObjectType->isDependentType()) ||
+            !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
+            ObjectType->castAs<TagType>()->isBeingDefined()) &&
+           "Caller should have completed object type");
+  } else if (SS && SS->isNotEmpty()) {
+    if (NestedNameSpecifier *NNS = SS->getScopeRep();
+        NNS->getKind() == NestedNameSpecifier::Super)
       return LookupInSuper(R, NNS->getAsRecordDecl());
-
-    if (DeclContext *DC = computeDeclContext(*SS, EnteringContext)) {
-      // We have resolved the scope specifier to a particular declaration
-      // contex, and will perform name lookup in that context.
+    // This nested-name-specifier occurs after another nested-name-specifier,
+    // so long into the context associated with the prior nested-name-specifier.
+    if ((DC = computeDeclContext(*SS, EnteringContext))) {
+      // The declaration context must be complete.
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
-
       R.setContextRange(SS->getRange());
-      return LookupQualifiedName(R, DC);
     }
+    IsDependent = !DC && isDependentScopeSpecifier(*SS);
+  } else {
+    // Perform unqualified name lookup starting in the given scope.
+    return LookupName(R, S, AllowBuiltinCreation);
+  }
 
+  // If we were able to compute a declaration context, perform qualified name
+  // lookup in that context.
+  if (DC)
+    return LookupQualifiedName(R, DC);
+  else if (IsDependent)
     // We could not resolve the scope specified to a specific declaration
     // context, which means that SS refers to an unknown specialization.
     // Name lookup can't find anything in this case.
     R.setNotFoundInCurrentInstantiation();
-    R.setContextRange(SS->getRange());
-    return false;
-  }
-
-  // Perform unqualified name lookup starting in the given scope.
-  return LookupName(R, S, AllowBuiltinCreation);
+  return false;
 }
 
 /// Perform qualified name lookup into all base classes of the given
@@ -3315,15 +3363,6 @@ NamedDecl *Sema::LookupSingleName(Scope *S, DeclarationName Name,
   LookupResult R(*this, Name, Loc, NameKind, Redecl);
   LookupName(R, S);
   return R.getAsSingle<NamedDecl>();
-}
-
-/// Find the protocol with the given name, if any.
-ObjCProtocolDecl *Sema::LookupProtocol(IdentifierInfo *II,
-                                       SourceLocation IdLoc,
-                                       RedeclarationKind Redecl) {
-  Decl *D = LookupSingleName(TUScope, II, IdLoc,
-                             LookupObjCProtocolName, Redecl);
-  return cast_or_null<ObjCProtocolDecl>(D);
 }
 
 void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
@@ -4449,7 +4488,8 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
   }
 
   // Not a GNU local label.
-  Res = LookupSingleName(CurScope, II, Loc, LookupLabel, NotForRedeclaration);
+  Res = LookupSingleName(CurScope, II, Loc, LookupLabel,
+                         RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
   if (Res && Res->getDeclContext() != CurContext)
@@ -5017,8 +5057,9 @@ static void LookupPotentialTypoResult(Sema &SemaRef,
     return;
   }
 
-  SemaRef.LookupParsedName(Res, S, SS, /*AllowBuiltinCreation=*/false,
-                           EnteringContext);
+  SemaRef.LookupParsedName(Res, S, SS,
+                           /*ObjectType=*/QualType(),
+                           /*AllowBuiltinCreation=*/false, EnteringContext);
 
   // Fake ivar lookup; this should really be part of
   // LookupParsedName.
@@ -5889,7 +5930,8 @@ void Sema::clearDelayedTypo(TypoExpr *TE) {
 
 void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
   DeclarationNameInfo Name(II, IILoc);
-  LookupResult R(*this, Name, LookupAnyName, Sema::NotForRedeclaration);
+  LookupResult R(*this, Name, LookupAnyName,
+                 RedeclarationKind::NotForRedeclaration);
   R.suppressDiagnostics();
   R.setHideTags(false);
   LookupName(R, S);
@@ -5898,4 +5940,14 @@ void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
 
 void Sema::ActOnPragmaDump(Expr *E) {
   E->dump();
+}
+
+RedeclarationKind Sema::forRedeclarationInCurContext() const {
+  // A declaration with an owning module for linkage can never link against
+  // anything that is not visible. We don't need to check linkage here; if
+  // the context has internal linkage, redeclaration lookup won't find things
+  // from other TUs, and we can't safely compute linkage yet in general.
+  if (cast<Decl>(CurContext)->getOwningModuleForLinkage(/*IgnoreLinkage*/ true))
+    return RedeclarationKind::ForVisibleRedeclaration;
+  return RedeclarationKind::ForExternalRedeclaration;
 }
