@@ -238,6 +238,30 @@ struct DfsPathFinder : public ICFGPathFinder {
         const char *what() const noexcept override { return "Path found"; }
     };
 
+    // {fid, u} -> bfs
+    std::map<std::pair<int, int>, const IntraProceduralBfs> bfsMap;
+    const IntraProceduralBfs &getBfs(int fid, int u) {
+        auto key = std::make_pair(fid, u);
+        auto it = bfsMap.find(key);
+        if (it == bfsMap.end()) {
+            it = bfsMap
+                     .emplace(key,
+                              IntraProceduralBfs(icfg, pointsToAvoid, fid, u))
+                     .first;
+        }
+        return it->second;
+    }
+
+    std::map<int, const InterProceduralDij> dijMap;
+    const InterProceduralDij &getDij(int u) {
+        auto it = dijMap.find(u);
+        if (it == dijMap.end()) {
+            it = dijMap.emplace(u, InterProceduralDij(icfg, pointsToAvoid, u))
+                     .first;
+        }
+        return it->second;
+    }
+
   private:
     /**
      * TODO: 目前 pointsToAvoid 还没处理
@@ -278,8 +302,7 @@ struct DfsPathFinder : public ICFGPathFinder {
                 const int vFid = Global.icfg.functionBlockOfNodeId[v].first;
 
                 if (uFid == vFid) {
-                    IntraProceduralBfs bfs(icfg, uFid);
-                    bfs.bfs(u, pointsToAvoid);
+                    const auto &bfs = getBfs(uFid, u);
                     requireTrue(bfs.reachable(v));
                     std::vector<int> p = bfs.trace(v);
                     fullPath.insert(fullPath.end(), p.begin() + 1, p.end());
@@ -316,8 +339,7 @@ struct DfsPathFinder : public ICFGPathFinder {
         const int currentFid = Global.icfg.functionBlockOfNodeId[u].first;
         const int targetFid = Global.icfg.functionBlockOfNodeId[target].first;
 
-        IntraProceduralBfs bfs(icfg, currentFid);
-        bfs.bfs(u, pointsToAvoid);
+        const auto &bfs = getBfs(currentFid, u);
 
         if (currentFid == targetFid) {
             // 过程内
@@ -337,8 +359,7 @@ struct DfsPathFinder : public ICFGPathFinder {
              *    对应 ICFG 反图上的 Dij
              */
 
-            InterProceduralDij dij(icfg);
-            dij.dij(target, pointsToAvoid);
+            const auto &dij = getDij(target);
 
             struct Node {
                 int v;           // u 可以到达的过程内节点
