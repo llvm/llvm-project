@@ -100,7 +100,13 @@ int msan_report_count = 0;
 
 // Array of stack origins.
 // FIXME: make it resizable.
-static const uptr kNumStackOriginDescrs = 1024 * 1024;
+// Although BSS memory doesn't cost anything until used, it is limited to 2GB
+// in some configurations (e.g., relocation R_X86_64_PC32 out of range:
+// 8600110908 is not in [-2147483648, 2147483647]; references section '.bss')
+// hence kNumStackOriginDescrs is limited to roughly 2GB / sizeof(uptr) / 2
+// == 128M per array (StackOriginDescr, StackOriginPC). We set it at 64M each
+// in case other parts of MSan want more BSS space in the future.
+static const uptr kNumStackOriginDescrs = 64 * 1024 * 1024;
 static const char *StackOriginDescr[kNumStackOriginDescrs];
 static uptr StackOriginPC[kNumStackOriginDescrs];
 static atomic_uint32_t NumStackOriginDescrs;
