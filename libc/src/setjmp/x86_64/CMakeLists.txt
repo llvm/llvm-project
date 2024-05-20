@@ -1,14 +1,9 @@
 add_entrypoint_object(
   setjmp
   SRCS
-    setjmp.cpp
+    setjmp.S
   HDRS
     ../setjmp_impl.h
-  DEPENDS
-    libc.include.setjmp
-  COMPILE_OPTIONS
-    -O3
-    -fno-omit-frame-pointer
 )
 
 add_entrypoint_object(
