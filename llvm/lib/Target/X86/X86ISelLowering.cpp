@@ -54610,12 +54610,78 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
   return true;
 }
 
-static SDValue combineX86SubCmpToCcmpCtestHelper(
-    SDNode *N, SDValue Flag, SDValue SetCC0, SDValue SetCC1, SelectionDAG &DAG,
-    TargetLowering::DAGCombinerInfo &DCI, unsigned NewOpc) {
-  SDValue LHS = N->getOperand(0);
-  SDValue Sub = SetCC1.getOperand(1);
+static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
+                                           SelectionDAG &DAG,
+                                           TargetLowering::DAGCombinerInfo &DCI,
+                                           const X86Subtarget &ST) {
+  // cmp(and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y))), 0)
+  // brcond ne
+  //
+  //  ->
+  //
+  // ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
+  // brcond cc1
+  //
+  //
+  // sub(and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y))), 1)
+  // brcond ne
+  //
+  // ->
+  //
+  // ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
+  // brcond ~cc1
 
+  // cmp(and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0))), 0)
+  // brcond ne
+  //
+  //  ->
+  //
+  // ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
+  // brcond cc1
+  //
+  //
+  // sub(and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0))), 1)
+  // brcond ne
+  //
+  //  ->
+  //
+  // ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
+  // brcond ~cc1
+
+  // if only flag has users, where cflags is determined by cc1.
+
+  SDValue LHS = N->getOperand(0);
+
+  if (!ST.hasCCMP() ||
+      (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != ISD::OR) ||
+      !Flag.hasOneUse())
+    return SDValue();
+
+  SDValue SetCC0 = LHS.getOperand(0);
+  SDValue SetCC1 = LHS.getOperand(1);
+  if (SetCC0.getOpcode() != X86ISD::SETCC ||
+      SetCC1.getOpcode() != X86ISD::SETCC)
+    return SDValue();
+
+  auto GetCombineToOpc = [&](SDValue V) {
+    SDValue Op = V.getOperand(1);
+    unsigned Opc = Op.getOpcode();
+    return (Opc == X86ISD::SUB) ? X86ISD::CCMP
+           : (Opc == X86ISD::CMP && isNullConstant(Op.getOperand(1)))
+               ? X86ISD::CTEST
+               : 0U;
+  };
+
+  unsigned NewOpc = 0;
+
+  // and/or is commutable. Try to commute the operands and then test again.
+  if (!(NewOpc = GetCombineToOpc(SetCC1))) {
+    std::swap(SetCC0, SetCC1);
+    if (!(NewOpc = GetCombineToOpc(SetCC1)))
+      return SDValue();
+  }
+
+  SDValue Sub = SetCC1.getOperand(1);
   SDNode *BrCond = *Flag->uses().begin();
   if (BrCond->getOpcode() != X86ISD::BRCOND)
     return SDValue();
@@ -54668,127 +54734,6 @@ static SDValue combineX86SubCmpToCcmpCtestHelper(
   return CCMP;
 }
 
-static SDValue combineX86SubCmpToCcmp(SDNode *N, SDValue Flag,
-                                      SelectionDAG &DAG,
-                                      TargetLowering::DAGCombinerInfo &DCI,
-                                      const X86Subtarget &ST) {
-  // cmp(and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y))), 0)
-  // brcond ne
-  //
-  //  ->
-  //
-  // ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond cc1
-  //
-  //
-  // sub(and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y))), 1)
-  // brcond ne
-  //
-  // ->
-  //
-  // ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond ~cc1
-  //
-  // if only flag has users, where cflags is determined by cc1.
-
-  SDValue LHS = N->getOperand(0);
-
-  if (!ST.hasCCMP() ||
-      (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != ISD::OR) ||
-      !Flag.hasOneUse())
-    return SDValue();
-
-  SDValue SetCC0 = LHS.getOperand(0);
-  SDValue SetCC1 = LHS.getOperand(1);
-  if (SetCC0.getOpcode() != X86ISD::SETCC ||
-      SetCC1.getOpcode() != X86ISD::SETCC)
-    return SDValue();
-
-  // and/or is commutable. Try to commute the operands and then test again.
-  if (SetCC1.getOperand(1).getOpcode() != X86ISD::SUB) {
-    std::swap(SetCC0, SetCC1);
-    if (SetCC1.getOperand(1).getOpcode() != X86ISD::SUB)
-      return SDValue();
-  }
-
-  return combineX86SubCmpToCcmpCtestHelper(N, Flag, SetCC0, SetCC1, DAG, DCI,
-                                           X86ISD::CCMP);
-}
-
-static SDValue combineX86SubCmpToCtest(SDNode *N, SDValue Flag,
-                                       SelectionDAG &DAG,
-                                       TargetLowering::DAGCombinerInfo &DCI,
-                                       const X86Subtarget &ST) {
-  // cmp(and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0))), 0)
-  // brcond ne
-  //
-  //  ->
-  //
-  // ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond cc1
-  //
-  //
-  // sub(and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0))), 1)
-  // brcond ne
-  //
-  //  ->
-  //
-  // ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond ~cc1
-  //
-  // if only flag has users, where cflags is determined by cc1.
-
-  SDValue LHS = N->getOperand(0);
-
-  if (!ST.hasCCMP() ||
-      (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != ISD::OR) ||
-      !Flag.hasOneUse())
-    return SDValue();
-
-  SDValue SetCC0 = LHS.getOperand(0);
-  SDValue SetCC1 = LHS.getOperand(1);
-  if (SetCC0.getOpcode() != X86ISD::SETCC ||
-      SetCC1.getOpcode() != X86ISD::SETCC)
-    return SDValue();
-
-  auto IsOp1CmpZero = [&](SDValue V) {
-    SDValue Op = V.getOperand(1);
-    return Op.getOpcode() == X86ISD::CMP && isNullConstant(Op.getOperand(1));
-  };
-  // and/or is commutable. Try to commute the operands and then test again.
-  if (!IsOp1CmpZero(SetCC1)) {
-    std::swap(SetCC0, SetCC1);
-    if (!IsOp1CmpZero(SetCC1))
-      return SDValue();
-  }
-
-  return combineX86SubCmpToCcmpCtestHelper(N, Flag, SetCC0, SetCC1, DAG, DCI,
-                                           X86ISD::CTEST);
-}
-
-static bool isOnlyFlagUsedX86SubOne(SDNode *N) {
-  return N->getOpcode() == X86ISD::SUB && isOneConstant(N->getOperand(1)) &&
-         !N->hasAnyUseOfValue(0);
-}
-
-static SDValue combineX86SubToCcmp(SDNode *N, SelectionDAG &DAG,
-                                   TargetLowering::DAGCombinerInfo &DCI,
-                                   const X86Subtarget &ST) {
-  if (!isOnlyFlagUsedX86SubOne(N))
-    return SDValue();
-
-  return combineX86SubCmpToCcmp(N, SDValue(N, 1), DAG, DCI, ST);
-}
-
-static SDValue combineX86SubToCtest(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI,
-                                    const X86Subtarget &ST) {
-  if (!isOnlyFlagUsedX86SubOne(N))
-    return SDValue();
-
-  return combineX86SubCmpToCtest(N, SDValue(N, 1), DAG, DCI, ST);
-}
-
 static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -54806,12 +54751,8 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (SDValue CCMP =
-          combineX86SubCmpToCcmp(N, SDValue(N, 0), DAG, DCI, Subtarget))
+          combineX86SubCmpToCcmpCtest(N, SDValue(N, 0), DAG, DCI, Subtarget))
     return CCMP;
-
-  if (SDValue CTEST =
-          combineX86SubCmpToCtest(N, SDValue(N, 0), DAG, DCI, Subtarget))
-    return CTEST;
 
   // If we have a constant logical shift that's only used in a comparison
   // against zero turn it into an equivalent AND. This allows turning it into
@@ -54953,11 +54894,11 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   bool IsSub = X86ISD::SUB == N->getOpcode();
   unsigned GenericOpc = IsSub ? ISD::SUB : ISD::ADD;
 
-  if (SDValue CCMP = combineX86SubToCcmp(N, DAG, DCI, ST))
-    return CCMP;
-
-  if (SDValue CTEST = combineX86SubToCtest(N, DAG, DCI, ST))
-    return CTEST;
+  if (IsSub && isOneConstant(N->getOperand(1)) && !N->hasAnyUseOfValue(0)) {
+    if (SDValue CCMP =
+            combineX86SubCmpToCcmpCtest(N, SDValue(N, 1), DAG, DCI, ST))
+      return CCMP;
+  }
 
   // If we don't use the flag result, simplify back to a generic ADD/SUB.
   if (!N->hasAnyUseOfValue(1)) {
