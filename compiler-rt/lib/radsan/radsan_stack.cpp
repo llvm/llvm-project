@@ -27,7 +27,8 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 }
 } // namespace __sanitizer
 
-namespace {
+namespace __radsan {
+
 void SetGlobalStackTraceFormat() {
   SetCommonFlagsDefaults();
   CommonFlags cf;
@@ -36,9 +37,7 @@ void SetGlobalStackTraceFormat() {
   cf.external_symbolizer_path = GetEnv("RADSAN_SYMBOLIZER_PATH");
   OverrideCommonFlags(cf);
 }
-} // namespace
 
-namespace radsan {
 void PrintStackTrace() {
 
   BufferedStackTrace Stack{};
@@ -49,4 +48,4 @@ void PrintStackTrace() {
   SetGlobalStackTraceFormat();
   Stack.Print();
 }
-} // namespace radsan
+} // namespace __radsan

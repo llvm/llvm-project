@@ -10,7 +10,7 @@
 
 #pragma once
 
-namespace radsan {
+namespace __radsan {
 
 class Context {
 public:
@@ -35,4 +35,4 @@ private:
 
 Context &GetContextForThisThread();
 
-} // namespace radsan
+} // namespace __radsan

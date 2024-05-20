@@ -15,23 +15,23 @@
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_init() {
-  radsan::InitializeInterceptors();
+  __radsan::InitializeInterceptors();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_enter() {
-  radsan::GetContextForThisThread().RealtimePush();
+  __radsan::GetContextForThisThread().RealtimePush();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_exit() {
-  radsan::GetContextForThisThread().RealtimePop();
+  __radsan::GetContextForThisThread().RealtimePop();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_off() {
-  radsan::GetContextForThisThread().BypassPush();
+  __radsan::GetContextForThisThread().BypassPush();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_on() {
-  radsan::GetContextForThisThread().BypassPop();
+  __radsan::GetContextForThisThread().BypassPop();
 }
 
 } // extern "C"

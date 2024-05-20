@@ -40,11 +40,11 @@
 
 using namespace __sanitizer;
 
-namespace radsan {
+namespace __radsan {
 void ExpectNotRealtime(const char *InterceptedFunctionName) {
   GetContextForThisThread().ExpectNotRealtime(InterceptedFunctionName);
 }
-} // namespace radsan
+} // namespace __radsan
 
 /*
     Filesystem
@@ -53,7 +53,7 @@ void ExpectNotRealtime(const char *InterceptedFunctionName) {
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
-  radsan::ExpectNotRealtime("open");
+  __radsan::ExpectNotRealtime("open");
   va_list args;
   va_start(args, oflag);
   const int result = REAL(open)(path, oflag, args);
@@ -64,7 +64,7 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
 INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
-  radsan::ExpectNotRealtime("openat");
+  __radsan::ExpectNotRealtime("openat");
   va_list args;
   va_start(args, oflag);
   const int result = REAL(openat)(fd, path, oflag, args);
@@ -75,13 +75,13 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
 INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
-  radsan::ExpectNotRealtime("creat");
+  __radsan::ExpectNotRealtime("creat");
   const int result = REAL(creat)(path, mode);
   return result;
 }
 
 INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
-  radsan::ExpectNotRealtime("fcntl");
+  __radsan::ExpectNotRealtime("fcntl");
   va_list args;
   va_start(args, cmd);
   const int result = REAL(fcntl)(filedes, cmd, args);
@@ -90,34 +90,34 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
 }
 
 INTERCEPTOR(int, close, int filedes) {
-  radsan::ExpectNotRealtime("close");
+  __radsan::ExpectNotRealtime("close");
   return REAL(close)(filedes);
 }
 
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
-  radsan::ExpectNotRealtime("fopen");
+  __radsan::ExpectNotRealtime("fopen");
   return REAL(fopen)(path, mode);
 }
 
 INTERCEPTOR(size_t, fread, void *ptr, size_t size, size_t nitems,
             FILE *stream) {
-  radsan::ExpectNotRealtime("fread");
+  __radsan::ExpectNotRealtime("fread");
   return REAL(fread)(ptr, size, nitems, stream);
 }
 
 INTERCEPTOR(size_t, fwrite, const void *ptr, size_t size, size_t nitems,
             FILE *stream) {
-  radsan::ExpectNotRealtime("fwrite");
+  __radsan::ExpectNotRealtime("fwrite");
   return REAL(fwrite)(ptr, size, nitems, stream);
 }
 
 INTERCEPTOR(int, fclose, FILE *stream) {
-  radsan::ExpectNotRealtime("fclose");
+  __radsan::ExpectNotRealtime("fclose");
   return REAL(fclose)(stream);
 }
 
 INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
-  radsan::ExpectNotRealtime("fputs");
+  __radsan::ExpectNotRealtime("fputs");
   return REAL(fputs)(s, stream);
 }
 
@@ -126,7 +126,7 @@ INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
 */
 
 INTERCEPTOR(int, puts, const char *s) {
-  radsan::ExpectNotRealtime("puts");
+  __radsan::ExpectNotRealtime("puts");
   return REAL(puts)(s);
 }
 
@@ -139,77 +139,77 @@ INTERCEPTOR(int, puts, const char *s) {
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
-  radsan::ExpectNotRealtime("OSSpinLockLock");
+  __radsan::ExpectNotRealtime("OSSpinLockLock");
   return REAL(OSSpinLockLock)(lock);
 }
 #pragma clang diagnostic pop
 
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
-  radsan::ExpectNotRealtime("os_unfair_lock_lock");
+  __radsan::ExpectNotRealtime("os_unfair_lock_lock");
   return REAL(os_unfair_lock_lock)(lock);
 }
 #elif SANITIZER_LINUX
 INTERCEPTOR(int, pthread_spin_lock, pthread_spinlock_t *spinlock) {
-  radsan::ExpectNotRealtime("pthread_spin_lock");
+  __radsan::ExpectNotRealtime("pthread_spin_lock");
   return REAL(pthread_spin_lock)(spinlock);
 }
 #endif
 
 INTERCEPTOR(int, pthread_create, pthread_t *thread, const pthread_attr_t *attr,
             void *(*start_routine)(void *), void *arg) {
-  radsan::ExpectNotRealtime("pthread_create");
+  __radsan::ExpectNotRealtime("pthread_create");
   return REAL(pthread_create)(thread, attr, start_routine, arg);
 }
 
 INTERCEPTOR(int, pthread_mutex_lock, pthread_mutex_t *mutex) {
-  radsan::ExpectNotRealtime("pthread_mutex_lock");
+  __radsan::ExpectNotRealtime("pthread_mutex_lock");
   return REAL(pthread_mutex_lock)(mutex);
 }
 
 INTERCEPTOR(int, pthread_mutex_unlock, pthread_mutex_t *mutex) {
-  radsan::ExpectNotRealtime("pthread_mutex_unlock");
+  __radsan::ExpectNotRealtime("pthread_mutex_unlock");
   return REAL(pthread_mutex_unlock)(mutex);
 }
 
 INTERCEPTOR(int, pthread_join, pthread_t thread, void **value_ptr) {
-  radsan::ExpectNotRealtime("pthread_join");
+  __radsan::ExpectNotRealtime("pthread_join");
   return REAL(pthread_join)(thread, value_ptr);
 }
 
 INTERCEPTOR(int, pthread_cond_signal, pthread_cond_t *cond) {
-  radsan::ExpectNotRealtime("pthread_cond_signal");
+  __radsan::ExpectNotRealtime("pthread_cond_signal");
   return REAL(pthread_cond_signal)(cond);
 }
 
 INTERCEPTOR(int, pthread_cond_broadcast, pthread_cond_t *cond) {
-  radsan::ExpectNotRealtime("pthread_cond_broadcast");
+  __radsan::ExpectNotRealtime("pthread_cond_broadcast");
   return REAL(pthread_cond_broadcast)(cond);
 }
 
 INTERCEPTOR(int, pthread_cond_wait, pthread_cond_t *cond,
             pthread_mutex_t *mutex) {
-  radsan::ExpectNotRealtime("pthread_cond_wait");
+  __radsan::ExpectNotRealtime("pthread_cond_wait");
   return REAL(pthread_cond_wait)(cond, mutex);
 }
 
 INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *cond,
             pthread_mutex_t *mutex, const timespec *ts) {
-  radsan::ExpectNotRealtime("pthread_cond_timedwait");
+  __radsan::ExpectNotRealtime("pthread_cond_timedwait");
   return REAL(pthread_cond_timedwait)(cond, mutex, ts);
 }
 
 INTERCEPTOR(int, pthread_rwlock_rdlock, pthread_rwlock_t *lock) {
-  radsan::ExpectNotRealtime("pthread_rwlock_rdlock");
+  __radsan::ExpectNotRealtime("pthread_rwlock_rdlock");
   return REAL(pthread_rwlock_rdlock)(lock);
 }
 
 INTERCEPTOR(int, pthread_rwlock_unlock, pthread_rwlock_t *lock) {
-  radsan::ExpectNotRealtime("pthread_rwlock_unlock");
+  __radsan::ExpectNotRealtime("pthread_rwlock_unlock");
   return REAL(pthread_rwlock_unlock)(lock);
 }
 
 INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
-  radsan::ExpectNotRealtime("pthread_rwlock_wrlock");
+  __radsan::ExpectNotRealtime("pthread_rwlock_wrlock");
   return REAL(pthread_rwlock_wrlock)(lock);
 }
 
@@ -218,18 +218,18 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
 */
 
 INTERCEPTOR(unsigned int, sleep, unsigned int s) {
-  radsan::ExpectNotRealtime("sleep");
+  __radsan::ExpectNotRealtime("sleep");
   return REAL(sleep)(s);
 }
 
 INTERCEPTOR(int, usleep, useconds_t u) {
-  radsan::ExpectNotRealtime("usleep");
+  __radsan::ExpectNotRealtime("usleep");
   return REAL(usleep)(u);
 }
 
 INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
             struct timespec *rmtp) {
-  radsan::ExpectNotRealtime("nanosleep");
+  __radsan::ExpectNotRealtime("nanosleep");
   return REAL(nanosleep)(rqtp, rmtp);
 }
 
@@ -238,40 +238,40 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
 */
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
-  radsan::ExpectNotRealtime("calloc");
+  __radsan::ExpectNotRealtime("calloc");
   return REAL(calloc)(num, size);
 }
 
 INTERCEPTOR(void, free, void *ptr) {
   if (ptr != NULL) {
-    radsan::ExpectNotRealtime("free");
+    __radsan::ExpectNotRealtime("free");
   }
   return REAL(free)(ptr);
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
-  radsan::ExpectNotRealtime("malloc");
+  __radsan::ExpectNotRealtime("malloc");
   return REAL(malloc)(size);
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
-  radsan::ExpectNotRealtime("realloc");
+  __radsan::ExpectNotRealtime("realloc");
   return REAL(realloc)(ptr, size);
 }
 
 INTERCEPTOR(void *, reallocf, void *ptr, SIZE_T size) {
-  radsan::ExpectNotRealtime("reallocf");
+  __radsan::ExpectNotRealtime("reallocf");
   return REAL(reallocf)(ptr, size);
 }
 
 INTERCEPTOR(void *, valloc, SIZE_T size) {
-  radsan::ExpectNotRealtime("valloc");
+  __radsan::ExpectNotRealtime("valloc");
   return REAL(valloc)(size);
 }
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
-  radsan::ExpectNotRealtime("aligned_alloc");
+  __radsan::ExpectNotRealtime("aligned_alloc");
   return REAL(aligned_alloc)(alignment, size);
 }
 #define RADSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
@@ -280,20 +280,20 @@ INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
 #endif
 
 INTERCEPTOR(int, posix_memalign, void **memptr, size_t alignment, size_t size) {
-  radsan::ExpectNotRealtime("posix_memalign");
+  __radsan::ExpectNotRealtime("posix_memalign");
   return REAL(posix_memalign)(memptr, alignment, size);
 }
 
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void *, memalign, size_t alignment, size_t size) {
-  radsan::ExpectNotRealtime("memalign");
+  __radsan::ExpectNotRealtime("memalign");
   return REAL(memalign)(alignment, size);
 }
 #endif
 
 #if SANITIZER_INTERCEPT_PVALLOC
 INTERCEPTOR(void *, pvalloc, size_t size) {
-  radsan::ExpectNotRealtime("pvalloc");
+  __radsan::ExpectNotRealtime("pvalloc");
   return REAL(pvalloc)(size);
 }
 #endif
@@ -303,45 +303,45 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
 */
 
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
-  radsan::ExpectNotRealtime("socket");
+  __radsan::ExpectNotRealtime("socket");
   return REAL(socket)(domain, type, protocol);
 }
 
 INTERCEPTOR(ssize_t, send, int sockfd, const void *buf, size_t len, int flags) {
-  radsan::ExpectNotRealtime("send");
+  __radsan::ExpectNotRealtime("send");
   return REAL(send)(sockfd, buf, len, flags);
 }
 
 INTERCEPTOR(ssize_t, sendmsg, int socket, const struct msghdr *message,
             int flags) {
-  radsan::ExpectNotRealtime("sendmsg");
+  __radsan::ExpectNotRealtime("sendmsg");
   return REAL(sendmsg)(socket, message, flags);
 }
 
 INTERCEPTOR(ssize_t, sendto, int socket, const void *buffer, size_t length,
             int flags, const struct sockaddr *dest_addr, socklen_t dest_len) {
-  radsan::ExpectNotRealtime("sendto");
+  __radsan::ExpectNotRealtime("sendto");
   return REAL(sendto)(socket, buffer, length, flags, dest_addr, dest_len);
 }
 
 INTERCEPTOR(ssize_t, recv, int socket, void *buffer, size_t length, int flags) {
-  radsan::ExpectNotRealtime("recv");
+  __radsan::ExpectNotRealtime("recv");
   return REAL(recv)(socket, buffer, length, flags);
 }
 
 INTERCEPTOR(ssize_t, recvfrom, int socket, void *buffer, size_t length,
             int flags, struct sockaddr *address, socklen_t *address_len) {
-  radsan::ExpectNotRealtime("recvfrom");
+  __radsan::ExpectNotRealtime("recvfrom");
   return REAL(recvfrom)(socket, buffer, length, flags, address, address_len);
 }
 
 INTERCEPTOR(ssize_t, recvmsg, int socket, struct msghdr *message, int flags) {
-  radsan::ExpectNotRealtime("recvmsg");
+  __radsan::ExpectNotRealtime("recvmsg");
   return REAL(recvmsg)(socket, message, flags);
 }
 
 INTERCEPTOR(int, shutdown, int socket, int how) {
-  radsan::ExpectNotRealtime("shutdown");
+  __radsan::ExpectNotRealtime("shutdown");
   return REAL(shutdown)(socket, how);
 }
 
@@ -349,7 +349,7 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
     Preinit
 */
 
-namespace radsan {
+namespace __radsan {
 void InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(free);
@@ -410,4 +410,4 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(shutdown);
 }
-} // namespace radsan
+} // namespace __radsan

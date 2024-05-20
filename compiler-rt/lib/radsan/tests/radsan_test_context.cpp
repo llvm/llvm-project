@@ -13,22 +13,22 @@
 
 #include "radsan_context.h"
 
-TEST(TestRadsanContext, CanCreateContext) { radsan::Context Context{}; }
+TEST(TestRadsanContext, CanCreateContext) { __radsan::Context Context{}; }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
-  radsan::Context Context{};
+  __radsan::Context Context{};
   Context.ExpectNotRealtime("do_some_stuff");
 }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
-  radsan::Context Context{};
+  __radsan::Context Context{};
   Context.RealtimePush();
   Context.RealtimePop();
   Context.ExpectNotRealtime("do_some_stuff");
 }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
-  radsan::Context Context{};
+  __radsan::Context Context{};
 
   Context.RealtimePush();
   EXPECT_DEATH(Context.ExpectNotRealtime("do_some_stuff"), "");
@@ -36,7 +36,7 @@ TEST(TestRadsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
 
 TEST(TestRadsanContext,
      ExpectNotRealtimeDiesAfterRealtimeAfterMorePushesThanPops) {
-  radsan::Context Context{};
+  __radsan::Context Context{};
 
   Context.RealtimePush();
   Context.RealtimePush();
@@ -47,7 +47,7 @@ TEST(TestRadsanContext,
 }
 
 TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
-  radsan::Context Context{};
+  __radsan::Context Context{};
 
   Context.RealtimePush();
   Context.BypassPush();
@@ -56,7 +56,7 @@ TEST(TestRadsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
 
 TEST(TestRadsanContext,
      ExpectNotRealtimeDoesNotDieIfBypassDepthIsGreaterThanZero) {
-  radsan::Context Context{};
+  __radsan::Context Context{};
 
   Context.RealtimePush();
   Context.BypassPush();
