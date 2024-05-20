@@ -102,7 +102,7 @@ struct VarLocResult {
  */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             int line, int column, bool isStmt,
-                            bool requireExact) {
+                            bool requireExact, bool succFirst) {
     FindVarVisitor visitor;
 
     for (const auto &fi : functionsInFile.at(file)) {
@@ -157,10 +157,24 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
             return std::nullopt;
         };
 
-        for (const auto &[stmt, block] : fi->stmtBlockPairs) {
-            auto result = locate(stmt, block);
-            if (result)
-                return result.value();
+        if (succFirst) {
+            // 优先访问 succ，也就是根据 Block ID 从小到大遍历
+            for (auto it = fi->stmtBlockPairs.cbegin();
+                 it != fi->stmtBlockPairs.cend(); it++) {
+                const auto &[stmt, block] = *it;
+                auto result = locate(stmt, block);
+                if (result)
+                    return result.value();
+            }
+        } else {
+            // 优先访问 pred，即从大到小，反向遍历
+            for (auto it = fi->stmtBlockPairs.crbegin();
+                 it != fi->stmtBlockPairs.crend(); it++) {
+                const auto &[stmt, block] = *it;
+                auto result = locate(stmt, block);
+                if (result)
+                    return result.value();
+            }
         }
     }
     return VarLocResult();
@@ -199,7 +213,7 @@ struct FunctionLocator {
 };
 
 VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
-                            bool isStmt) {
+                            bool succFirst) {
     int fid = locator.getFid(loc);
     if (fid == -1) {
         return VarLocResult();
@@ -229,7 +243,7 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
     */
     auto result = locateVariable(functionsInFile, loc.file, loc.line,
-                                 loc.column, isStmt, false);
+                                 loc.column, true, false, succFirst);
     return result;
 }
 
@@ -515,9 +529,11 @@ void generatePathFromOneEntry(const ordered_json &result,
             continue;
         }
 
-        // 目前把 source 和 sink 都当作 stmt 来处理，
-        // 精确匹配不上的话，就模糊匹配
-        bool isStmt = true; // type == "stmt";
+        // 目前把 source 和 sink 都当作 stmt 来处理
+        // 全部模糊匹配
+
+        // 对于 source 和 sink，优先访问 succ
+        bool succFirst = (type != "stmt");
         Location jsonLoc(loc);
 
         // 跳过项目以外的库函数路径
@@ -526,7 +542,7 @@ void generatePathFromOneEntry(const ordered_json &result,
             continue;
         }
 
-        VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
+        VarLocResult varLoc = locateVariable(locator, jsonLoc, succFirst);
         if (!varLoc.isValid()) {
             logger.error("Error: cannot locate {} at {}", type, loc);
             // 跳过无法定位的中间路径
