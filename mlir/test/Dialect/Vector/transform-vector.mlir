@@ -92,3 +92,41 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @ewise_outerproduct
+//  CHECK-SAME:   %[[LHS:.*]]: vector<[4]xi32>,
+//  CHECK-SAME:   %[[RHS:.*]]: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
+//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[LHS]], %[[RHS]] : vector<[4]xi32>, vector<[4]xi32>
+//       CHECK:     return %[[RES]] : vector<[4]x[4]xi32>
+func.func @ewise_outerproduct(%lhs: vector<[4]xi32>, %rhs: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
+  %lhsBcast = vector.broadcast %lhs : vector<[4]xi32> to vector<[4]x[4]xi32>
+  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<[4]x[4]xi32> to vector<[4]x[4]xi32>
+  %rhsBcast = vector.broadcast %rhs : vector<[4]xi32> to vector<[4]x[4]xi32>
+  %mul = arith.muli %lhsT, %rhsBcast : vector<[4]x[4]xi32>
+  return %mul: vector<[4]x[4]xi32>
+}
+
+// CHECK-LABEL: func.func @ewise_outerproduct_transposed_rhs
+//  CHECK-SAME:   %[[LHS:.*]]: vector<16xf32>,
+//  CHECK-SAME:   %[[RHS:.*]]: vector<16xf32>) -> vector<16x16xf32> {
+//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[RHS]], %[[LHS]] : vector<16xf32>, vector<16xf32>
+//       CHECK:     return %[[RES]] : vector<16x16xf32>
+func.func @ewise_outerproduct_transposed_rhs(%lhs: vector<16xf32>, %rhs: vector<16xf32>) -> vector<16x16xf32> {
+  %rhsBcast = vector.broadcast %rhs : vector<16xf32> to vector<16x16xf32>
+  %rhsT = vector.transpose %rhsBcast, [1, 0] : vector<16x16xf32> to vector<16x16xf32>
+  %lhsBcast = vector.broadcast %lhs : vector<16xf32> to vector<16x16xf32>
+  %mul = arith.mulf %lhsBcast, %rhsT : vector<16x16xf32>
+  return %mul: vector<16x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.vector.elementwise_to_vector
+    } : !transform.any_op
+    transform.yield
+  }
+}

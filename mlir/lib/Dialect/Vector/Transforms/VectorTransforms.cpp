@@ -1795,6 +1795,75 @@ private:
   unsigned maxNumElementsToExtract = 0;
 };
 
+/// Pattern aiming to fold a series of ops mulf(tr(broadcast(A)), broadcast(B))
+/// into vector.outerproduct(A, B) such as :
+/// ```mlir
+///  %lhsBcast = vector.broadcast %lhs : vector<4xi32> to vector<4x4xi32>
+///  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<4x4xi32> to
+///  vector<4x4xi32> %rhsBcast = vector.broadcast %rhs : vector<4xi32> to
+///  vector<4x4xi32> %mul = arith.muli %lhsT, %rhsBcast : vector<4x4xi32>
+///```
+/// Becomes :
+///```mlir
+///  %res = vector.outerproduct %lhs, %rhs : vector<4xi32>, vector<4xi32>
+///```
+/// Edge Cases where broadcast ops are not 1D to 2D as follow are not handled.
+/// %ex1 = vector.broadcast %lhsCast : vector<1x4xf32> to vector<4x4xf32>
+/// %ex2 = vector.broadcast %lhsCast : f32 to vector<4x4xf32>
+/// %ex3 = vector.broadcast %lhsCast : vector<1x1xf32> to vector<4x4xf32>
+
+template <typename MulOpType>
+struct ElementwiseToOuterproduct : public OpRewritePattern<MulOpType> {
+  using OpRewritePattern<MulOpType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MulOpType mulOp,
+                                PatternRewriter &rewriter) const override {
+    auto VT = llvm::cast<VectorType>(mulOp.getResult().getType());
+    if (!VT)
+      return failure();
+    if (VT.getRank() != 2)
+      return failure();
+
+    auto canonicalize = [&](Value OperandA,
+                            Value OperandB) -> vector::OuterProductOp {
+      vector::TransposeOp transposedLhs =
+          dyn_cast_or_null<vector::TransposeOp>(OperandA.getDefiningOp());
+      if (!transposedLhs)
+        return vector::OuterProductOp();
+      // Fail unless this is a true 2-D matrix transpose.
+      ArrayRef<int64_t> permutation = transposedLhs.getPermutation();
+      if (permutation[0] != 1 || permutation[1] != 0)
+        return vector::OuterProductOp();
+
+      // Fail in case it is not a 1-to-2 dimension to broadcast to avoid
+      // generating shape_casts/broadcasts which do not belong in this pattern.
+      vector::BroadcastOp broadcastedLhs = dyn_cast<vector::BroadcastOp>(
+          transposedLhs.getVector().getDefiningOp());
+      if (!broadcastedLhs ||
+          !broadcastedLhs.computeBroadcastedUnitDims().empty())
+        return vector::OuterProductOp();
+      // Avoid broadcast f32 or vector<f32> -> ResType
+      auto srcVT = dyn_cast<VectorType>(broadcastedLhs.getSourceType());
+      if (!srcVT || srcVT.getRank() != 1)
+        return vector::OuterProductOp();
+
+      vector::BroadcastOp broadcastedRhs =
+          dyn_cast<vector::BroadcastOp>(OperandB.getDefiningOp());
+      if (!broadcastedRhs || broadcastedRhs.getSourceType() != srcVT)
+        return vector::OuterProductOp();
+
+      return rewriter.replaceOpWithNewOp<vector::OuterProductOp>(
+          mulOp, VT, broadcastedLhs.getSource(), broadcastedRhs.getSource(),
+          Value(), vector::CombiningKind::ADD);
+    };
+    Value a = mulOp->getOperand(0), b = mulOp->getOperand(1);
+    vector::OuterProductOp outerP = canonicalize(a, b);
+    // Handle commutativity, the transposed op is the outerproduct LHS.
+    outerP = outerP ? outerP : canonicalize(b, a);
+    return outerP ? success() : failure();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateFoldArithExtensionPatterns(
@@ -1880,6 +1949,12 @@ void mlir::vector::populateBreakDownVectorReductionPatterns(
     PatternBenefit benefit) {
   patterns.add<BreakDownVectorReduction>(patterns.getContext(),
                                          maxNumElementsToExtract, benefit);
+}
+
+void mlir::vector::populateElementwiseToVectorOpsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ElementwiseToOuterproduct<arith::MulFOp>,
+               ElementwiseToOuterproduct<arith::MulIOp>>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
