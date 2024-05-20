@@ -5785,6 +5785,68 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(
   return VData;
 }
 
+static unsigned getBufferDiscardPseudo(Intrinsic::ID IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B32;
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B128;
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B1024;
+  default:
+    llvm_unreachable("unhandled discard opcode");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeBufferDiscard(MachineInstr &MI,
+                                                MachineIRBuilder &B,
+                                                Intrinsic::ID IID) const {
+
+  castBufferRsrcArgToV4I32(MI, B, 1);
+  Register RSrc = MI.getOperand(1).getReg();
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+
+  unsigned ImmOffset;
+  const bool HasVIndex = MI.getNumOperands() == 6;
+  Register VIndex;
+  int OpOffset = 0;
+  if (HasVIndex) {
+    VIndex = MI.getOperand(2).getReg();
+    OpOffset = 1;
+  } else {
+    VIndex = B.buildConstant(S32, 0).getReg(0);
+  }
+
+  Register VOffset = MI.getOperand(2 + OpOffset).getReg();
+  Register SOffset = MI.getOperand(3 + OpOffset).getReg();
+
+  unsigned AuxiliaryData = MI.getOperand(4 + OpOffset).getImm();
+
+  std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
+
+  B.buildInstr(getBufferDiscardPseudo(IID))
+      .addUse(RSrc)
+      .addUse(VIndex)
+      .addUse(VOffset)
+      .addUse(SOffset)
+      .addImm(ImmOffset)
+      .addImm(AuxiliaryData)
+      .addImm(HasVIndex ? -1 : 0)
+      .addMemOperand(MMO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B,
@@ -7454,6 +7516,19 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+    return legalizeBufferDiscard(MI, B, IntrID);
   case Intrinsic::amdgcn_s_buffer_load:
     return legalizeSBufferLoad(Helper, MI);
   case Intrinsic::amdgcn_raw_buffer_store:

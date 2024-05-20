@@ -3112,6 +3112,61 @@ class AMDGPUPermuteAuxDataTwoDest :
 def int_amdgcn_permute_pair_2src_interleave_b64 : AMDGPUPermuteAuxDataTwoDest;
 def int_amdgcn_permute_pack_tensor_2src_b64 : AMDGPUPermuteAuxDataTwoDest;
 
+class AMDGPURawPtrBufferDiscard : DefaultAttrsIntrinsic <
+  [],
+  [AMDGPUBufferRsrcTy,   // rsrc(SGPR)
+   llvm_i32_ty,          // offset(VGPR/imm)
+   llvm_i32_ty,          // soffset(SGPR/imm)
+   llvm_i32_ty],         // cachepolicy(imm) bits [0-2] = th, bits[3-4] = scope
+  [IntrWriteMem, ImmArg<ArgIndex<3>>]
+>;
+
+def int_amdgcn_raw_ptr_buffer_discard_b32   : AMDGPURawPtrBufferDiscard;
+def int_amdgcn_raw_ptr_buffer_discard_b128  : AMDGPURawPtrBufferDiscard;
+def int_amdgcn_raw_ptr_buffer_discard_b1024 : AMDGPURawPtrBufferDiscard;
+
+class AMDGPURawBufferDiscard : DefaultAttrsIntrinsic <
+  [],
+  [llvm_v4i32_ty,   // rsrc(SGPR)
+   llvm_i32_ty,     // offset(VGPR/imm)
+   llvm_i32_ty,     // soffset(SGPR/imm)
+   llvm_i32_ty],    // cachepolicy(imm)  bits [0-2] = th, bits[3-4] = scope
+  [IntrWriteMem, ImmArg<ArgIndex<3>>]
+>;
+
+def int_amdgcn_raw_buffer_discard_b32   : AMDGPURawBufferDiscard;
+def int_amdgcn_raw_buffer_discard_b128  : AMDGPURawBufferDiscard;
+def int_amdgcn_raw_buffer_discard_b1024 : AMDGPURawBufferDiscard;
+
+class AMDGPUStructPtrBufferDiscard : DefaultAttrsIntrinsic <
+  [],
+  [AMDGPUBufferRsrcTy,   // rsrc(SGPR)
+   llvm_i32_ty,          // vindex(VGPR)
+   llvm_i32_ty,          // offset(VGPR/imm)
+   llvm_i32_ty,          // soffset(SGPR/imm)
+   llvm_i32_ty],         // cachepolicy(imm) bits [0-2] = th, bits[3-4] = scope
+  [IntrWriteMem, ImmArg<ArgIndex<4>>]
+>;
+
+def int_amdgcn_struct_ptr_buffer_discard_b32   : AMDGPUStructPtrBufferDiscard;
+def int_amdgcn_struct_ptr_buffer_discard_b128  : AMDGPUStructPtrBufferDiscard;
+def int_amdgcn_struct_ptr_buffer_discard_b1024 : AMDGPUStructPtrBufferDiscard;
+
+class AMDGPUStructBufferDiscard : DefaultAttrsIntrinsic <
+  [],
+  [llvm_v4i32_ty,   // rsrc(SGPR)
+   llvm_i32_ty,     // vindex(VGPR)
+   llvm_i32_ty,     // offset(VGPR/imm)
+   llvm_i32_ty,     // soffset(SGPR/imm)
+   llvm_i32_ty],    // cachepolicy(imm) bits [0-2] = th, bits[3-4] = scope
+  [IntrWriteMem, ImmArg<ArgIndex<4>>]
+>;
+
+def int_amdgcn_struct_buffer_discard_b32   : AMDGPUStructBufferDiscard;
+def int_amdgcn_struct_buffer_discard_b128  : AMDGPUStructBufferDiscard;
+def int_amdgcn_struct_buffer_discard_b1024 : AMDGPUStructBufferDiscard;
+
+
 class AMDGPUDiscard : DefaultAttrsIntrinsic<
   [],
   [llvm_anyptr_ty, // vaddr,

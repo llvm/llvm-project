@@ -255,6 +255,10 @@ def : GINodeEquiv<G_AMDGPU_UMED3, AMDGPUumed3>;
 def : GINodeEquiv<G_AMDGPU_FMED3, AMDGPUfmed3_impl>;
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
+def : GINodeEquiv<G_AMDGPU_BUFFER_DISCARD_B32,   SIbuffer_discard_b32>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_DISCARD_B128,  SIbuffer_discard_b128>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_DISCARD_B1024, SIbuffer_discard_b1024>;
+
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT, SIbuffer_load_ushort>;

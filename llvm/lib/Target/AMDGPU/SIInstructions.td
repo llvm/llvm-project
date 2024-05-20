@@ -3924,6 +3924,19 @@ def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
 
+class BufferDiscardInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$rsrc, type1:$vindex, type1:$voffset,
+                           type1:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_BUFFER_DISCARD_B32   : BufferDiscardInstruction;
+def G_AMDGPU_BUFFER_DISCARD_B128  : BufferDiscardInstruction;
+def G_AMDGPU_BUFFER_DISCARD_B1024 : BufferDiscardInstruction;
+
 class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,

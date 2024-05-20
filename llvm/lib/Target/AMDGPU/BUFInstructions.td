@@ -603,6 +603,40 @@ multiclass MUBUF_Pseudo_Loads_LDSOpc<string opName,
   def _VBUFFER_BOTHEN : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, legal_load_vt, TiedDest, isLds, isLdsOpc, 0, 1>;
 }
 
+class MUBUF_Discard_Pseudo <string opName, int addrKind>
+ : MUBUF_Pseudo<opName,
+                (outs),
+                getMUBUFIns<addrKind, [], 0, 1>.ret,
+                getMUBUFAsmOps<addrKind, 1, 0, 0>.ret,
+                []>,
+   MUBUF_SetupAddr<addrKind> {
+
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
+  let mayStore = 1;
+  let has_vdata = 0;
+  let tfe = 0;
+}
+
+multiclass MUBUF_Pseudo_Discard<string opName> {
+  def _VBUFFER_OFFSET : MUBUF_Discard_Pseudo <opName, BUFAddrKind.Offset>,
+                        MUBUFAddr64Table<0, NAME>;
+
+  def _VBUFFER_ADDR64 : MUBUF_Discard_Pseudo <opName, BUFAddrKind.Addr64>,
+                        MUBUFAddr64Table<1, NAME>;
+
+
+  def _VBUFFER_OFFEN  : MUBUF_Discard_Pseudo <opName, BUFAddrKind.OffEn>;
+  def _VBUFFER_IDXEN  : MUBUF_Discard_Pseudo <opName, BUFAddrKind.IdxEn>;
+  def _VBUFFER_BOTHEN : MUBUF_Discard_Pseudo <opName, BUFAddrKind.BothEn>;
+
+  let DisableWQM = 1 in {
+    def _VBUFFER_OFFSET_exact : MUBUF_Discard_Pseudo <opName, BUFAddrKind.Offset>;
+    def _VBUFFER_OFFEN_exact  : MUBUF_Discard_Pseudo <opName, BUFAddrKind.OffEn>;
+    def _VBUFFER_IDXEN_exact  : MUBUF_Discard_Pseudo <opName, BUFAddrKind.IdxEn>;
+    def _VBUFFER_BOTHEN_exact : MUBUF_Discard_Pseudo <opName, BUFAddrKind.BothEn>;
+  }
+}
+
 class MUBUF_Store_Pseudo <string opName,
                           int addrKind,
                           ValueType store_vt,
@@ -1039,6 +1073,10 @@ defm BUFFER_STORE_DWORDX4 : MUBUF_Pseudo_Stores <
 defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_BYTE", i32, truncstorei8_global>;
 defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_SHORT", i32, truncstorei16_global>;
 
+defm BUFFER_DISCARD_B32   : MUBUF_Pseudo_Discard <"buffer_discard_b32">;
+defm BUFFER_DISCARD_B128  : MUBUF_Pseudo_Discard <"buffer_discard_b128">;
+defm BUFFER_DISCARD_B1024 : MUBUF_Pseudo_Discard <"buffer_discard_b1024">;
+
 foreach vt = Reg32Types.types in {
 defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORD", vt, store_global>;
 }
@@ -1468,6 +1506,41 @@ defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_byte_tfe, v2i32, "BUFFER_LOAD_SBYTE_
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_short_tfe, v2i32, "BUFFER_LOAD_SSHORT_TFE">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ubyte_tfe, v2i32, "BUFFER_LOAD_UBYTE_TFE">;
 defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort_tfe, v2i32, "BUFFER_LOAD_USHORT_TFE">;
+
+multiclass MUBUF_DiscardIntrinsicPat<SDPatternOperator name, string opcode> {
+
+  def : GCNPat<
+    (name v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset, timm:$auxiliary, 0),
+    (!cast<MUBUF_Pseudo>(opcode # _VBUFFER_OFFSET_exact) SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      (extract_cpol $auxiliary), (extract_swz $auxiliary))
+  >;
+
+  def : GCNPat<
+    (name v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset, timm:$auxiliary, 0),
+    (!cast<MUBUF_Pseudo>(opcode # _VBUFFER_OFFEN_exact) VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
+      timm:$offset, (extract_cpol $auxiliary), (extract_swz $auxiliary))
+  >;
+
+  def : GCNPat<
+    (name v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
+              timm:$auxiliary, timm),
+    (!cast<MUBUF_Pseudo>(opcode # _VBUFFER_IDXEN_exact) VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
+      timm:$offset, (extract_cpol $auxiliary), (extract_swz $auxiliary))
+  >;
+
+  def : GCNPat<
+    (name v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
+              timm:$auxiliary, timm),
+    (!cast<MUBUF_Pseudo>(opcode # _VBUFFER_BOTHEN_exact)
+      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, (extract_cpol $auxiliary),
+      (extract_swz $auxiliary))
+  >;
+}
+
+defm : MUBUF_DiscardIntrinsicPat<SIbuffer_discard_b32, "BUFFER_DISCARD_B32">;
+defm : MUBUF_DiscardIntrinsicPat<SIbuffer_discard_b128, "BUFFER_DISCARD_B128">;
+defm : MUBUF_DiscardIntrinsicPat<SIbuffer_discard_b1024, "BUFFER_DISCARD_B1024">;
 
 multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
                                    string opcode, ValueType memoryVt = vt> {
@@ -2570,6 +2643,12 @@ multiclass MUBUF_Real_Atomics_gfx13<bits<8> op, string real_name = get_BUF_ps<NA
     def : Mnem_gfx13<extra_alias, real_name>;
 }
 
+multiclass MUBUF_Real_Discard_gfx13<bits<8> op, string real_name = get_BUF_ps<NAME # _VBUFFER>.Mnemonic> {
+  foreach mode = ["_BOTHEN", "_IDXEN", "_OFFEN", "_OFFSET"] in {
+    defm _VBUFFER # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
+  }
+}
+
 // TODO-GFX13: SP3 does not accept buffer_atomic_min/max_f64 as aliases.
 defm BUFFER_ATOMIC_MIN_F64      : MUBUF_Real_Atomics_gfx13<0x41, "buffer_atomic_min_num_f64">;
 defm BUFFER_ATOMIC_MAX_F64      : MUBUF_Real_Atomics_gfx13<0x42, "buffer_atomic_max_num_f64">;
@@ -2577,6 +2656,10 @@ defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Real_Atomics_gfx13<0x47>;
 defm BUFFER_ATOMIC_PK_ADD_F16   : MUBUF_Real_Atomics_gfx13<0x4a>;
 defm BUFFER_ATOMIC_PK_ADD_BF16  : MUBUF_Real_Atomics_gfx13<0x4b>;
 defm BUFFER_ATOMIC_ADD_F32      : MUBUF_Real_Atomics_gfx13<0x54>;
+
+defm BUFFER_DISCARD_B32         : MUBUF_Real_Discard_gfx13<0x04c>;
+defm BUFFER_DISCARD_B128        : MUBUF_Real_Discard_gfx13<0x04d>;
+defm BUFFER_DISCARD_B1024       : MUBUF_Real_Discard_gfx13<0x04e>;
 
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX11, GFX12, GFX1210.

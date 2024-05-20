@@ -163,6 +163,22 @@ def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
+def SDTBufferDiscard : SDTypeProfile<0, 7,
+    [ SDTCisVT<0, v4i32>, // rsrc
+      SDTCisVT<1, i32>,   // vindex(VGPR)
+      SDTCisVT<2, i32>,   // voffset(VGPR)
+      SDTCisVT<3, i32>,   // soffset(SGPR)
+      SDTCisVT<4, i32>,   // offset(imm)
+      SDTCisVT<5, i32>,   // cachepolicy
+      SDTCisVT<6, i1>]>;  // idxen(imm)
+
+def SIbuffer_discard_b32   : SDNode <"AMDGPUISD::BUFFER_DISCARD_B32", SDTBufferDiscard,
+                                   [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_discard_b128  : SDNode <"AMDGPUISD::BUFFER_DISCARD_B128", SDTBufferDiscard,
+                                   [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIbuffer_discard_b1024 : SDNode <"AMDGPUISD::BUFFER_DISCARD_B1024", SDTBufferDiscard,
+                                   [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+
 def SDTBufferStore : SDTypeProfile<0, 8,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc

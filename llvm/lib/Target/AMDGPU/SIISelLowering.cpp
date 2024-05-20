@@ -1321,6 +1321,10 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_discard_b32:
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
@@ -1330,8 +1334,16 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
   case Intrinsic::amdgcn_discard_b128:
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
     return 128;
   case Intrinsic::amdgcn_discard_b1024:
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
     return 1024;
   default:
     llvm_unreachable("Unknown width");
@@ -1573,9 +1585,26 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad;
     return true;
   }
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.flags |= MachineMemOperand::MOStore;
+    return true;
+  }
   case Intrinsic::amdgcn_discard_b32:
   case Intrinsic::amdgcn_discard_b128:
-  case Intrinsic::amdgcn_discard_b1024: {
+  case Intrinsic::amdgcn_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getOperand(0);
@@ -9998,6 +10027,98 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return SDValue();
   };
+
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024: {
+
+    unsigned Opc;
+
+    switch (IntrinsicID) {
+    default:
+      return SDValue();
+    case Intrinsic::amdgcn_raw_buffer_discard_b32:
+    case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+      Opc = AMDGPUISD::BUFFER_DISCARD_B32;
+      break;
+    case Intrinsic::amdgcn_raw_buffer_discard_b128:
+    case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+      Opc = AMDGPUISD::BUFFER_DISCARD_B128;
+      break;
+    case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+    case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+      Opc = AMDGPUISD::BUFFER_DISCARD_B1024;
+      break;
+    }
+
+    auto Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
+    auto Offsets = splitBufferOffsets(Op.getOperand(3), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
+    SDValue Ops[] = {
+        Chain,
+        Rsrc,                                 // rsrc
+        DAG.getConstant(0, DL, MVT::i32),     // vindex
+        Offsets.first,                        // voffset
+        SOffset,                              // soffset
+        Offsets.second,                       // offset
+        Op.getOperand(5),                     // cachepolicy
+        DAG.getTargetConstant(0, DL, MVT::i1) // idxen
+    };
+
+    auto *M = cast<MemSDNode>(Op);
+
+    return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
+                                   M->getMemoryVT(), M->getMemOperand());
+  }
+
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024: {
+
+    unsigned Opc;
+
+    switch (IntrinsicID) {
+    default:
+      return SDValue();
+    case Intrinsic::amdgcn_struct_buffer_discard_b32:
+    case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+      Opc = AMDGPUISD::BUFFER_DISCARD_B32;
+      break;
+    case Intrinsic::amdgcn_struct_buffer_discard_b128:
+    case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+      Opc = AMDGPUISD::BUFFER_DISCARD_B128;
+      break;
+    case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+    case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+      Opc = AMDGPUISD::BUFFER_DISCARD_B1024;
+      break;
+    }
+
+    auto Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
+    auto Offsets = splitBufferOffsets(Op.getOperand(4), DAG);
+    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
+    SDValue Ops[] = {
+        Chain,
+        Rsrc,                                  // Rsrc
+        Op.getOperand(3),                      // vindex
+        Offsets.first,                         // voffset
+        SOffset,                               // soffset
+        Offsets.second,                        // offset
+        Op.getOperand(6),                      // cachepolicy
+        DAG.getTargetConstant(1, DL, MVT::i1), // idxen
+    };
+
+    MemSDNode *M = cast<MemSDNode>(Op);
+
+    return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
+                                   M->getMemoryVT(), M->getMemOperand());
+  }
 
   case Intrinsic::amdgcn_struct_tbuffer_store:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
