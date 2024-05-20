@@ -33,18 +33,14 @@ define i32 @no_freezes(ptr %p, i32 noundef %x, i32 noundef %y) {
   ret i32 %rem
 }
 
-; FIXME: There should be no need to `freeze` x2 and y2 since they have defined
-; but potentially poison values.
 define i32 @poison_does_not_freeze(ptr %p, i32 noundef %x, i32 noundef %y) {
 ; CHECK-LABEL: define i32 @poison_does_not_freeze(
 ; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i32 [[X]], 5
 ; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[X2_FROZEN:%.*]] = freeze i32 [[X2]]
-; CHECK-NEXT:    [[Y2_FROZEN:%.*]] = freeze i32 [[Y2]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X2_FROZEN]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X2_FROZEN]], [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X2]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[DIV]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[REM_DECOMPOSED]]
 ;
@@ -61,11 +57,9 @@ define i32 @poison_does_not_freeze_signed(ptr %p, i32 noundef %x, i32 noundef %y
 ; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i32 [[X]], 5
 ; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[X2_FROZEN:%.*]] = freeze i32 [[X2]]
-; CHECK-NEXT:    [[Y2_FROZEN:%.*]] = freeze i32 [[Y2]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X2_FROZEN]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X2_FROZEN]], [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X2]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[DIV]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[REM_DECOMPOSED]]
 ;
@@ -82,11 +76,9 @@ define <4 x i8> @poison_does_not_freeze_vector(ptr %p, <4 x i8> noundef %x, <4 x
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i8> noundef [[X:%.*]], <4 x i8> noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw <4 x i8> [[X]], <i8 5, i8 5, i8 5, i8 5>
 ; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw <4 x i8> [[Y]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[X2_FROZEN:%.*]] = freeze <4 x i8> [[X2]]
-; CHECK-NEXT:    [[Y2_FROZEN:%.*]] = freeze <4 x i8> [[Y2]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <4 x i8> [[X2_FROZEN]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[DIV]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub <4 x i8> [[X2_FROZEN]], [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv <4 x i8> [[X2]], [[Y2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[DIV]], [[Y2]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub <4 x i8> [[X2]], [[TMP1]]
 ; CHECK-NEXT:    store <4 x i8> [[DIV]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret <4 x i8> [[REM_DECOMPOSED]]
 ;
@@ -103,11 +95,9 @@ define i32 @explicit_poison_does_not_freeze(ptr %p, i32 noundef %y) {
 ; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = add i32 poison, 1
 ; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    [[Y2_FROZEN:%.*]] = freeze i32 [[Y2]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X_FROZEN]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X_FROZEN]], [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X]], [[Y2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[DIV]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[REM_DECOMPOSED]]
 ;
@@ -124,11 +114,9 @@ define i32 @explicit_poison_does_not_freeze_signed(ptr %p, i32 noundef %y) {
 ; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = add i32 poison, 1
 ; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    [[Y2_FROZEN:%.*]] = freeze i32 [[Y2]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X_FROZEN]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2_FROZEN]]
-; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X_FROZEN]], [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[Y2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], [[Y2]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[DIV]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[REM_DECOMPOSED]]
 ;
