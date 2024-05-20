@@ -51,6 +51,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 
 #include "lldb/Host/Config.h"
@@ -158,6 +159,17 @@ bool CommandInterpreter::GetPromptOnQuit() const {
 
 void CommandInterpreter::SetPromptOnQuit(bool enable) {
   const uint32_t idx = ePropertyPromptOnQuit;
+  SetPropertyAtIndex(idx, enable);
+}
+
+bool CommandInterpreter::GetSaveTranscript() const {
+  const uint32_t idx = ePropertySaveTranscript;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
+void CommandInterpreter::SetSaveTranscript(bool enable) {
+  const uint32_t idx = ePropertySaveTranscript;
   SetPropertyAtIndex(idx, enable);
 }
 
@@ -1889,7 +1901,16 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   else
     add_to_history = (lazy_add_to_history == eLazyBoolYes);
 
-  m_transcript_stream << "(lldb) " << command_line << '\n';
+  // The same `transcript_item` will be used below to add output and error of
+  // the command.
+  StructuredData::DictionarySP transcript_item;
+  if (GetSaveTranscript()) {
+    m_transcript_stream << "(lldb) " << command_line << '\n';
+
+    transcript_item = std::make_shared<StructuredData::Dictionary>();
+    transcript_item->AddStringItem("command", command_line);
+    m_transcript.AddItem(transcript_item);
+  }
 
   bool empty_command = false;
   bool comment_command = false;
@@ -1994,7 +2015,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // Take care of things like setting up the history command & calling the
   // appropriate Execute method on the CommandObject, with the appropriate
   // arguments.
-
+  StatsDuration execute_time;
   if (cmd_obj != nullptr) {
     bool generate_repeat_command = add_to_history;
     // If we got here when empty_command was true, then this command is a
@@ -2035,14 +2056,24 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         log, "HandleCommand, command line after removing command name(s): '%s'",
         remainder.c_str());
 
+    ElapsedTime elapsed(execute_time);
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
   LLDB_LOGF(log, "HandleCommand, command %s",
             (result.Succeeded() ? "succeeded" : "did not succeed"));
 
-  m_transcript_stream << result.GetOutputData();
-  m_transcript_stream << result.GetErrorData();
+  // To test whether or not transcript should be saved, `transcript_item` is
+  // used instead of `GetSaveTrasncript()`. This is because the latter will
+  // fail when the command is "settings set interpreter.save-transcript true".
+  if (transcript_item) {
+    m_transcript_stream << result.GetOutputData();
+    m_transcript_stream << result.GetErrorData();
+
+    transcript_item->AddStringItem("output", result.GetOutputData());
+    transcript_item->AddStringItem("error", result.GetErrorData());
+    transcript_item->AddFloatItem("seconds", execute_time.get().count());
+  }
 
   return result.Succeeded();
 }
@@ -3553,4 +3584,8 @@ llvm::json::Value CommandInterpreter::GetStatistics() {
   for (const auto &command_usage : m_command_usages)
     stats.try_emplace(command_usage.getKey(), command_usage.getValue());
   return stats;
+}
+
+const StructuredData::Array &CommandInterpreter::GetTranscript() const {
+  return m_transcript;
 }

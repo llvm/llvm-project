@@ -1,5 +1,6 @@
 """Test the SBCommandInterpreter APIs."""
 
+import json
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,8 +16,7 @@ class CommandInterpreterAPICase(TestBase):
         # Find the line number to break on inside main.cpp.
         self.line = line_number("main.c", "Hello world.")
 
-    def test_with_process_launch_api(self):
-        """Test the SBCommandInterpreter APIs."""
+    def buildAndCreateTarget(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
@@ -27,6 +27,11 @@ class CommandInterpreterAPICase(TestBase):
         # Retrieve the associated command interpreter from our debugger.
         ci = self.dbg.GetCommandInterpreter()
         self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
+        return ci
+
+    def test_with_process_launch_api(self):
+        """Test the SBCommandInterpreter APIs."""
+        ci = self.buildAndCreateTarget()
 
         # Exercise some APIs....
 
@@ -85,3 +90,166 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(res.GetOutput(), "")
         self.assertIsNotNone(res.GetError())
         self.assertEqual(res.GetError(), "")
+
+    def getTranscriptAsPythonObject(self, ci):
+        """Retrieve the transcript and convert it into a Python object"""
+        structured_data = ci.GetTranscript()
+        self.assertTrue(structured_data.IsValid())
+
+        stream = lldb.SBStream()
+        self.assertTrue(stream)
+
+        error = structured_data.GetAsJSON(stream)
+        self.assertSuccess(error)
+
+        return json.loads(stream.GetData())
+
+    def test_structured_transcript(self):
+        """Test structured transcript generation and retrieval."""
+        ci = self.buildAndCreateTarget()
+
+        # Make sure the "save-transcript" setting is on
+        self.runCmd("settings set interpreter.save-transcript true")
+
+        # Send a few commands through the command interpreter.
+        #
+        # Using `ci.HandleCommand` because some commands will fail so that we
+        # can test the "error" field in the saved transcript.
+        res = lldb.SBCommandReturnObject()
+        ci.HandleCommand("version", res)
+        ci.HandleCommand("an-unknown-command", res)
+        ci.HandleCommand("breakpoint set -f main.c -l %d" % self.line, res)
+        ci.HandleCommand("r", res)
+        ci.HandleCommand("p a", res)
+        ci.HandleCommand("statistics dump", res)
+        total_number_of_commands = 6
+
+        # Get transcript as python object
+        transcript = self.getTranscriptAsPythonObject(ci)
+
+        # All commands should have expected fields.
+        for command in transcript:
+            self.assertIn("command", command)
+            self.assertIn("output", command)
+            self.assertIn("error", command)
+            self.assertIn("seconds", command)
+
+        # The following validates individual commands in the transcript.
+        #
+        # Notes:
+        # 1. Some of the asserts rely on the exact output format of the
+        #    commands. Hopefully we are not changing them any time soon.
+        # 2. We are removing the "seconds" field from each command, so that
+        #    some of the validations below can be easier / more readable.
+        for command in transcript:
+            del(command["seconds"])
+
+        # (lldb) version
+        self.assertEqual(transcript[0]["command"], "version")
+        self.assertIn("lldb version", transcript[0]["output"])
+        self.assertEqual(transcript[0]["error"], "")
+
+        # (lldb) an-unknown-command
+        self.assertEqual(transcript[1],
+            {
+                "command": "an-unknown-command",
+                "output": "",
+                "error": "error: 'an-unknown-command' is not a valid command.\n",
+            })
+
+        # (lldb) breakpoint set -f main.c -l <line>
+        self.assertEqual(transcript[2]["command"], "breakpoint set -f main.c -l %d" % self.line)
+        # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
+        self.assertIn("Breakpoint 1: where = a.out`main ", transcript[2]["output"])
+        self.assertEqual(transcript[2]["error"], "")
+
+        # (lldb) r
+        self.assertEqual(transcript[3]["command"], "r")
+        # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
+        self.assertIn("Process", transcript[3]["output"])
+        self.assertIn("launched", transcript[3]["output"])
+        self.assertEqual(transcript[3]["error"], "")
+
+        # (lldb) p a
+        self.assertEqual(transcript[4],
+            {
+                "command": "p a",
+                "output": "(int) 123\n",
+                "error": "",
+            })
+
+        # (lldb) statistics dump
+        statistics_dump = json.loads(transcript[5]["output"])
+        # Dump result should be valid JSON
+        self.assertTrue(statistics_dump is not json.JSONDecodeError)
+        # Dump result should contain expected fields
+        self.assertIn("commands", statistics_dump)
+        self.assertIn("memory", statistics_dump)
+        self.assertIn("modules", statistics_dump)
+        self.assertIn("targets", statistics_dump)
+
+    def test_save_transcript_setting_default(self):
+        ci = self.buildAndCreateTarget()
+        res = lldb.SBCommandReturnObject()
+
+        # The setting's default value should be "false"
+        self.runCmd("settings show interpreter.save-transcript", "interpreter.save-transcript (boolean) = false\n")
+        # self.assertEqual(res.GetOutput(), )
+
+    def test_save_transcript_setting_off(self):
+        ci = self.buildAndCreateTarget()
+
+        # Make sure the setting is off
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # The transcript should be empty after running a command
+        self.runCmd("version")
+        transcript = self.getTranscriptAsPythonObject(ci)
+        self.assertEqual(transcript, [])
+
+    def test_save_transcript_setting_on(self):
+        ci = self.buildAndCreateTarget()
+        res = lldb.SBCommandReturnObject()
+
+        # Make sure the setting is on
+        self.runCmd("settings set interpreter.save-transcript true")
+
+        # The transcript should contain one item after running a command
+        self.runCmd("version")
+        transcript = self.getTranscriptAsPythonObject(ci)
+        self.assertEqual(len(transcript), 1)
+        self.assertEqual(transcript[0]["command"], "version")
+
+    def test_save_transcript_returns_copy(self):
+        """
+        Test that the returned structured data is *at least* a shallow copy.
+
+        We believe that a deep copy *is* performed in `SBCommandInterpreter::GetTranscript`.
+        However, the deep copy cannot be tested and doesn't need to be tested,
+        because there is no logic in the command interpreter to modify a
+        transcript item (representing a command) after it has been returned.
+        """
+        ci = self.buildAndCreateTarget()
+
+        # Make sure the setting is on
+        self.runCmd("settings set interpreter.save-transcript true")
+
+        # Run commands and get the transcript as structured data
+        self.runCmd("version")
+        structured_data_1 = ci.GetTranscript()
+        self.assertTrue(structured_data_1.IsValid())
+        self.assertEqual(structured_data_1.GetSize(), 1)
+        self.assertEqual(structured_data_1.GetItemAtIndex(0).GetValueForKey("command").GetStringValue(100), "version")
+
+        # Run some more commands and get the transcript as structured data again
+        self.runCmd("help")
+        structured_data_2 = ci.GetTranscript()
+        self.assertTrue(structured_data_2.IsValid())
+        self.assertEqual(structured_data_2.GetSize(), 2)
+        self.assertEqual(structured_data_2.GetItemAtIndex(0).GetValueForKey("command").GetStringValue(100), "version")
+        self.assertEqual(structured_data_2.GetItemAtIndex(1).GetValueForKey("command").GetStringValue(100), "help")
+
+        # Now, the first structured data should remain unchanged
+        self.assertTrue(structured_data_1.IsValid())
+        self.assertEqual(structured_data_1.GetSize(), 1)
+        self.assertEqual(structured_data_1.GetItemAtIndex(0).GetValueForKey("command").GetStringValue(100), "version")
