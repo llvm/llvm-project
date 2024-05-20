@@ -22,6 +22,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,6 +33,11 @@
 using namespace llvm;
 
 STATISTIC(NumEliminatedCanonicalIV, "Number of canonical IVs we eliminated");
+
+static cl::opt<bool> EnableEVLIndVarSimplify(
+    "enable-evl-indvar-simplify",
+    cl::desc("Enable EVL-based induction variable simplify Pass"), cl::Hidden,
+    cl::init(true));
 
 namespace {
 struct EVLIndVarSimplifyImpl {
@@ -62,10 +68,9 @@ struct EVLIndVarSimplify : public LoopPass {
 };
 } // anonymous namespace
 
-static std::optional<uint32_t> getVFFromIndVar(const SCEV *Step,
-                                               const Function &F) {
+static uint32_t getVFFromIndVar(const SCEV *Step, const Function &F) {
   if (!Step)
-    return std::nullopt;
+    return 0U;
 
   // Looking for loops with IV step value in the form of `(<constant VF> x
   // vscale)`.
@@ -95,14 +100,18 @@ static std::optional<uint32_t> getVFFromIndVar(const SCEV *Step,
       }
     }
 
-  return std::nullopt;
+  return 0U;
 }
 
 // Remove the original induction variable if it's not used anywhere.
-static void cleanupOriginalIndVar(PHINode *OrigIndVar, BasicBlock *InitBlock,
-                                  BasicBlock *BackEdgeBlock) {
-  Value *InitValue = OrigIndVar->getIncomingValueForBlock(InitBlock);
-  Value *RecValue = OrigIndVar->getIncomingValueForBlock(BackEdgeBlock);
+static void tryCleanupOriginalIndVar(PHINode *OrigIndVar,
+                                     const InductionDescriptor &IVD) {
+  if (OrigIndVar->getNumIncomingValues() != 2)
+    return;
+  Value *InitValue = OrigIndVar->getIncomingValue(0);
+  Value *RecValue = OrigIndVar->getIncomingValue(1);
+  if (InitValue != IVD.getStartValue())
+    std::swap(InitValue, RecValue);
 
   // If the only user of OrigIndVar is the one produces RecValue, then we can
   // safely remove it.
@@ -117,6 +126,9 @@ static void cleanupOriginalIndVar(PHINode *OrigIndVar, BasicBlock *InitBlock,
 }
 
 bool EVLIndVarSimplifyImpl::run(Loop &L) {
+  if (!EnableEVLIndVarSimplify)
+    return false;
+
   InductionDescriptor IVD;
   PHINode *IndVar = L.getInductionVariable(SE);
   if (!IndVar || !L.getInductionDescriptor(SE, IVD)) {
@@ -143,23 +155,23 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   Value *CanonicalIVFinal = &Bounds->getFinalIVValue();
 
   const SCEV *StepV = IVD.getStep();
-  auto VF = getVFFromIndVar(StepV, *L.getHeader()->getParent());
+  uint32_t VF = getVFFromIndVar(StepV, *L.getHeader()->getParent());
   if (!VF) {
     LLVM_DEBUG(dbgs() << "Could not infer VF from IndVar step '" << *StepV
                       << "'\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "Using VF=" << *VF << " for loop " << L.getName()
+  LLVM_DEBUG(dbgs() << "Using VF=" << VF << " for loop " << L.getName()
                     << "\n");
 
   // Try to find the EVL-based induction variable.
   using namespace PatternMatch;
   BasicBlock *BB = IndVar->getParent();
 
-  Value *EVLIndex = nullptr;
-  Value *RemVL = nullptr, *AVL = nullptr;
+  Value *EVLIndVar = nullptr;
+  Value *RemTC = nullptr, *TC = nullptr;
   auto IntrinsicMatch = m_Intrinsic<Intrinsic::experimental_get_vector_length>(
-      m_Value(RemVL), m_SpecificInt(*VF),
+      m_Value(RemTC), m_SpecificInt(VF),
       /*Scalable=*/m_SpecificInt(1));
   for (auto &PN : BB->phis()) {
     if (&PN == IndVar)
@@ -198,19 +210,19 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
                       << "\n");
 
     // Check 3: Pattern match to find the EVL-based index and total trip count
-    // (AVL).
+    // (TC).
     if (match(RecValue,
               m_c_Add(m_ZExtOrSelf(IntrinsicMatch), m_Specific(&PN))) &&
-        match(RemVL, m_Sub(m_Value(AVL), m_Specific(&PN)))) {
-      EVLIndex = RecValue;
+        match(RemTC, m_Sub(m_Value(TC), m_Specific(&PN)))) {
+      EVLIndVar = RecValue;
       break;
     }
   }
 
-  if (!EVLIndex || !AVL)
+  if (!EVLIndVar || !TC)
     return false;
 
-  LLVM_DEBUG(dbgs() << "Using " << *EVLIndex << " for EVL-based IndVar\n");
+  LLVM_DEBUG(dbgs() << "Using " << *EVLIndVar << " for EVL-based IndVar\n");
 
   // Create an EVL-based comparison and replace the branch to use it as
   // predicate.
@@ -220,10 +232,10 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
     return false;
 
   IRBuilder<> Builder(OrigLatchCmp);
-  auto *NewPred = Builder.CreateICmp(Pred, EVLIndex, AVL);
+  auto *NewPred = Builder.CreateICmp(Pred, EVLIndVar, TC);
   OrigLatchCmp->replaceAllUsesWith(NewPred);
 
-  cleanupOriginalIndVar(IndVar, InitBlock, BackEdgeBlock);
+  tryCleanupOriginalIndVar(IndVar, IVD);
 
   ++NumEliminatedCanonicalIV;
 
