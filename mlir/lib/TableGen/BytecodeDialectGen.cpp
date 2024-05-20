@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/IndentedOstream.h"
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/ByteCodeGen.h"
+
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+
 #include <regex>
 
 using namespace llvm;

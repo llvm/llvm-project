@@ -11,12 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/PassGen.h"
 #include "mlir/TableGen/Pass.h"
+
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;

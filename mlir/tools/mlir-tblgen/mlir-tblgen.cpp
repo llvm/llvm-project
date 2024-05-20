@@ -11,9 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/ByteCodeGen.h"
+#include "mlir/TableGen/CAPIGen.h"
+#include "mlir/TableGen/DialectGenUtilities.h"
+#include "mlir/TableGen/DocGenUtilities.h"
+#include "mlir/TableGen/EnumGen.h"
+#include "mlir/TableGen/LLVMGen.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/OpInterfacesGen.h"
+#include "mlir/TableGen/PassGen.h"
+#include "mlir/TableGen/PythonGen.h"
+#include "mlir/TableGen/SPIRVGen.h"
 #include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -23,42 +33,20 @@ using namespace mlir;
 using namespace mlir::tblgen;
 
 //===----------------------------------------------------------------------===//
-// Commandline Options
+// AttrDef
 //===----------------------------------------------------------------------===//
+
+static llvm::cl::OptionCategory attrdefGenCat("Options for -gen-attrdef-*");
+
+static llvm::cl::opt<std::string>
+    attrDialect("attrdefs-dialect",
+                llvm::cl::desc("Generate attributes for this dialect"),
+                llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
 
 static llvm::cl::opt<bool> formatErrorIsFatal(
     "asmformat-error-is-fatal",
     llvm::cl::desc("Emit a fatal error if format parsing fails"),
     llvm::cl::init(true));
-
-cl::OptionCategory opDefGenCat("Options for op definition generators");
-
-static cl::opt<std::string> opIncFilter(
-    "op-include-regex",
-    cl::desc("Regex of name of op's to include (no filter if empty)"),
-    cl::cat(opDefGenCat));
-static cl::opt<std::string> opExcFilter(
-    "op-exclude-regex",
-    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
-    cl::cat(opDefGenCat));
-static cl::opt<unsigned> opShardCount(
-    "op-shard-count",
-    cl::desc("The number of shards into which the op classes will be divided"),
-    cl::cat(opDefGenCat), cl::init(1));
-
-//===----------------------------------------------------------------------===//
-// GEN: Registration hooks
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// AttrDef
-//===----------------------------------------------------------------------===//
-
-static llvm::cl::OptionCategory attrdefGenCat("Options for -gen-attrdef-*");
-static llvm::cl::opt<std::string>
-    attrDialect("attrdefs-dialect",
-                llvm::cl::desc("Generate attributes for this dialect"),
-                llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
 
 static mlir::GenRegistration
     genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
@@ -76,6 +64,21 @@ static mlir::GenRegistration
 //===----------------------------------------------------------------------===//
 // TypeDef
 //===----------------------------------------------------------------------===//
+
+cl::OptionCategory opDefGenCat("Options for op definition generators");
+
+static cl::opt<std::string> opIncFilter(
+    "op-include-regex",
+    cl::desc("Regex of name of op's to include (no filter if empty)"),
+    cl::cat(opDefGenCat));
+static cl::opt<std::string> opExcFilter(
+    "op-exclude-regex",
+    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
+    cl::cat(opDefGenCat));
+static cl::opt<unsigned> opShardCount(
+    "op-shard-count",
+    cl::desc("The number of shards into which the op classes will be divided"),
+    cl::cat(opDefGenCat), cl::init(1));
 
 static llvm::cl::OptionCategory typedefGenCat("Options for -gen-typedef-*");
 static llvm::cl::opt<std::string>
@@ -459,7 +462,7 @@ static mlir::GenRegistration genSPIRVOpAvailabilityImpl(
     });
 
 //===----------------------------------------------------------------------===//
-//
+// Generic
 //===----------------------------------------------------------------------===//
 
 // Generator that prints records.

@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/DocGenUtilities.h"
-#include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Pass.h"
+
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
 

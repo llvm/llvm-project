@@ -10,7 +10,9 @@
 #define MLIR_TOOLS_MLIRTBLGEN_DIALECTGENUTILITIES_H_
 
 #include "mlir/Support/LLVM.h"
+
 #include "llvm/Support/CommandLine.h"
+#include "llvm/TableGen/Record.h"
 
 namespace mlir {
 namespace tblgen {
@@ -21,6 +23,13 @@ class Dialect;
 std::optional<Dialect>
 findDialectToGenerate(ArrayRef<Dialect> dialects,
                       const std::string &selectedDialect);
+bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper, raw_ostream &os,
+                      const std::string &selectedDialect);
+bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper, raw_ostream &os,
+                     const std::string &selectedDialect);
+bool emitDirectiveDecls(const llvm::RecordKeeper &recordKeeper,
+                        llvm::StringRef dialect, raw_ostream &os);
+
 } // namespace tblgen
 } // namespace mlir
 

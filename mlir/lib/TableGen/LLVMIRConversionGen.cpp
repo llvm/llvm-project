@@ -14,7 +14,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/LLVMGen.h"
 #include "mlir/TableGen/Operator.h"
 
 #include "llvm/ADT/Sequence.h"

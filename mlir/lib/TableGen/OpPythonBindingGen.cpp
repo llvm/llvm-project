@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/OpGenHelpers.h"
-
-#include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/PythonGen.h"
+
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"

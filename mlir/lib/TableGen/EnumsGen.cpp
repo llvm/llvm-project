@@ -11,9 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/EnumGen.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/FormatGen.h"
-#include "mlir/TableGen/GenInfo.h"
+
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"

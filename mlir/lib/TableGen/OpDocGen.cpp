@@ -216,7 +216,8 @@ static void emitOpDoc(const Operator &op, raw_ostream &os,
         // Expandable description.
         // This appears as just the summary, but when clicked shows the full
         // description.
-        os << "<details>" << "<summary>" << it.attr.getSummary() << "</summary>"
+        os << "<details>"
+           << "<summary>" << it.attr.getSummary() << "</summary>"
            << "{{% markdown %}}" << description << "{{% /markdown %}}"
            << "</details>";
       } else {

@@ -17,7 +17,9 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+
 #include "llvm/TableGen/Record.h"
+
 #include <vector>
 
 namespace mlir {
@@ -105,6 +107,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
     extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
+
 /// A specialized generator for operation interfaces.
 struct OpInterfaceGenerator : public InterfaceGenerator {
   OpInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
@@ -121,6 +124,7 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
     extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
+
 /// A specialized generator for type interfaces.
 struct TypeInterfaceGenerator : public InterfaceGenerator {
   TypeInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
@@ -136,6 +140,7 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
     extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
+
 } // namespace tblgen
 } // namespace mlir
 

@@ -14,7 +14,9 @@
 #define MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
 
 #include "mlir/Support/LLVM.h"
+
 #include "llvm/TableGen/Record.h"
+
 #include <vector>
 
 namespace mlir {
@@ -35,6 +37,14 @@ bool isPythonReserved(llvm::StringRef str);
 void shardOpDefinitions(ArrayRef<llvm::Record *> defs,
                         SmallVectorImpl<ArrayRef<llvm::Record *>> &shardedDefs,
                         unsigned shardOpDefinitions);
+
+bool emitOpDecls(const llvm::RecordKeeper &recordKeeper, raw_ostream &os,
+                 const std::string &opIncFilter, const std::string &opExcFilter,
+                 unsigned opShardCount, bool formatErrorIsFatal);
+
+bool emitOpDefs(const llvm::RecordKeeper &recordKeeper, raw_ostream &os,
+                const std::string &opIncFilter, const std::string &opExcFilter,
+                unsigned opShardCount, bool formatErrorIsFatal);
 
 } // namespace tblgen
 } // namespace mlir

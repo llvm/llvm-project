@@ -12,9 +12,9 @@
 
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Argument.h"
-#include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Type.h"
+
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -22,11 +22,9 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <list>
 
 #define DEBUG_TYPE "mlir-tblgen-operator"
 

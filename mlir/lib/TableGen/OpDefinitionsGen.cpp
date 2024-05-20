@@ -25,6 +25,7 @@
 #include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/SideEffects.h"
 #include "mlir/TableGen/Trait.h"
+
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Sequence.h"
@@ -736,9 +737,6 @@ private:
 
   // Helper for emitting op code.
   OpOrAdaptorHelper emitHelper;
-
-  /// Whether a failure in parsing the assembly format should be a fatal error.
-  bool formatErrorIsFatal;
 };
 
 } // namespace
@@ -1031,8 +1029,7 @@ OpEmitter::OpEmitter(const Operator &op,
       opClass(op.getCppClassName(), formatExtraDeclarations(op),
               formatExtraDefinitions(op)),
       staticVerifierEmitter(staticVerifierEmitter),
-      emitHelper(op, /*emitForOp=*/true),
-      formatErrorIsFatal(formatErrorIsFatal) {
+      emitHelper(op, /*emitForOp=*/true) {
   verifyCtx.addSubst("_op", "(*this->getOperation())");
   verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
 
@@ -2492,7 +2489,8 @@ void OpEmitter::genSeparateArgParamBuilder() {
 
       // Avoid emitting "resultTypes.size() >= 0u" which is always true.
       if (!hasVariadicResult || numNonVariadicResults != 0)
-        body << "  " << "assert(resultTypes.size() "
+        body << "  "
+             << "assert(resultTypes.size() "
              << (hasVariadicResult ? ">=" : "==") << " "
              << numNonVariadicResults
              << "u && \"mismatched number of results\");\n";

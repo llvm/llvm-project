@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/LLVMGen.h"
 
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"

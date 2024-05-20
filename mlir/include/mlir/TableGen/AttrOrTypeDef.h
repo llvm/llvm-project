@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Builder.h"
 #include "mlir/TableGen/Trait.h"
+
 #include "llvm/TableGen/Record.h"
 
 namespace llvm {

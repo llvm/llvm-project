@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/DialectGenUtilities.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"

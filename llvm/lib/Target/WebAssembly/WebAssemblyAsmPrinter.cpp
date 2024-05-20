@@ -387,7 +387,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
 void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   // This is required to emit external declarations (like .functypes) when
   // no functions are defined in the compilation unit and therefore,
-  // emitDirectiveDecls() is not called until now.
+  // emitDecls() is not called until now.
   emitDecls(M);
 
   // When a function's address is taken, a TABLE_INDEX relocation is emitted

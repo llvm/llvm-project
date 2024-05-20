@@ -15,6 +15,7 @@
 #define MLIR_TOOLS_MLIRTBLGEN_DOCGENUTILITIES_H_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TableGen/Record.h"
 
 namespace llvm {
 class raw_ostream;
@@ -38,6 +39,22 @@ void emitDescription(llvm::StringRef description, llvm::raw_ostream &os);
 // Emit the description as a C++ comment while realigning it.
 void emitDescriptionComment(llvm::StringRef description, llvm::raw_ostream &os,
                             llvm::StringRef prefix = "");
+
+void emitAttrOrTypeDefDoc(const llvm::RecordKeeper &recordKeeper,
+                          llvm::raw_ostream &os,
+                          llvm::StringRef recordTypeName);
+
+void emitOpDoc(const llvm::RecordKeeper &recordKeeper, llvm::raw_ostream &os,
+               const std::string &emitOpDoc, bool allowHugoSpecificFeatures,
+               const std::string &opIncFilter, const std::string &opExcFilter);
+
+bool emitDialectDoc(const llvm::RecordKeeper &recordKeeper,
+                    llvm::raw_ostream &os, const std::string &selectedDialect,
+                    const std::string &opIncFilter,
+                    const std::string &opExcFilter,
+                    const std::string &stripPrefix,
+                    bool allowHugoSpecificFeatures);
+void emitDocs(const llvm::RecordKeeper &recordKeeper, llvm::raw_ostream &os);
 
 } // namespace tblgen
 } // namespace mlir
