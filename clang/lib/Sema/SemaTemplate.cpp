@@ -10391,6 +10391,44 @@ bool Sema::CheckFunctionTemplateSpecialization(
       !ResolveExceptionSpec(FD->getLocation(), SpecializationFPT))
     return true;
 
+  // If this is a friend declaration, then we're not really declaring
+  // an explicit specialization.
+  bool isFriend = (FD->getFriendObjectKind() != Decl::FOK_None);
+
+  // C++23 [dcl.fct]p6 (with CWG2846 applied):
+  //   [...] An explicit-object-parameter-declaration shall appear
+  //   only as the first parameter-declaration of a parameter-declaration-list
+  //   of either one of:
+  //   - a member-declarator that declares declaration of a member function or
+  //     member function template, or
+  //   - an explicit instantiation or explicit specialization of a templated
+  //     member function, or
+  //   - a lambda-declarator.
+  //
+  // If the primary template is an explicit object member function, then
+  // the specialization must have an explicit object parameter. Likewise,
+  // if the primary template is an implicit object member function,
+  // static member function, or non-member function, then the specialization
+  // cannot have an explicit object parameter.
+  FunctionDecl *Primary =
+      Specialization->getPrimaryTemplate()->getTemplatedDecl();
+  if (FD->hasCXXExplicitFunctionObjectParameter() !=
+      Primary->hasCXXExplicitFunctionObjectParameter()) {
+    Diag(FD->getLocation(), diag::err_explicit_object_spec_mismatch)
+        << isFriend
+        << (Primary->isStatic()
+                ? 0
+                : Specialization->hasCXXExplicitFunctionObjectParameter() + 1)
+        << (FD->hasCXXExplicitFunctionObjectParameter()
+                ? FD->getParamDecl(0)->getSourceRange()
+                : SourceRange());
+    Diag(Primary->getLocation(), diag::note_specialized_decl)
+        << (Primary->hasCXXExplicitFunctionObjectParameter()
+                ? Primary->getParamDecl(0)->getSourceRange()
+                : SourceRange());
+    return true;
+  }
+
   FunctionTemplateSpecializationInfo *SpecInfo
     = Specialization->getTemplateSpecializationInfo();
   assert(SpecInfo && "Function template specialization info missing?");
@@ -10412,10 +10450,6 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
   // FIXME: Check if the prior specialization has a point of instantiation.
   // If so, we have run afoul of .
-
-  // If this is a friend declaration, then we're not really declaring
-  // an explicit specialization.
-  bool isFriend = (FD->getFriendObjectKind() != Decl::FOK_None);
 
   // Check the scope of this explicit specialization.
   if (!isFriend &&

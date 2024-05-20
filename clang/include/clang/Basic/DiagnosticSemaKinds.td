@@ -7525,6 +7525,10 @@ def err_explicit_object_parameter_mutable: Error<
 def err_invalid_explicit_object_type_in_lambda: Error<
   "invalid explicit object parameter type %0 in lambda with capture; "
   "the type must be the same as, or derived from, the lambda">;
+def err_explicit_object_spec_mismatch: Error<
+  "%select{an explicit|a friend function}0 specialization %select{of|naming}0 "
+  "%select{a static|an implicit object|an explicit object}1 member function "
+  "%select{cannot|cannot|must}1 have an explicit object parameter">;
 
 def err_ref_qualifier_overload : Error<
   "cannot overload a member function %select{without a ref-qualifier|with "
