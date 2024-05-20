@@ -485,8 +485,11 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   auto TargetTriple = Triple(M.getTargetTriple());
   // This is not a stable ABI for now, so only allow in dev builds with API
   // level 10000.
+  // The ThreadLong format is the same as with HWASan, but the entries for
+  // stack MTE take two slots (16 bytes).
   if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(10000)) {
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(10000) &&
+      !AllocasToInstrument.empty()) {
     constexpr int StackMteSlot = -3;
     constexpr uint64_t TagMask = 0xFULL << 56;
 
