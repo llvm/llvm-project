@@ -70,5 +70,5 @@ define i32 @_Z4testP4Base(ptr %0) !prof !15 {
 ; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS: ^1 = gv: (guid: 1960855528937986108)
 ; DIS: ^2 = gv: (guid: 5459407273543877811)
-; DIS: ^3 = gv: (name: "_Z4testP4Base", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 4, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 1, mustBeUnreachable: 0), calls: ((callee: ^2, hotness: hot)), refs: (readonly ^1)))) ; guid = 15857150948103218965
+; DIS: ^3 = gv: (name: "_Z4testP4Base", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 4, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 1, mustBeUnreachable: 0), calls: ((callee: ^2, hotness: hot)), refs: (readonly ^1)))) ; guid = 15857150948103218965
 ; DIS: ^4 = blockcount: 0

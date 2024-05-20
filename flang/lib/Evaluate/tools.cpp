@@ -28,11 +28,11 @@ namespace Fortran::evaluate {
 static constexpr bool allowOperandDuplication{false};
 
 std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
-  const Symbol &symbol{ref.GetLastSymbol()};
-  if (auto dyType{DynamicType::From(symbol)}) {
+  if (auto dyType{DynamicType::From(ref.GetLastSymbol())}) {
     return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+  } else {
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &symbol) {
@@ -1056,8 +1056,8 @@ public:
   explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(call.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            call.proc(), context_, /*emitError=*/false)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }

@@ -322,6 +322,8 @@ public:
 #include <sys/dr.h>
 #include <sys/rset.h>
 #define VMI_MAXRADS 64 // Maximum number of RADs allowed by AIX.
+#define GET_NUMBER_SMT_SETS 0x0004
+extern "C" int syssmt(int flags, int, int, int *);
 #endif
 class KMPNativeAffinity : public KMPAffinity {
   class Mask : public KMPAffinity::Mask {

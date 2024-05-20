@@ -9,9 +9,10 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_MERGE_H
 #define _LIBCPP___ALGORITHM_PSTL_MERGE_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__config>
 #include <__functional/operations.h>
+#include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -70,6 +71,10 @@ merge(_ExecutionPolicy&& __policy,
       _ForwardIterator2 __last2,
       _ForwardOutIterator __result,
       _Comp __comp = {}) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "merge requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "merge requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(*__first1), "merge requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(*__first2), "merge requires an OutputIterator");
   auto __res = std::__merge(
       __policy,
       std::move(__first1),

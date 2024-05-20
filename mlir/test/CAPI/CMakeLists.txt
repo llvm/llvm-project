@@ -12,6 +12,7 @@ function(_add_capi_test_executable name)
   llvm_update_compile_flags(${name})
   if(MLIR_BUILD_MLIR_C_DYLIB)
     target_link_libraries(${name} PRIVATE
+      LLVMCore
       MLIR-C)
   else()
     target_link_libraries(${name} PRIVATE
@@ -35,6 +36,13 @@ _add_capi_test_executable(mlir-capi-ir-test
     MLIRCAPIIR
     MLIRCAPIFunc
     MLIRCAPIRegisterEverything
+)
+
+_add_capi_test_executable(mlir-capi-irdl-test
+  irdl.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIIRDL
 )
 
 _add_capi_test_executable(mlir-capi-llvm-test

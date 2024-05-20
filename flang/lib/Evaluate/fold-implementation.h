@@ -45,6 +45,12 @@
 
 namespace Fortran::evaluate {
 
+// Don't use Kahan extended precision summation any more when folding
+// transformational intrinsic functions other than SUM, since it is
+// not used in the runtime implementations of those functions and we
+// want results to match.
+static constexpr bool useKahanSummation{false};
+
 // Utilities
 template <typename T> class Folder {
 public:
@@ -201,11 +207,12 @@ std::optional<Constant<T>> Folder<T>::ApplySubscripts(const Constant<T> &array,
   ConstantSubscripts resultShape;
   ConstantSubscripts ssLB;
   for (const auto &ss : subscripts) {
-    CHECK(ss.Rank() <= 1);
     if (ss.Rank() == 1) {
       resultShape.push_back(static_cast<ConstantSubscript>(ss.size()));
       elements *= ss.size();
       ssLB.push_back(ss.lbounds().front());
+    } else if (ss.Rank() > 1) {
+      return std::nullopt; // error recovery
     }
   }
   ConstantSubscripts ssAt(rank, 0), at(rank, 0), tmp(1, 0);
@@ -1691,7 +1698,9 @@ Expr<TO> FoldOperation(
           if constexpr (TO::category == TypeCategory::Integer) {
             if constexpr (FromCat == TypeCategory::Integer) {
               auto converted{Scalar<TO>::ConvertSigned(*value)};
-              if (converted.overflow) {
+              if (converted.overflow &&
+                  msvcWorkaround.context.languageFeatures().ShouldWarn(
+                      common::UsageWarning::FoldingException)) {
                 ctx.messages().Say(
                     "INTEGER(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
                     Operand::kind, TO::kind);
@@ -1699,14 +1708,17 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{value->template ToInteger<Scalar<TO>>()};
-              if (converted.flags.test(RealFlag::InvalidArgument)) {
-                ctx.messages().Say(
-                    "REAL(%d) to INTEGER(%d) conversion: invalid argument"_warn_en_US,
-                    Operand::kind, TO::kind);
-              } else if (converted.flags.test(RealFlag::Overflow)) {
-                ctx.messages().Say(
-                    "REAL(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
-                    Operand::kind, TO::kind);
+              if (msvcWorkaround.context.languageFeatures().ShouldWarn(
+                      common::UsageWarning::FoldingException)) {
+                if (converted.flags.test(RealFlag::InvalidArgument)) {
+                  ctx.messages().Say(
+                      "REAL(%d) to INTEGER(%d) conversion: invalid argument"_warn_en_US,
+                      Operand::kind, TO::kind);
+                } else if (converted.flags.test(RealFlag::Overflow)) {
+                  ctx.messages().Say(
+                      "REAL(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
+                      Operand::kind, TO::kind);
+                }
               }
               return ScalarConstantToExpr(std::move(converted.value));
             }
@@ -1815,7 +1827,9 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
   } else if (auto value{GetScalarConstantValue<T>(operand)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto negated{value->Negate()};
-      if (negated.overflow) {
+      if (negated.overflow &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingException)) {
         context.messages().Say(
             "INTEGER(%d) negation overflowed"_warn_en_US, T::kind);
       }
@@ -1855,7 +1869,9 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto sum{folded->first.AddSigned(folded->second)};
-      if (sum.overflow) {
+      if (sum.overflow &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingException)) {
         context.messages().Say(
             "INTEGER(%d) addition overflowed"_warn_en_US, T::kind);
       }
@@ -1881,7 +1897,9 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto difference{folded->first.SubtractSigned(folded->second)};
-      if (difference.overflow) {
+      if (difference.overflow &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingException)) {
         context.messages().Say(
             "INTEGER(%d) subtraction overflowed"_warn_en_US, T::kind);
       }
@@ -1907,7 +1925,9 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto product{folded->first.MultiplySigned(folded->second)};
-      if (product.SignedMultiplicationOverflowed()) {
+      if (product.SignedMultiplicationOverflowed() &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingException)) {
         context.messages().Say(
             "INTEGER(%d) multiplication overflowed"_warn_en_US, T::kind);
       }
@@ -1952,11 +1972,16 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto quotAndRem{folded->first.DivideSigned(folded->second)};
       if (quotAndRem.divisionByZero) {
-        context.messages().Say(
-            "INTEGER(%d) division by zero"_warn_en_US, T::kind);
+        if (context.languageFeatures().ShouldWarn(
+                common::UsageWarning::FoldingException)) {
+          context.messages().Say(
+              "INTEGER(%d) division by zero"_warn_en_US, T::kind);
+        }
         return Expr<T>{std::move(x)};
       }
-      if (quotAndRem.overflow) {
+      if (quotAndRem.overflow &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingException)) {
         context.messages().Say(
             "INTEGER(%d) division overflowed"_warn_en_US, T::kind);
       }
@@ -1997,22 +2022,26 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto power{folded->first.Power(folded->second)};
-      if (power.divisionByZero) {
-        context.messages().Say(
-            "INTEGER(%d) zero to negative power"_warn_en_US, T::kind);
-      } else if (power.overflow) {
-        context.messages().Say(
-            "INTEGER(%d) power overflowed"_warn_en_US, T::kind);
-      } else if (power.zeroToZero) {
-        context.messages().Say(
-            "INTEGER(%d) 0**0 is not defined"_warn_en_US, T::kind);
+      if (context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingException)) {
+        if (power.divisionByZero) {
+          context.messages().Say(
+              "INTEGER(%d) zero to negative power"_warn_en_US, T::kind);
+        } else if (power.overflow) {
+          context.messages().Say(
+              "INTEGER(%d) power overflowed"_warn_en_US, T::kind);
+        } else if (power.zeroToZero) {
+          context.messages().Say(
+              "INTEGER(%d) 0**0 is not defined"_warn_en_US, T::kind);
+        }
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
       if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
         return Expr<T>{
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
-      } else {
+      } else if (context.languageFeatures().ShouldWarn(
+                     common::UsageWarning::FoldingFailure)) {
         context.messages().Say(
             "Power for %s cannot be folded on host"_warn_en_US,
             T{}.AsFortran());
@@ -2096,7 +2125,9 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
           CHECK(constant);
           Scalar<Result> real{constant->GetScalarValue().value()};
           From converted{From::ConvertUnsigned(real.RawBits()).value};
-          if (original != converted) { // C1601
+          if (original != converted &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::FoldingValueChecks)) { // C1601
             context.messages().Say(
                 "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
           }

@@ -128,7 +128,8 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                                        "n32:64-S128-ni:1:10:20"),
           TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
           getEffectiveCodeModel(CM, CodeModel::Large), OL),
-      TLOF(new WebAssemblyTargetObjectFile()) {
+      TLOF(new WebAssemblyTargetObjectFile()),
+      UsesMultivalueABI(Options.MCOptions.getABIName() == "experimental-mv") {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
@@ -291,6 +292,17 @@ private:
     bool Stripped = false;
     for (auto &GV : M.globals()) {
       if (GV.isThreadLocal()) {
+        // replace `@llvm.threadlocal.address.pX(GV)` with `GV`.
+        for (Use &U : make_early_inc_range(GV.uses())) {
+          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+            if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
+                II->getArgOperand(0) == &GV) {
+              II->replaceAllUsesWith(&GV);
+              II->eraseFromParent();
+            }
+          }
+        }
+
         Stripped = true;
         GV.setThreadLocal(false);
       }
@@ -472,16 +484,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
-  WebAssemblyTargetMachine *WasmTM =
-      static_cast<WebAssemblyTargetMachine *>(TM);
-  const WebAssemblySubtarget *Subtarget =
-      WasmTM->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                               std::string(WasmTM->getTargetFeatureString()));
-  if (Subtarget->hasReferenceTypes()) {
-    // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
-    // loads and stores are promoted to local.gets/local.sets.
-    addPass(createWebAssemblyRefTypeMem2Local());
-  }
+  // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
+  // loads and stores are promoted to local.gets/local.sets.
+  addPass(createWebAssemblyRefTypeMem2Local());
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
@@ -506,6 +511,10 @@ bool WebAssemblyPassConfig::addInstSelector() {
 
   // Eliminate range checks and add default targets to br_table instructions.
   addPass(createWebAssemblyFixBrTableDefaults());
+
+  // unreachable is terminator, non-terminator instruction after it is not
+  // allowed.
+  addPass(createWebAssemblyCleanCodeAfterTrap());
 
   return false;
 }

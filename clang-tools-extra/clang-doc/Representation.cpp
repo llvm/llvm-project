@@ -380,8 +380,8 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
   this->SourceRoot = std::string(SourceRootDir);
   if (!RepositoryUrl.empty()) {
     this->RepositoryUrl = std::string(RepositoryUrl);
-    if (!RepositoryUrl.empty() && RepositoryUrl.find("http://") != 0 &&
-        RepositoryUrl.find("https://") != 0)
+    if (!RepositoryUrl.empty() && !RepositoryUrl.starts_with("http://") &&
+        !RepositoryUrl.starts_with("https://"))
       this->RepositoryUrl->insert(0, "https://");
   }
 }

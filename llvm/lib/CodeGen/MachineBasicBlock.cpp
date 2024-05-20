@@ -1728,6 +1728,12 @@ void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
 }
 
+void MachineBasicBlock::clearLiveIns(
+    std::vector<RegisterMaskPair> &OldLiveIns) {
+  assert(OldLiveIns.empty() && "Vector must be empty");
+  std::swap(LiveIns, OldLiveIns);
+}
+
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
   assert(getParent()->getProperties().hasProperty(
       MachineFunctionProperties::Property::TracksLiveness) &&

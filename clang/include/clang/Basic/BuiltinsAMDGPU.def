@@ -61,6 +61,7 @@ BUILTIN(__builtin_amdgcn_s_waitcnt, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_sendmsg, "vIiUi", "n")
 BUILTIN(__builtin_amdgcn_s_sendmsghalt, "vIiUi", "n")
 BUILTIN(__builtin_amdgcn_s_barrier, "v", "n")
+BUILTIN(__builtin_amdgcn_s_ttracedata, "vi", "n")
 BUILTIN(__builtin_amdgcn_wave_barrier, "v", "n")
 BUILTIN(__builtin_amdgcn_sched_barrier, "vIi", "n")
 BUILTIN(__builtin_amdgcn_sched_group_barrier, "vIiIiIi", "n")
@@ -267,6 +268,7 @@ TARGET_BUILTIN(__builtin_amdgcn_dot4_f32_bf8_bf8, "fUiUif", "nc", "dot11-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane16, "UiUiUiUiUiIbIb", "nc", "gfx10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlanex16, "UiUiUiUiUiIbIb", "nc", "gfx10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_mov_dpp8, "UiUiIUi", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_ttracedata_imm, "vIs", "n", "gfx10-insts")
 
 //===----------------------------------------------------------------------===//
 // Raytracing builtins.

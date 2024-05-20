@@ -114,6 +114,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -497,12 +498,15 @@ bool AsmPrinter::doInitialization(Module &M) {
     else
       FileName = M.getSourceFileName();
     if (MAI->hasFourStringsDotFile()) {
-#ifdef PACKAGE_VENDOR
       const char VerStr[] =
-          PACKAGE_VENDOR " " PACKAGE_NAME " version " PACKAGE_VERSION;
-#else
-      const char VerStr[] = PACKAGE_NAME " version " PACKAGE_VERSION;
+#ifdef PACKAGE_VENDOR
+          PACKAGE_VENDOR " "
 #endif
+          PACKAGE_NAME " version " PACKAGE_VERSION
+#ifdef LLVM_REVISION
+                         " (" LLVM_REVISION ")"
+#endif
+          ;
       // TODO: Add timestamp and description.
       OutStreamer->emitFileDirective(FileName, VerStr, "", "");
     } else {
@@ -3497,7 +3501,7 @@ static void emitGlobalConstantStruct(const DataLayout &DL,
                                      const Constant *BaseCV, uint64_t Offset,
                                      AsmPrinter::AliasMapTy *AliasList) {
   // Print the fields in successive locations. Pad to align if needed!
-  unsigned Size = DL.getTypeAllocSize(CS->getType());
+  uint64_t Size = DL.getTypeAllocSize(CS->getType());
   const StructLayout *Layout = DL.getStructLayout(CS->getType());
   uint64_t SizeSoFar = 0;
   for (unsigned I = 0, E = CS->getNumOperands(); I != E; ++I) {

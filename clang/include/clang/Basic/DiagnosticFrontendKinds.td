@@ -134,6 +134,8 @@ def err_fe_no_pch_in_dir : Error<
     "no suitable precompiled header file found in directory '%0'">;
 def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
+def err_fe_invalid_multiple_actions : Error<
+    "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
@@ -370,4 +372,7 @@ def warn_missing_symbol_graph_dir : Warning<
   "Missing symbol graph output directory, defaulting to working directory">,
   InGroup<ExtractAPIMisuse>;
 
+def err_ast_action_on_llvm_ir : Error<
+  "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
 }
