@@ -239,7 +239,10 @@ Retry:
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
-    if (((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
+    if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
+         (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
+             ParsedStmtContext()) &&
+        ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
