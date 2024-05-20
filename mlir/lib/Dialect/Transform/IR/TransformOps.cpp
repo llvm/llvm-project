@@ -648,13 +648,14 @@ LogicalResult transform::ApplyConversionPatternsOp::verify() {
     if (!llvm::hasSingleElement(typeConverterRegion.front()))
       return emitOpError()
              << "expected exactly one op in default type converter region";
+    Operation *maybeTypeConverter = &typeConverterRegion.front().front();
     auto typeConverterOp = dyn_cast<transform::TypeConverterBuilderOpInterface>(
-        &typeConverterRegion.front().front());
+        maybeTypeConverter);
     if (!typeConverterOp) {
       InFlightDiagnostic diag = emitOpError()
                                 << "expected default converter child op to "
                                    "implement TypeConverterBuilderOpInterface";
-      diag.attachNote(typeConverterOp->getLoc()) << "op without interface";
+      diag.attachNote(maybeTypeConverter->getLoc()) << "op without interface";
       return diag;
     }
     // Check default type converter type.

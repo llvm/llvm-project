@@ -1670,10 +1670,10 @@ private:
   hsa_agent_t Agent;
 
   /// The maximum number of queues.
-  int MaxNumQueues;
+  uint32_t MaxNumQueues;
 
   /// The size of created queues.
-  int QueueSize;
+  uint32_t QueueSize;
 };
 
 /// Abstract class that holds the common members of the actual kernel devices
@@ -1847,8 +1847,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   // Create an AMDGPU device with a device id and default AMDGPU grid values.
   AMDGPUDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                  AMDHostDeviceTy &HostDevice, hsa_agent_t Agent)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, {0}),
-        AMDGenericDeviceTy(),
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, {}), AMDGenericDeviceTy(),
         OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
@@ -2015,9 +2014,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  const uint64_t getStreamBusyWaitMicroseconds() const {
-    return OMPX_StreamBusyWait;
-  }
+  uint64_t getStreamBusyWaitMicroseconds() const { return OMPX_StreamBusyWait; }
 
   Expected<std::unique_ptr<MemoryBuffer>>
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {

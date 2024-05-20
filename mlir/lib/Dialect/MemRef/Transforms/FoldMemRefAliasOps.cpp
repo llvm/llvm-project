@@ -362,7 +362,7 @@ public:
 
 /// Folds nvgpu.device_async_copy subviews into the copy itself. This pattern
 /// is folds subview on src and dst memref of the copy.
-class NvgpuAsyncCopyOpSubViewOpFolder final
+class NVGPUAsyncCopyOpSubViewOpFolder final
     : public OpRewritePattern<nvgpu::DeviceAsyncCopyOp> {
 public:
   using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
@@ -694,7 +694,7 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
   return success();
 }
 
-LogicalResult NvgpuAsyncCopyOpSubViewOpFolder::matchAndRewrite(
+LogicalResult NVGPUAsyncCopyOpSubViewOpFolder::matchAndRewrite(
     nvgpu::DeviceAsyncCopyOp copyOp, PatternRewriter &rewriter) const {
 
   LLVM_DEBUG(DBGS() << "copyOp       : " << copyOp << "\n");
@@ -769,7 +769,7 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                LoadOpOfCollapseShapeOpFolder<memref::LoadOp>,
                StoreOpOfCollapseShapeOpFolder<affine::AffineStoreOp>,
                StoreOpOfCollapseShapeOpFolder<memref::StoreOp>,
-               SubViewOfSubViewFolder, NvgpuAsyncCopyOpSubViewOpFolder>(
+               SubViewOfSubViewFolder, NVGPUAsyncCopyOpSubViewOpFolder>(
       patterns.getContext());
 }
 

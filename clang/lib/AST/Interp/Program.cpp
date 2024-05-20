@@ -144,12 +144,15 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
+  QualType QT = VD->getType();
+  if (const auto *RT = QT->getAs<ReferenceType>())
+    QT = RT->getPointeeType();
+
   Descriptor *Desc;
-  if (std::optional<PrimType> T = Ctx.classify(VD->getType()))
+  if (std::optional<PrimType> T = Ctx.classify(QT))
     Desc = createDescriptor(VD, *T, std::nullopt, true, false);
   else
-    Desc = createDescriptor(VD, VD->getType().getTypePtr(), std::nullopt, true,
-                            false);
+    Desc = createDescriptor(VD, QT.getTypePtr(), std::nullopt, true, false);
   if (!Desc)
     Desc = allocateDescriptor(VD);
 
@@ -372,7 +375,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
-            D, ElemTy.getTypePtr(), MDSize, IsConst, IsTemporary);
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
         unsigned ElemSize =
@@ -386,7 +389,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
     // is forbidden on pointers to such objects.
-    if (isa<IncompleteArrayType>(ArrayType)) {
+    if (isa<IncompleteArrayType>(ArrayType) ||
+        isa<VariableArrayType>(ArrayType)) {
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});

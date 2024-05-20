@@ -96,6 +96,7 @@ public:
   VFDatabase(CallInst &CI)
       : M(CI.getModule()), CI(CI),
         ScalarToVectorMappings(VFDatabase::getMappings(CI)) {}
+
   /// \defgroup VFDatabase query interface.
   ///
   /// @{

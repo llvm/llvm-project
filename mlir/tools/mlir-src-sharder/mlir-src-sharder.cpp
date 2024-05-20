@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   // of `llvm-tblgen`, which caused `TestOps.cpp` to fail due to
   // "Unknnown command line argument '-D...`" when a macros name is
   // present. The following is a workaround to re-register it again.
-  llvm::cl::list<std::string> MacroNames(
+  llvm::cl::list<std::string> macroNames(
       "D",
       llvm::cl::desc(
           "Name of the macro to be defined -- ignored by mlir-src-sharder"),
