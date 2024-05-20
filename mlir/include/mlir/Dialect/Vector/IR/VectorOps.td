@@ -420,7 +420,7 @@ def Vector_ShuffleOp :
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      InferTypeOpAdaptor]>,
-     Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
+     Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
                     I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
@@ -443,6 +443,8 @@ def Vector_ShuffleOp :
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
+
+    Note, scalable vectors are not supported.
 
     Example:
 
@@ -1325,7 +1327,7 @@ def Vector_TransferReadOp :
           // Update the temporary gathered slice with the individual element
           %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
           %updated = vector.insert %a, %slice[%i, %j, %k] : f32 into vector<3x4x5xf32>
-          memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+          memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -1348,7 +1350,7 @@ def Vector_TransferReadOp :
         %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
         // Here we only store to the first element in dimension one
         %updated = vector.insert %a, %slice[%i, 0, %k] : f32 into vector<3x4x5xf32>
-        memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+        memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.

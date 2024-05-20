@@ -105,7 +105,7 @@ define i32 @test_gep() {
 ; FP-NEXT:    .cfi_def_cfa_register %a6
 ; FP-NEXT:    move.l #21, (-4,%a6)
 ; FP-NEXT:    move.l #12, (-256,%a6)
-; FP-NEXT:    move.l #0, %d0
+; FP-NEXT:    moveq #0, %d0
 ; FP-NEXT:    unlk %a6
 ; FP-NEXT:    rts
 ;
@@ -116,7 +116,7 @@ define i32 @test_gep() {
 ; NO-FP-NEXT:    .cfi_def_cfa_offset -260
 ; NO-FP-NEXT:    move.l #21, (252,%sp)
 ; NO-FP-NEXT:    move.l #12, (0,%sp)
-; NO-FP-NEXT:    move.l #0, %d0
+; NO-FP-NEXT:    moveq #0, %d0
 ; NO-FP-NEXT:    adda.l #256, %sp
 ; NO-FP-NEXT:    rts
 entry:

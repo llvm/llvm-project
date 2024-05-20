@@ -36,7 +36,7 @@ entry:
 }
 
 ; CHECK-NOT: .option push
-define void @test5() "target-features"="+fast-unaligned-access" {
+define void @test5() "target-features"="+unaligned-scalar-mem" {
 ; CHECK-LABEL: test5
 ; CHECK-NOT: .option pop
 entry:

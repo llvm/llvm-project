@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_H
 #define _LIBCPP___FORMAT_FORMATTER_H
 
-#include <__availability>
 #include <__config>
 #include <__fwd/format.h>
 

@@ -59,6 +59,10 @@ bool LibcxxWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring_view
 
+bool LibcxxStdSliceArraySummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::slice_array
+
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
@@ -224,6 +228,14 @@ LibcxxStdValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
                                           lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibcxxStdSliceArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                            lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdProxyArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                            lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibcxxStdListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP);
 
@@ -272,6 +284,14 @@ bool LibcxxChronoSysSecondsSummaryProvider(
 bool LibcxxChronoSysDaysSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::chrono::sys_days
+
+bool LibcxxChronoLocalSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::local_seconds
+
+bool LibcxxChronoLocalDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::chrono::local_days
 
 bool LibcxxChronoMonthSummaryProvider(
     ValueObject &valobj, Stream &stream,

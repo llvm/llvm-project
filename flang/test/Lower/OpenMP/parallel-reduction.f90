@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK:  omp.reduction.declare @[[REDUCTION_DECLARE:[_a-z0-9]+]] : i32 init {
+!CHECK:  omp.declare_reduction @[[REDUCTION_DECLARE:[_a-z0-9]+]] : i32 init {
 !CHECK:  ^bb0(%{{.*}}: i32):
 !CHECK:    %[[I0:[_a-z0-9]+]] = arith.constant 0 : i32
 !CHECK:    omp.yield(%[[I0]] : i32)

@@ -91,7 +91,7 @@ declare dso_local void @_ZNK3Cat9makeNoiseEv(ptr nonnull dereferenceable(8)) unn
 define dso_local void @_Z17useDoThingWithCatv() local_unnamed_addr {
 entry:
   %call = tail call noalias nonnull dereferenceable(8) ptr @_Znwm(i64 8)
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV3Cat, i64 0, inrange i32 0, i64 2), ptr %call, align 8, !tbaa !4
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV3Cat, i64 0, i32 0, i64 2), ptr %call, align 8, !tbaa !4
   tail call void @_Z14doThingWithCatP6Animal(ptr nonnull %call)
   ret void
 }

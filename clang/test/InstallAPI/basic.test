@@ -2,7 +2,8 @@
 // RUN: split-file %s %t
 /// Check basic arguments are captured.
 // RUN: clang-installapi -x objective-c -target arm64-apple-ios13.0.0 \
-// RUN: -fapplication-extension -current_version 1 -install_name /usr/lib/basic.dylib \
+// RUN: -fapplication-extension -current_version 1 -compatibility_version 1 \
+// RUN: -install_name /usr/lib/basic.dylib \
 // RUN: %t/basic_inputs.json -o %t/basic.tbd 2>&1 | FileCheck %s --allow-empty
 // RUN: llvm-readtapi -compare %t/basic.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
 
@@ -25,11 +26,6 @@
 //--- expected.tbd
 {
   "main_library": {
-    "compatibility_versions": [
-      {
-        "version": "0"
-      }
-    ],
     "install_names": [
       {
         "name": "/usr/lib/basic.dylib"

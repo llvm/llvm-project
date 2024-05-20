@@ -4,6 +4,7 @@
 
 // CHECK: #pragma clang attribute supports the following attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
+// CHECK-NEXT: AMDGPUMaxNumWorkGroups (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUWavesPerEU (SubjectMatchRule_function)
@@ -47,6 +48,7 @@
 // CHECK-NEXT: Capability (SubjectMatchRule_record, SubjectMatchRule_type_alias)
 // CHECK-NEXT: CarriesDependency (SubjectMatchRule_variable_is_parameter, SubjectMatchRule_objc_method, SubjectMatchRule_function)
 // CHECK-NEXT: Cleanup (SubjectMatchRule_variable_is_local)
+// CHECK-NEXT: ClspvLibclcBuiltin (SubjectMatchRule_function)
 // CHECK-NEXT: CmseNSEntry (SubjectMatchRule_function)
 // CHECK-NEXT: Cold (SubjectMatchRule_function)
 // CHECK-NEXT: Common (SubjectMatchRule_variable)

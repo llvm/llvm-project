@@ -27,8 +27,14 @@ void test(void) {
                               compat-warning {{use of an empty initializer is incompatible with C standards before C23}}
   int vla[i] = {}; // compat-warning {{use of an empty initializer is incompatible with C standards before C23}} \
                       pedantic-warning {{use of an empty initializer is a C23 extension}}
+  // C99 6.5.2.5 Compound literals constraint 1: The type name shall specify an
+  // object type or an array of unknown size, but not a variable length array
+  // type.
   int *compound_literal_vla = (int[i]){}; // compat-warning {{use of an empty initializer is incompatible with C standards before C23}} \
-                                             pedantic-warning {{use of an empty initializer is a C23 extension}}
+                                             pedantic-warning {{use of an empty initializer is a C23 extension}}\
+                                             compat-error {{compound literal cannot be of variable-length array type}} \
+                                             pedantic-error {{compound literal cannot be of variable-length array type}}\
+
 
   struct T {
 	int i;

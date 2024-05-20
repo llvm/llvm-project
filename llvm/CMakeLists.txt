@@ -147,7 +147,7 @@ endif()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -158,6 +158,18 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
     message(FATAL_ERROR "Runtime \"${proj}\" is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
   endif()
 endforeach()
+
+# Set a shorthand option to enable the GPU build of the 'libc' project.
+option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
+if(LIBC_GPU_BUILD)
+  if(LLVM_RUNTIME_TARGETS)
+    list(APPEND LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" "amdgcn-amd-amdhsa")
+  else()
+    set(LLVM_RUNTIME_TARGETS "default;nvptx64-nvidia-cuda;amdgcn-amd-amdhsa")
+  endif()
+  list(APPEND RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES "libc")
+  list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
+endif()
 
 set(NEED_LIBC_HDRGEN FALSE)
 if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
@@ -661,6 +673,9 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
+option(LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES
+  "Preserve exported symbols in executables" ON)
+
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
 
@@ -786,6 +801,9 @@ option (LLVM_BUILD_EXTERNAL_COMPILER_RT
 
 option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
   "Show target and host info when tools are invoked with --version." ON)
+
+option(LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+  "Show the optional build config flags when tools are invoked with --version." ON)
 
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
@@ -1138,6 +1156,11 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
   add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
+  # Need to build LLVM as ASCII application.
+  # This can't be a global setting because other projects may
+  # need to be built in EBCDIC mode.
+  append("-fzos-le-char-mode=ascii" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  append("-m64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.

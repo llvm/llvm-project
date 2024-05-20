@@ -158,6 +158,24 @@ Arguments<(ins I32:$index,
    }];
 }
 
+def ROCDL_BallotOp :
+  ROCDL_Op<"ballot">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins I1:$pred)> {
+  let summary = "Vote across thread group";
+
+  let description = [{
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      The nth bit of the result contains the 1 bit contributed by the nth warp lane.
+  }];
+
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$_resultType});
+  }];
+
+  let assemblyFormat = "$pred attr-dict `:` type($res)";
+}
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index

@@ -18,8 +18,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
@@ -89,7 +89,7 @@ public:
   }
 
   Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
-                      FastMathFlags FMF) const override {
+                     FastMathFlags FMF) const override {
     if (Constant *C = dyn_cast<Constant>(V))
       return ConstantFoldUnaryInstruction(Opc, C);
     return nullptr;
@@ -180,6 +180,12 @@ public:
         return ConstantExpr::getCast(Op, C, DestTy);
       return ConstantFoldCastInstruction(Op, C, DestTy);
     }
+    return nullptr;
+  }
+
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource) const override {
+    // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }
 

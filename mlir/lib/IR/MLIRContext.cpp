@@ -183,7 +183,8 @@ public:
   llvm::StringMap<std::unique_ptr<OperationName::Impl>> operations;
 
   /// A vector of operation info specifically for registered operations.
-  llvm::StringMap<RegisteredOperationName> registeredOperations;
+  llvm::DenseMap<TypeID, RegisteredOperationName> registeredOperations;
+  llvm::StringMap<RegisteredOperationName> registeredOperationsByName;
 
   /// This is a sorted container of registered operations for a deterministic
   /// and efficient `getRegisteredOperations` implementation.
@@ -780,8 +781,8 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
     // Check the registered info map first. In the overwhelmingly common case,
     // the entry will be in here and it also removes the need to acquire any
     // locks.
-    auto registeredIt = ctxImpl.registeredOperations.find(name);
-    if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperations.end())) {
+    auto registeredIt = ctxImpl.registeredOperationsByName.find(name);
+    if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperationsByName.end())) {
       impl = registeredIt->second.impl;
       return;
     }
@@ -909,10 +910,19 @@ OperationName::UnregisteredOpModel::hashProperties(OpaqueProperties prop) {
 //===----------------------------------------------------------------------===//
 
 std::optional<RegisteredOperationName>
+RegisteredOperationName::lookup(TypeID typeID, MLIRContext *ctx) {
+  auto &impl = ctx->getImpl();
+  auto it = impl.registeredOperations.find(typeID);
+  if (it != impl.registeredOperations.end())
+    return it->second;
+  return std::nullopt;
+}
+
+std::optional<RegisteredOperationName>
 RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
   auto &impl = ctx->getImpl();
-  auto it = impl.registeredOperations.find(name);
-  if (it != impl.registeredOperations.end())
+  auto it = impl.registeredOperationsByName.find(name);
+  if (it != impl.registeredOperationsByName.end())
     return it->getValue();
   return std::nullopt;
 }
@@ -945,11 +955,16 @@ void RegisteredOperationName::insert(
 
   // Update the registered info for this operation.
   auto emplaced = ctxImpl.registeredOperations.try_emplace(
-      name, RegisteredOperationName(impl));
+      impl->getTypeID(), RegisteredOperationName(impl));
   assert(emplaced.second && "operation name registration must be successful");
+  auto emplacedByName = ctxImpl.registeredOperationsByName.try_emplace(
+      name, RegisteredOperationName(impl));
+  (void)emplacedByName;
+  assert(emplacedByName.second &&
+         "operation name registration must be successful");
 
   // Add emplaced operation name to the sorted operations container.
-  RegisteredOperationName &value = emplaced.first->getValue();
+  RegisteredOperationName &value = emplaced.first->second;
   ctxImpl.sortedRegisteredOperations.insert(
       llvm::upper_bound(ctxImpl.sortedRegisteredOperations, value,
                         [](auto &lhs, auto &rhs) {

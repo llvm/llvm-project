@@ -85,8 +85,13 @@ public:
     return CPU == "mips32r6" || CPU == "mips64r6";
   }
 
-  bool isFP64Default() const {
-    return CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64";
+  enum FPModeEnum getDefaultFPMode() const {
+    if (CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64")
+      return FP64;
+    else if (CPU == "mips1")
+      return FP32;
+    else
+      return FPXX;
   }
 
   bool isNan2008() const override { return IsNan2008; }
@@ -315,9 +320,10 @@ public:
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;
-    FPMode = isFP64Default() ? FP64 : FPXX;
     NoOddSpreg = false;
+    FPMode = getDefaultFPMode();
     bool OddSpregGiven = false;
+    bool StrictAlign = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -328,6 +334,12 @@ public:
         IsMips16 = true;
       else if (Feature == "+micromips")
         IsMicromips = true;
+      else if (Feature == "+mips32r6" || Feature == "+mips64r6")
+        HasUnalignedAccess = true;
+      // We cannot be sure that the order of strict-align vs mips32r6.
+      // Thus we need an extra variable here.
+      else if (Feature == "+strict-align")
+        StrictAlign = true;
       else if (Feature == "+dsp")
         DspRev = std::max(DspRev, DSP1);
       else if (Feature == "+dspr2")
@@ -365,6 +377,9 @@ public:
 
     if (FPMode == FPXX && !OddSpregGiven)
       NoOddSpreg = true;
+
+    if (StrictAlign)
+      HasUnalignedAccess = false;
 
     setDataLayout();
 
@@ -421,6 +436,10 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasBitIntType() const override { return true; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 };
 } // namespace targets
 } // namespace clang

@@ -272,14 +272,17 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(
 std::unique_ptr<ASTConsumer>
 GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) {
-  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
-  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
-  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile));
 
-  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
-      CreateMultiplexConsumer(CI, InFile);
-  if (Consumers.empty())
-    return nullptr;
+  if (CI.getFrontendOpts().GenReducedBMI &&
+      !CI.getFrontendOpts().ModuleOutputPath.empty()) {
+    Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
+        CI.getPreprocessor(), CI.getModuleCache(),
+        CI.getFrontendOpts().ModuleOutputPath));
+  }
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -293,11 +296,9 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GenerateReducedModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                         StringRef InFile) {
-  auto Buffer = std::make_shared<PCHBuffer>();
-  return std::make_unique<ReducedBMIGenerator>(
-      CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile, Buffer,
-      /*IncludeTimestamps=*/+CI.getFrontendOpts().IncludeTimestamps);
+  return std::make_unique<ReducedBMIGenerator>(CI.getPreprocessor(),
+                                               CI.getModuleCache(),
+                                               CI.getFrontendOpts().OutputFile);
 }
 
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
@@ -452,6 +453,8 @@ private:
       return "BuildingBuiltinDumpStructCall";
     case CodeSynthesisContext::BuildingDeductionGuides:
       return "BuildingDeductionGuides";
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      return "TypeAliasTemplateInstantiation";
     }
     return "";
   }
@@ -1085,6 +1088,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::CUDA:
   case Language::HIP:
   case Language::HLSL:
+  case Language::CIR:
     break;
 
   case Language::Unknown:

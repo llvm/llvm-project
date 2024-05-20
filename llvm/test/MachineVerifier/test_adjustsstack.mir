@@ -1,0 +1,26 @@
+# RUN: not --crash llc -o - -start-before=twoaddressinstruction -verify-machineinstrs %s 2>&1 \
+# RUN:   | FileCheck %s
+# REQUIRES: aarch64-registered-target
+--- |
+  target triple = "aarch64-unknown-linux"
+  declare i32 @bar(i32) nounwind
+  define i32 @foo() nounwind {
+    call i32 @bar(i32 0)
+    ret i32 0
+  }
+...
+---
+name: foo
+registers:
+  - { id: 0, class: gpr32 }
+body: |
+  bb.0 (%ir-block.0):
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %0 = COPY $wzr
+    $w0 = COPY %0
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    $w0 = COPY killed %0
+    RET_ReallyLR implicit $w0
+...
+# CHECK-LABEL: Bad machine code: AdjustsStack not set in presence of a frame pseudo instruction.

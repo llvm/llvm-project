@@ -107,6 +107,12 @@ static cl::opt<unsigned>
                   cl::desc("print statistics about basic block ordering"),
                   cl::init(0), cl::cat(BoltOptCategory));
 
+static cl::opt<bool> PrintLargeFunctions(
+    "print-large-functions",
+    cl::desc("print functions that could not be overwritten due to excessive "
+             "size"),
+    cl::init(false), cl::cat(BoltOptCategory));
+
 static cl::list<bolt::DynoStats::Category>
     PrintSortedBy("print-sorted-by", cl::CommaSeparated,
                   cl::desc("print functions sorted by order of dyno stats"),
@@ -570,8 +576,12 @@ Error CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
         BC.calculateEmittedSize(BF, /*FixBranches=*/false);
-    if (HotSize > BF.getMaxSize())
+    if (HotSize > BF.getMaxSize()) {
+      if (opts::PrintLargeFunctions)
+        BC.outs() << "BOLT-INFO: " << BF << " size exceeds allocated space by "
+                  << (HotSize - BF.getMaxSize()) << " bytes\n";
       BF.setSimple(false);
+    }
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
@@ -664,7 +674,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
   MCPlusBuilder *MIB = Function.getBinaryContext().MIB.get();
   for (BinaryBasicBlock &BB : Function) {
     auto checkAndPatch = [&](BinaryBasicBlock *Pred, BinaryBasicBlock *Succ,
-                             const MCSymbol *SuccSym) {
+                             const MCSymbol *SuccSym,
+                             std::optional<uint32_t> Offset) {
       // Ignore infinite loop jumps or fallthrough tail jumps.
       if (Pred == Succ || Succ == &BB)
         return false;
@@ -705,6 +716,11 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
           Pred->removeSuccessor(&BB);
           Pred->eraseInstruction(Pred->findInstruction(Branch));
           Pred->addTailCallInstruction(SuccSym);
+          if (Offset) {
+            MCInst *TailCall = Pred->getLastNonPseudoInstr();
+            assert(TailCall);
+            MIB->setOffset(*TailCall, *Offset);
+          }
         } else {
           return false;
         }
@@ -747,7 +763,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
       if (Pred->getSuccessor() == &BB ||
           (Pred->getConditionalSuccessor(true) == &BB && !IsTailCall) ||
           Pred->getConditionalSuccessor(false) == &BB)
-        if (checkAndPatch(Pred, Succ, SuccSym) && MarkInvalid)
+        if (checkAndPatch(Pred, Succ, SuccSym, MIB->getOffset(*Inst)) &&
+            MarkInvalid)
           BB.markValid(BB.pred_size() != 0 || BB.isLandingPad() ||
                        BB.isEntryPoint());
     }
@@ -852,6 +869,10 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       assert(Result && "internal error analyzing conditional branch");
       assert(CondBranch && "conditional branch expected");
 
+      // Skip dynamic branches for now.
+      if (BF.getBinaryContext().MIB->isDynamicBranch(*CondBranch))
+        continue;
+
       // It's possible that PredBB is also a successor to BB that may have
       // been processed by a previous iteration of the SCTC loop, in which
       // case it may have been marked invalid.  We should skip rewriting in
@@ -896,6 +917,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
       CTCAnnotation = CTCTakenFreq;
+      // Preserve Offset annotation, used in BAT.
+      // Instr is a direct tail call instruction that was created when CTCs are
+      // first expanded, and has the original CTC offset set.
+      if (std::optional<uint32_t> Offset = MIB->getOffset(*Instr))
+        MIB->setOffset(*CondBranch, *Offset);
 
       // Remove the unused successor which may be eliminated later
       // if there are no other users.
@@ -1012,6 +1038,10 @@ uint64_t ShortenInstructions::shortenInstructions(BinaryFunction &Function) {
   const BinaryContext &BC = Function.getBinaryContext();
   for (BinaryBasicBlock &BB : Function) {
     for (MCInst &Inst : BB) {
+      // Skip shortening instructions with Size annotation.
+      if (BC.MIB->getSize(Inst))
+        continue;
+
       MCInst OriginalInst;
       if (opts::Verbosity > 2)
         OriginalInst = Inst;
@@ -1056,10 +1086,9 @@ void Peepholes::addTailcallTraps(BinaryFunction &Function) {
     MCInst *Inst = BB.getLastNonPseudoInstr();
     if (Inst && MIB->isTailCall(*Inst) && MIB->isIndirectBranch(*Inst)) {
       MCInst Trap;
-      if (MIB->createTrap(Trap)) {
-        BB.addInstruction(Trap);
-        ++TailCallTraps;
-      }
+      MIB->createTrap(Trap);
+      BB.addInstruction(Trap);
+      ++TailCallTraps;
     }
   }
 }

@@ -274,9 +274,7 @@ define void @vpstore_v2i8_allones_mask(<2 x i8> %val, ptr %ptr, i32 zeroext %evl
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> zeroinitializer
-  call void @llvm.vp.store.v2i8.p0(<2 x i8> %val, ptr %ptr, <2 x i1> %b, i32 %evl)
+  call void @llvm.vp.store.v2i8.p0(<2 x i8> %val, ptr %ptr, <2 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 

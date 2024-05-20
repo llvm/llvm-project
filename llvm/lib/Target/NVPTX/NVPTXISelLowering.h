@@ -61,6 +61,7 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+  DYNAMIC_STACKALLOC,
   Dummy,
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -460,6 +461,9 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
+
+  Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
+                                     const DataLayout &DL) const;
 
   /// getFunctionParamOptimizedAlign - since function arguments are passed via
   /// .param space, we may want to increase their alignment in a way that

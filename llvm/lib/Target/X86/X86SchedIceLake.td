@@ -413,9 +413,9 @@ defm : ICXWriteResPair<WritePHMINPOS, [ICXPort0], 4, [1], 1, 6>; // Vector PHMIN
 
 // Vector integer shifts.
 defm : ICXWriteResPair<WriteVecShift, [ICXPort0], 1, [1], 1, 5>;
-defm : X86WriteRes<WriteVecShiftX,    [ICXPort5,ICXPort01],  2, [1,1], 2>;
-defm : X86WriteRes<WriteVecShiftY,    [ICXPort5,ICXPort01],  4, [1,1], 2>;
-defm : X86WriteRes<WriteVecShiftZ,    [ICXPort5,ICXPort0],   4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftX,    [ICXPort01,ICXPort15], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftY,    [ICXPort01,ICXPort5],  4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftZ,    [ICXPort0,ICXPort5],   4, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftXLd,  [ICXPort01,ICXPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftYLd,  [ICXPort01,ICXPort23], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftZLd,  [ICXPort0,ICXPort23],  8, [1,1], 2>;

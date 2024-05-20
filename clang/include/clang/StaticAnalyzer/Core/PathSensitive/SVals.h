@@ -232,14 +232,6 @@ protected:
       : DefinedOrUnknownSVal(Kind, Data) {}
 };
 
-/// Represents an SVal that is guaranteed to not be UnknownVal.
-class KnownSVal : public SVal {
-public:
-  /*implicit*/ KnownSVal(DefinedSVal V) : SVal(V) {}
-  /*implicit*/ KnownSVal(UndefinedVal V) : SVal(V) {}
-  static bool classof(SVal V) { return !V.isUnknown(); }
-};
-
 class NonLoc : public DefinedSVal {
 protected:
   NonLoc(SValKind Kind, const void *Data) : DefinedSVal(Kind, Data) {}

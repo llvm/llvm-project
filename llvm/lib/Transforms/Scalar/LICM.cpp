@@ -933,12 +933,14 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(ReciprocalDivisor, I.getParent());
         ReciprocalDivisor->insertBefore(&I);
+        ReciprocalDivisor->setDebugLoc(I.getDebugLoc());
 
         auto Product =
             BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
         Product->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(Product, I.getParent());
         Product->insertAfter(&I);
+        Product->setDebugLoc(I.getDebugLoc());
         I.replaceAllUsesWith(Product);
         eraseInstruction(I, *SafetyInfo, MSSAU);
 
@@ -2701,6 +2703,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
 
   // First, we need to make sure we should do the transformation.
   SmallVector<Use *> Changes;
+  SmallVector<BinaryOperator *> Adds;
   SmallVector<BinaryOperator *> Worklist;
   if (BinaryOperator *VariantBinOp = dyn_cast<BinaryOperator>(VariantOp))
     Worklist.push_back(VariantBinOp);
@@ -2713,6 +2716,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
         isa<BinaryOperator>(BO->getOperand(1))) {
       Worklist.push_back(cast<BinaryOperator>(BO->getOperand(0)));
       Worklist.push_back(cast<BinaryOperator>(BO->getOperand(1)));
+      Adds.push_back(BO);
       continue;
     }
     if (!isReassociableOp(BO, Instruction::Mul, Instruction::FMul) ||
@@ -2735,6 +2739,12 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   if (Changes.empty())
     return false;
 
+  // Drop the poison flags for any adds we looked through.
+  if (I.getType()->isIntOrIntVectorTy()) {
+    for (auto *Add : Adds)
+      Add->dropPoisonGeneratingFlags();
+  }
+
   // We know we should do it so let's do the transformation.
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
@@ -2743,9 +2753,11 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     assert(L.isLoopInvariant(U->get()));
     Instruction *Ins = cast<Instruction>(U->getUser());
     Value *Mul;
-    if (I.getType()->isIntOrIntVectorTy())
+    if (I.getType()->isIntOrIntVectorTy()) {
       Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
-    else
+      // Drop the poison flags on the original multiply.
+      Ins->dropPoisonGeneratingFlags();
+    } else
       Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
     U->set(Mul);
   }

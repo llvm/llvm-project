@@ -422,6 +422,7 @@ public:
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
@@ -466,7 +467,7 @@ public:
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
-  void AddIMGInit(MachineInstr &MI) const;
+  void AddMemOpInit(MachineInstr &MI) const;
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
 
@@ -523,10 +524,10 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        unsigned MaxDepth = 5) const;
-  bool isCanonicalized(Register Reg, MachineFunction &MF,
+  bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
-  bool denormalsEnabledForType(LLT Ty, MachineFunction &MF) const;
+  bool denormalsEnabledForType(LLT Ty, const MachineFunction &MF) const;
 
   bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                  const TargetRegisterInfo *TRI,

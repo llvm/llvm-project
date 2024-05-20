@@ -460,14 +460,14 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_REALTIME = 131,
   ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
-  ID_RTN_GET_SE_AID_ID = 134,
+  ID_RTN_GET_TBA_TO_PC = 134,
+  ID_RTN_GET_SE_AID_ID = 135,
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
 };
 
 enum Op { // Both GS and SYS operation IDs.
-  OP_UNKNOWN_ = -1,
   OP_SHIFT_ = 4,
   OP_NONE_ = 0,
   // Bits used for operation encoding
@@ -478,14 +478,12 @@ enum Op { // Both GS and SYS operation IDs.
   OP_GS_CUT = 1,
   OP_GS_EMIT = 2,
   OP_GS_EMIT_CUT = 3,
-  OP_GS_LAST_,
   OP_GS_FIRST_ = OP_GS_NOP,
   // SYS operations are encoded in bits 6:4
   OP_SYS_ECC_ERR_INTERRUPT = 1,
   OP_SYS_REG_RD = 2,
   OP_SYS_HOST_TRAP_ACK = 3,
   OP_SYS_TTRACE_PC = 4,
-  OP_SYS_LAST_,
   OP_SYS_FIRST_ = OP_SYS_ECC_ERR_INTERRUPT,
 };
 

@@ -17,6 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -220,6 +221,8 @@ void AffineDialect::initialize() {
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
   addInterfaces<AffineInlinerInterface>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
+                            AffineMinOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -1484,9 +1487,8 @@ void SimplifyAffineOp<AffinePrefetchOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffinePrefetchOp prefetch, AffineMap map,
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffinePrefetchOp>(
-      prefetch, prefetch.getMemref(), map, mapOperands,
-      prefetch.getLocalityHint(), prefetch.getIsWrite(),
-      prefetch.getIsDataCache());
+      prefetch, prefetch.getMemref(), map, mapOperands, prefetch.getIsWrite(),
+      prefetch.getLocalityHint(), prefetch.getIsDataCache());
 }
 template <>
 void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(
@@ -3583,20 +3585,18 @@ ParseResult AffinePrefetchOp::parse(OpAsmParser &parser,
       parser.resolveOperands(mapOperands, indexTy, result.operands))
     return failure();
 
-  if (!readOrWrite.equals("read") && !readOrWrite.equals("write"))
+  if (readOrWrite != "read" && readOrWrite != "write")
     return parser.emitError(parser.getNameLoc(),
                             "rw specifier has to be 'read' or 'write'");
-  result.addAttribute(
-      AffinePrefetchOp::getIsWriteAttrStrName(),
-      parser.getBuilder().getBoolAttr(readOrWrite.equals("write")));
+  result.addAttribute(AffinePrefetchOp::getIsWriteAttrStrName(),
+                      parser.getBuilder().getBoolAttr(readOrWrite == "write"));
 
-  if (!cacheType.equals("data") && !cacheType.equals("instr"))
+  if (cacheType != "data" && cacheType != "instr")
     return parser.emitError(parser.getNameLoc(),
                             "cache type has to be 'data' or 'instr'");
 
-  result.addAttribute(
-      AffinePrefetchOp::getIsDataCacheAttrStrName(),
-      parser.getBuilder().getBoolAttr(cacheType.equals("data")));
+  result.addAttribute(AffinePrefetchOp::getIsDataCacheAttrStrName(),
+                      parser.getBuilder().getBoolAttr(cacheType == "data"));
 
   return success();
 }

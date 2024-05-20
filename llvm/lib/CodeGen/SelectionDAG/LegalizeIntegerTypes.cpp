@@ -76,6 +76,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        Res = PromoteIntRes_CTTZ(N); break;
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS:
+    Res = PromoteIntRes_VP_CttzElements(N);
+    break;
   case ISD::EXTRACT_VECTOR_ELT:
                          Res = PromoteIntRes_EXTRACT_VECTOR_ELT(N); break;
   case ISD::LOAD:        Res = PromoteIntRes_LOAD(cast<LoadSDNode>(N)); break;
@@ -349,6 +353,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
                               N->getMemoryVT(), ResVT,
                               N->getChain(), N->getBasePtr(),
                               N->getMemOperand());
+  if (N->getOpcode() == ISD::ATOMIC_LOAD) {
+    ISD::LoadExtType ETy = cast<AtomicSDNode>(N)->getExtensionType();
+    if (ETy == ISD::NON_EXTLOAD) {
+      switch (TLI.getExtendForAtomicOps()) {
+      case ISD::SIGN_EXTEND:
+        ETy = ISD::SEXTLOAD;
+        break;
+      case ISD::ZERO_EXTEND:
+        ETy = ISD::ZEXTLOAD;
+        break;
+      case ISD::ANY_EXTEND:
+        ETy = ISD::EXTLOAD;
+        break;
+      default:
+        llvm_unreachable("Invalid atomic op extension");
+      }
+    }
+    cast<AtomicSDNode>(Res)->setExtensionType(ETy);
+  }
+
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -685,23 +709,32 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
     }
   }
 
-  if (N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::VP_CTTZ) {
+  unsigned NewOpc = N->getOpcode();
+  if (NewOpc == ISD::CTTZ || NewOpc == ISD::VP_CTTZ) {
     // The count is the same in the promoted type except if the original
     // value was zero.  This can be handled by setting the bit just off
     // the top of the original type.
     auto TopBit = APInt::getOneBitSet(NVT.getScalarSizeInBits(),
                                       OVT.getScalarSizeInBits());
-    if (N->getOpcode() == ISD::CTTZ)
+    if (NewOpc == ISD::CTTZ) {
       Op = DAG.getNode(ISD::OR, dl, NVT, Op, DAG.getConstant(TopBit, dl, NVT));
-    else
+      NewOpc = ISD::CTTZ_ZERO_UNDEF;
+    } else {
       Op =
           DAG.getNode(ISD::VP_OR, dl, NVT, Op, DAG.getConstant(TopBit, dl, NVT),
                       N->getOperand(1), N->getOperand(2));
+      NewOpc = ISD::VP_CTTZ_ZERO_UNDEF;
+    }
   }
   if (!N->isVPOpcode())
-    return DAG.getNode(N->getOpcode(), dl, NVT, Op);
-  return DAG.getNode(N->getOpcode(), dl, NVT, Op, N->getOperand(1),
-                     N->getOperand(2));
+    return DAG.getNode(NewOpc, dl, NVT, Op);
+  return DAG.getNode(NewOpc, dl, NVT, Op, N->getOperand(1), N->getOperand(2));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VP_CttzElements(SDNode *N) {
+  SDLoc DL(N);
+  EVT NewVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  return DAG.getNode(N->getOpcode(), DL, NewVT, N->ops());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N) {
@@ -929,7 +962,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
   unsigned NumOps = N->getNumOperands();
   assert(NumOps <= 3 && "Too many operands");
   if (NumOps == 3)
-    Ops[2] = N->getOperand(2);
+    Ops[2] = PromoteTargetBoolean(N->getOperand(2), VT);
 
   SDLoc dl(N);
   SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(VT, SVT),
@@ -1847,11 +1880,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FSHL:
   case ISD::FSHR: Res = PromoteIntOp_FunnelShift(N); break;
 
-  case ISD::SADDO_CARRY:
-  case ISD::SSUBO_CARRY:
-  case ISD::UADDO_CARRY:
-  case ISD::USUBO_CARRY: Res = PromoteIntOp_ADDSUBO_CARRY(N, OpNo); break;
-
   case ISD::FRAMEADDR:
   case ISD::RETURNADDR: Res = PromoteIntOp_FRAMERETURNADDR(N); break;
 
@@ -2351,19 +2379,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
                                    N->getOperand(0).getScalarValueSizeInBits());
   return DAG.getNode(ISD::VP_AND, dl, VT, Op, DAG.getConstant(Imm, dl, VT),
                      N->getOperand(1), N->getOperand(2));
-}
-
-SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo) {
-  assert(OpNo == 2 && "Don't know how to promote this operand!");
-
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDValue Carry = N->getOperand(2);
-  SDLoc DL(N);
-
-  Carry = PromoteTargetBoolean(Carry, LHS.getValueType());
-
-  return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_FIX(SDNode *N) {
@@ -4527,6 +4542,7 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
                                           SDValue &Lo, SDValue &Hi) {
   EVT VT = N->getValueType(0);
+  unsigned Opc = N->getOpcode();
   SDLoc dl(N);
 
   // If we can emit an efficient shift operation, do so now.  Check to see if
@@ -4541,12 +4557,12 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
 
   // If this target supports shift_PARTS, use it.  First, map to the _PARTS opc.
   unsigned PartsOpc;
-  if (N->getOpcode() == ISD::SHL) {
+  if (Opc == ISD::SHL) {
     PartsOpc = ISD::SHL_PARTS;
-  } else if (N->getOpcode() == ISD::SRL) {
+  } else if (Opc == ISD::SRL) {
     PartsOpc = ISD::SRL_PARTS;
   } else {
-    assert(N->getOpcode() == ISD::SRA && "Unknown shift!");
+    assert(Opc == ISD::SRA && "Unknown shift!");
     PartsOpc = ISD::SRA_PARTS;
   }
 
@@ -4599,7 +4615,7 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
   // Otherwise, emit a libcall.
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
   bool isSigned;
-  if (N->getOpcode() == ISD::SHL) {
+  if (Opc == ISD::SHL) {
     isSigned = false; /*sign irrelevant*/
     if (VT == MVT::i16)
       LC = RTLIB::SHL_I16;
@@ -4609,7 +4625,7 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
       LC = RTLIB::SHL_I64;
     else if (VT == MVT::i128)
       LC = RTLIB::SHL_I128;
-  } else if (N->getOpcode() == ISD::SRL) {
+  } else if (Opc == ISD::SRL) {
     isSigned = false;
     if (VT == MVT::i16)
       LC = RTLIB::SRL_I16;
@@ -4620,7 +4636,7 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     else if (VT == MVT::i128)
       LC = RTLIB::SRL_I128;
   } else {
-    assert(N->getOpcode() == ISD::SRA && "Unknown shift!");
+    assert(Opc == ISD::SRA && "Unknown shift!");
     isSigned = true;
     if (VT == MVT::i16)
       LC = RTLIB::SRA_I16;

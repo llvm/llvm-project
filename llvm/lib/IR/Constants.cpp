@@ -315,8 +315,8 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   Type *IntTy = VectorType::getInteger(VTy);
   Constant *C0 = ConstantExpr::getBitCast(const_cast<Constant *>(this), IntTy);
   Constant *C1 = ConstantExpr::getBitCast(cast<Constant>(Y), IntTy);
-  Constant *CmpEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, C0, C1);
-  return isa<UndefValue>(CmpEq) || match(CmpEq, m_One());
+  Constant *CmpEq = ConstantFoldCompareInstruction(ICmpInst::ICMP_EQ, C0, C1);
+  return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
 static bool
@@ -1568,7 +1568,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), GEPO->getInRangeIndex(), OnlyIfReducedTy);
+        GEPO->isInBounds(), GEPO->getInRange(), OnlyIfReducedTy);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1696,14 +1696,14 @@ void ConstantVector::destroyConstantImpl() {
   getType()->getContext().pImpl->VectorConstants.remove(this);
 }
 
-Constant *Constant::getSplatValue(bool AllowUndefs) const {
+Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    return CV->getSplatValue(AllowUndefs);
+    return CV->getSplatValue(AllowPoison);
 
   // Check if this is a constant expression splat of the form returned by
   // ConstantVector::getSplat()
@@ -1728,7 +1728,7 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
   return nullptr;
 }
 
-Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
+Constant *ConstantVector::getSplatValue(bool AllowPoison) const {
   // Check out first element.
   Constant *Elt = getOperand(0);
   // Then make sure all remaining elements point to the same value.
@@ -1738,15 +1738,15 @@ Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
       continue;
 
     // Strict mode: any mismatch is not a splat.
-    if (!AllowUndefs)
+    if (!AllowPoison)
       return nullptr;
 
-    // Allow undefs mode: ignore undefined elements.
-    if (isa<UndefValue>(OpC))
+    // Allow poison mode: ignore poison elements.
+    if (isa<PoisonValue>(OpC))
       continue;
 
     // If we do not have a defined element yet, use the current operand.
-    if (isa<UndefValue>(Elt))
+    if (isa<PoisonValue>(Elt))
       Elt = OpC;
 
     if (OpC != Elt)
@@ -2349,17 +2349,16 @@ Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
-                                         std::optional<unsigned> InRangeIndex,
+                                         std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC =
-          ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))
-    return FC;          // Fold a few common cases.
+  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InBounds, InRange, Idxs))
+    return FC; // Fold a few common cases.
 
-  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) &&
-         "GEP indices invalid!");;
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+  ;
 
   // Get the result type of the getelementptr!
   Type *ReqTy = GetElementPtrInst::getGEPReturnType(C, Idxs);
@@ -2392,10 +2391,9 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   }
 
   unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
-  if (InRangeIndex && *InRangeIndex < 63)
-    SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, std::nullopt, Ty);
+                                SubClassOptionalData, std::nullopt, Ty,
+                                InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2522,10 +2520,10 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
 }
 
-Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
+Constant *ConstantExpr::getNeg(Constant *C, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
-  return getSub(ConstantInt::get(C->getType(), 0), C, HasNUW, HasNSW);
+  return getSub(ConstantInt::get(C->getType(), 0), C, /*HasNUW=*/false, HasNSW);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {
@@ -2691,13 +2689,15 @@ const char *ConstantExpr::getOpcodeName() const {
 }
 
 GetElementPtrConstantExpr::GetElementPtrConstantExpr(
-    Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy)
+    Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy,
+    std::optional<ConstantRange> InRange)
     : ConstantExpr(DestTy, Instruction::GetElementPtr,
                    OperandTraits<GetElementPtrConstantExpr>::op_end(this) -
                        (IdxList.size() + 1),
                    IdxList.size() + 1),
       SrcElementTy(SrcElementTy),
-      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)) {
+      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)),
+      InRange(std::move(InRange)) {
   Op<0>() = C;
   Use *OperandList = getOperandList();
   for (unsigned i = 0, E = IdxList.size(); i != E; ++i)
@@ -2710,6 +2710,10 @@ Type *GetElementPtrConstantExpr::getSourceElementType() const {
 
 Type *GetElementPtrConstantExpr::getResultElementType() const {
   return ResElementTy;
+}
+
+std::optional<ConstantRange> GetElementPtrConstantExpr::getInRange() const {
+  return InRange;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3303,7 +3307,7 @@ Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {
       NewOps, this, From, To, NumUpdated, OperandNo);
 }
 
-Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
+Instruction *ConstantExpr::getAsInstruction() const {
   SmallVector<Value *, 4> ValueOperands(operands());
   ArrayRef<Value*> Ops(ValueOperands);
 
@@ -3322,32 +3326,31 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
     return CastInst::Create((Instruction::CastOps)getOpcode(), Ops[0],
-                            getType(), "", InsertBefore);
+                            getType(), "");
   case Instruction::InsertElement:
-    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
+    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "");
   case Instruction::ExtractElement:
-    return ExtractElementInst::Create(Ops[0], Ops[1], "", InsertBefore);
+    return ExtractElementInst::Create(Ops[0], Ops[1], "");
   case Instruction::ShuffleVector:
-    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "",
-                                 InsertBefore);
+    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "");
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
     if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(
-          GO->getSourceElementType(), Ops[0], Ops.slice(1), "", InsertBefore);
+      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
+                                               Ops[0], Ops.slice(1), "");
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
-                                     Ops.slice(1), "", InsertBefore);
+                                     Ops.slice(1), "");
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
                            (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
-                           "", InsertBefore);
+                           "");
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO = BinaryOperator::Create(
-        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "", InsertBefore);
+        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "");
     if (isa<OverflowingBinaryOperator>(BO)) {
       BO->setHasNoUnsignedWrap(SubclassOptionalData &
                                OverflowingBinaryOperator::NoUnsignedWrap);

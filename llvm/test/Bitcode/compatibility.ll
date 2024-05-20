@@ -1648,16 +1648,16 @@ define void @instructions.va_arg(ptr %v, ...) {
   %ap = alloca ptr
 
   call void @llvm.va_start(ptr %ap)
-  ; CHECK: call void @llvm.va_start(ptr %ap)
+  ; CHECK: call void @llvm.va_start.p0(ptr %ap)
 
   va_arg ptr %ap, i32
   ; CHECK: va_arg ptr %ap, i32
 
   call void @llvm.va_copy(ptr %v, ptr %ap)
-  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap)
+  ; CHECK: call void @llvm.va_copy.p0(ptr %v, ptr %ap)
 
   call void @llvm.va_end(ptr %ap)
-  ; CHECK: call void @llvm.va_end(ptr %ap)
+  ; CHECK: call void @llvm.va_end.p0(ptr %ap)
 
   ret void
 }
@@ -1941,8 +1941,8 @@ declare void @f.speculatable() speculatable
 ;; Constant Expressions
 
 define ptr @constexpr() {
-  ; CHECK: ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
-  ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
+  ; CHECK: ret ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
+  ret ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, i32 1, i32 2)
 }
 
 define void @instructions.strictfp() strictfp {
@@ -2091,12 +2091,12 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #33 = { memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #34 = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #35 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #36 = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #37 = { nounwind memory(argmem: read) }
-; CHECK: attributes #38 = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #39 = { nocallback nofree nosync nounwind willreturn memory(read) }
-; CHECK: attributes #40 = { nocallback nounwind }
-; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #36 = { nounwind memory(argmem: read) }
+; CHECK: attributes #37 = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #38 = { nocallback nofree nosync nounwind willreturn memory(read) }
+; CHECK: attributes #39 = { nocallback nounwind }
+; CHECK: attributes #40 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #41 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #42 = { memory(write) }
 ; CHECK: attributes #43 = { speculatable }
 ; CHECK: attributes #44 = { strictfp }

@@ -301,15 +301,15 @@ define <2 x i32> @not_cond_vec(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
   ret <2 x i32> %r
 }
 
-; Should match vector 'not' with undef element.
+; Should match vector 'not' with poison element.
 ; The condition is inverted, and the select ops are swapped. The metadata should be swapped.
 
-define <2 x i32> @not_cond_vec_undef(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
-; CHECK-LABEL: @not_cond_vec_undef(
+define <2 x i32> @not_cond_vec_poison(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
+; CHECK-LABEL: @not_cond_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[FV:%.*]], <2 x i32> [[TV:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %notc = xor <2 x i1> %c, <i1 undef, i1 true>
+  %notc = xor <2 x i1> %c, <i1 poison, i1 true>
   %r = select <2 x i1> %notc, <2 x i32> %tv, <2 x i32> %fv, !prof !1
   ret <2 x i32> %r
 }
@@ -360,23 +360,23 @@ define i128 @select_ashr(i1 %cond, i128 %x, i128 %y) {
 
 define double @select_fmul(i1 %cond, double %x, double %y) {
 ; CHECK-LABEL: @select_fmul(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], double [[Y:%.*]], double 1.000000e+00, !prof [[PROF0]], !unpredictable [[META2]]
+; CHECK-NEXT:    [[OP:%.*]] = select nnan i1 [[COND:%.*]], double [[Y:%.*]], double 1.000000e+00, !prof [[PROF0]], !unpredictable [[META2]]
 ; CHECK-NEXT:    [[RET:%.*]] = fmul double [[OP]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[RET]]
 ;
   %op = fmul double %x, %y
-  %ret = select i1 %cond, double %op, double %x, !prof !1, !unpredictable !3
+  %ret = select nnan i1 %cond, double %op, double %x, !prof !1, !unpredictable !3
   ret double %ret
 }
 
 define <2 x float> @select_fdiv(i1 %cond, <2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @select_fdiv(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x float> [[Y:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, !prof [[PROF0]], !unpredictable [[META2]]
+; CHECK-NEXT:    [[OP:%.*]] = select nnan i1 [[COND:%.*]], <2 x float> [[Y:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, !prof [[PROF0]], !unpredictable [[META2]]
 ; CHECK-NEXT:    [[RET:%.*]] = fdiv <2 x float> [[X:%.*]], [[OP]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %op = fdiv <2 x float> %x, %y
-  %ret = select i1 %cond, <2 x float> %op, <2 x float> %x, !prof !1, !unpredictable !3
+  %ret = select nnan i1 %cond, <2 x float> %op, <2 x float> %x, !prof !1, !unpredictable !3
   ret <2 x float> %ret
 }
 

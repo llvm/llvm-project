@@ -1,6 +1,7 @@
 ; Test upgrade of dbg.addr intrinsics into dbg.value with DW_OP_deref appended
 ;
 ; RUN: llvm-dis < %s.bc | FileCheck %s
+; RUN: llvm-dis < %s.bc --load-bitcode-into-experimental-debuginfo-iterators --write-experimental-debuginfo=false | FileCheck %s
 ; RUN: verify-uselistorder < %s.bc
 
 define i32 @example(i32 %num) {

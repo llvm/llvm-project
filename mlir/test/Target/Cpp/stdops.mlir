@@ -60,14 +60,14 @@ func.func @two_results() -> (i32, f32) {
 }
 // CPP-DEFAULT: std::tuple<int32_t, float> two_results() {
 // CPP-DEFAULT: int32_t [[V0:[^ ]*]] = 0;
-// CPP-DEFAULT: float [[V1:[^ ]*]] = (float)1.000000000e+00;
+// CPP-DEFAULT: float [[V1:[^ ]*]] = 1.000000000e+00f;
 // CPP-DEFAULT: return std::make_tuple([[V0]], [[V1]]);
 
 // CPP-DECLTOP: std::tuple<int32_t, float> two_results() {
 // CPP-DECLTOP: int32_t [[V0:[^ ]*]];
 // CPP-DECLTOP: float [[V1:[^ ]*]];
 // CPP-DECLTOP: [[V0]] = 0;
-// CPP-DECLTOP: [[V1]] = (float)1.000000000e+00;
+// CPP-DECLTOP: [[V1]] = 1.000000000e+00f;
 // CPP-DECLTOP: return std::make_tuple([[V0]], [[V1]]);
 
 

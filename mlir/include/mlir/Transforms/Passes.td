@@ -278,6 +278,13 @@ def Inliner : Pass<"inline"> {
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,
+    Option<"inliningThreshold", "inlining-threshold", "unsigned",
+           /*default=*/"-1U",
+           "If the ratio between the number of the operations "
+           "in the callee and the number of the operations "
+           "in the caller exceeds this value (in percentage), "
+           "then the callee is not inlined even if it is legal "
+           "to inline it">,
   ];
 }
 
@@ -543,6 +550,23 @@ def TopologicalSort : Pass<"topological-sort"> {
   }];
 
   let constructor = "mlir::createTopologicalSortPass()";
+}
+
+def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
+  let summary = "Composite fixed point pass";
+  let description = [{
+    Composite pass runs provided set of passes until fixed point or maximum
+    number of iterations reached.
+  }];
+
+  let options = [
+    Option<"name", "name", "std::string", /*default=*/"\"CompositeFixedPointPass\"",
+      "Composite pass display name">,
+    Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
+      "Composite pass inner pipeline">,
+    Option<"maxIter", "max-iterations", "int", /*default=*/"10",
+      "Maximum number of iterations if inner pipeline">,
+  ];
 }
 
 #endif // MLIR_TRANSFORMS_PASSES

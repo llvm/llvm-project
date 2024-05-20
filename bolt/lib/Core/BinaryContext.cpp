@@ -14,7 +14,6 @@
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
-#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -39,7 +38,6 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
-#include <numeric>
 #include <unordered_set>
 
 using namespace llvm;
@@ -162,28 +160,30 @@ BinaryContext::~BinaryContext() {
 
 /// Create BinaryContext for a given architecture \p ArchName and
 /// triple \p TripleName.
-Expected<std::unique_ptr<BinaryContext>>
-BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
-                                   std::unique_ptr<DWARFContext> DwCtx,
-                                   JournalingStreams Logger) {
+Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
+    Triple TheTriple, StringRef InputFileName, SubtargetFeatures *Features,
+    bool IsPIC, std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger) {
   StringRef ArchName = "";
   std::string FeaturesStr = "";
-  switch (File->getArch()) {
+  switch (TheTriple.getArch()) {
   case llvm::Triple::x86_64:
+    if (Features)
+      return createFatalBOLTError(
+          "x86_64 target does not use SubtargetFeatures");
     ArchName = "x86-64";
     FeaturesStr = "+nopl";
     break;
   case llvm::Triple::aarch64:
+    if (Features)
+      return createFatalBOLTError(
+          "AArch64 target does not use SubtargetFeatures");
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
   case llvm::Triple::riscv64: {
     ArchName = "riscv64";
-    Expected<SubtargetFeatures> Features = File->getFeatures();
-
-    if (auto E = Features.takeError())
-      return std::move(E);
-
+    if (!Features)
+      return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
     // to PseudoCALL and then making JITLink relax them). Since the relax
     // feature is not stored in the object file, we manually enable it.
@@ -196,12 +196,11 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
                              "BOLT-ERROR: Unrecognized machine in ELF file");
   }
 
-  auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  const std::string TripleName = TheTriple->str();
+  const std::string TripleName = TheTriple.str();
 
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(ArchName), *TheTriple, Error);
+      TargetRegistry::lookupTarget(std::string(ArchName), TheTriple, Error);
   if (!TheTarget)
     return createStringError(make_error_code(std::errc::not_supported),
                              Twine("BOLT-ERROR: ", Error));
@@ -240,13 +239,13 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
         Twine("BOLT-ERROR: no instruction info for target ", TripleName));
 
   std::unique_ptr<MCContext> Ctx(
-      new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
+      new MCContext(TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
   // We do not support X86 Large code model. Change this in the future.
   bool Large = false;
-  if (TheTriple->getArch() == llvm::Triple::aarch64)
+  if (TheTriple.getArch() == llvm::Triple::aarch64)
     Large = true;
   unsigned LSDAEncoding =
       Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
@@ -273,7 +272,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> InstructionPrinter(
-      TheTarget->createMCInstPrinter(*TheTriple, AsmPrinterVariant, *AsmInfo,
+      TheTarget->createMCInstPrinter(TheTriple, AsmPrinterVariant, *AsmInfo,
                                      *MII, *MRI));
   if (!InstructionPrinter)
     return createStringError(
@@ -285,8 +284,8 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
       TheTarget->createMCCodeEmitter(*MII, *Ctx));
 
   auto BC = std::make_unique<BinaryContext>(
-      std::move(Ctx), std::move(DwCtx), std::move(TheTriple), TheTarget,
-      std::string(TripleName), std::move(MCE), std::move(MOFI),
+      std::move(Ctx), std::move(DwCtx), std::make_unique<Triple>(TheTriple),
+      TheTarget, std::string(TripleName), std::move(MCE), std::move(MOFI),
       std::move(AsmInfo), std::move(MII), std::move(STI),
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
@@ -296,7 +295,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
   BC->MAB = std::unique_ptr<MCAsmBackend>(
       BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
 
-  BC->setFilename(File->getFileName());
+  BC->setFilename(InputFileName);
 
   BC->HasFixedLoadAddress = !IsPIC;
 
@@ -556,6 +555,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                                      const uint64_t NextJTAddress,
                                      JumpTable::AddressesType *EntriesAsAddress,
                                      bool *HasEntryInFragment) const {
+  // Target address of __builtin_unreachable.
+  const uint64_t UnreachableAddress = BF.getAddress() + BF.getSize();
+
   // Is one of the targets __builtin_unreachable?
   bool HasUnreachable = false;
 
@@ -565,9 +567,15 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   // Number of targets other than __builtin_unreachable.
   uint64_t NumRealEntries = 0;
 
-  auto addEntryAddress = [&](uint64_t EntryAddress) {
-    if (EntriesAsAddress)
-      EntriesAsAddress->emplace_back(EntryAddress);
+  // Size of the jump table without trailing __builtin_unreachable entries.
+  size_t TrimmedSize = 0;
+
+  auto addEntryAddress = [&](uint64_t EntryAddress, bool Unreachable = false) {
+    if (!EntriesAsAddress)
+      return;
+    EntriesAsAddress->emplace_back(EntryAddress);
+    if (!Unreachable)
+      TrimmedSize = EntriesAsAddress->size();
   };
 
   ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
@@ -619,8 +627,8 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
             : *getPointerAtAddress(EntryAddress);
 
     // __builtin_unreachable() case.
-    if (Value == BF.getAddress() + BF.getSize()) {
-      addEntryAddress(Value);
+    if (Value == UnreachableAddress) {
+      addEntryAddress(Value, /*Unreachable*/ true);
       HasUnreachable = true;
       LLVM_DEBUG(dbgs() << formatv("OK: {0:x} __builtin_unreachable\n", Value));
       continue;
@@ -673,6 +681,13 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       *HasEntryInFragment = true;
     addEntryAddress(Value);
   }
+
+  // Trim direct/normal jump table to exclude trailing unreachable entries that
+  // can collide with a function address.
+  if (Type == JumpTable::JTT_NORMAL && EntriesAsAddress &&
+      TrimmedSize != EntriesAsAddress->size() &&
+      getBinaryFunctionAtAddress(UnreachableAddress))
+    EntriesAsAddress->resize(TrimmedSize);
 
   // It's a jump table if the number of real entries is more than 1, or there's
   // one real entry and one or more special targets. If there are only multiple
@@ -1865,7 +1880,7 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
   // the end of a data chunk inside code, $d identifies start of data.
-  if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
+  if (isX86() || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
   Expected<StringRef> NameOrError = Symbol.getName();
@@ -1939,7 +1954,13 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << Endl;
     return;
   }
-  InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
+  if (std::optional<uint32_t> DynamicID =
+          MIB->getDynamicBranchID(Instruction)) {
+    OS << "\tjit\t" << MIB->getTargetSymbol(Instruction)->getName()
+       << " # ID: " << DynamicID;
+  } else {
+    InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
+  }
   if (MIB->isCall(Instruction)) {
     if (MIB->isTailCall(Instruction))
       OS << " # TAILCALL ";
