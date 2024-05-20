@@ -1510,7 +1510,7 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
                        LevelAttr:$loLvl, LevelAttr:$hiLvl);
   let results = (outs AnySparseIterSpace:$resultSpace);
   let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
-                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)?";
+                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)? `->` type($resultSpace)";
 
   let hasVerifier = 1;
 }
@@ -1543,8 +1543,8 @@ def IterateOp : SparseTensor_Op<"iterate",
         : !sparse_tensor.iter_space<#CSR, lvls = 0 to 2>
       ```
 
-      `sparse_tensor.iterate` can also operate on loop-carried variables
-      and returns the final values after loop termination.
+      `sparse_tensor.iterate` can also operate on loop-carried variables.
+      It returns the final values after loop termination.
       The initial values of the variables are passed as additional SSA operands
       to the iterator SSA value and used coordinate SSA values mentioned
       above. The operation region has an argument for the iterator, variadic
@@ -1554,9 +1554,9 @@ def IterateOp : SparseTensor_Op<"iterate",
       The body region must contain exactly one block that terminates with
       `sparse_tensor.yield`.
 
-      `sparse_tensor.iterate` results hold the final values after the last
-      iteration. If the `sparse_tensor.iterate` defines any values, a yield
-      must be explicitly present.
+      The results of an `sparse_tensor.iterate` hold the final values after
+      the last iteration. If the `sparse_tensor.iterate` defines any values,
+      a yield must be explicitly present.
       The number and types of the `sparse_tensor.iterate` results must match
       the initial values in the iter_args binding and the yield operands.
 
