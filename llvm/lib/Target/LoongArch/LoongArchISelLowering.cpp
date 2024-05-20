@@ -139,6 +139,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
+    setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
   }
 
   // Set operations for LA32 only.
@@ -1665,6 +1666,10 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case ISD::UDIV:
+    return LoongArchISD::DIV_WU;
+  case ISD::UREM:
+    return LoongArchISD::MOD_WU;
   case ISD::SHL:
     return LoongArchISD::SLL_W;
   case ISD::SRA:
@@ -1841,6 +1846,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to legalize this operation");
+  case ISD::UDIV:
+  case ISD::UREM:
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOp(N, DAG, 2, ISD::SIGN_EXTEND));
+    break;
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -3445,6 +3456,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
+    NODE_NAME_CASE(DIV_WU)
+    NODE_NAME_CASE(MOD_WU)
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
     NODE_NAME_CASE(DBAR)

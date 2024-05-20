@@ -85,6 +85,8 @@ def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
+def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_h_w
@@ -1110,9 +1112,13 @@ def : PatGprImm_32<add, ADDI_W, simm12>;
 def : PatGprGpr<sub, SUB_D>;
 def : PatGprGpr_32<sub, SUB_W>;
 def : PatGprGpr<sdiv, DIV_D>;
+def : PatGprGpr_32<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_DU>;
+def : PatGprGpr<loongarch_div_wu, DIV_WU>;
 def : PatGprGpr<srem, MOD_D>;
+def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
+def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<rotr, ROTR_D>;
 def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
 def : PatGprGpr_32<rotr, ROTR_W>;
