@@ -4789,6 +4789,7 @@ void RewriteInstance::updateELFSymbolTable(
       continue;
 
     Expected<StringRef> SymbolName = Symbol.getName(StringSection);
+    assert(SymbolName && "cannot get symbol name");
 
     const BinaryFunction *Function =
         BC->getBinaryFunctionAtAddress(Symbol.st_value);
