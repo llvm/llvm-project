@@ -1,0 +1,129 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/compile_commands.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "nodes": [
+                29,
+                21,
+                20,
+                19,
+                17,
+                12,
+                11,
+                10
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 46,
+                    "beginColumn": 5,
+                    "endLine": 46,
+                    "endColumn": 36,
+                    "content": "int *data = (int *)AllocBuff();",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 48,
+                    "beginColumn": 8,
+                    "endLine": 48,
+                    "endColumn": 23,
+                    "content": "Func_Proc(data)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 27,
+                    "beginColumn": 1,
+                    "endLine": 41,
+                    "endColumn": 2,
+                    "content": "int Func_Proc(int *data)\n{\n\tint ret;\n\tret = Func_3(data);\n\tif (ret != 0) {\n\t     ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 29,
+                    "beginColumn": 2,
+                    "endLine": 29,
+                    "endColumn": 10,
+                    "content": "int ret;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 30,
+                    "beginColumn": 8,
+                    "endLine": 30,
+                    "endColumn": 20,
+                    "content": "Func_3(data)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 30,
+                    "beginColumn": 2,
+                    "endLine": 30,
+                    "endColumn": 20,
+                    "content": "ret = Func_3(data)",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 31,
+                    "beginColumn": 6,
+                    "endLine": 31,
+                    "endColumn": 14,
+                    "content": "ret != 0",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 35,
+                    "beginColumn": 8,
+                    "endLine": 35,
+                    "endColumn": 20,
+                    "content": "Func_4(data)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 22,
+                    "beginColumn": 1,
+                    "endLine": 25,
+                    "endColumn": 2,
+                    "content": "int Func_4(int *data)\n{\n    return Func_5(*data);\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 24,
+                    "beginColumn": 12,
+                    "endLine": 24,
+                    "endColumn": 25,
+                    "content": "Func_5(*data)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/test_1.c",
+                    "beginLine": 24,
+                    "beginColumn": 5,
+                    "endLine": 24,
+                    "endColumn": 25,
+                    "content": "return Func_5(*data)",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        }
+    ]
+}
