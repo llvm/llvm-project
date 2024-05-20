@@ -1886,7 +1886,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // Local sizes arguments: Sizes of block invoke arguments. Clang generates
   // local size operands as an array, so we need to unpack them.
   SmallVector<Register, 16> LocalSizes;
-  if (Call->Builtin->Name.find("_varargs") != StringRef::npos || IsSpirvOp) {
+  if (Call->Builtin->Name.contains("_varargs") || IsSpirvOp) {
     const unsigned LocalSizeArrayIdx = HasEvents ? 9 : 6;
     Register GepReg = Call->Arguments[LocalSizeArrayIdx];
     MachineInstr *GepMI = MRI->getUniqueVRegDef(GepReg);
