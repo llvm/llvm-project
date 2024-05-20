@@ -26,7 +26,7 @@ uploaders = set(
         "jakeegan",
         "maryammo",
         "tstellar",
-        "github-actions[bot]"
+        "github-actions[bot]",
     ]
 )
 
@@ -41,4 +41,3 @@ for release in repo.get_releases():
         if asset.uploader.login not in uploaders:
             print("Invalid uploader")
             sys.exit(1)
-
