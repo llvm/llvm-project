@@ -1,4 +1,4 @@
-//==- SemaRISCVVectorLookup.cpp - Name Lookup for RISC-V Vector Intrinsic -==//
+//==------- SemaRISCV.cpp ------- RISC-V target-specific routines ----------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements name lookup for RISC-V vector intrinsic.
+//  This file implements semantic analysis functions specific to RISC-V.
 //
 //===----------------------------------------------------------------------===//
 
