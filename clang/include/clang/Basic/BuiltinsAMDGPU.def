@@ -592,6 +592,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_bf6_f32, "V6UiV32fUif", "nc
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_bf16, "V6UiV32yUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_f16, "V6UiV32hUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_sr_pk32_fp6_f32, "V6UiV32fUif", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_bitop3_b32, "iiiiIUc", "nc", "bitop3-insts")
+TARGET_BUILTIN(__builtin_amdgcn_bitop3_b16, "ssssIUc", "nc", "bitop3-insts")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
