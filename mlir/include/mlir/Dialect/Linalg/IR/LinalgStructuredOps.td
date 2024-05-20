@@ -426,7 +426,7 @@ def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
             CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 3;
+        int64_t numSpatialDims = cast<ShapedType>(input.getType()).getRank() - 3;
         if (strides.empty())
           strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
         if (dilations.empty())
@@ -446,7 +446,7 @@ def GroupedConvNDOp : LinalgStructuredBase_Op<"grouped_conv_nd",
             CArg<"ArrayRef<int64_t>", "{}">:$strides, CArg<"ArrayRef<int64_t>", "{}">:$dilations,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        int64_t numSpatialDims = input.getType().cast<ShapedType>().getRank() - 3;
+        int64_t numSpatialDims = cast<ShapedType>(input.getType()).getRank() - 3;
         if (strides.empty())
           strides = ::llvm::SmallVector<int64_t, 2>(numSpatialDims, 1);
         if (dilations.empty())

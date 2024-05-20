@@ -59,7 +59,7 @@ func.func @grouped_conv_2D(%arg0 : memref<?x?x?x?x?xf32>, %arg1 : memref<?x?x?x?
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.grouped_conv_nd"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop:5 = transform.structured.tile_using_for %0 [2, 3, 4, 5, 6] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loop:5 = transform.structured.tile_using_for %0 tile_sizes [2, 3, 4, 5, 6] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -84,20 +84,20 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[W:.*]] = memref.dim %[[ARG2]], %[[C3]]
 //   CHECK-DAG:   %[[H:.*]] = memref.dim %[[ARG2]], %[[C4]]
 //       CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[BATCH]] step %[[C2]]
-//       CHECK:     %[[T4:.*]] = affine.min #[[MAP0]](%[[I]])[%[[BATCH]]]
 //       CHECK:     scf.for %[[J:.*]] = %[[C0]] to %[[GROUPS]] step %[[C3]]
-//       CHECK:       %[[T5:.*]] = affine.min #[[MAP1]](%[[J]])[%[[GROUPS]]]
-//       CHECK:     scf.for %[[K:.*]] = %[[C0]] to %[[OUT_CHANNELS]] step %[[C4]]
-//   CHECK-DAG:       %[[T6:.*]] = affine.min #[[MAP2]](%[[K]])[%[[OUT_CHANNELS]]]
-//       CHECK:       scf.for %[[L:.*]] = %[[C0]] to %[[W]] step %[[C5]]
-//   CHECK-DAG:         %[[T7:.*]] = affine.min #[[MAP3]](%[[L]])[%[[W]]]
-//       CHECK:         scf.for %[[M:.*]] = %[[C0]] to %[[H]] step %[[C6]]
-//   CHECK-DAG:           %[[T8:.*]] = affine.min #[[MAP4]](%[[M]])[%[[H]]]
-//   CHECK-DAG:           %[[T9:.*]] = affine.apply #[[MAP5]](%[[T7]])[%[[KW]]]
-//   CHECK-DAG:           %[[T10:.*]] = affine.apply #[[MAP5]](%[[T8]])[%[[KH]]]
-//   CHECK-DAG:           %[[SVIN:.*]] = memref.subview %[[ARG0]][%[[I]], %[[J]], 0, %[[L]], %[[M]]] [%[[T4]], %[[T5]], %[[IN_CHANNELS]], %[[T9]], %[[T10]]]
-//   CHECK-DAG:           %[[SVKER:.*]] = memref.subview %[[ARG1]][%[[J]], %[[K]], 0, 0, 0] [%[[T5]], %[[T6]], %[[IN_CHANNELS]], %[[KW]], %[[KH]]]
-//   CHECK-DAG:           %[[SVOUT:.*]] = memref.subview %[[ARG2]][%[[I]], %[[J]], %[[K]], %[[L]], %[[M]]] [%[[T4]], %[[T5]], %[[T6]], %[[T7]], %[[T8]]]
-//       CHECK:           linalg.grouped_conv_nd {layouts = ["ngcs", "gfcs", "ngfs"]}
-//  CHECK-SAME:             ins(%[[SVIN]], %[[SVKER]]
-//  CHECK-SAME:             outs(%[[SVOUT]]
+//       CHECK:       scf.for %[[K:.*]] = %[[C0]] to %[[OUT_CHANNELS]] step %[[C4]]
+//       CHECK:         scf.for %[[L:.*]] = %[[C0]] to %[[W]] step %[[C5]]
+//       CHECK:           scf.for %[[M:.*]] = %[[C0]] to %[[H]] step %[[C6]]
+//       CHECK:             %[[T4:.*]] = affine.min #[[MAP0]](%[[I]])[%[[BATCH]]]
+//       CHECK:             %[[T5:.*]] = affine.min #[[MAP1]](%[[J]])[%[[GROUPS]]]
+//   CHECK-DAG:             %[[T6:.*]] = affine.min #[[MAP2]](%[[K]])[%[[OUT_CHANNELS]]]
+//   CHECK-DAG:             %[[T7:.*]] = affine.min #[[MAP3]](%[[L]])[%[[W]]]
+//   CHECK-DAG:             %[[T8:.*]] = affine.min #[[MAP4]](%[[M]])[%[[H]]]
+//   CHECK-DAG:             %[[T9:.*]] = affine.apply #[[MAP5]](%[[T7]])[%[[KW]]]
+//   CHECK-DAG:             %[[T10:.*]] = affine.apply #[[MAP5]](%[[T8]])[%[[KH]]]
+//   CHECK-DAG:             %[[SVIN:.*]] = memref.subview %[[ARG0]][%[[I]], %[[J]], 0, %[[L]], %[[M]]] [%[[T4]], %[[T5]], %[[IN_CHANNELS]], %[[T9]], %[[T10]]]
+//   CHECK-DAG:             %[[SVKER:.*]] = memref.subview %[[ARG1]][%[[J]], %[[K]], 0, 0, 0] [%[[T5]], %[[T6]], %[[IN_CHANNELS]], %[[KW]], %[[KH]]]
+//   CHECK-DAG:             %[[SVOUT:.*]] = memref.subview %[[ARG2]][%[[I]], %[[J]], %[[K]], %[[L]], %[[M]]] [%[[T4]], %[[T5]], %[[T6]], %[[T7]], %[[T8]]]
+//       CHECK:             linalg.grouped_conv_nd {layouts = ["ngcs", "gfcs", "ngfs"]}
+//  CHECK-SAME:               ins(%[[SVIN]], %[[SVKER]]
+//  CHECK-SAME:               outs(%[[SVOUT]]

@@ -1754,7 +1754,7 @@ void mlir::linalg::detail::convolution_impl::regionBuilder(
     ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
   assert(block.getNumArguments() == 3 &&
          "ConvolutionInterface regionBuilder expects 3 (>=0) args");
-  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 
   Value value1 =
@@ -1774,7 +1774,7 @@ void mlir::linalg::detail::convolution_impl::quantizedRegionBuilder(
     ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
   assert(block.getNumArguments() == 5 &&
          "ConvolutionInterface regionBuilder expects 5 args");
-  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  RegionBuilderHelper helper(b, block);
   Value value1 =
       helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
                          block.getArgument(0));
@@ -1802,7 +1802,7 @@ void mlir::linalg::detail::convolution_impl::getEffects(
   if (!isa<ConvolutionOpInterface>(op))
     return;
   if (LinalgOp linalgOp = dyn_cast<LinalgOp>(op)) {
-    if (linalgOp.hasTensorSemantics())
+    if (linalgOp.hasPureTensorSemantics())
       return;
     getGenericEffectsImpl(effects, linalgOp.getOperation()->getResults(),
                           linalgOp.getDpsInputs(), linalgOp.getDpsInits());
