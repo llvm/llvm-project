@@ -511,7 +511,8 @@ define float @test_rootn_f32__y_1__strictfp(float %x) #1 {
 ; CHECK-LABEL: define float @test_rootn_f32__y_1__strictfp(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z5rootnfi(float [[X]], i32 1) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
   %call = tail call float @_Z5rootnfi(float %x, i32 1) #1
@@ -533,7 +534,8 @@ define <2 x float> @test_rootn_v2f32__y_1__strictfp(<2 x float> %x) #1 {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_1__strictfp(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x float> [[X]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 1, i32 1>) #[[ATTR0]]
+; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
   %call = tail call <2 x float> @_Z5rootnDv2_fDv2_i(<2 x float> %x, <2 x i32> <i32 1, i32 1>) #1
