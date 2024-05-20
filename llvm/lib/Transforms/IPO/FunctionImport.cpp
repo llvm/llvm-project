@@ -390,9 +390,8 @@ class GlobalsImporter final {
         // Only update stat and exports if we haven't already imported this
         // variable.
         if (!Inserted) {
-          // FIXME: Introduce a wrapper struct around ImportType, and provide
-          // an `updateType` method for better readability, just like how we
-          // update the hotness of a call edge.
+          // Set the value to 'std::min(existing-value, new-value)' to make
+          // sure a definition takes precedence over a declaration.
           Iter->second = std::min(GlobalValueSummary::Definition, Iter->second);
           break;
         }
@@ -1125,10 +1124,10 @@ void llvm::ComputeCrossModuleImport(
         }
       }
     }
-    //  Prune list computed above to only include values defined in the
-    //  exporting module. We do this after the above insertion since we may hit
-    //  the same ref/call target multiple times in above loop, and it is more
-    //  efficient to avoid a set lookup each time.
+    // Prune list computed above to only include values defined in the
+    // exporting module. We do this after the above insertion since we may hit
+    // the same ref/call target multiple times in above loop, and it is more
+    // efficient to avoid a set lookup each time.
     for (auto EI = NewExports.begin(); EI != NewExports.end();) {
       if (!DefinedGVSummaries.count(EI->first.getGUID()))
         NewExports.erase(EI++);
@@ -1901,6 +1900,7 @@ Expected<bool> FunctionImporter::importFunctions(
   NumImportedFunctions += (ImportedCount - ImportedGVCount);
   NumImportedGlobalVars += ImportedGVCount;
 
+  // TODO: Print counters for definitions and declarations in the debugging log.
   LLVM_DEBUG(dbgs() << "Imported " << ImportedCount - ImportedGVCount
                     << " functions for Module "
                     << DestModule.getModuleIdentifier() << "\n");

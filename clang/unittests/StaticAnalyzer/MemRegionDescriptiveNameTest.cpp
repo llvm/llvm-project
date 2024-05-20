@@ -38,7 +38,8 @@ public:
 
 private:
   const BugType Bug{this, "DescriptiveNameBug"};
-  const CallDescription HandlerFn = {{"reportDescriptiveName"}, 1};
+  const CallDescription HandlerFn = {
+      CDM::SimpleFunc, {"reportDescriptiveName"}, 1};
 };
 
 void addDescriptiveNameChecker(AnalysisASTConsumer &AnalysisConsumer,

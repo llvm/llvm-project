@@ -83,6 +83,8 @@
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
 
+; TODO: Extend this test case to test IR once postlink optimizer makes use of
+; the import type for declarations.
 ; IMPORTDUMP-DAG: Not importing function 11825436545918268459 callee from lib.cc
 ; IMPORTDUMP-DAG: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
 ; IMPORTDUMP-DAG: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc

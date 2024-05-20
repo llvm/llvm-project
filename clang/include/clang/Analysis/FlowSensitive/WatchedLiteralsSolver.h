@@ -48,8 +48,7 @@ public:
 
   Result solve(llvm::ArrayRef<const Formula *> Vals) override;
 
-  // The solver reached its maximum number of iterations.
-  bool reachedLimit() const { return MaxIterations == 0; }
+  bool reachedLimit() const override { return MaxIterations == 0; }
 };
 
 } // namespace dataflow

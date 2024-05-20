@@ -13,8 +13,6 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 
-#include "Shared/PluginAPI.h"
-
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 
@@ -23,6 +21,9 @@ namespace elf {
 
 /// Returns true or false if the \p Buffer is an ELF file.
 bool isELF(llvm::StringRef Buffer);
+
+/// Returns the ELF e_machine value of the current compilation target.
+uint16_t getTargetMachine();
 
 /// Checks if the given \p Object is a valid ELF matching the e_machine value.
 llvm::Expected<bool> checkMachine(llvm::StringRef Object, uint16_t EMachine);

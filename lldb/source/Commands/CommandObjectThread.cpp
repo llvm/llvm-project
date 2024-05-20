@@ -151,14 +151,14 @@ public:
 
     for (size_t idx = 0; idx < num_entries; idx++) {
       llvm::StringRef arg_string = copy_args[idx].ref();
-      if (arg_string.equals("-c") || count_opt.starts_with(arg_string)) {
+      if (arg_string == "-c" || count_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
         count_idx = idx;
         if (copy_args[idx].ref().getAsInteger(0, count_val))
           return std::nullopt;
-      } else if (arg_string.equals("-s") || start_opt.starts_with(arg_string)) {
+      } else if (arg_string == "-s" || start_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;

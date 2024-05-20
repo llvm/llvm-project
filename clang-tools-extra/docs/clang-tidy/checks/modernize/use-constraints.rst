@@ -68,3 +68,7 @@ The tool will replace the above code with,
   // The tool will not emit a diagnostic or attempt to replace the code.
   template <typename T, std::enable_if_t<T::some_trait, int> = 0>
   struct my_class {};
+
+.. note::
+
+  System headers are not analyzed by this check.

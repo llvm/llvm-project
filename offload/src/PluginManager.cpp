@@ -23,85 +23,25 @@ using namespace llvm::sys;
 
 PluginManager *PM = nullptr;
 
-Expected<std::unique_ptr<PluginAdaptorTy>>
-PluginAdaptorTy::create(const std::string &Name) {
-  DP("Attempting to load library '%s'...\n", Name.c_str());
-  TIMESCOPE_WITH_NAME_AND_IDENT(Name, (const ident_t *)nullptr);
-
-  std::string ErrMsg;
-  auto LibraryHandler = std::make_unique<DynamicLibrary>(
-      DynamicLibrary::getPermanentLibrary(Name.c_str(), &ErrMsg));
-
-  if (!LibraryHandler->isValid()) {
-    // Library does not exist or cannot be found.
-    return createStringError(inconvertibleErrorCode(),
-                             "Unable to load library '%s': %s!\n", Name.c_str(),
-                             ErrMsg.c_str());
-  }
-
-  DP("Successfully loaded library '%s'!\n", Name.c_str());
-  auto PluginAdaptor = std::unique_ptr<PluginAdaptorTy>(
-      new PluginAdaptorTy(Name, std::move(LibraryHandler)));
-  if (auto Err = PluginAdaptor->init())
-    return Err;
-  return std::move(PluginAdaptor);
-}
-
-PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
-                                 std::unique_ptr<llvm::sys::DynamicLibrary> DL)
-    : Name(Name), LibraryHandler(std::move(DL)) {}
-
-Error PluginAdaptorTy::init() {
-
-#define PLUGIN_API_HANDLE(NAME)                                                \
-  NAME = reinterpret_cast<decltype(NAME)>(                                     \
-      LibraryHandler->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME)));          \
-  if (!NAME) {                                                                 \
-    return createStringError(inconvertibleErrorCode(),                         \
-                             "Invalid plugin as necessary interface function " \
-                             "(%s) was not found.\n",                          \
-                             std::string(#NAME).c_str());                      \
-  }
-
-#include "Shared/PluginAPI.inc"
-#undef PLUGIN_API_HANDLE
-
-  // Remove plugin on failure to call optional init_plugin
-  int32_t Rc = init_plugin();
-  if (Rc != OFFLOAD_SUCCESS) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Unable to initialize library '%s': %u!\n",
-                             Name.c_str(), Rc);
-  }
-
-  // No devices are supported by this RTL?
-  int32_t NumberOfPluginDevices = number_of_devices();
-  if (!NumberOfPluginDevices) {
-    return createStringError(inconvertibleErrorCode(),
-                             "No devices supported in this RTL\n");
-  }
-
-  DP("Registered '%s' with %d plugin visible devices!\n", Name.c_str(),
-     NumberOfPluginDevices);
-  return Error::success();
-}
+// Every plugin exports this method to create an instance of the plugin type.
+#define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
+#include "Shared/Targets.def"
 
 void PluginManager::init() {
   TIMESCOPE();
   DP("Loading RTLs...\n");
 
-  // Attempt to open all the plugins and, if they exist, check if the interface
-  // is correct and if they are supporting any devices.
+  // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    auto PluginAdaptorOrErr =                                                  \
-        PluginAdaptorTy::create("libomptarget.rtl." #Name ".so");              \
-    if (!PluginAdaptorOrErr) {                                                 \
-      [[maybe_unused]] std::string InfoMsg =                                   \
-          toString(PluginAdaptorOrErr.takeError());                            \
-      DP("%s", InfoMsg.c_str());                                               \
+    auto Plugin = std::unique_ptr<GenericPluginTy>(createPlugin_##Name());     \
+    if (auto Err = Plugin->init()) {                                           \
+      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));         \
+      DP("Failed to init plugin: %s\n", InfoMsg.c_str());                      \
     } else {                                                                   \
-      PluginAdaptors.push_back(std::move(*PluginAdaptorOrErr));                \
+      DP("Registered plugin %s with %d visible device(s)\n",                   \
+         Plugin->getName(), Plugin->number_of_devices());                      \
+      Plugins.emplace_back(std::move(Plugin));                                 \
     }                                                                          \
   } while (false);
 #include "Shared/Targets.def"
@@ -109,15 +49,29 @@ void PluginManager::init() {
   DP("RTLs loaded!\n");
 }
 
-void PluginManager::initDevices(PluginAdaptorTy &RTL) {
+void PluginManager::deinit() {
+  TIMESCOPE();
+  DP("Unloading RTLs...\n");
+
+  for (auto &Plugin : Plugins) {
+    if (auto Err = Plugin->deinit()) {
+      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+      DP("Failed to deinit plugin: %s\n", InfoMsg.c_str());
+    }
+    Plugin.release();
+  }
+
+  DP("RTLs unloaded!\n");
+}
+
+void PluginManager::initDevices(GenericPluginTy &RTL) {
   // If this RTL has already been initialized.
   if (PM->DeviceOffsets.contains(&RTL))
     return;
   TIMESCOPE();
 
   // If this RTL is not already in use, initialize it.
-  assert(RTL.number_of_devices() > 0 &&
-         "Tried to initialize useless plugin adaptor");
+  assert(RTL.number_of_devices() > 0 && "Tried to initialize useless plugin!");
 
   // Initialize the device information for the RTL we are about to use.
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
@@ -157,13 +111,12 @@ void PluginManager::initDevices(PluginAdaptorTy &RTL) {
 
   DeviceOffsets[&RTL] = DeviceOffset;
   DeviceUsed[&RTL] = NumberOfUserDevices;
-  DP("Plugin adaptor " DPxMOD " has index %d, exposes %d out of %d devices!\n",
-     DPxPTR(RTL.LibraryHandler.get()), DeviceOffset, NumberOfUserDevices,
-     RTL.number_of_devices());
+  DP("Plugin has index %d, exposes %d out of %d devices!\n", DeviceOffset,
+     NumberOfUserDevices, RTL.number_of_devices());
 }
 
 void PluginManager::initAllPlugins() {
-  for (auto &R : PluginAdaptors)
+  for (auto &R : Plugins)
     initDevices(*R);
 }
 
@@ -216,19 +169,22 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &DI.getExecutableImage();
 
-    PluginAdaptorTy *FoundRTL = nullptr;
+    GenericPluginTy *FoundRTL = nullptr;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
-    for (auto &R : PM->pluginAdaptors()) {
+    for (auto &R : PM->plugins()) {
+      if (!R.number_of_devices())
+        continue;
+
       if (!R.is_valid_binary(Img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-           DPxPTR(Img->ImageStart), R.Name.c_str());
+           DPxPTR(Img->ImageStart), R.getName());
         continue;
       }
 
       DP("Image " DPxMOD " is compatible with RTL %s!\n",
-         DPxPTR(Img->ImageStart), R.Name.c_str());
+         DPxPTR(Img->ImageStart), R.getName());
 
       PM->initDevices(R);
 
@@ -247,7 +203,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
           (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
 
       DP("Registering image " DPxMOD " with RTL %s!\n", DPxPTR(Img->ImageStart),
-         R.Name.c_str());
+         R.getName());
 
       registerImageIntoTranslationTable(TransTable, PM->DeviceOffsets[&R],
                                         PM->DeviceUsed[&R], Img);
@@ -282,11 +238,11 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &DI.getExecutableImage();
 
-    PluginAdaptorTy *FoundRTL = NULL;
+    GenericPluginTy *FoundRTL = NULL;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image. We only need to scan RTLs that are already being used.
-    for (auto &R : PM->pluginAdaptors()) {
+    for (auto &R : PM->plugins()) {
       if (!DeviceOffsets.contains(&R))
         continue;
 
@@ -296,8 +252,7 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
       FoundRTL = &R;
 
-      DP("Unregistered image " DPxMOD " from RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R.LibraryHandler.get()));
+      DP("Unregistered image " DPxMOD " from RTL\n", DPxPTR(Img->ImageStart));
 
       break;
     }

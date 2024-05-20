@@ -121,7 +121,7 @@ void llvm::computeLTOCacheKey(
     support::endian::write64le(Data, I);
     Hasher.update(Data);
   };
-  auto AddUint8 = [&](const uint8_t &I) {
+  auto AddUint8 = [&](const uint8_t I) {
     Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
   };
   AddString(Conf.CPU);
@@ -166,12 +166,7 @@ void llvm::computeLTOCacheKey(
         std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
 
   // Sort the export list elements GUIDs.
-  llvm::sort(ExportsGUID, [](const std::pair<uint64_t, uint8_t> &LHS,
-                             const std::pair<uint64_t, uint8_t> &RHS) {
-    if (LHS.first != RHS.first)
-      return LHS.first < RHS.first;
-    return LHS.second < RHS.second;
-  });
+  llvm::sort(ExportsGUID);
   for (auto [GUID, ExportType] : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
@@ -207,14 +202,20 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
+  std::vector<std::pair<uint64_t, uint8_t>> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-    for (auto &[GUID, ImportType] : Entry.getFunctions()) {
+
+    ImportedGUIDs.clear();
+    for (auto &[Fn, ImportType] : Entry.getFunctions())
+      ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
+    llvm::sort(ImportedGUIDs);
+    for (auto &[GUID, Type] : ImportedGUIDs) {
       AddUint64(GUID);
-      AddUint8(ImportType);
+      AddUint8(Type);
     }
   }
 

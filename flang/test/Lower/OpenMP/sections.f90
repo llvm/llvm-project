@@ -2,8 +2,8 @@
 
 ! This test checks the lowering of OpenMP sections construct with several clauses present
 
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
-! RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+! RUN: bbc -hlfir -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "sample"} {
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>
@@ -79,7 +79,7 @@ program sample
 end program sample
 
 !CHECK: func @_QPfirstprivate(%[[ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "alpha"}) {
-!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>) 
+!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>) 
 !CHECK:   %[[PRIVATE_ALPHA:.*]] = fir.alloca f32 {bindc_name = "alpha", pinned, uniq_name = "_QFfirstprivateEalpha"}
 !CHECK:   %[[PRIVATE_ALPHA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ALPHA]] {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[TEMP:.*]] = fir.load %[[ARG_DECL]]#0 : !fir.ref<f32>

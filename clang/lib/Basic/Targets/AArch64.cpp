@@ -154,6 +154,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else
     LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
 
+  BitIntMaxAlign = 128;
   MaxVectorAlign = 128;
   MaxAtomicInlineWidth = 128;
   MaxAtomicPromoteWidth = 128;
@@ -224,7 +225,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
     return false;
 
   BPI.SignReturnAddr =

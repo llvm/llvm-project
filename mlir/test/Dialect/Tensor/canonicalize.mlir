@@ -755,6 +755,34 @@ func.func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
 
 // -----
 
+// CHECK-LABEL: func @insert_slice_cast
+func.func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
+  // CHECK-SAME: %[[ARG0:.*]]: tensor<1x?xf32>
+  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x?xf32>
+  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[ARG0]]
+  // CHECK-SAME: [{{.*}}, {{.*}}] [1, {{.*}}] [{{.*}}, {{.*}}]
+  // CHECK-SAME: : tensor<1x?xf32> into tensor<?x?xf32>
+  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, %arg5] [%arg6, %arg7] : tensor<?x?xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RES]] : tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_slice_cast_no_fold
+func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
+  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x5xf32>
+  // CHECK: %[[CAST:.*]] = tensor.cast
+  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[CAST]]
+  // CHECK-SAME: [{{.*}}, {{.*}}] [{{.*}}, 5] [{{.*}}, {{.*}}]
+  // CHECK-SAME: : tensor<?x5xf32> into tensor<?x?xf32>
+  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, 5] [%arg6, %arg7] : tensor<?x5xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RES]] : tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_tensor_cast_on_insert_slice_src(
 // CHECK-SAME:      %[[arg0:.*]]: tensor<?x5x?xf32>, %[[arg1:.*]]: tensor<?x?x?xf32>
 //      CHECK:    %[[cast:.*]] = tensor.cast %[[arg0]] : tensor<?x5x?xf32> to tensor<64x5x64xf32>
@@ -1890,21 +1918,6 @@ func.func @splat_dynamic_no_fold(%m: index) -> tensor<4x?xf32> {
 
 // -----
 
-// There was an issue in cast + insert_slice folding generating invalid ir.
-// https://github.com/llvm/llvm-project/issues/53099
-// CHECK-LABEL: func @insert_slice_cast
-func.func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
-  // CHECK: %[[CAST:.*]] = tensor.cast %{{.*}} : tensor<1x?xf32> to tensor<?x?xf32>
-  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x?xf32>
-  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[CAST]]
-  // CHECK-SAME: : tensor<?x?xf32> into tensor<?x?xf32>
-  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, %arg5] [%arg6, %arg7] : tensor<?x?xf32> into tensor<?x?xf32>
-  // CHECK: return %[[RES]] : tensor<?x?xf32>
-  return %1 : tensor<?x?xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func @cast_extract_slice
 func.func @cast_extract_slice(%arg0 : tensor<128x512xf32>, %s : index, %o : index)
     -> tensor<16x512xf32> {
@@ -2235,6 +2248,32 @@ func.func @pack_unpack_dynamic_with_padding(%t: tensor<?x?x?x?xf32>, %dim1: inde
   %tensor_empty1 = tensor.empty(%dim3, %dim4, %dim5, %dim6) : tensor<?x?x?x?xf32>
   %packed = tensor.pack %unpacked padding_value(%pad: f32) inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
   return %packed : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// CHECK: func.func @pack_outer_dims_unpack_no_outer_dims(
+// CHECK-SAME: %[[T:.+]]: tensor<16x16x?x?xf32>,
+// CHECK: return %[[T]] : tensor<16x16x?x?xf32>
+func.func @pack_outer_dims_unpack_no_outer_dims(%t: tensor<16x16x?x?xf32>, %tile1: index, %tile2: index) -> tensor<16x16x?x?xf32> {
+  %tensor_empty = tensor.empty() : tensor<128x128xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<16x16x?x?xf32> -> tensor<128x128xf32>
+  %tensor_empty1 = tensor.empty(%tile1, %tile2) : tensor<16x16x?x?xf32>
+  %packed = tensor.pack %unpacked outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<128x128xf32> -> tensor<16x16x?x?xf32>
+  return %packed : tensor<16x16x?x?xf32>
+}
+
+// -----
+
+// CHECK: func.func @pack_no_outer_dims_unpack_outer_dims(
+// CHECK-SAME: %[[T:.+]]: tensor<16x16x?x?xf32>,
+// CHECK: return %[[T]] : tensor<16x16x?x?xf32>
+func.func @pack_no_outer_dims_unpack_outer_dims(%t: tensor<16x16x?x?xf32>, %tile1: index, %tile2: index) -> tensor<16x16x?x?xf32> {
+  %tensor_empty = tensor.empty() : tensor<128x128xf32>
+  %unpacked = tensor.unpack %t outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<16x16x?x?xf32> -> tensor<128x128xf32>
+  %tensor_empty1 = tensor.empty(%tile1, %tile2) : tensor<16x16x?x?xf32>
+  %packed = tensor.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<128x128xf32> -> tensor<16x16x?x?xf32>
+  return %packed : tensor<16x16x?x?xf32>
 }
 
 // -----

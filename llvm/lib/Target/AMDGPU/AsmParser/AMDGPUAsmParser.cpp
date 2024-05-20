@@ -1388,9 +1388,6 @@ private:
                     bool IsAtomic);
 
 public:
-  enum AMDGPUMatchResultTy {
-    Match_PreferE32 = FIRST_TARGET_MATCH_RESULT_TY
-  };
   enum OperandMode {
     OperandMode_Default,
     OperandMode_NSA,
@@ -5262,15 +5259,11 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                   Variant);
     // We order match statuses from least to most specific. We use most specific
     // status as resulting
-    // Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature < Match_PreferE32
-    if ((R == Match_Success) ||
-        (R == Match_PreferE32) ||
-        (R == Match_MissingFeature && Result != Match_PreferE32) ||
-        (R == Match_InvalidOperand && Result != Match_MissingFeature
-                                   && Result != Match_PreferE32) ||
-        (R == Match_MnemonicFail   && Result != Match_InvalidOperand
-                                   && Result != Match_MissingFeature
-                                   && Result != Match_PreferE32)) {
+    // Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature
+    if (R == Match_Success || R == Match_MissingFeature ||
+        (R == Match_InvalidOperand && Result != Match_MissingFeature) ||
+        (R == Match_MnemonicFail && Result != Match_InvalidOperand &&
+         Result != Match_MissingFeature)) {
       Result = R;
       ErrorInfo = EI;
     }
@@ -5316,9 +5309,6 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(ErrorLoc, "invalid operand for instruction");
   }
 
-  case Match_PreferE32:
-    return Error(IDLoc, "internal error: instruction without _e64 suffix "
-                        "should be encoded as e32");
   case Match_MnemonicFail:
     llvm_unreachable("Invalid instructions should have been handled already");
   }
@@ -7436,7 +7426,8 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
     Op.IsDefined = true;
     Op.Loc = getLoc();
     if (isToken(AsmToken::Identifier) &&
-        (Op.Val = getMsgOpId(Msg.Val, getTokenStr())) >= 0) {
+        (Op.Val = getMsgOpId(Msg.Val, getTokenStr(), getSTI())) !=
+            OPR_ID_UNKNOWN) {
       lex(); // skip operation name
     } else if (!parseExpr(Op.Val, "an operation name")) {
       return false;
@@ -7484,7 +7475,10 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     return false;
   }
   if (!isValidMsgOp(Msg.Val, Op.Val, getSTI(), Strict)) {
-    Error(Op.Loc, "invalid operation id");
+    if (Op.Val == OPR_ID_UNSUPPORTED)
+      Error(Op.Loc, "specified operation id is not supported on this GPU");
+    else
+      Error(Op.Loc, "invalid operation id");
     return false;
   }
   if (Strict && !msgSupportsStream(Msg.Val, Op.Val, getSTI()) &&
@@ -8395,12 +8389,16 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     AGVK VK = StringSwitch<AGVK>(TokenId)
                   .Case("max", AGVK::AGVK_Max)
                   .Case("or", AGVK::AGVK_Or)
+                  .Case("extrasgprs", AGVK::AGVK_ExtraSGPRs)
+                  .Case("totalnumvgprs", AGVK::AGVK_TotalNumVGPRs)
+                  .Case("alignto", AGVK::AGVK_AlignTo)
+                  .Case("occupancy", AGVK::AGVK_Occupancy)
                   .Default(AGVK::AGVK_None);
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
       SmallVector<const MCExpr *, 4> Exprs;
       uint64_t CommaCount = 0;
-      lex(); // Eat 'max'/'or'
+      lex(); // Eat Arg ('or', 'max', 'occupancy', etc.)
       lex(); // Eat '('
       while (true) {
         if (trySkipToken(AsmToken::RParen)) {

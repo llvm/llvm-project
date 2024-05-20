@@ -1126,12 +1126,10 @@ void device_type() {
 #pragma acc parallel dtype(
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type()
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype()
   {}
 
@@ -1173,12 +1171,10 @@ void device_type() {
 #pragma acc parallel dtype(ident, ident2
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type(ident, ident2,)
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype(ident, ident2,)
   {}
 
@@ -1200,40 +1196,31 @@ void device_type() {
 #pragma acc parallel dtype(*,ident)
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type(ident, *)
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype(ident, *)
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type("foo", 54)
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype(31, "bar")
   {}
 
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, auto, int, float)
   {}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident, auto, int, float)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, auto, int, float) dtype(ident, auto, int, float)
   {}
 }
 
 #define acc_async_sync -1
 void AsyncArgument() {
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async
   {}
 
@@ -1250,15 +1237,12 @@ void AsyncArgument() {
 #pragma acc parallel async(4, 3)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(returns_int())
   {}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(acc_async_sync)
   {}
 }

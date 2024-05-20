@@ -273,6 +273,22 @@ class TypeAndTypeListTestCase(TestBase):
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
 
+    def test_nested_typedef(self):
+        """Exercise FindDirectNestedType for typedefs."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
+        self.assertTrue(target)
+
+        with_nested_typedef = target.FindFirstType("WithNestedTypedef")
+        self.assertTrue(with_nested_typedef)
+
+        # This is necessary to work around #91186
+        self.assertTrue(target.FindFirstGlobalVariable("typedefed_value").GetType())
+
+        the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
+        self.assertTrue(the_typedef)
+        self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
+
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""
         self.build()
