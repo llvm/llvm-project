@@ -2433,7 +2433,9 @@ def err_auto_not_allowed : Error<
   "|in template parameter|in friend declaration|in function prototype that is "
   "not a function declaration|in requires expression parameter"
   "|in array declaration"
-  "|in declaration of conversion function template}1">;
+  "|in declaration of conversion function template"
+  "|in lambda parameter before C++14}1">;
+
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -3003,6 +3005,8 @@ def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
   "%select{and|because}0 %1 does not satisfy %2">;
 def note_atomic_constraint_evaluated_to_false_elaborated : Note<
   "%select{and|because}0 '%1' (%2 %3 %4) evaluated to false">;
+def note_is_deducible_constraint_evaluated_to_false : Note<
+  "cannot deduce template arguments for %0 from %1">;
 def err_constrained_virtual_method : Error<
   "virtual function cannot have a requires clause">;
 def err_trailing_requires_clause_on_deduction_guide : Error<
@@ -3205,6 +3209,8 @@ def warn_attribute_arm_zt0_builtin_no_zt0_state : Warning<
   InGroup<DiagGroup<"undefined-arm-zt0">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
+def err_sve_vector_in_non_streaming_function : Error<
+  "SVE vector type %0 cannot be used in a non-streaming function">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
   "%0 is only supported when '-mrvv-vector-bits=<bits>' is specified with a "
   "value of \"zvl\" or a power 2 in the range [64,65536]">;
@@ -3371,6 +3377,8 @@ def err_field_with_address_space : Error<
   "field may not be qualified with an address space">;
 def err_compound_literal_with_address_space : Error<
   "compound literal in function scope may not be qualified with an address space">;
+def err_compound_literal_with_vla_type : Error<
+  "compound literal cannot be of variable-length array type">;
 def err_address_space_mismatch_templ_inst : Error<
   "conflicting address space qualifiers are provided between types %0 and %1">;
 def err_attr_objc_ownership_redundant : Error<
@@ -3829,6 +3837,9 @@ def note_cannot_use_trivial_abi_reason : Note<
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
   "unknown platform %0 in availability macro">, InGroup<Availability>;
+def warn_availability_unknown_environment : Warning<
+  "unknown environment %0 in availability macro">, InGroup<Availability>;
+
 def warn_availability_version_ordering : Warning<
   "feature cannot be %select{introduced|deprecated|obsoleted}0 in %1 version "
   "%2 before it was %select{introduced|deprecated|obsoleted}3 in version %4; "
@@ -3859,12 +3870,20 @@ def note_protocol_method : Note<
 def warn_availability_fuchsia_unavailable_minor : Warning<
   "Fuchsia API Level prohibits specifying a minor or sub-minor version">,
   InGroup<Availability>;
+def err_availability_unexpected_parameter: Error<
+  "unexpected parameter '%0' in availability attribute, not permitted in %select{HLSL|C/C++}1">;
 
 def warn_unguarded_availability :
-  Warning<"%0 is only available on %1 %2 or newer">,
+  Warning<"%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
+  InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_unguarded_availability_unavailable :
+  Warning<"%0 is unavailable">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
 def warn_unguarded_availability_new :
   Warning<warn_unguarded_availability.Summary>,
+  InGroup<UnguardedAvailabilityNew>;
+def warn_unguarded_availability_unavailable_new :
+  Warning<warn_unguarded_availability_unavailable.Summary>,
   InGroup<UnguardedAvailabilityNew>;
 def note_decl_unguarded_availability_silence : Note<
   "annotate %select{%1|anonymous %1}0 with an availability attribute to silence this warning">;
@@ -5862,8 +5881,8 @@ def note_availability_specified_here : Note<
   "%0 has been explicitly marked "
   "%select{unavailable|deleted|deprecated}1 here">;
 def note_partial_availability_specified_here : Note<
-  "%0 has been marked as being introduced in %1 %2 here, "
-  "but the deployment target is %1 %3">;
+  "%0 has been marked as being introduced in %1 %2 %select{|in %5 environment }4here, "
+  "but the deployment target is %1 %3%select{| %6 environment }4">;
 def note_implicitly_deleted : Note<
   "explicitly defaulted function was implicitly deleted here">;
 def warn_not_enough_argument : Warning<
@@ -6910,6 +6929,10 @@ def warn_precedence_bitwise_conditional : Warning<
   InGroup<BitwiseConditionalParentheses>;
 def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
+
+def warn_consecutive_comparison : Warning<
+  "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
+  InGroup<Parentheses>;
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
@@ -12350,4 +12373,8 @@ def warn_acc_deprecated_alias_name
 def err_acc_var_not_pointer_type
     : Error<"expected pointer in '%0' clause, type is %1">;
 def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
+def err_acc_clause_after_device_type
+    : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
+            "compute construct">;
+
 } // end of sema component.

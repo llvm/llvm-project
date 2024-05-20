@@ -893,10 +893,10 @@ define void @test_dag_loop() {
 ; CHECK-LABEL: test_dag_loop:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, tu, mu
-; CHECK-NEXT:    vmv4r.v v12, v8
 ; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v12, v8
@@ -942,8 +942,8 @@ declare <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
 define <vscale x 2 x i32> @vredsum(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vredsum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vredsum.vs v11, v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
@@ -967,8 +967,8 @@ define <vscale x 2 x float> @vfredusum(<vscale x 2 x float> %passthru, <vscale x
 ; CHECK-LABEL: vfredusum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fsrmi a1, 0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v11, v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0

@@ -1522,7 +1522,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       auto isPAuthLR = [](const char *member) {
         llvm::AArch64::ExtensionInfo pauthlr_extension =
             llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
-        return (pauthlr_extension.Feature.compare(member) == 0);
+        return pauthlr_extension.Feature == member;
       };
 
       if (std::any_of(CmdArgs.begin(), CmdArgs.end(), isPAuthLR))
@@ -7249,15 +7249,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_unique_vtables,
                      options::OPT_fno_assume_unique_vtables);
 
-  // -fno-relaxed-template-template-args is deprecated.
-  if (Arg *A = Args.getLastArg(options::OPT_frelaxed_template_template_args,
-                               options::OPT_fno_relaxed_template_template_args);
-      A &&
-      A->getOption().matches(options::OPT_fno_relaxed_template_template_args))
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << /*hasReplacement=*/false;
-  else
-    CmdArgs.push_back("-fno-relaxed-template-template-args");
+  // -frelaxed-template-template-args is deprecated.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_frelaxed_template_template_args,
+                          options::OPT_fno_relaxed_template_template_args)) {
+    if (A->getOption().matches(
+            options::OPT_fno_relaxed_template_template_args)) {
+      D.Diag(diag::warn_drv_deprecated_arg_no_relaxed_template_template_args);
+      CmdArgs.push_back("-fno-relaxed-template-template-args");
+    } else {
+      D.Diag(diag::warn_drv_deprecated_arg)
+          << A->getAsString(Args) << /*hasReplacement=*/false;
+    }
+  }
 
   // -fsized-deallocation is off by default, as it is an ABI-breaking change for
   // most platforms.

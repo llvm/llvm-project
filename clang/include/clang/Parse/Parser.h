@@ -18,6 +18,8 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
@@ -150,6 +152,9 @@ class Parser : public CodeCompletionHandler {
 
   /// Identifier for "replacement".
   IdentifierInfo *Ident_replacement;
+
+  /// Identifier for "environment".
+  IdentifierInfo *Ident_environment;
 
   /// Identifiers used by the 'external_source_symbol' attribute.
   IdentifierInfo *Ident_language, *Ident_defined_in,
@@ -445,8 +450,8 @@ class Parser : public CodeCompletionHandler {
   /// True if we are within an Objective-C container while parsing C-like decls.
   ///
   /// This is necessary because Sema thinks we have left the container
-  /// to parse the C-like decls, meaning Actions.getObjCDeclContext() will
-  /// be NULL.
+  /// to parse the C-like decls, meaning Actions.ObjC().getObjCDeclContext()
+  /// will be NULL.
   bool ParsingInObjCContainer;
 
   /// Whether to skip parsing of function bodies.
@@ -497,7 +502,7 @@ public:
   }
 
   ObjCContainerDecl *getObjCDeclContext() const {
-    return Actions.getObjCDeclContext();
+    return Actions.ObjC().getObjCDeclContext();
   }
 
   // Type forwarding.  All of these are statically 'void*', but they may all be
@@ -1083,11 +1088,11 @@ private:
       : P(p), DC(p.getObjCDeclContext()),
         WithinObjCContainer(P.ParsingInObjCContainer, DC != nullptr) {
       if (DC)
-        P.Actions.ActOnObjCTemporaryExitContainerContext(DC);
+        P.Actions.ObjC().ActOnObjCTemporaryExitContainerContext(DC);
     }
     ~ObjCDeclContextSwitch() {
       if (DC)
-        P.Actions.ActOnObjCReenterContainerContext(DC);
+        P.Actions.ObjC().ActOnObjCReenterContainerContext(DC);
     }
   };
 
@@ -2479,24 +2484,23 @@ private:
   bool trySkippingFunctionBody();
 
   bool ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
-                        const ParsedTemplateInfo &TemplateInfo,
-                        AccessSpecifier AS, DeclSpecContext DSC,
-                        ParsedAttributes &Attrs);
+                        ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+                        DeclSpecContext DSC, ParsedAttributes &Attrs);
   DeclSpecContext
   getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context);
-  void ParseDeclarationSpecifiers(
-      DeclSpec &DS,
-      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-      LateParsedAttrList *LateAttrs = nullptr) {
+  void
+  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
+                             AccessSpecifier AS = AS_none,
+                             DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                             LateParsedAttrList *LateAttrs = nullptr) {
     return ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
                                       getImplicitTypenameContext(DSC));
   }
-  void ParseDeclarationSpecifiers(
-      DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
-      DeclSpecContext DSC, LateParsedAttrList *LateAttrs,
-      ImplicitTypenameContext AllowImplicitTypename);
+  void
+  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
+                             AccessSpecifier AS, DeclSpecContext DSC,
+                             LateParsedAttrList *LateAttrs,
+                             ImplicitTypenameContext AllowImplicitTypename);
 
   SourceLocation ParsePackIndexingType(DeclSpec &DS);
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
@@ -2997,7 +3001,8 @@ private:
 
   IdentifierInfo *TryParseCXX11AttributeIdentifier(
       SourceLocation &Loc,
-      Sema::AttributeCompletion Completion = Sema::AttributeCompletion::None,
+      SemaCodeCompletion::AttributeCompletion Completion =
+          SemaCodeCompletion::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
   void MaybeParseHLSLAnnotations(Declarator &D,
@@ -3307,7 +3312,7 @@ private:
   // C++ 9: classes [class] and C structs/unions.
   bool isValidAfterTypeSpecifier(bool CouldBeBitfield);
   void ParseClassSpecifier(tok::TokenKind TagTokKind, SourceLocation TagLoc,
-                           DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo,
+                           DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                            AccessSpecifier AS, bool EnteringContext,
                            DeclSpecContext DSC, ParsedAttributes &Attributes);
   void SkipCXXMemberSpecification(SourceLocation StartLoc,
@@ -3329,7 +3334,7 @@ private:
                                                                VirtSpecifiers &VS);
   DeclGroupPtrTy ParseCXXClassMemberDeclaration(
       AccessSpecifier AS, ParsedAttributes &Attr,
-      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
+      ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject *DiagsFromTParams = nullptr);
   DeclGroupPtrTy
   ParseCXXClassMemberDeclarationWithPragmas(AccessSpecifier &AS,
@@ -3553,6 +3558,23 @@ private:
   OMPClause *ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
                                       OpenMPClauseKind Kind, bool ParseOnly);
 
+  /// Parses a clause consisting of a list of expressions.
+  ///
+  /// \param Kind          The clause to parse.
+  /// \param ClauseNameLoc [out] The location of the clause name.
+  /// \param OpenLoc       [out] The location of '('.
+  /// \param CloseLoc      [out] The location of ')'.
+  /// \param Exprs         [out] The parsed expressions.
+  /// \param ReqIntConst   If true, each expression must be an integer constant.
+  ///
+  /// \return Whether the clause was parsed successfully.
+  bool ParseOpenMPExprListClause(OpenMPClauseKind Kind,
+                                 SourceLocation &ClauseNameLoc,
+                                 SourceLocation &OpenLoc,
+                                 SourceLocation &CloseLoc,
+                                 SmallVectorImpl<Expr *> &Exprs,
+                                 bool ReqIntConst = false);
+
   /// Parses and creates OpenMP 5.0 iterators expression:
   /// <iterators> = 'iterator' '(' { [ <iterator-type> ] identifier =
   /// <range-specification> }+ ')'
@@ -3703,7 +3725,8 @@ private:
                                SourceLocation Loc,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
-  bool ParseOpenACCDeviceTypeList();
+  bool ParseOpenACCDeviceTypeList(
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs);
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,

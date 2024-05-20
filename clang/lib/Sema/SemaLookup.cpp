@@ -3365,15 +3365,6 @@ NamedDecl *Sema::LookupSingleName(Scope *S, DeclarationName Name,
   return R.getAsSingle<NamedDecl>();
 }
 
-/// Find the protocol with the given name, if any.
-ObjCProtocolDecl *Sema::LookupProtocol(IdentifierInfo *II,
-                                       SourceLocation IdLoc,
-                                       RedeclarationKind Redecl) {
-  Decl *D = LookupSingleName(TUScope, II, IdLoc,
-                             LookupObjCProtocolName, Redecl);
-  return cast_or_null<ObjCProtocolDecl>(D);
-}
-
 void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
                                         UnresolvedSetImpl &Functions) {
   // C++ [over.match.oper]p3:

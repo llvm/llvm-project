@@ -3575,15 +3575,14 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   switch (ABI) {
   default:
     llvm_unreachable("Unexpected ABI");
-  case LoongArchABI::ABI_ILP32S:
+    break;
   case LoongArchABI::ABI_ILP32F:
   case LoongArchABI::ABI_LP64F:
-    report_fatal_error("Unimplemented ABI");
-    break;
   case LoongArchABI::ABI_ILP32D:
   case LoongArchABI::ABI_LP64D:
     UseGPRForFloat = !IsFixed;
     break;
+  case LoongArchABI::ABI_ILP32S:
   case LoongArchABI::ABI_LP64S:
     break;
   }
@@ -4983,4 +4982,21 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
 ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
   // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
   return ISD::SIGN_EXTEND;
+}
+
+bool LoongArchTargetLowering::shouldSignExtendTypeInLibCall(
+    EVT Type, bool IsSigned) const {
+  if (Subtarget.is64Bit() && Type == MVT::i32)
+    return true;
+
+  return IsSigned;
+}
+
+bool LoongArchTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
+  // Return false to suppress the unnecessary extensions if the LibCall
+  // arguments or return value is a float narrower than GRLEN on a soft FP ABI.
+  if (Subtarget.isSoftFPABI() && (Type.isFloatingPoint() && !Type.isVector() &&
+                                  Type.getSizeInBits() < Subtarget.getGRLen()))
+    return false;
+  return true;
 }

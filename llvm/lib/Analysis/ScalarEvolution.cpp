@@ -9540,7 +9540,8 @@ static Constant *EvaluateExpression(Value *V, const Loop *L,
     Operands[i] = C;
   }
 
-  return ConstantFoldInstOperands(I, Operands, DL, TLI);
+  return ConstantFoldInstOperands(I, Operands, DL, TLI,
+                                  /*AllowNonDeterministic=*/false);
 }
 
 
@@ -10031,7 +10032,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
     Constant *C = nullptr;
     const DataLayout &DL = getDataLayout();
-    C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
+    C = ConstantFoldInstOperands(I, Operands, DL, &TLI,
+                                 /*AllowNonDeterministic=*/false);
     if (!C)
       return V;
     return getSCEV(C);
@@ -11274,7 +11276,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(ICmpInst::Predicate Pred,
     [[fallthrough]];
   case ICmpInst::ICMP_ULE:
     // (X + C1)<nuw> u<= (X + C2)<nuw> for C1 u<= C2.
-    if (MatchBinaryAddToConst(RHS, LHS, C2, C1, SCEV::FlagNUW) && C1.ule(C2))
+    if (MatchBinaryAddToConst(LHS, RHS, C1, C2, SCEV::FlagNUW) && C1.ule(C2))
       return true;
 
     break;
@@ -11284,7 +11286,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(ICmpInst::Predicate Pred,
     [[fallthrough]];
   case ICmpInst::ICMP_ULT:
     // (X + C1)<nuw> u< (X + C2)<nuw> if C1 u< C2.
-    if (MatchBinaryAddToConst(RHS, LHS, C2, C1, SCEV::FlagNUW) && C1.ult(C2))
+    if (MatchBinaryAddToConst(LHS, RHS, C1, C2, SCEV::FlagNUW) && C1.ult(C2))
       return true;
     break;
   }

@@ -21,6 +21,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -460,7 +461,8 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
 
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompleteInitializer(getCurScope(), OmpPrivParm);
+      Actions.CodeCompletion().CodeCompleteInitializer(getCurScope(),
+                                                       OmpPrivParm);
       Actions.FinalizeDeclaration(OmpPrivParm);
       return;
     }
@@ -484,9 +486,10 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
 
     SourceLocation LParLoc = T.getOpenLocation();
     auto RunSignatureHelp = [this, OmpPrivParm, LParLoc, &Exprs]() {
-      QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-          OmpPrivParm->getType()->getCanonicalTypeInternal(),
-          OmpPrivParm->getLocation(), Exprs, LParLoc, /*Braced=*/false);
+      QualType PreferredType =
+          Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+              OmpPrivParm->getType()->getCanonicalTypeInternal(),
+              OmpPrivParm->getLocation(), Exprs, LParLoc, /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -3107,34 +3110,14 @@ bool Parser::ParseOpenMPSimpleVarList(
 }
 
 OMPClause *Parser::ParseOpenMPSizesClause() {
-  SourceLocation ClauseNameLoc = ConsumeToken();
+  SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
   SmallVector<Expr *, 4> ValExprs;
-
-  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
-  if (T.consumeOpen()) {
-    Diag(Tok, diag::err_expected) << tok::l_paren;
+  if (ParseOpenMPExprListClause(OMPC_sizes, ClauseNameLoc, OpenLoc, CloseLoc,
+                                ValExprs))
     return nullptr;
-  }
 
-  while (true) {
-    ExprResult Val = ParseConstantExpression();
-    if (!Val.isUsable()) {
-      T.skipToEnd();
-      return nullptr;
-    }
-
-    ValExprs.push_back(Val.get());
-
-    if (Tok.is(tok::r_paren) || Tok.is(tok::annot_pragma_openmp_end))
-      break;
-
-    ExpectAndConsume(tok::comma);
-  }
-
-  T.consumeClose();
-
-  return Actions.OpenMP().ActOnOpenMPSizesClause(
-      ValExprs, ClauseNameLoc, T.getOpenLocation(), T.getCloseLocation());
+  return Actions.OpenMP().ActOnOpenMPSizesClause(ValExprs, ClauseNameLoc,
+                                                 OpenLoc, CloseLoc);
 }
 
 OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
@@ -4228,13 +4211,20 @@ bool Parser::parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data) {
   return T.consumeClose();
 }
 
+static OpenMPMapClauseKind isMapType(Parser &P);
+
 /// Parse map-type-modifiers in map clause.
-/// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
+/// map([ [map-type-modifier[,] [map-type-modifier[,] ...] [map-type] : ] list)
 /// where, map-type-modifier ::= always | close | mapper(mapper-identifier) |
 /// present
+/// where, map-type ::= alloc | delete | from | release | to | tofrom
 bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
+  bool HasMapType = false;
+  SourceLocation PreMapLoc = Tok.getLocation();
+  StringRef PreMapName = "";
   while (getCurToken().isNot(tok::colon)) {
     OpenMPMapModifierKind TypeModifier = isMapModifier(*this);
+    OpenMPMapClauseKind MapKind = isMapType(*this);
     if (TypeModifier == OMPC_MAP_MODIFIER_always ||
         TypeModifier == OMPC_MAP_MODIFIER_close ||
         TypeModifier == OMPC_MAP_MODIFIER_present ||
@@ -4257,6 +4247,19 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
         Diag(Data.MapTypeModifiersLoc.back(), diag::err_omp_missing_comma)
             << "map type modifier";
 
+    } else if (getLangOpts().OpenMP >= 60 && MapKind != OMPC_MAP_unknown) {
+      if (!HasMapType) {
+        HasMapType = true;
+        Data.ExtraModifier = MapKind;
+        MapKind = OMPC_MAP_unknown;
+        PreMapLoc = Tok.getLocation();
+        PreMapName = Tok.getIdentifierInfo()->getName();
+      } else {
+        Diag(Tok, diag::err_omp_more_one_map_type);
+        Diag(PreMapLoc, diag::note_previous_map_type_specified_here)
+            << PreMapName;
+      }
+      ConsumeToken();
     } else {
       // For the case of unknown map-type-modifier or a map-type.
       // Map-type is followed by a colon; the function returns when it
@@ -4267,8 +4270,14 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
         continue;
       }
       // Potential map-type token as it is followed by a colon.
-      if (PP.LookAhead(0).is(tok::colon))
-        return false;
+      if (PP.LookAhead(0).is(tok::colon)) {
+        if (getLangOpts().OpenMP >= 60) {
+          break;
+        } else {
+          return false;
+        }
+      }
+
       Diag(Tok, diag::err_omp_unknown_map_type_modifier)
           << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
                                          : 0)
@@ -4277,6 +4286,14 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
     }
     if (getCurToken().is(tok::comma))
       ConsumeToken();
+  }
+  if (getLangOpts().OpenMP >= 60 && !HasMapType) {
+    if (!Tok.is(tok::colon)) {
+      Diag(Tok, diag::err_omp_unknown_map_type);
+      ConsumeToken();
+    } else {
+      Data.ExtraModifier = OMPC_MAP_unknown;
+    }
   }
   return false;
 }
@@ -4289,13 +4306,12 @@ static OpenMPMapClauseKind isMapType(Parser &P) {
   if (!Tok.isOneOf(tok::identifier, tok::kw_delete))
     return OMPC_MAP_unknown;
   Preprocessor &PP = P.getPreprocessor();
-  OpenMPMapClauseKind MapType =
-      static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-          OMPC_map, PP.getSpelling(Tok), P.getLangOpts()));
+  unsigned MapType =
+      getOpenMPSimpleClauseType(OMPC_map, PP.getSpelling(Tok), P.getLangOpts());
   if (MapType == OMPC_MAP_to || MapType == OMPC_MAP_from ||
       MapType == OMPC_MAP_tofrom || MapType == OMPC_MAP_alloc ||
       MapType == OMPC_MAP_delete || MapType == OMPC_MAP_release)
-    return MapType;
+    return static_cast<OpenMPMapClauseKind>(MapType);
   return OMPC_MAP_unknown;
 }
 
@@ -4679,8 +4695,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // Only parse map-type-modifier[s] and map-type if a colon is present in
     // the map clause.
     if (ColonPresent) {
+      if (getLangOpts().OpenMP >= 60 && getCurToken().is(tok::colon))
+        Diag(Tok, diag::err_omp_map_modifier_specification_list);
       IsInvalidMapperModifier = parseMapTypeModifiers(Data);
-      if (!IsInvalidMapperModifier)
+      if (getLangOpts().OpenMP < 60 && !IsInvalidMapperModifier)
         parseMapType(*this, Data);
       else
         SkipUntil(tok::colon, tok::annot_pragma_openmp_end, StopBeforeMatch);
@@ -4990,4 +5008,39 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
     return nullptr;
   OMPVarListLocTy Locs(Loc, LOpen, Data.RLoc);
   return Actions.OpenMP().ActOnOpenMPVarListClause(Kind, Vars, Locs, Data);
+}
+
+bool Parser::ParseOpenMPExprListClause(OpenMPClauseKind Kind,
+                                       SourceLocation &ClauseNameLoc,
+                                       SourceLocation &OpenLoc,
+                                       SourceLocation &CloseLoc,
+                                       SmallVectorImpl<Expr *> &Exprs,
+                                       bool ReqIntConst) {
+  assert(getOpenMPClauseName(Kind) == PP.getSpelling(Tok) &&
+         "Expected parsing to start at clause name");
+  ClauseNameLoc = ConsumeToken();
+
+  // Parse inside of '(' and ')'.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return true;
+  }
+
+  // Parse the list with interleaved commas.
+  do {
+    ExprResult Val =
+        ReqIntConst ? ParseConstantExpression() : ParseAssignmentExpression();
+    if (!Val.isUsable()) {
+      // Encountered something other than an expression; abort to ')'.
+      T.skipToEnd();
+      return true;
+    }
+    Exprs.push_back(Val.get());
+  } while (TryConsumeToken(tok::comma));
+
+  bool Result = T.consumeClose();
+  OpenLoc = T.getOpenLocation();
+  CloseLoc = T.getCloseLocation();
+  return Result;
 }
