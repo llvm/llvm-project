@@ -6767,11 +6767,9 @@ public:
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
                                   bool HasTrailingLParen);
 
-  ExprResult
-  BuildQualifiedDeclarationNameExpr(CXXScopeSpec &SS,
-                                    const DeclarationNameInfo &NameInfo,
-                                    bool IsAddressOfOperand, const Scope *S,
-                                    TypeSourceInfo **RecoveryTSI = nullptr);
+  ExprResult BuildQualifiedDeclarationNameExpr(
+      CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
+      bool IsAddressOfOperand, TypeSourceInfo **RecoveryTSI = nullptr);
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
@@ -11443,7 +11441,8 @@ public:
   ExprResult
   BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                                const DeclarationNameInfo &NameInfo,
-                               const TemplateArgumentListInfo *TemplateArgs);
+                               const TemplateArgumentListInfo *TemplateArgs,
+                               bool IsAddressOfOperand);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in

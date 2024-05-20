@@ -614,8 +614,10 @@ TEST_P(ASTMatchersTest, MemberExpr_MatchesVariable) {
   EXPECT_TRUE(matches("template <class T>"
                       "class X : T { void f() { this->T::v; } };",
                       cxxDependentScopeMemberExpr()));
-  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
-                      cxxDependentScopeMemberExpr()));
+  // FIXME: Add a matcher for DependentScopeDeclRefExpr.
+  EXPECT_TRUE(
+      notMatches("template <class T> class X : T { void f() { T::v; } };",
+                 cxxDependentScopeMemberExpr()));
   EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
                       cxxDependentScopeMemberExpr()));
 }
