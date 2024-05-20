@@ -4877,6 +4877,9 @@ foreach i = {8-15,18} in
   def fcall_saved_x#i : Flag<["-"], "fcall-saved-x"#i>, Group<m_aarch64_Features_Group>,
     HelpText<"Make the x"#i#" register call-saved (AArch64 only)">;
 
+def mno_va_float : Flag<["-"], "mno-va-float">, Group<m_aarch64_Features_Group>,
+  HelpText<"Do not generate code to save FP in variadic functions">;
+
 def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Features_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"

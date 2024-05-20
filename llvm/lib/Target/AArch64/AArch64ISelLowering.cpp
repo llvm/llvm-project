@@ -7470,7 +7470,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   FuncInfo->setVarArgsGPRIndex(GPRIdx);
   FuncInfo->setVarArgsGPRSize(GPRSaveSize);
 
-  if (Subtarget->hasFPARMv8() && !IsWin64) {
+  if (Subtarget->hasFPARMv8() && !IsWin64 && !Subtarget->hasNoVaFloat()) {
     auto FPRArgRegs = AArch64::getFPRArgRegs();
     const unsigned NumFPRArgRegs = FPRArgRegs.size();
     unsigned FirstVariadicFPR = CCInfo.getFirstUnallocated(FPRArgRegs);

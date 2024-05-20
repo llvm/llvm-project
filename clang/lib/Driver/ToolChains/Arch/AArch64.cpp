@@ -432,6 +432,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
 
+  if (Args.hasArg(options::OPT_mno_va_float))
+    Features.push_back("+no-va-float");
+
   if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a53_835769,
                                options::OPT_mno_fix_cortex_a53_835769)) {
     if (A->getOption().matches(options::OPT_mfix_cortex_a53_835769))

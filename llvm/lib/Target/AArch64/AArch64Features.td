@@ -788,6 +788,8 @@ def FeaturePAuthLR : Extension<"pauth-lr", "PAuthLR",
 def FeatureTLBIW : Extension<"tlbiw", "TLBIW",
   "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
 
+def FeatureVariadicSaveFP : SubtargetFeature<"no-va-float", "HasNoVaFloat",
+    "true", "Do not generate code to save FP in variadic functions">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
