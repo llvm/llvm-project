@@ -742,6 +742,8 @@ Bug Fixes to C++ Support
 - Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 - Fix a bug where the last argument was not considered when considering the most viable function for
   explicit object argument member functions. Fixes (#GH92188).
+- Fix a C++11 crash when a non-const non-static member function is defined out-of-line with
+  the ``constexpr`` specifier. Fixes (#GH61004).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
