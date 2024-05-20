@@ -177,6 +177,7 @@
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/PoisonChecking.h"
@@ -1139,6 +1140,24 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
     }
   }
   return Result;
+}
+
+Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
+  SmallVector<std::string, 1> PreservedGVs;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("preserve-gv=")) {
+      PreservedGVs.push_back(ParamName.str());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid Internalize pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
 } // namespace

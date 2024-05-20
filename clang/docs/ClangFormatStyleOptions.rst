@@ -861,7 +861,8 @@ the configuration (without a prefix: ``Auto``).
 
 **AlignConsecutiveShortCaseStatements** (``ShortCaseStatementsAlignmentStyle``) :versionbadge:`clang-format 17` :ref:`¶ <AlignConsecutiveShortCaseStatements>`
   Style of aligning consecutive short case labels.
-  Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+  Only applies if ``AllowShortCaseExpressionOnASingleLine`` or
+  ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
 
 
   .. code-block:: yaml
@@ -934,6 +935,24 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       default: return "";
       }
+
+  * ``bool AlignCaseArrows`` Whether to align the case arrows when aligning short case expressions.
+
+    .. code-block:: java
+
+      true:
+      i = switch (day) {
+        case THURSDAY, SATURDAY -> 8;
+        case WEDNESDAY          -> 9;
+        default                 -> 0;
+      };
+
+      false:
+      i = switch (day) {
+        case THURSDAY, SATURDAY -> 8;
+        case WEDNESDAY ->          9;
+        default ->                 0;
+      };
 
   * ``bool AlignCaseColons`` Whether aligned case labels are aligned on the colon, or on the tokens
     after the colon.
@@ -1691,6 +1710,21 @@ the configuration (without a prefix: ``Auto``).
       while (true) { continue; }
 
 
+
+.. _AllowShortCaseExpressionOnASingleLine:
+
+**AllowShortCaseExpressionOnASingleLine** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <AllowShortCaseExpressionOnASingleLine>`
+  Whether to merge a short switch labeled rule into a single line.
+
+  .. code-block:: java
+
+    true:                               false:
+    switch (a) {           vs.          switch (a) {
+    case 1 -> 1;                        case 1 ->
+    default -> 0;                         1;
+    };                                  default ->
+                                          0;
+                                        };
 
 .. _AllowShortCaseLabelsOnASingleLine:
 

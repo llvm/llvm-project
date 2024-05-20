@@ -8,12 +8,18 @@
 
 // Implements the I/O statement API
 
+// template function BeginExternalListIo<> is in runtime/io-api-common.h.
+// APIs BeginExternalListOutput, OutputInteger{8,16,32,64,128},
+// OutputReal{32,64}, OutputComplex{32,64}, OutputAscii, & EndIoStatement()
+// are in runtime/io-api-minimal.cpp.
+
 #include "flang/Runtime/io-api.h"
 #include "descriptor-io.h"
 #include "edit-input.h"
 #include "edit-output.h"
 #include "environment.h"
 #include "format.h"
+#include "io-api-common.h"
 #include "io-stmt.h"
 #include "terminator.h"
 #include "tools.h"
@@ -155,83 +161,6 @@ Cookie IODEF(BeginInternalFormattedInput)(const char *internal,
   return BeginInternalFormattedIO<Direction::Input>(internal, internalLength,
       format, formatLength, formatDescriptor, scratchArea, scratchBytes,
       sourceFile, sourceLine);
-}
-
-static RT_API_ATTRS Cookie NoopUnit(const Terminator &terminator,
-    int unitNumber, enum Iostat iostat = IostatOk) {
-  Cookie cookie{&New<NoopStatementState>{terminator}(
-      terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
-                     .release()
-                     ->ioStatementState()};
-  if (iostat != IostatOk) {
-    cookie->GetIoErrorHandler().SetPendingError(iostat);
-  }
-  return cookie;
-}
-
-static RT_API_ATTRS ExternalFileUnit *GetOrCreateUnit(int unitNumber,
-    Direction direction, Fortran::common::optional<bool> isUnformatted,
-    const Terminator &terminator, Cookie &errorCookie) {
-  if (ExternalFileUnit *
-      unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-          unitNumber, direction, isUnformatted, terminator)}) {
-    errorCookie = nullptr;
-    return unit;
-  } else {
-    errorCookie = NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
-    return nullptr;
-  }
-}
-
-template <Direction DIR, template <Direction> class STATE, typename... A>
-RT_API_ATTRS Cookie BeginExternalListIO(
-    int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
-  Terminator terminator{sourceFile, sourceLine};
-  Cookie errorCookie{nullptr};
-  ExternalFileUnit *unit{GetOrCreateUnit(
-      unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
-  if (!unit) {
-    return errorCookie;
-  }
-  if (!unit->isUnformatted.has_value()) {
-    unit->isUnformatted = false;
-  }
-  Iostat iostat{IostatOk};
-  if (*unit->isUnformatted) {
-    iostat = IostatFormattedIoOnUnformattedUnit;
-  }
-  if (ChildIo * child{unit->GetChildIo()}) {
-    if (iostat == IostatOk) {
-      iostat = child->CheckFormattingAndDirection(false, DIR);
-    }
-    if (iostat == IostatOk) {
-      return &child->BeginIoStatement<ChildListIoStatementState<DIR>>(
-          *child, sourceFile, sourceLine);
-    } else {
-      return &child->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, nullptr /* no unit */, sourceFile, sourceLine);
-    }
-  } else {
-    if (iostat == IostatOk && unit->access == Access::Direct) {
-      iostat = IostatListIoOnDirectAccessUnit;
-    }
-    if (iostat == IostatOk) {
-      iostat = unit->SetDirection(DIR);
-    }
-    if (iostat == IostatOk) {
-      return &unit->BeginIoStatement<STATE<DIR>>(
-          terminator, std::forward<A>(xs)..., *unit, sourceFile, sourceLine);
-    } else {
-      return &unit->BeginIoStatement<ErroneousIoStatementState>(
-          terminator, iostat, unit, sourceFile, sourceLine);
-    }
-  }
-}
-
-Cookie IODEF(BeginExternalListOutput)(
-    ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
-  return BeginExternalListIO<Direction::Output, ExternalListIoStatementState>(
-      unitNumber, sourceFile, sourceLine);
 }
 
 Cookie IODEF(BeginExternalListInput)(
@@ -1139,63 +1068,6 @@ bool IODEF(InputDescriptor)(Cookie cookie, const Descriptor &descriptor) {
   return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
-bool IODEF(OutputInteger8)(Cookie cookie, std::int8_t n) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputInteger8")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Integer, 1, reinterpret_cast<void *>(&n), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-
-bool IODEF(OutputInteger16)(Cookie cookie, std::int16_t n) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputInteger16")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Integer, 2, reinterpret_cast<void *>(&n), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-
-bool IODEF(OutputInteger32)(Cookie cookie, std::int32_t n) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputInteger32")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Integer, 4, reinterpret_cast<void *>(&n), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-
-bool IODEF(OutputInteger64)(Cookie cookie, std::int64_t n) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputInteger64")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Integer, 8, reinterpret_cast<void *>(&n), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-
-#ifdef __SIZEOF_INT128__
-bool IODEF(OutputInteger128)(Cookie cookie, common::int128_t n) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputInteger128")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Integer, 16, reinterpret_cast<void *>(&n), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-#endif
-
 bool IODEF(InputInteger)(Cookie cookie, std::int64_t &n, int kind) {
   if (!cookie->CheckFormattedStmtType<Direction::Input>("InputInteger")) {
     return false;
@@ -1205,26 +1077,6 @@ bool IODEF(InputInteger)(Cookie cookie, std::int64_t &n, int kind) {
   descriptor.Establish(
       TypeCategory::Integer, kind, reinterpret_cast<void *>(&n), 0);
   return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
-}
-
-bool IODEF(OutputReal32)(Cookie cookie, float x) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputReal32")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(TypeCategory::Real, 4, reinterpret_cast<void *>(&x), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-
-bool IODEF(OutputReal64)(Cookie cookie, double x) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputReal64")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(TypeCategory::Real, 8, reinterpret_cast<void *>(&x), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IODEF(InputReal32)(Cookie cookie, float &x) {
@@ -1245,30 +1097,6 @@ bool IODEF(InputReal64)(Cookie cookie, double &x) {
   Descriptor &descriptor{staticDescriptor.descriptor()};
   descriptor.Establish(TypeCategory::Real, 8, reinterpret_cast<void *>(&x), 0);
   return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
-}
-
-bool IODEF(OutputComplex32)(Cookie cookie, float r, float i) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputComplex32")) {
-    return false;
-  }
-  float z[2]{r, i};
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Complex, 4, reinterpret_cast<void *>(&z), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
-}
-
-bool IODEF(OutputComplex64)(Cookie cookie, double r, double i) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputComplex64")) {
-    return false;
-  }
-  double z[2]{r, i};
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Complex, 8, reinterpret_cast<void *>(&z), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IODEF(InputComplex32)(Cookie cookie, float z[2]) {
@@ -1305,10 +1133,6 @@ bool IODEF(OutputCharacter)(
   return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
-bool IODEF(OutputAscii)(Cookie cookie, const char *x, std::size_t length) {
-  return IONAME(OutputCharacter(cookie, x, length, 1));
-}
-
 bool IODEF(InputCharacter)(
     Cookie cookie, char *x, std::size_t length, int kind) {
   if (!cookie->CheckFormattedStmtType<Direction::Input>("InputCharacter")) {
@@ -1322,17 +1146,6 @@ bool IODEF(InputCharacter)(
 
 bool IODEF(InputAscii)(Cookie cookie, char *x, std::size_t length) {
   return IONAME(InputCharacter)(cookie, x, length, 1);
-}
-
-bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
-  if (!cookie->CheckFormattedStmtType<Direction::Output>("OutputLogical")) {
-    return false;
-  }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(
-      TypeCategory::Logical, sizeof truth, reinterpret_cast<void *>(&truth), 0);
-  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IODEF(InputLogical)(Cookie cookie, bool &truth) {
@@ -1446,11 +1259,6 @@ bool IODEF(InquireInteger64)(
   return false;
 }
 
-enum Iostat IODEF(EndIoStatement)(Cookie cookie) {
-  IoStatementState &io{*cookie};
-  return static_cast<enum Iostat>(io.EndIoStatement());
-}
-
 template <typename INT>
 static RT_API_ATTRS enum Iostat CheckUnitNumberInRangeImpl(INT unit,
     bool handleError, char *ioMsg, std::size_t ioMsgLength,
@@ -1502,20 +1310,5 @@ enum Iostat IODEF(CheckUnitNumberInRange128)(common::int128_t unit,
 }
 #endif
 
-} // namespace Fortran::runtime::io
-
-#if defined(_LIBCPP_VERBOSE_ABORT)
-// Provide own definition for `std::__libcpp_verbose_abort` to avoid dependency
-// on the version provided by libc++.
-
-void std::__libcpp_verbose_abort(char const *format, ...) {
-  va_list list;
-  va_start(list, format);
-  std::vfprintf(stderr, format, list);
-  va_end(list);
-
-  std::abort();
-}
-#endif
-
 RT_EXT_API_GROUP_END
+} // namespace Fortran::runtime::io

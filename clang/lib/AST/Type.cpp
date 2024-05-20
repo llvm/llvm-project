@@ -256,7 +256,8 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
-  E->Profile(ID, Context, true);
+  if (E)
+    E->Profile(ID, Context, true);
 }
 
 DependentVectorType::DependentVectorType(QualType ElementType,
@@ -2370,6 +2371,14 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     if (Def)
       *Def = Rec;
     return !Rec->isCompleteDefinition();
+  }
+  case InjectedClassName: {
+    CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)->getDecl();
+    if (!Rec->isBeingDefined())
+      return false;
+    if (Def)
+      *Def = Rec;
+    return true;
   }
   case ConstantArray:
   case VariableArray:

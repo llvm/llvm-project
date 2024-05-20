@@ -129,15 +129,15 @@ generateReplacements(const MatchFinder::MatchResult &Match,
       continue;
     }
 
+    // if the nested call is not the same as the top call
+    if (InnerCall->getDirectCallee()->getQualifiedNameAsString() !=
+        TopCall->getDirectCallee()->getQualifiedNameAsString())
+      continue;
+
     const FindArgsResult InnerResult = findArgs(InnerCall);
 
     // if the nested call doesn't have arguments skip it
     if (!InnerResult.First || !InnerResult.Last)
-      continue;
-
-    // if the nested call is not the same as the top call
-    if (InnerCall->getDirectCallee()->getQualifiedNameAsString() !=
-        TopCall->getDirectCallee()->getQualifiedNameAsString())
       continue;
 
     // if the nested call doesn't have the same compare function

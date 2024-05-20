@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
@@ -73,6 +75,13 @@ program main
    end do
    !$omp end distribute
   !$omp end teams
+
+  !$omp target teams
+    !$omp distribute
+    do i = 1, 10
+    end do
+    !$omp end distribute
+  !$omp end target teams
 
   !$omp teams 
       !ERROR: Only `DISTRIBUTE` or `PARALLEL` regions are allowed to be strictly nested inside `TEAMS` region.

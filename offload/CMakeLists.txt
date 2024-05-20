@@ -1,14 +1,5 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build offloading library and related plugins.
-#
-##===----------------------------------------------------------------------===##
+# See for https://openmp.llvm.org/SupportAndFAQ.html for instructions on how
+# to build offload with CMake.
 
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -17,26 +8,16 @@ if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   project(offload C CXX ASM)
 endif()
 
-set(ENABLE_LIBOMPTARGET ON)
-# Currently libomptarget cannot be compiled on Windows or MacOS X.
-# Since the device plugins are only supported on Linux anyway,
-# there is no point in trying to compile libomptarget on other OSes.
-# 32-bit systems are not supported either.
-if (APPLE OR WIN32 OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(ENABLE_LIBOMPTARGET OFF)
-endif()
-
-option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
-       ${ENABLE_LIBOMPTARGET})
-if (OPENMP_ENABLE_LIBOMPTARGET)
-  # Check that the library can actually be built.
-  if (APPLE OR WIN32)
-    message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
-  elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")
-  endif()
+# Check that the library can actually be built.
+if(APPLE OR WIN32 OR WASM)
+  message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
+  return()
+elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  message(WARNING "Host compiler must support C++17 to build libomptarget!")
+  return()
+elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  message(WARNING "libomptarget on 32-bit systems is not supported!")
+  return()
 endif()
 
 if(OPENMP_STANDALONE_BUILD)
@@ -137,18 +118,22 @@ else()
   set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 endif()
 
-# Message utilities.
-include(LibomptargetUtils)
-
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
+check_cxx_compiler_flag(-Werror=global-constructors OFFLOAD_HAVE_WERROR_CTOR)
+
 # LLVM source tree is required at build time for libomptarget
 if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
+endif()
+
+if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
+   DEFINED LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
+  message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
 endif()
 
 set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
@@ -158,6 +143,8 @@ set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
+message(STATUS "Building the offload library with support for "
+               "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
 
 set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS "")
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
@@ -210,6 +197,9 @@ endif()
 set(offload_compile_flags -fno-exceptions)
 if(NOT LLVM_ENABLE_RTTI)
   set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
+endif()
+if(OFFLOAD_HAVE_WERROR_CTOR)
+  list(APPEND offload_compile_flags -Werror=global-constructors)
 endif()
 
 # TODO: Consider enabling LTO by default if supported.

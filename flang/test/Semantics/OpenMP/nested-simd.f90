@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! Various checks with the nesting of SIMD construct
