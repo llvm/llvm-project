@@ -112,7 +112,10 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
 
         // search all CFG stmts in function for matching variable
         ASTContext *Context = &fi->D->getASTContext();
-        for (const auto &[stmt, block] : fi->stmtBlockPairs) {
+
+        auto locate =
+            [&](const Stmt *stmt,
+                const CFGBlock *block) -> std::optional<VarLocResult> {
             if (isStmt) {
                 // search for stmt
                 auto bLoc =
@@ -121,7 +124,7 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                     Location::fromSourceLocation(*Context, stmt->getEndLoc());
 
                 if (!bLoc || bLoc->file != file)
-                    continue;
+                    return std::nullopt;
 
                 // 精确匹配：要求行号、列号相同
                 bool matchExact = bLoc->line == line && bLoc->column == column;
@@ -151,6 +154,13 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                     return VarLocResult(fi, block);
                 }
             }
+            return std::nullopt;
+        };
+
+        for (const auto &[stmt, block] : fi->stmtBlockPairs) {
+            auto result = locate(stmt, block);
+            if (result)
+                return result.value();
         }
     }
     return VarLocResult();
