@@ -1568,15 +1568,15 @@ def IterateOp : SparseTensor_Op<"iterate",
       func.func @nested_iterate(%sp : tensor<4x8xf32, #COO>) {
         // Iterates over the first level of %sp
         %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO>
-        %r1 = sparse_tensor.iterate %it1 in %l1 at (%crd0)
+        %r1 = sparse_tensor.iterate %it1 in %l1 at (%coord0)
             : !sparse_tensor.iter_space<#COO, lvls = 0 to 1>  {
           // Iterates over the second level of %sp
           %l2 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 1
               : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0 to 1>
-          %r2 = sparse_tensor.iterate %it2 in %l2 at (crd1)
+          %r2 = sparse_tensor.iterate %it2 in %l2 at (coord1)
               : !sparse_tensor.iter_space<#COO, lvls = 1 to 2>  {
-             vector.print %crd0 : index
-             vector.print %crd1 : index
+             vector.print %coord0 : index
+             vector.print %coord1 : index
           }
         }
       }
