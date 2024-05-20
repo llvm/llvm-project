@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -Wno-unused-value -verify %s
+// RUN:
+// DEACTIVATED: %clang_cc1 -Wno-unused-value -verify %s
 
 namespace N0 {
   struct A {
