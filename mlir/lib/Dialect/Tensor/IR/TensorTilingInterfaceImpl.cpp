@@ -538,7 +538,8 @@ struct UnPackOpTiling
     // unpack op.
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
     if (failed(cast<TilingInterface>(op).getIterationDomainTileFromOperandTile(
-            b, 0, offsets, sizes, outputOffsets, outputSizes)))
+            b, /*operandNumber=*/0, offsets, sizes, outputOffsets,
+            outputSizes)))
       return failure();
 
     auto oneAttr = b.getI64IntegerAttr(1);
