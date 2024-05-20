@@ -840,14 +840,9 @@ def ProcessorFeatures {
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
                       FeatureEnableSelectOptimize]>;
-
-// Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16]>;
-
-def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
-                     [TuneA35]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
+                     [TuneA35]>;
+def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA53]>;
@@ -905,24 +900,24 @@ def : ProcessorModel<"cortex-x3", NeoverseN2Model, ProcessorFeatures.X3,
                      [TuneX3]>;
 def : ProcessorModel<"cortex-x4", NeoverseN2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
-def : ProcessorModel<"neoverse-e1", CortexA53Model, ProcessorFeatures.NeoverseE1,
-                     [TuneNeoverseE1]>;
-def : ProcessorModel<"neoverse-n1", NeoverseN1Model, ProcessorFeatures.NeoverseN1,
-                     [TuneNeoverseN1]>;
-def : ProcessorModel<"neoverse-n2", NeoverseN2Model, ProcessorFeatures.NeoverseN2,
-                     [TuneNeoverseN2]>;
-def : ProcessorModel<"neoverse-n3", NeoverseN2Model, ProcessorFeatures.NeoverseN3,
-                     [TuneNeoverseN3]>;
-def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model, ProcessorFeatures.Neoverse512TVB,
-                     [TuneNeoverse512TVB]>;
-def : ProcessorModel<"neoverse-v1", NeoverseV1Model, ProcessorFeatures.NeoverseV1,
-                     [TuneNeoverseV1]>;
-def : ProcessorModel<"neoverse-v2", NeoverseV2Model, ProcessorFeatures.NeoverseV2,
-                     [TuneNeoverseV2]>;
-def : ProcessorModel<"neoverse-v3", NeoverseV2Model, ProcessorFeatures.NeoverseV3,
-                     [TuneNeoverseV3]>;
-def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model, ProcessorFeatures.NeoverseV3AE,
-                     [TuneNeoverseV3AE]>;
+def : ProcessorModel<"neoverse-e1", CortexA53Model,
+                     ProcessorFeatures.NeoverseE1, [TuneNeoverseE1]>;
+def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
+                     ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
+def : ProcessorModel<"neoverse-n2", NeoverseN2Model,
+                     ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
+def : ProcessorModel<"neoverse-n3", NeoverseN2Model,
+                     ProcessorFeatures.NeoverseN3, [TuneNeoverseN3]>;
+def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model,
+                     ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;
+def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
+                     ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
+def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
+                     ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
+def : ProcessorModel<"neoverse-v3", NeoverseV2Model,
+                     ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
+def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model,
+                     ProcessorFeatures.NeoverseV3AE, [TuneNeoverseV3AE]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,
@@ -933,24 +928,23 @@ def : ProcessorModel<"falkor", FalkorModel, ProcessorFeatures.Falkor,
                      [TuneFalkor]>;
 def : ProcessorModel<"saphira", FalkorModel, ProcessorFeatures.Saphira,
                      [TuneSaphira]>;
-def : ProcessorModel<"kryo", KryoModel, ProcessorFeatures.A53,
-                     [TuneKryo]>;
+def : ProcessorModel<"kryo", KryoModel, ProcessorFeatures.A53, [TuneKryo]>;
 
 // Cavium ThunderX/ThunderX T8X  Processors
 def : ProcessorModel<"thunderx", ThunderXT8XModel,  ProcessorFeatures.ThunderX,
                      [TuneThunderX]>;
-def : ProcessorModel<"thunderxt88", ThunderXT8XModel, ProcessorFeatures.ThunderX,
-                     [TuneThunderXT88]>;
-def : ProcessorModel<"thunderxt81", ThunderXT8XModel, ProcessorFeatures.ThunderX,
-                     [TuneThunderXT81]>;
-def : ProcessorModel<"thunderxt83", ThunderXT8XModel, ProcessorFeatures.ThunderX,
-                     [TuneThunderXT83]>;
+def : ProcessorModel<"thunderxt88", ThunderXT8XModel,
+                     ProcessorFeatures.ThunderX, [TuneThunderXT88]>;
+def : ProcessorModel<"thunderxt81", ThunderXT8XModel,
+                     ProcessorFeatures.ThunderX, [TuneThunderXT81]>;
+def : ProcessorModel<"thunderxt83", ThunderXT8XModel,
+                     ProcessorFeatures.ThunderX, [TuneThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
-def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, ProcessorFeatures.ThunderX2T99,
-                     [TuneThunderX2T99]>;
+def : ProcessorModel<"thunderx2t99", ThunderX2T99Model,
+                     ProcessorFeatures.ThunderX2T99, [TuneThunderX2T99]>;
 // Marvell ThunderX3T110 Processors.
-def : ProcessorModel<"thunderx3t110", ThunderX3T110Model, ProcessorFeatures.ThunderX3T110,
-                     [TuneThunderX3T110]>;
+def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
+                     ProcessorFeatures.ThunderX3T110, [TuneThunderX3T110]>;
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
 
@@ -994,6 +988,10 @@ def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
 def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
+
+// Alias for the latest Apple processor model supported by LLVM.
+def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
+                     [TuneAppleA16]>;
 
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
