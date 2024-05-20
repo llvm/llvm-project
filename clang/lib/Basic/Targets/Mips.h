@@ -85,8 +85,13 @@ public:
     return CPU == "mips32r6" || CPU == "mips64r6";
   }
 
-  bool isFP64Default() const {
-    return CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64";
+  enum FPModeEnum getDefaultFPMode() const {
+    if (CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64")
+      return FP64;
+    else if (CPU == "mips1")
+      return FP32;
+    else
+      return FPXX;
   }
 
   bool isNan2008() const override { return IsNan2008; }
@@ -315,8 +320,8 @@ public:
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;
-    FPMode = isFP64Default() ? FP64 : FPXX;
     NoOddSpreg = false;
+    FPMode = getDefaultFPMode();
     bool OddSpregGiven = false;
     bool StrictAlign = false;
 
