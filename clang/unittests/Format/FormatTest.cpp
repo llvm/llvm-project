@@ -24545,6 +24545,13 @@ TEST_F(FormatTest, STLWhileNotDefineChed) {
                "#endif // while");
 }
 
+TEST_F(FormatTest, BinaryOperatorAfterUnaryOperator) {
+  verifyFormat("void test(void) {\n"
+               "  static void (*xor)(uint8_t *, size_t, uint8_t);\n"
+               "  xor = resolve_xor_x86();\n"
+               "}");
+}
+
 TEST_F(FormatTest, OperatorSpacing) {
   FormatStyle Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Right;
