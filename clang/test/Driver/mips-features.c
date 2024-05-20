@@ -163,6 +163,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NOMMSA %s
 // CHECK-NOMMSA: "-target-feature" "-msa"
 //
+// -mmsa
+// RUN: %clang -target mips-linux-gnu -### -c %s \
+// RUN:     -mmsa 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MMSA-MFP64 %s
+// CHECK-MMSA-MFP64: "-target-feature" "+msa" "-target-feature" "+fp64"
+//
 // -mmt
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mt -mmt 2>&1 \
