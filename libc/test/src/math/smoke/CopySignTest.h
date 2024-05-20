@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_COPYSIGNTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
 
 template <typename T>
-class CopySignTest : public LIBC_NAMESPACE::testing::Test {
+class CopySignTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

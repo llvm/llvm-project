@@ -2,6 +2,10 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
   "Compile Fortran runtime as CUDA sources (experimental)" OFF
   )
 
+option(FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS
+  "Do not compile global variables' definitions when producing PTX library" OFF
+  )
+
 set(FLANG_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
 
 set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
@@ -56,6 +60,11 @@ macro(enable_cuda_compilation name files)
     # Add an OBJECT library consisting of CUDA PTX.
     llvm_add_library(${name}PTX OBJECT PARTIAL_SOURCES_INTENDED ${files})
     set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    if (FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
+      target_compile_definitions(obj.${name}PTX
+        PRIVATE FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+        )
+    endif()
   endif()
 endmacro()
 

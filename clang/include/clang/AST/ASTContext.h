@@ -458,7 +458,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// initialization of another module).
   struct PerModuleInitializers {
     llvm::SmallVector<Decl*, 4> Initializers;
-    llvm::SmallVector<Decl::DeclID, 4> LazyInitializers;
+    llvm::SmallVector<GlobalDeclID, 4> LazyInitializers;
 
     void resolve(ASTContext &Ctx);
   };
@@ -1062,7 +1062,7 @@ public:
   /// or an ImportDecl nominating another module that has initializers.
   void addModuleInitializer(Module *M, Decl *Init);
 
-  void addLazyModuleInitializers(Module *M, ArrayRef<Decl::DeclID> IDs);
+  void addLazyModuleInitializers(Module *M, ArrayRef<GlobalDeclID> IDs);
 
   /// Get the initializations to perform when importing a module, if any.
   ArrayRef<Decl*> getModuleInitializers(Module *M);
@@ -1119,7 +1119,8 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
-  CanQualType DependentTy, OverloadTy, BoundMemberTy, UnknownAnyTy;
+  CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
+      UnknownAnyTy;
   CanQualType BuiltinFnTy;
   CanQualType PseudoObjectTy, ARCUnbridgedCastTy;
   CanQualType ObjCBuiltinIdTy, ObjCBuiltinClassTy, ObjCBuiltinSelTy;
@@ -1130,7 +1131,8 @@ public:
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
   CanQualType OCLQueueTy, OCLReserveIDTy;
   CanQualType IncompleteMatrixIdxTy;
-  CanQualType OMPArraySectionTy, OMPArrayShapingTy, OMPIteratorTy;
+  CanQualType ArraySectionTy;
+  CanQualType OMPArrayShapingTy, OMPIteratorTy;
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   CanQualType Id##Ty;
 #include "clang/Basic/OpenCLExtensionTypes.def"
@@ -2203,6 +2205,16 @@ public:
     Qualifiers Qs = type.getQualifiers();
     Qs.removeObjCLifetime();
     return getQualifiedType(type.getUnqualifiedType(), Qs);
+  }
+
+  /// \brief Return a type with the given __ptrauth qualifier.
+  QualType getPointerAuthType(QualType Ty, PointerAuthQualifier PointerAuth) {
+    assert(!Ty.getPointerAuth());
+    assert(PointerAuth);
+
+    Qualifiers Qs;
+    Qs.setPointerAuth(PointerAuth);
+    return getQualifiedType(Ty, Qs);
   }
 
   unsigned char getFixedPointScale(QualType Ty) const;

@@ -351,7 +351,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!retTy.isa<fir::SequenceType>()) {
+    if (!mlir::isa<fir::SequenceType>(retTy)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "--Allocation is not for an array: skipping\n");
       return;
@@ -775,8 +775,4 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<mlir::Pass> fir::createStackArraysPass() {
-  return std::make_unique<StackArraysPass>();
 }

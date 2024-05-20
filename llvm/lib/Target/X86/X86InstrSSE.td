@@ -1554,7 +1554,6 @@ def CVTPS2DQrm : PDI<0x5B, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        (v4i32 (X86cvtp2Int (memopv4f32 addr:$src))))]>,
                      Sched<[WriteCvtPS2ILd]>, SIMD_EXC;
 
-
 // Convert Packed Double FP to Packed DW Integers
 let Predicates = [HasAVX, NoVLX], Uses = [MXCSR], mayRaiseFPException = 1 in {
 // The assembler can recognize rr 256-bit instructions by seeing a ymm
@@ -1584,6 +1583,20 @@ def VCVTPD2DQYrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                        [(set VR128:$dst,
                          (v4i32 (X86cvtp2Int (loadv4f64 addr:$src))))]>,
                        VEX, VEX_L, Sched<[WriteCvtPD2IYLd]>, WIG;
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(v4i32 (lrint VR128:$src)), (VCVTPS2DQrr VR128:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f32 addr:$src))), (VCVTPS2DQrm addr:$src)>;
+  def : Pat<(v8i32 (lrint VR256:$src)), (VCVTPS2DQYrr VR256:$src)>;
+  def : Pat<(v8i32 (lrint (loadv8f32 addr:$src))), (VCVTPS2DQYrm addr:$src)>;
+  def : Pat<(v4i32 (lrint VR256:$src)), (VCVTPD2DQYrr VR256:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f64 addr:$src))), (VCVTPD2DQYrm addr:$src)>;
+}
+
+let Predicates = [UseSSE2] in {
+  def : Pat<(v4i32 (lrint VR128:$src)), (CVTPS2DQrr VR128:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f32 addr:$src))), (CVTPS2DQrm addr:$src)>;
 }
 
 def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
