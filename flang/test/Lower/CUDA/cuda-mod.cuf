@@ -10,6 +10,6 @@ contains
   end
 end module
 
-! CHECK: fir.global @_QMcuf_modEmd {cuda_attr = #fir.cuda<device>} : f32
+! CHECK: fir.global @_QMcuf_modEmd {data_attr = #cuf.cuda<device>} : f32
 
-! CHECK: func.func @_QMcuf_modPdevsub() attributes {fir.cuda_attr = #fir.cuda_proc<device>}
+! CHECK: func.func @_QMcuf_modPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<device>}

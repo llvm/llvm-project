@@ -114,12 +114,12 @@ void llvm::computeLTOCacheKey(
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
     support::endian::write32le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 4});
+    Hasher.update(Data);
   };
   auto AddUint64 = [&](uint64_t I) {
     uint8_t Data[8];
     support::endian::write64le(Data, I);
-    Hasher.update(ArrayRef<uint8_t>{Data, 8});
+    Hasher.update(Data);
   };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
@@ -199,13 +199,19 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
+  std::vector<uint64_t> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
+
+    ImportedGUIDs.clear();
     for (auto &Fn : Entry.getFunctions())
-      AddUint64(Fn);
+      ImportedGUIDs.push_back(Fn);
+    llvm::sort(ImportedGUIDs);
+    for (auto &GUID : ImportedGUIDs)
+      AddUint64(GUID);
   }
 
   // Include the hash for the resolved ODR.

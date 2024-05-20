@@ -846,6 +846,18 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // No other 'aarch64.sve.bf*'.
       }
 
+      if (Name.consume_front("addqv")) {
+        // 'aarch64.sve.addqv'.
+        if (!F->getReturnType()->isFPOrFPVectorTy())
+          return false;
+
+        auto Args = F->getFunctionType()->params();
+        Type *Tys[] = {F->getReturnType(), Args[1]};
+        NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                          Intrinsic::aarch64_sve_faddqv, Tys);
+        return true;
+      }
+
       if (Name.consume_front("ld")) {
         // 'aarch64.sve.ld*'.
         static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
@@ -1047,7 +1059,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name.equals("coro.end")) {
+    if (F->arg_size() == 2 && Name == "coro.end") {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
@@ -1080,17 +1092,24 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     break;
   case 'e':
     if (Name.consume_front("experimental.vector.")) {
-      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
-                             .StartsWith("extract.", Intrinsic::vector_extract)
-                             .StartsWith("insert.", Intrinsic::vector_insert)
-                             .Default(Intrinsic::not_intrinsic);
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .StartsWith("extract.", Intrinsic::vector_extract)
+              .StartsWith("insert.", Intrinsic::vector_insert)
+              .StartsWith("splice.", Intrinsic::vector_splice)
+              .StartsWith("reverse.", Intrinsic::vector_reverse)
+              .StartsWith("interleave2.", Intrinsic::vector_interleave2)
+              .StartsWith("deinterleave2.", Intrinsic::vector_deinterleave2)
+              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         const auto *FT = F->getFunctionType();
         SmallVector<Type *, 2> Tys;
-        if (ID == Intrinsic::vector_extract)
+        if (ID == Intrinsic::vector_extract ||
+            ID == Intrinsic::vector_interleave2)
           // Extracting overloads the return type.
           Tys.push_back(FT->getReturnType());
-        Tys.push_back(FT->getParamType(0));
+        if (ID != Intrinsic::vector_interleave2)
+          Tys.push_back(FT->getParamType(0));
         if (ID == Intrinsic::vector_insert)
           // Inserting overloads the inserted type.
           Tys.push_back(FT->getParamType(1));
@@ -5267,6 +5286,14 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+
+  // Older versions of LLVM treated an "implicit-section-name" attribute
+  // similarly to directly setting the section on a Function.
+  if (Attribute A = F.getFnAttribute("implicit-section-name");
+      A.isValid() && A.isStringAttribute()) {
+    F.setSection(A.getValueAsString());
+    F.removeFnAttr("implicit-section-name");
+  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
@@ -5333,10 +5360,11 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
 
 std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   Triple T(TT);
-  // The only data layout upgrades needed for pre-GCN are setting the address
-  // space of globals to 1.
-  if (T.isAMDGPU() && !T.isAMDGCN() && !DL.contains("-G") &&
-      !DL.starts_with("G")) {
+  // The only data layout upgrades needed for pre-GCN, SPIR or SPIRV are setting
+  // the address space of globals to 1. This does not apply to SPIRV Logical.
+  if (((T.isAMDGPU() && !T.isAMDGCN()) ||
+       (T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical()))) &&
+      !DL.contains("-G") && !DL.starts_with("G")) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 
@@ -5375,6 +5403,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 
+    return Res;
+  }
+
+  // AArch64 data layout upgrades.
+  if (T.isAArch64()) {
+    // Add "-Fn32"
+    if (!DL.empty() && !DL.contains("-Fn32"))
+      Res.append("-Fn32");
     return Res;
   }
 

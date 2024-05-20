@@ -75,6 +75,9 @@ struct DriverOptions {
   /// \brief Verification mode for comparing symbols.
   VerificationMode VerifyMode = VerificationMode::Pedantic;
 
+  /// \brief Whether the library is zippered.
+  bool Zippered = false;
+
   /// \brief Print demangled symbols when reporting errors.
   bool Demangle = false;
 
@@ -104,6 +107,9 @@ struct LinkerOptions {
   /// \brief Additional library search paths.
   PathSeq LibPaths;
 
+  /// \brief List of alias symbol files.
+  PathSeq AliasLists;
+
   /// \brief The install name to use for the dynamic library.
   std::string InstallName;
 
@@ -127,6 +133,9 @@ struct LinkerOptions {
 };
 
 struct FrontendOptions {
+  /// \brief Unique clang options to pass per key in map.
+  llvm::StringMap<std::vector<std::string>> UniqueArgs;
+
   /// \brief The language mode to parse headers in.
   Language LangMode = Language::ObjC;
 
@@ -137,7 +146,7 @@ struct FrontendOptions {
   PathSeq FwkPaths;
 
   /// \brief Additional SYSTEM framework search paths.
-  PathSeq SystemFwkPaths;
+  PathToPlatformSeq SystemFwkPaths;
 };
 
 using arg_iterator = llvm::opt::arg_iterator<llvm::opt::Arg **>;
@@ -150,6 +159,8 @@ private:
   processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args);
   bool processInstallAPIXOptions(llvm::opt::InputArgList &Args);
   bool processXarchOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
+  bool processXplatformOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
+  bool processXprojectOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
 
 public:
   /// The various options grouped together.
@@ -170,6 +181,11 @@ public:
   /// ones.
   std::vector<std::string> &getClangFrontendArgs() { return FrontendArgs; }
 
+  /// \brief Add relevant, but conditionalized by active target and header type,
+  /// arguments for constructing a CC1 invocation.
+  void addConditionalCC1Args(std::vector<std::string> &ArgStrings,
+                             const llvm::Triple &Targ, const HeaderType Type);
+
 private:
   bool addFilePaths(llvm::opt::InputArgList &Args, PathSeq &Headers,
                     llvm::opt::OptSpecifier ID);
@@ -180,6 +196,7 @@ private:
   FileManager *FM;
   std::vector<std::string> FrontendArgs;
   llvm::DenseMap<const llvm::opt::Arg *, Architecture> ArgToArchMap;
+  std::vector<std::string> ProjectLevelArgs;
 };
 
 enum ID {

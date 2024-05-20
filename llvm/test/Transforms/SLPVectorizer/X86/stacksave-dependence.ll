@@ -35,7 +35,7 @@ define void @allocas(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[V1]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP4]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -127,7 +127,7 @@ define void @stacksave2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[V1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[V2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[V1]], i32 1
 ; CHECK-NEXT:    store ptr [[TMP4]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    call void @use(ptr inalloca(i8) [[V2]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[STACK]])

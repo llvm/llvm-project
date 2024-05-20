@@ -184,20 +184,18 @@ __uses_allocator_construction_args(const _Alloc& __alloc, _Type&& __value) noexc
   struct __pair_constructor {
     using _PairMutable = remove_cv_t<_Pair>;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr auto __do_construct(const _PairMutable& __pair) const {
+    _LIBCPP_HIDDEN constexpr auto __do_construct(const _PairMutable& __pair) const {
       return std::__make_obj_using_allocator<_PairMutable>(__alloc_, __pair);
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr auto __do_construct(_PairMutable&& __pair) const {
+    _LIBCPP_HIDDEN constexpr auto __do_construct(_PairMutable&& __pair) const {
       return std::__make_obj_using_allocator<_PairMutable>(__alloc_, std::move(__pair));
     }
 
     const _Alloc& __alloc_;
     _Type& __value_;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr operator _PairMutable() const {
-      return __do_construct(std::forward<_Type>(this->__value_));
-    }
+    _LIBCPP_HIDDEN constexpr operator _PairMutable() const { return __do_construct(std::forward<_Type>(__value_)); }
   };
 
   return std::make_tuple(__pair_constructor{__alloc, __value});

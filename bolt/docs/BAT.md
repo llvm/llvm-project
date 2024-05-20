@@ -81,9 +81,10 @@ Hot indices are delta encoded, implicitly starting at zero.
 | `FuncHash` | 8b | Function hash for input function | Hot |
 | `NumBlocks` | ULEB128 | Number of basic blocks in the original function | Hot |
 | `NumSecEntryPoints` | ULEB128 | Number of secondary entry points in the original function | Hot |
+| `ColdInputSkew` | ULEB128 | Skew to apply to all input offsets | Cold |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function | Both |
-| `EqualElems` | ULEB128 | Number of equal offsets in the beginning of a function | Hot |
-| `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | If `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit | Hot |
+| `EqualElems` | ULEB128 | Number of equal offsets in the beginning of a function | Both |
+| `BranchEntries` | Bitmask, `alignTo(EqualElems, 8)` bits | If `EqualElems` is non-zero, bitmask denoting entries with `BRANCHENTRY` bit | Both |
 
 Function header is followed by *Address Translation Table* with `NumEntries`
 total entries, and *Secondary Entry Points* table with `NumSecEntryPoints`
@@ -99,8 +100,8 @@ entry is encoded. Input offsets implicitly start at zero.
 | `BBHash` | Optional, 8b | Basic block hash in input binary | BB |
 | `BBIdx`  | Optional, Delta, ULEB128 | Basic block index in input binary | BB |
 
-For hot fragments, the table omits the first `EqualElems` input offsets
-where the input offset equals output offset.
+The table omits the first `EqualElems` input offsets where the input offset
+equals output offset.
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target

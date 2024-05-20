@@ -23,6 +23,7 @@
 
 namespace mlir {
 #define GEN_PASS_DEF_SPARSEASSEMBLER
+#define GEN_PASS_DEF_SPARSEENCODINGPROPAGATION
 #define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
@@ -50,13 +51,22 @@ namespace {
 struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
   SparseAssembler() = default;
   SparseAssembler(const SparseAssembler &pass) = default;
+  SparseAssembler(bool dO) { directOut = dO; }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseAssembler(patterns);
+    populateSparseAssembler(patterns, directOut);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
+};
+
+struct SparseEncodingPropagation
+    : public impl::SparseEncodingPropagationBase<SparseEncodingPropagation> {
+  SparseEncodingPropagation() = default;
+  SparseEncodingPropagation(const SparseEncodingPropagation &pass) = default;
+
+  void runOnOperation() override {}
 };
 
 struct SparseReinterpretMap
@@ -395,6 +405,10 @@ struct StorageSpecifierToLLVMPass
 
 std::unique_ptr<Pass> mlir::createSparseAssembler() {
   return std::make_unique<SparseAssembler>();
+}
+
+std::unique_ptr<Pass> mlir::createSparseEncodingPropagationPass() {
+  return std::make_unique<SparseEncodingPropagation>();
 }
 
 std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
