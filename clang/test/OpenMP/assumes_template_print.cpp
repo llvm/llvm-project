@@ -28,12 +28,12 @@ struct S {
 // CHECK{LITERAL}:     void foo() [[omp::assume("ompx_global_assumption")]] {
 
 #pragma omp begin assumes no_openmp
-// CHECK{LITERAL}: void S_with_assumes_no_call() [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}: [[omp::assume("omp_no_openmp")]] void S_with_assumes_no_call() [[omp::assume("ompx_global_assumption")]] {
 void S_with_assumes_no_call() {
   S<int> s;
   s.a = 0;
 }
-// CHECK{LITERAL}: void S_with_assumes_call() [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}: [[omp::assume("omp_no_openmp")]] void S_with_assumes_call() [[omp::assume("ompx_global_assumption")]] {
 void S_with_assumes_call() {
   S<int> s;
   s.a = 0;
@@ -54,7 +54,7 @@ void S_without_assumes() {
 template <typename T>
 struct P {
 // CHECK: template <typename T> struct P {
-// CHECK{LITERAL}:    void foo() [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}:    [[omp::assume("ompx_global_assumption")]] void foo() {
   int a;
   void foo() {
     #pragma omp parallel
@@ -65,21 +65,21 @@ struct P {
 // TODO: Avoid the duplication here:
 
 // CHECK: template<> struct P<int> {
-// CHECK{LITERAL}:     void foo() [[omp::assume("ompx_global_assumption")]] [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}:     [[omp::assume("ompx_global_assumption")]] [[omp::assume("ompx_global_assumption")]] void foo() {
 
-// CHECK{LITERAL}: void P_without_assumes() [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}: [[omp::assume("ompx_global_assumption")]] void P_without_assumes() {
 void P_without_assumes() {
   P<int> p;
   p.foo();
 }
 
 #pragma omp begin assumes no_openmp
-// CHECK{LITERAL}: void P_with_assumes_no_call() [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}: [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] void P_with_assumes_no_call() {
 void P_with_assumes_no_call() {
   P<int> p;
   p.a = 0;
 }
-// CHECK{LITERAL}: void P_with_assumes_call() [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] {
+// CHECK{LITERAL}: [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] void P_with_assumes_call() {
 void P_with_assumes_call() {
   P<int> p;
   p.a = 0;

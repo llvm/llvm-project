@@ -38,7 +38,7 @@ void baz() {
 #pragma omp end assumes
 
 // CHECK{LITERAL}: void foo() [[omp::assume("omp_no_openmp_routines")]] [[omp::assume("omp_no_openmp")]]
-// CHECK{LITERAL}: void bar() [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines")]] [[omp::assume("omp_no_openmp")]]
-// CHECK{LITERAL}: void baz() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines")]] [[omp::assume("omp_no_openmp")]]
+// CHECK{LITERAL}: [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines")]] [[omp::assume("omp_no_openmp")]] void bar()
+// CHECK{LITERAL}: [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines")]] [[omp::assume("omp_no_openmp")]] void baz()
 
 #endif

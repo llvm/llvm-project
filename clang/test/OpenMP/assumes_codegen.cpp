@@ -71,37 +71,37 @@ int lambda_outer() {
 // AST-NEXT{LITERAL}: }
 // AST-NEXT{LITERAL}: class BAR {
 // AST-NEXT{LITERAL}: public:
-// AST-NEXT{LITERAL}:     BAR() [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] BAR() {
 // AST-NEXT{LITERAL}:     }
-// AST-NEXT{LITERAL}:     void bar1() [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void bar1() {
 // AST-NEXT{LITERAL}:     }
-// AST-NEXT{LITERAL}:     static void bar2() [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] static void bar2() {
 // AST-NEXT{LITERAL}:     }
 // AST-NEXT{LITERAL}: };
-// AST-NEXT{LITERAL}: void bar() [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_range_bar_only")]] [[omp::assume("ompx_range_bar_only_2")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void bar() {
 // AST-NEXT{LITERAL}:     BAR b;
 // AST-NEXT{LITERAL}: }
-// AST-NEXT{LITERAL}: void baz() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]];
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz();
 // AST-NEXT{LITERAL}: template <typename T> class BAZ {
 // AST-NEXT{LITERAL}: public:
-// AST-NEXT{LITERAL}:     BAZ<T>() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] BAZ<T>() {
 // AST-NEXT{LITERAL}:     }
-// AST-NEXT{LITERAL}:     void baz1() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz1() {
 // AST-NEXT{LITERAL}:     }
-// AST-NEXT{LITERAL}:     static void baz2() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] static void baz2() {
 // AST-NEXT{LITERAL}:     }
 // AST-NEXT{LITERAL}: };
 // AST-NEXT{LITERAL}: template<> class BAZ<float> {
 // AST-NEXT{LITERAL}: public:
-// AST-NEXT{LITERAL}:     BAZ() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] BAZ() {
 // AST-NEXT{LITERAL}:     }
-// AST-NEXT{LITERAL}:     void baz1() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]];
-// AST-NEXT{LITERAL}:     static void baz2() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]];
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz1();
+// AST-NEXT{LITERAL}:     [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] static void baz2();
 // AST-NEXT{LITERAL}: };
-// AST-NEXT{LITERAL}: void baz() [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_1234")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] void baz() {
 // AST-NEXT{LITERAL}:     BAZ<float> b;
 // AST-NEXT{LITERAL}: }
-// AST-NEXT{LITERAL}: int lambda_outer() [[omp::assume("ompx_lambda_assumption")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] {
+// AST-NEXT{LITERAL}: [[omp::assume("ompx_lambda_assumption")]] [[omp::assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses")]] [[omp::assume("omp_no_openmp")]] int lambda_outer() {
 // AST-NEXT{LITERAL}:     auto lambda_inner = []() {
 // AST-NEXT{LITERAL}:         return 42;
 // AST-NEXT{LITERAL}:     };
