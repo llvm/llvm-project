@@ -125,7 +125,7 @@ INTERCEPTOR(int, puts, const char *s) {
   return REAL(puts)(s);
 }
 
- // Concurrency
+// Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
