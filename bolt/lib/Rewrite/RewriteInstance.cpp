@@ -4789,7 +4789,6 @@ void RewriteInstance::updateELFSymbolTable(
       continue;
 
     Expected<StringRef> SymbolName = Symbol.getName(StringSection);
-    assert(SymbolName && "cannot get symbol name");
 
     const BinaryFunction *Function =
         BC->getBinaryFunctionAtAddress(Symbol.st_value);
@@ -4798,8 +4797,11 @@ void RewriteInstance::updateELFSymbolTable(
     if (Function && Symbol.getType() == ELF::STT_SECTION)
       Function = nullptr;
 
-    // Ignore input hot markers as function aliases – markers are handled
-    // separately.
+    // Ignore input hot markers as function aliases.
+    // If hot markers are treated as function aliases, we may create
+    // non-sensical __hot_start.cold symbols which would not have a parent
+    // when read by BOLT as we don't register them as function aliases
+    // (explicitly ignored in parsing symbol table in discoverFileObjects).
     if (Function &&
         (*SymbolName == "__hot_start" || *SymbolName == "__hot_end"))
       Function = nullptr;
