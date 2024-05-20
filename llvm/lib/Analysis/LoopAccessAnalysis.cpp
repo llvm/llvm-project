@@ -1977,8 +1977,13 @@ getDependenceDistanceStrideAndSize(
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
-  uint64_t TypeByteSizeA = ATy->isScalableTy() ? 0 : DL.getTypeAllocSize(ATy);
-  uint64_t TypeByteSizeB = BTy->isScalableTy() ? 0 : DL.getTypeAllocSize(BTy);
+  // Conservatively use size of 0. Users of the sizes already check and ignore the size if it is 0.
+  uint64_t TypeByteSizeA = 0;
+  uint64_t TypeByteSizeB = 0;
+  if (!ATy->isScalableTy() && !BTy->isScalableTy()) {
+     TypeByteSizeA = DL.getTypeAllocSize(ATy);
+     TypeByteSizeB = DL.getTypeAllocSize(BTy);
+  }
   // If either Src or Sink are loop invariant, check if Src + AccessSize <= Sink
   // (or vice versa). This is done by checking (Sink - (Src + AccessSize)) s>=
   // 0.
