@@ -4554,8 +4554,11 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         Entry->setLinkage(llvm::Function::ExternalLinkage);
     }
 
-    // Handle dropped DLL attributes.
-    if (D && !D->hasAttr<DLLImportAttr>() && !D->hasAttr<DLLExportAttr>() &&
+    // Handle dropped dllimport.
+    if (D &&
+        (Entry->getDLLStorageClass() ==
+         llvm::GlobalVariable::DLLImportStorageClass) &&
+        !D->hasAttr<DLLImportAttr>() &&
         !shouldMapVisibilityToDLLExport(cast_or_null<NamedDecl>(D))) {
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
       setDSOLocal(Entry);
@@ -4849,9 +4852,12 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
         Entry->setLinkage(llvm::Function::ExternalLinkage);
     }
 
-    // Handle dropped DLL attributes.
-    if (D && !D->hasAttr<DLLImportAttr>() && !D->hasAttr<DLLExportAttr>() &&
-        !shouldMapVisibilityToDLLExport(D))
+    // Handle dropped dllimport.
+    if (D &&
+        (Entry->getDLLStorageClass() ==
+         llvm::GlobalVariable::DLLImportStorageClass) &&
+        !D->hasAttr<DLLImportAttr>() &&
+        !shouldMapVisibilityToDLLExport(cast_or_null<NamedDecl>(D)))
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
 
     if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && D)
