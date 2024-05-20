@@ -9954,6 +9954,8 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
       return UsingOrError.takeError();
     return TemplateName(cast<UsingShadowDecl>(*UsingOrError));
   }
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("Unexpected DeducedTemplate");
   }
 
   llvm_unreachable("Invalid template name kind");

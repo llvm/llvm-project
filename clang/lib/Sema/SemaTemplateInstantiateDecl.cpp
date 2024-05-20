@@ -3919,10 +3919,10 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
   // Check that the template argument list is well-formed for this
   // class template.
   SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
-  if (SemaRef.CheckTemplateArgumentList(InstClassTemplate, D->getLocation(),
-                                        InstTemplateArgs, false,
-                                        SugaredConverted, CanonicalConverted,
-                                        /*UpdateArgsWithConversions=*/true))
+  if (SemaRef.CheckTemplateArgumentList(
+          InstClassTemplate, D->getLocation(), InstTemplateArgs,
+          /*DefaultArgs=*/{}, false, SugaredConverted, CanonicalConverted,
+          /*UpdateArgsWithConversions=*/true))
     return nullptr;
 
   // Figure out where to insert this class template explicit specialization
@@ -4027,10 +4027,10 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
 
   // Check that the template argument list is well-formed for this template.
   SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
-  if (SemaRef.CheckTemplateArgumentList(InstVarTemplate, D->getLocation(),
-                                        VarTemplateArgsInfo, false,
-                                        SugaredConverted, CanonicalConverted,
-                                        /*UpdateArgsWithConversions=*/true))
+  if (SemaRef.CheckTemplateArgumentList(
+          InstVarTemplate, D->getLocation(), VarTemplateArgsInfo,
+          /*DefaultArgs=*/{}, false, SugaredConverted, CanonicalConverted,
+          /*UpdateArgsWithConversions=*/true))
     return nullptr;
 
   // Check whether we've already seen a declaration of this specialization.
@@ -4295,6 +4295,7 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
   SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
   if (SemaRef.CheckTemplateArgumentList(
           ClassTemplate, PartialSpec->getLocation(), InstTemplateArgs,
+          /*DefaultArgs=*/{},
           /*PartialTemplateArgs=*/false, SugaredConverted, CanonicalConverted))
     return nullptr;
 
@@ -4406,9 +4407,10 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
   // Check that the template argument list is well-formed for this
   // class template.
   SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
-  if (SemaRef.CheckTemplateArgumentList(
-          VarTemplate, PartialSpec->getLocation(), InstTemplateArgs,
-          /*PartialTemplateArgs=*/false, SugaredConverted, CanonicalConverted))
+  if (SemaRef.CheckTemplateArgumentList(VarTemplate, PartialSpec->getLocation(),
+                                        InstTemplateArgs, /*DefaultArgs=*/{},
+                                        /*PartialTemplateArgs=*/false,
+                                        SugaredConverted, CanonicalConverted))
     return nullptr;
 
   // Check these arguments are valid for a template partial specialization.
