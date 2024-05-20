@@ -381,13 +381,21 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GCN-SDAG-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], s[0:1]
 ; GCN-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GCN-GISEL-LABEL: v_add_neg_f64:
-; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
-; GCN-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
-; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-GISEL-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], v[2:3]
-; GCN-GISEL-NEXT:    ; return to shader part epilog
+; GFX1210-GISEL-LABEL: v_add_neg_f64:
+; GFX1210-GISEL:       ; %bb.0:
+; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
+; GFX1210-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1210-GISEL-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], v[2:3]
+; GFX1210-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX1300-GISEL-LABEL: v_add_neg_f64:
+; GFX1300-GISEL:       ; %bb.0:
+; GFX1300-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX1300-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], v[2:3]
+; GFX1300-GISEL-NEXT:    ; return to shader part epilog
   %fneg = fsub double -0.0, %a
   %add = fadd double %fneg, 200.1
   %ret = bitcast double %add to <2 x float>
@@ -395,23 +403,41 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 }
 
 define amdgpu_ps <2 x float> @v_cndmask(double %a) {
-; GCN-SDAG-LABEL: v_cndmask:
-; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, 0x40632000
-; GCN-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
-; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v1, vcc_lo
-; GCN-SDAG-NEXT:    ; return to shader part epilog
+; GFX1210-SDAG-LABEL: v_cndmask:
+; GFX1210-SDAG:       ; %bb.0:
+; GFX1210-SDAG-NEXT:    v_mov_b32_e32 v2, 0x40632000
+; GFX1210-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
+; GFX1210-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
+; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1210-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v2, vcc_lo
+; GFX1210-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GCN-GISEL-LABEL: v_cndmask:
-; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0x40690333
-; GCN-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
-; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GCN-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 0x40632000, vcc_lo
-; GCN-GISEL-NEXT:    ; return to shader part epilog
+; GFX1210-GISEL-LABEL: v_cndmask:
+; GFX1210-GISEL:       ; %bb.0:
+; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v2, 0x40690333
+; GFX1210-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
+; GFX1210-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
+; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1210-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 0x40632000, vcc_lo
+; GFX1210-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX1300-SDAG-LABEL: v_cndmask:
+; GFX1300-SDAG:       ; %bb.0:
+; GFX1300-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
+; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v1, 0x40632000
+; GFX1300-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
+; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1300-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v1, vcc_lo
+; GFX1300-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX1300-GISEL-LABEL: v_cndmask:
+; GFX1300-GISEL:       ; %bb.0:
+; GFX1300-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, 0x40690333
+; GFX1300-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1300-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 0x40632000, vcc_lo
+; GFX1300-GISEL-NEXT:    ; return to shader part epilog
   %cmp = fcmp oeq double %a, 0.0
   %sel = select i1 %cmp, double 153.0, double 200.1
   %ret = bitcast double %sel to <2 x float>

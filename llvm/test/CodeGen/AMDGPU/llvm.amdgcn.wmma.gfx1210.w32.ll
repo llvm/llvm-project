@@ -868,8 +868,8 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfloat> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f32_16x16x64_bf16:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -989,8 +989,8 @@ bb:
 define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16(<16 x bfloat> %A, <32 x bfloat> %B, <8 x bfloat> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_bf16_16x16x64_bf16:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28
+; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
@@ -1095,8 +1095,8 @@ bb:
 define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfloat> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1194,8 +1194,8 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f32_16x16x128_fp8_fp8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1204,8 +1204,8 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -1220,8 +1220,8 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f32_16x16x128_fp8_bf8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1230,8 +1230,8 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -1246,8 +1246,8 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f32_16x16x128_bf8_fp8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1256,8 +1256,8 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -1272,8 +1272,8 @@ bb:
 define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f32_16x16x128_bf8_bf8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1282,8 +1282,8 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -1298,16 +1298,16 @@ bb:
 define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f16_16x16x128_fp8_fp8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28
+; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -1320,16 +1320,16 @@ bb:
 define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f16_16x16x128_fp8_bf8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28
+; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -1342,16 +1342,16 @@ bb:
 define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f16_16x16x128_bf8_fp8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28
+; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -1364,16 +1364,16 @@ bb:
 define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_f16_16x16x128_bf8_bf8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28
+; GFX1210-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
 ; GFX1210-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v28
+; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -1386,8 +1386,8 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8(<8 x i32> %A, <16 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_i32_16x16x128_iu8:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1396,8 +1396,8 @@ define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8(<8 x i32> %A, <16 x i32> %B
 ;
 ; GISEL-LABEL: test_swmmac_i32_16x16x128_iu8:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -1412,8 +1412,8 @@ bb:
 define amdgpu_ps void @test_swmmac_i32_16x16x256_iu4(<8 x i32> %A, <16 x i32> %B, <8 x i32> %C, i16 %Index, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_swmmac_i32_16x16x256_iu4:
 ; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32
+; GFX1210-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
 ; GFX1210-NEXT:    s_clause 0x1
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1210-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1422,8 +1422,8 @@ define amdgpu_ps void @test_swmmac_i32_16x16x256_iu4(<8 x i32> %A, <16 x i32> %B
 ;
 ; GISEL-LABEL: test_swmmac_i32_16x16x256_iu4:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32
+; GISEL-NEXT:    v_dual_mov_b32 v36, v33 :: v_dual_mov_b32 v37, v34
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16

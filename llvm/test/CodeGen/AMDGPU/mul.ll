@@ -4089,10 +4089,10 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-NEXT:    v_mad_nc_u64_u32 v[8:9], v4, v6, v[8:9]
 ; GFX1210-NEXT:    v_mov_b32_e32 v12, v11
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1210-NEXT:    v_mad_nc_u64_u32 v[14:15], v7, v2, v[12:13]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-NEXT:    v_mad_u32 v1, v5, v6, v9
-; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1210-NEXT:    v_mad_nc_u64_u32 v[14:15], v7, v2, v[12:13]
+; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-NEXT:    v_mad_u32 v9, v4, v7, v1
 ; GFX1210-NEXT:    v_dual_mov_b32 v12, v15 :: v_dual_mov_b32 v15, v13
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
