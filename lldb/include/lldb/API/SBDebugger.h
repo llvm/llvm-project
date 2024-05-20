@@ -330,12 +330,12 @@ public:
   /// Add a callback for when the debugger is destroyed. Return a token, which
   /// can be used to remove said callback. Multiple callbacks can be added by
   /// calling this function multiple times, and will be invoked in FIFO order.
-  lldb::destroy_callback_token_t
+  lldb::callback_token_t
   AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                      void *baton);
 
   /// Remove the specified callback. Return true if successful.
-  bool RemoveDestroyCallback(lldb::destroy_callback_token_t token);
+  bool RemoveDestroyCallback(lldb::callback_token_t token);
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use DispatchInput(const void *, size_t)",

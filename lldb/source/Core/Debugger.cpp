@@ -748,17 +748,17 @@ void Debugger::HandleDestroyCallback() {
   // added during this loop will be appended, invoked and then removed last.
   // Callbacks which are removed during this loop will not be invoked.
   while (true) {
-    DebuggerDestroyCallbackTuple callback;
+    DestroyCallbackInfo callback_info;
     {
       std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
       if (m_destroy_callbacks.empty())
         break;
       // Pop the first item in the list
-      callback = m_destroy_callbacks.front();
+      callback_info = m_destroy_callbacks.front();
       m_destroy_callbacks.erase(m_destroy_callbacks.begin());
     }
     // Call the destroy callback with user id and baton
-    std::get<1>(callback)(user_id, std::get<2>(callback));
+    callback_info.callback(user_id, callback_info.baton);
   }
 }
 
@@ -1442,23 +1442,23 @@ void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
   m_destroy_callbacks.clear();
-  const lldb::destroy_callback_token_t token = m_destroy_callback_next_token++;
+  const lldb::callback_token_t token = m_destroy_callback_next_token++;
   m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
 }
 
-lldb::destroy_callback_token_t Debugger::AddDestroyCallback(
+lldb::callback_token_t Debugger::AddDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
-  const lldb::destroy_callback_token_t token = m_destroy_callback_next_token++;
+  const lldb::callback_token_t token = m_destroy_callback_next_token++;
   m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
   return token;
 }
 
-bool Debugger::RemoveDestroyCallback(lldb::destroy_callback_token_t token) {
+bool Debugger::RemoveDestroyCallback(lldb::callback_token_t token) {
   std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
   for (auto it = m_destroy_callbacks.begin(); it != m_destroy_callbacks.end();
        ++it) {
-    if (std::get<0>(*it) == token) {
+    if (it->token == token) {
       m_destroy_callbacks.erase(it);
       return true;
     }
