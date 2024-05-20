@@ -386,7 +386,8 @@ struct TemporalProfTraceTy {
   /// partitioning function nodes used by BalancedPartitioning to generate a
   /// function order that reduces page faults during startup
   static void createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces,
-                                    std::vector<BPFunctionNode> &Nodes);
+                                    std::vector<BPFunctionNode> &Nodes,
+                                    bool RemoveOutlierUNs = true);
 };
 
 inline std::error_code make_error_code(instrprof_error E) {

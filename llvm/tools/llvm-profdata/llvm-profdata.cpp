@@ -440,11 +440,12 @@ cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
                                  cl::sub(ShowSubcommand));
 
 // Options specific to order subcommand.
-cl::opt<unsigned> NumTestTraces(
-    "num-test-traces", cl::init(0),
-    cl::desc("Keep aside <num-test-traces> traces when computing the function "
-             "order and instead use them to evaluate that order"),
-    cl::sub(OrderSubcommand));
+cl::opt<unsigned>
+    NumTestTraces("num-test-traces", cl::init(0),
+                  cl::desc("Keep aside the last <num-test-traces> traces in "
+                           "the profile when computing the function order and "
+                           "instead use them to evaluate that order"),
+                  cl::sub(OrderSubcommand));
 
 // We use this string to indicate that there are
 // multiple static functions map to the same name.

@@ -1003,7 +1003,8 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
 }
 
 void TemporalProfTraceTy::createBPFunctionNodes(
-    ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes) {
+    ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
+    bool RemoveOutlierUNs) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
   UtilityNodeT MaxUN = 0;
@@ -1033,16 +1034,18 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     IdToFirstUN.clear();
   }
 
-  DenseMap<UtilityNodeT, unsigned> UNFrequency;
-  for (auto &[Id, UNs] : IdToUNs)
-    for (auto &UN : UNs)
-      ++UNFrequency[UN];
-  // Filter out rare and common utility nodes to make BalancedPartitioning more
-  // effective.
-  for (auto &[Id, UNs] : IdToUNs)
-    llvm::erase_if(UNs, [&](auto &UN) {
-      return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
-    });
+  if (RemoveOutlierUNs) {
+    DenseMap<UtilityNodeT, unsigned> UNFrequency;
+    for (auto &[Id, UNs] : IdToUNs)
+      for (auto &UN : UNs)
+        ++UNFrequency[UN];
+    // Filter out utility nodes that are too infrequent or too prevalent to make
+    // BalancedPartitioning more effective.
+    for (auto &[Id, UNs] : IdToUNs)
+      llvm::erase_if(UNs, [&](auto &UN) {
+        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+      });
+  }
 
   for (auto &[Id, UNs] : IdToUNs)
     Nodes.emplace_back(Id, UNs);
