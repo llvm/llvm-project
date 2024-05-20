@@ -745,8 +745,8 @@ def is_binutils_lto_supported():
 
 
 def is_lld_lto_supported():
-    # We require LLD does support LTO, but we require it to be built with the
-    # latest changes to claim support. Otherwise older copies of LLD may not
+    # LLD does support LTO, but we require it to be built with the latest
+    # changes to claim support. Otherwise older copies of LLD may not
     # understand new bitcode versions.
     return os.path.exists(os.path.join(config.llvm_tools_dir, "lld"))
 
