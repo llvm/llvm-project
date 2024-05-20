@@ -770,6 +770,8 @@ private:
   typedef llvm::StringMap<uint64_t> CommandUsageMap;
   CommandUsageMap m_command_usages;
 
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this stream. Otherwise this stream is empty.
   StreamString m_transcript_stream;
 
   /// Contains a list of handled commands and their details. Each element in
@@ -778,6 +780,9 @@ private:
   /// - "output" (string): The output of the command. Empty ("") if no output.
   /// - "error" (string): The error of the command. Empty ("") if no error.
   /// - "seconds" (float): The time it took to execute the command.
+  ///
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this list. Otherwise this list is empty.
   StructuredData::Array m_transcript;
 };
 
