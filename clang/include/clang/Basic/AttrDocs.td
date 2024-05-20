@@ -2027,9 +2027,6 @@ Different optimisers are likely to react differently to the presence of
 this attribute; in some cases, adding ``assume`` may affect performance
 negatively. It should be used with parsimony and care.
 
-Note that `clang::assume` is a different attribute. Always write ``assume``
-without a namespace if you intend to use the standard C++ attribute.
-
 Example:
 
 .. code-block:: c++
