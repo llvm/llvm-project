@@ -1159,9 +1159,10 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
     case TTI::SK_ExtractSubvector:
     case TTI::SK_InsertSubvector: {
-      if (HasVOP3P && NumVectorElts == 2)
+      // Even aligned accesses are free
+      if (!(Index % 2))
         return 0;
-      // Insert/extract subvectors require only shifts / extract code to get the
+      // Insert/extract subvectors only require shifts / extract code to get the
       // relevant bits
       return alignTo(RequestedElts, 2) / 2;
     }
