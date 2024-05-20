@@ -7,34 +7,34 @@
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_2(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_2
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_2
 ; PRELOAD-1-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0:![0-9]+]]
 ; PRELOAD-1-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-1-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
 ; PRELOAD-1-NEXT:    ret void
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_2
 ; PRELOAD-3-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-3-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-3-NEXT:    ret void
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_2
 ; PRELOAD-8-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_2_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-8-NEXT:    ret void
@@ -47,15 +47,15 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_2(ptr addrspace(1) %i
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %out, ptr addrspace(1) %out1) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 16
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 24
-; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -64,13 +64,13 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %i
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4
 ; PRELOAD-1-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 16
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 24
-; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-1-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; PRELOAD-1-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -79,9 +79,9 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %i
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4
 ; PRELOAD-3-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT]], i64 24
-; PRELOAD-3-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0:![0-9]+]]
 ; PRELOAD-3-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-3-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-3-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -90,7 +90,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %i
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4
 ; PRELOAD-8-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -107,23 +107,23 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4(ptr addrspace(1) %i
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(1) %in3, ptr addrspace(1) %out, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_8
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]], ptr addrspace(1) [[IN3:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]], ptr addrspace(1) [[OUT2:%.*]], ptr addrspace(1) [[OUT3:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IN2_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 16
-; NO-PRELOAD-NEXT:    [[IN2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN2_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN2_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IN3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 24
-; NO-PRELOAD-NEXT:    [[IN3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 32
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 40
-; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT2_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 48
-; NO-PRELOAD-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 56
-; NO-PRELOAD-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    [[LOAD2:%.*]] = load i32, ptr addrspace(1) [[IN2_LOAD]], align 4
@@ -136,21 +136,21 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %i
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_8
 ; PRELOAD-1-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]], ptr addrspace(1) [[IN3:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]], ptr addrspace(1) [[OUT2:%.*]], ptr addrspace(1) [[OUT3:%.*]]) #[[ATTR0]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[IN2_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 16
-; PRELOAD-1-NEXT:    [[IN2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN2_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN2_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[IN3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 24
-; PRELOAD-1-NEXT:    [[IN3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 32
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 40
-; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT2_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 48
-; PRELOAD-1-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 56
-; PRELOAD-1-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-1-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; PRELOAD-1-NEXT:    [[LOAD2:%.*]] = load i32, ptr addrspace(1) [[IN2_LOAD]], align 4
@@ -163,17 +163,17 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %i
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_8
 ; PRELOAD-3-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[IN2:%.*]], ptr addrspace(1) [[IN3:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]], ptr addrspace(1) [[OUT2:%.*]], ptr addrspace(1) [[OUT3:%.*]]) #[[ATTR0]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[IN3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 24
-; PRELOAD-3-NEXT:    [[IN3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-3-NEXT:    [[IN3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 32
-; PRELOAD-3-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 40
-; PRELOAD-3-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[OUT2_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 48
-; PRELOAD-3-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT2_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT2_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[OUT3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 56
-; PRELOAD-3-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-3-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-3-NEXT:    [[LOAD2:%.*]] = load i32, ptr addrspace(1) [[IN2]], align 4
@@ -186,9 +186,9 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %i
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_8
 ; PRELOAD-8-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[IN2:%.*]], ptr addrspace(1) inreg [[IN3:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]], ptr addrspace(1) inreg [[OUT2:%.*]], ptr addrspace(1) inreg [[OUT3:%.*]]) #[[ATTR0]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[OUT3_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_8_KERNARG_SEGMENT]], i64 56
-; PRELOAD-8-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-8-NEXT:    [[OUT3_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT3_KERNARG_OFFSET]], align 8, !invariant.load [[META0:![0-9]+]]
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD2:%.*]] = load i32, ptr addrspace(1) [[IN2]], align 4
@@ -215,15 +215,15 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_8(ptr addrspace(1) %i
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %out1) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 16
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 24
-; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -232,13 +232,13 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr ad
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset
 ; PRELOAD-1-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 16
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT]], i64 24
-; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-1-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; PRELOAD-1-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -247,7 +247,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr ad
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset
 ; PRELOAD-3-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-3-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-3-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -256,7 +256,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr ad
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset
 ; PRELOAD-8-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -275,13 +275,13 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset(ptr ad
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence(ptr addrspace(1) inreg %in, ptr addrspace(1) %in1, ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %out1) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence
 ; NO-PRELOAD-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT]], i64 16
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT]], i64 24
-; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -290,13 +290,13 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_se
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence
 ; PRELOAD-1-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT]], i64 16
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT]], i64 24
-; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-1-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; PRELOAD-1-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -305,7 +305,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_se
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence
 ; PRELOAD-3-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-3-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-3-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -314,7 +314,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_se
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_inreg_offset_two_sequence
 ; PRELOAD-8-SAME: (ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_INREG_OFFSET_TWO_SEQUENCE_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(32) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-8-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -331,18 +331,18 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_inreg_offset_two_se
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg0, ptr addrspace(1) %in, ptr addrspace(1) %in1, ptr addrspace(1) %out, ptr addrspace(1) %out1) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_misaligned
 ; NO-PRELOAD-SAME: (i16 [[ARG0:%.*]], ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; NO-PRELOAD-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 16
-; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 24
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 32
-; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    [[EXT:%.*]] = zext i16 [[TMP2]] to i32
@@ -353,15 +353,15 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_misaligned
 ; PRELOAD-1-SAME: (i16 inreg [[ARG0:%.*]], ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 16
-; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 24
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 32
-; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN_LOAD]], align 4
 ; PRELOAD-1-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1_LOAD]], align 4
 ; PRELOAD-1-NEXT:    [[EXT:%.*]] = zext i16 [[ARG0]] to i32
@@ -372,11 +372,11 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_misaligned
 ; PRELOAD-3-SAME: (i16 inreg [[ARG0:%.*]], ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 24
-; PRELOAD-3-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT]], i64 32
-; PRELOAD-3-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 16, !invariant.load !0
+; PRELOAD-3-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; PRELOAD-3-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-3-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-3-NEXT:    [[EXT:%.*]] = zext i16 [[ARG0]] to i32
@@ -387,7 +387,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_misaligned
 ; PRELOAD-8-SAME: (i16 inreg [[ARG0:%.*]], ptr addrspace(1) inreg [[IN:%.*]], ptr addrspace(1) inreg [[IN1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) inreg [[OUT1:%.*]]) #[[ATTR0]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_MISALIGNED_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(40) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; PRELOAD-8-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[IN1]], align 4
 ; PRELOAD-8-NEXT:    [[EXT:%.*]] = zext i16 [[ARG0]] to i32
@@ -410,16 +410,16 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_misaligned(i16 %arg
 define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, i16 %arg1, ptr addrspace(1) %out) #0 {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_i16_i16
 ; NO-PRELOAD-SAME: (i16 [[ARG0:%.*]], i16 [[ARG1:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; NO-PRELOAD-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[ARG1_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[ARG1_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 16
 ; NO-PRELOAD-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT]], i64 8
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[EXT:%.*]] = zext i16 [[TMP2]] to i32
 ; NO-PRELOAD-NEXT:    [[EXT1:%.*]] = zext i16 [[TMP5]] to i32
 ; NO-PRELOAD-NEXT:    [[ADD:%.*]] = add i32 [[EXT]], [[EXT1]]
@@ -428,13 +428,13 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, 
 ;
 ; PRELOAD-1-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_i16_i16
 ; PRELOAD-1-SAME: (i16 inreg [[ARG0:%.*]], i16 [[ARG1:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-1-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-1-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT]], i64 0
-; PRELOAD-1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG1_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load !0
+; PRELOAD-1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG1_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
 ; PRELOAD-1-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; PRELOAD-1-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT]], i64 8
-; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load !0
+; PRELOAD-1-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
 ; PRELOAD-1-NEXT:    [[EXT:%.*]] = zext i16 [[ARG0]] to i32
 ; PRELOAD-1-NEXT:    [[EXT1:%.*]] = zext i16 [[TMP3]] to i32
 ; PRELOAD-1-NEXT:    [[ADD:%.*]] = add i32 [[EXT]], [[EXT1]]
@@ -443,7 +443,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, 
 ;
 ; PRELOAD-3-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_i16_i16
 ; PRELOAD-3-SAME: (i16 inreg [[ARG0:%.*]], i16 inreg [[ARG1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0]] {
-; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-3-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-3-NEXT:    [[EXT:%.*]] = zext i16 [[ARG0]] to i32
 ; PRELOAD-3-NEXT:    [[EXT1:%.*]] = zext i16 [[ARG1]] to i32
 ; PRELOAD-3-NEXT:    [[ADD:%.*]] = add i32 [[EXT]], [[EXT1]]
@@ -452,7 +452,7 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, 
 ;
 ; PRELOAD-8-LABEL: define {{[^@]+}}@test_preload_IR_lowering_kernel_4_i16_i16
 ; PRELOAD-8-SAME: (i16 inreg [[ARG0:%.*]], i16 inreg [[ARG1:%.*]], ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0]] {
-; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-8-NEXT:    [[TEST_PRELOAD_IR_LOWERING_KERNEL_4_I16_I16_KERNARG_SEGMENT:%.*]] = call align 16 dereferenceable(16) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-8-NEXT:    [[EXT:%.*]] = zext i16 [[ARG0]] to i32
 ; PRELOAD-8-NEXT:    [[EXT1:%.*]] = zext i16 [[ARG1]] to i32
 ; PRELOAD-8-NEXT:    [[ADD:%.*]] = add i32 [[EXT]], [[EXT1]]
