@@ -11,8 +11,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $x0 = MOVZXi 49370, 0
     ; CHECK-NEXT: renamable $x0 = MOVKXi $x0, 320, 16
-    ; CHECK-NEXT: renamable $x0 = MOVKXi $x0, 49370, 32
-    ; CHECK-NEXT: renamable $x0 = MOVKXi $x0, 320, 48
+    ; CHECK-NEXT: renamable $x0 = ORRXrs $x0, $x0, 32
     ; CHECK-NEXT: RET undef $lr, implicit $x0
     renamable $x0 = MOVi64imm 90284035103834330
     RET_ReallyLR implicit $x0
@@ -28,8 +27,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $x0 = MOVZXi 320, 0
     ; CHECK-NEXT: renamable $x0 = MOVKXi $x0, 49370, 16
-    ; CHECK-NEXT: renamable $x0 = MOVKXi $x0, 320, 32
-    ; CHECK-NEXT: renamable $x0 = MOVKXi $x0, 49370, 48
+    ; CHECK-NEXT: renamable $x0 = ORRXrs $x0, $x0, 32
     ; CHECK-NEXT: RET undef $lr, implicit $x0
     renamable $x0 = MOVi64imm -4550323095879417536
     RET_ReallyLR implicit $x0
