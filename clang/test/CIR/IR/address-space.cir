@@ -1,0 +1,11 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // CHECK: @test_addrspace_assembly_format(%arg0: !cir.ptr<!s32i>)
+  cir.func @test_addrspace_assembly_format(%arg0: !cir.ptr<!s32i, addrspace(0)>) {
+    cir.return
+  }
+}
