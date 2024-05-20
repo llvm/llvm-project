@@ -2374,12 +2374,11 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
   }
   case InjectedClassName: {
     CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)->getDecl();
-    if (Rec->isBeingDefined()) {
-      if (Def)
-        *Def = Rec;
-      return true;
-    }
-    return false;
+    if (!Rec->isBeingDefined())
+      return false;
+    if (Def)
+      *Def = Rec;
+    return true;
   }
   case ConstantArray:
   case VariableArray:
