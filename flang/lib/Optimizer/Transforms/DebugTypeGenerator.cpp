@@ -53,7 +53,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     auto intTy = mlir::IntegerType::get(context, 64);
     // FIXME: Only supporting lower bound of 1 at the moment. The
     // 'SequenceType' has information about the shape but not the shift. In
-    // cases, where the conversion originated during the processing of
+    // cases where the conversion originated during the processing of
     // 'DeclareOp', it may be possible to pass on this information. But the
     // type conversion should ideally be based on what information present in
     // the type class so that it works from everywhere (e.g. when it is part
