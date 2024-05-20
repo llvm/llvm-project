@@ -4826,11 +4826,20 @@ void RewriteInstance::updateELFSymbolTable(
         updateSymbolValue(*SymbolName);
         ++NumHotTextSymsUpdated;
       }
-      // Ignore input hot markers as function aliases.
-      // If hot markers are treated as function aliases, we may create
-      // non-sensical __hot_start.cold symbols which would not have a parent
-      // when read by BOLT as we don't register them as function aliases
-      // (explicitly ignored in parsing symbol table in discoverFileObjects).
+      goto registerSymbol;
+    }
+
+    if (*SymbolName == "__hot_data_start" || *SymbolName == "__hot_data_end") {
+      if (opts::HotData) {
+        updateSymbolValue(*SymbolName);
+        ++NumHotDataSymsUpdated;
+      }
+      goto registerSymbol;
+    }
+
+    if (*SymbolName == "_end") {
+      if (NextAvailableAddress > Symbol.st_value)
+        updateSymbolValue(*SymbolName, NextAvailableAddress);
       goto registerSymbol;
     }
 
@@ -4930,17 +4939,7 @@ void RewriteInstance::updateELFSymbolTable(
       }
     }
 
-    // Handle special symbols based on their name.
-    if (opts::HotData && (*SymbolName == "__hot_data_start" ||
-                          *SymbolName == "__hot_data_end")) {
-      updateSymbolValue(*SymbolName);
-      ++NumHotDataSymsUpdated;
-    }
-
-    if (*SymbolName == "_end" && NextAvailableAddress > Symbol.st_value)
-      updateSymbolValue(*SymbolName, NextAvailableAddress);
-
-registerSymbol:
+  registerSymbol:
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *
                 sizeof(ELFSymTy),
