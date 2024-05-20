@@ -390,9 +390,8 @@ class GlobalsImporter final {
         // Only update stat and exports if we haven't already imported this
         // variable.
         if (!Inserted) {
-          // FIXME: Introduce a wrapper struct around ImportType, and provide
-          // an `updateType` method for better readability, just like how we
-          // update the hotness of a call edge.
+          // Set the value to 'std::min(existing-value, new-value)' to make
+          // sure a definition takes precedence over a declaration.
           Iter->second = std::min(GlobalValueSummary::Definition, Iter->second);
           break;
         }

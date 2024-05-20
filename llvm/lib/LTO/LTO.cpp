@@ -166,12 +166,7 @@ void llvm::computeLTOCacheKey(
         std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
 
   // Sort the export list elements GUIDs.
-  llvm::sort(ExportsGUID, [](const std::pair<uint64_t, uint8_t> &LHS,
-                             const std::pair<uint64_t, uint8_t> &RHS) {
-    if (LHS.first != RHS.first)
-      return LHS.first < RHS.first;
-    return LHS.second < RHS.second;
-  });
+  llvm::sort(ExportsGUID);
   for (auto [GUID, ExportType] : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
@@ -218,7 +213,7 @@ void llvm::computeLTOCacheKey(
     for (auto &[Fn, ImportType] : Entry.getFunctions())
       ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
     llvm::sort(ImportedGUIDs);
-    for (auto &[GUID, Type]: ImportedGUIDs) {
+    for (auto &[GUID, Type] : ImportedGUIDs) {
       AddUint64(GUID);
       AddUint8(Type);
     }
