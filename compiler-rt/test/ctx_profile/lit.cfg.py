@@ -31,5 +31,5 @@ config.test_source_root = os.path.dirname(__file__)
 config.suffixes = [".c", ".cpp", ".test"]
 
 config.substitutions.append(
-    ("%clangxx ", " ".join([config.clang] + config.cxx_mode_flags) + " ")
+    ("%clangxx ", " ".join([config.clang] + config.cxx_mode_flags) + " -ldl -lpthread ")
 )

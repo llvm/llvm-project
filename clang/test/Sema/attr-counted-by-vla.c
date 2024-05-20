@@ -173,21 +173,24 @@ struct has_annotated_VLA {
 
 struct buffer_of_structs_with_unnannotated_vla {
   int count;
-  // expected-error@+1{{'counted_by' cannot be applied to an array with element of unknown size because 'struct has_unannotated_VLA' is a struct type with a flexible array member}}
+  // Treating this as a warning is a temporary fix for existing attribute adopters. It **SHOULD BE AN ERROR**.
+  // expected-warning@+1{{'counted_by' should not be applied to an array with element of unknown size because 'struct has_unannotated_VLA' is a struct type with a flexible array member. This will be an error in a future compiler version}}
   struct has_unannotated_VLA Arr[] __counted_by(count);
 };
 
 
 struct buffer_of_structs_with_annotated_vla {
   int count;
-  // expected-error@+1{{'counted_by' cannot be applied to an array with element of unknown size because 'struct has_annotated_VLA' is a struct type with a flexible array member}}
+  // Treating this as a warning is a temporary fix for existing attribute adopters. It **SHOULD BE AN ERROR**.
+  // expected-warning@+1{{'counted_by' should not be applied to an array with element of unknown size because 'struct has_annotated_VLA' is a struct type with a flexible array member. This will be an error in a future compiler version}}
   struct has_annotated_VLA Arr[] __counted_by(count);
 };
 
 struct buffer_of_const_structs_with_annotated_vla {
   int count;
+  // Treating this as a warning is a temporary fix for existing attribute adopters. It **SHOULD BE AN ERROR**.
   // Make sure the `const` qualifier is printed when printing the element type.
-  // expected-error@+1{{'counted_by' cannot be applied to an array with element of unknown size because 'const struct has_annotated_VLA' is a struct type with a flexible array member}}
+  // expected-warning@+1{{'counted_by' should not be applied to an array with element of unknown size because 'const struct has_annotated_VLA' is a struct type with a flexible array member. This will be an error in a future compiler version}}
   const struct has_annotated_VLA Arr[] __counted_by(count);
 };
 
