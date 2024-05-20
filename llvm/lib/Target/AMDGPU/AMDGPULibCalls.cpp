@@ -1156,25 +1156,26 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
 bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
                                 const FuncInfo &FInfo) {
-  // skip vector function
-  if (getVecSize(FInfo) != 1)
-    return false;
-
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
 
-  ConstantInt *CINT = dyn_cast<ConstantInt>(opr1);
-  if (!CINT) {
+  const APInt *CINT = nullptr;
+  if (!match(opr1, m_APIntAllowPoison(CINT)))
     return false;
-  }
+
+  Function *Parent = B.GetInsertBlock()->getParent();
+
   int ci_opr1 = (int)CINT->getSExtValue();
-  if (ci_opr1 == 1) {  // rootn(x, 1) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+  if (ci_opr1 == 1 && !Parent->hasFnAttribute(Attribute::StrictFP)) {
+    // rootn(x, 1) = x
+    //
+    // TODO: Insert constrained canonicalize for strictfp case.
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << '\n');
     replaceCall(FPOp, opr0);
     return true;
   }
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = Parent->getParent();
   if (ci_opr1 == 2) { // rootn(x, 2) = sqrt(x)
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {

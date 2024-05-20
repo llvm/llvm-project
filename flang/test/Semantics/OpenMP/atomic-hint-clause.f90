@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags 
