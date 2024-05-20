@@ -414,7 +414,14 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   // a diagnostic every time it is called because the problem is in the
   // definition of the derived type, not at the call site.
   //
-  // FIXME: Move this check to where we instantiate the method?
+  // FIXME: Move this check to where we instantiate the method? This should
+  // be possible, but the naive approach of just marking the method as invalid
+  // leads to us emitting more diagnostics than we should have to for this case
+  // (1 error here *and* 1 error about there being no matching overload at the
+  // call site). It might be possible to avoid that by also checking if there
+  // is an empty cast path for the method stored in the context (signalling that
+  // we've already diagnosed it) and then just not building the call, but that
+  // doesn't really seem any simpler than diagnosing it at the call site...
   if (auto It = Context.LambdaCastPaths.find(Method);
       It != Context.LambdaCastPaths.end())
     return It->second.empty();
