@@ -3719,10 +3719,9 @@ private:
     bool rhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.rhs);
 
     auto getRefIfLoaded = [](mlir::Value val) -> mlir::Value {
-      if (mlir::isa_and_nonnull<fir::LoadOp>(val.getDefiningOp())) {
-        auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp());
+      if (auto loadOp =
+              mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
         return loadOp.getMemref();
-      }
       return val;
     };
 
