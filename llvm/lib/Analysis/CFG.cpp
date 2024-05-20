@@ -137,11 +137,12 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
                             const DominatorTree *DT, const LoopInfo *LI) {
   // When a stop block is unreachable, it's dominated from everywhere,
   // regardless of whether there's a path between the two blocks.
-  SmallPtrSet<const BasicBlock *, 2> StopBBReachable;
   if (DT) {
     for (auto *BB : StopSet) {
-      if (DT->isReachableFromEntry(BB))
-        StopBBReachable.insert(BB);
+      if (DT->isReachableFromEntry(BB)) {
+        DT = nullptr;
+        break;
+      }
     }
   }
 
@@ -182,7 +183,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       continue;
     if (DT) {
       if (llvm::any_of(StopSet, [&](const BasicBlock *StopBB) {
-            return StopBBReachable.contains(BB) && DT->dominates(BB, StopBB);
+            return DT->dominates(BB, StopBB);
           }))
         return true;
     }
