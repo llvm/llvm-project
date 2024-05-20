@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! Tests for C1128 and F'2023 C1130:
+! Tests for F'2023 C1130:
 ! A variable-name that appears in a LOCAL or LOCAL_INIT locality-spec shall not
 ! have the ALLOCATABLE; INTENT (IN); or OPTIONAL attribute; shall not be of
 ! finalizable type; shall not be a nonpointer polymorphic dummy argument; and
