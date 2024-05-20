@@ -60,10 +60,10 @@
 ; RUN: opt < %t/b-LTO.ll -passes="embed-bitcode<thinlto;emit-summary>" | llc --relocation-model=pic --filetype=obj -o %t/b-fat-pic.o
 ; RUN: llvm-readobj -S %t/b-fat-pic.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
 
-; RUN: llvm-ar rcs %t/fat.archive %t/a-fat-pic.o %t/b-fat-pic.o
+; RUN: llvm-ar rcs %t/fat.pic.archive %t/a-fat-pic.o %t/b-fat-pic.o
 ; RUN: llvm-readobj -S %t/fat.pic.archive | FileCheck --check-prefix=HAS_LLVM_LTO %s
 
-; RUN: ld.lld --whole-archive %t/fat.pic.archive -r -o %t/fat-relocatable.o
+; RUN: ld.lld --whole-archive %t/fat.pic.archive -r -o %t/fat-pic-relocatable.o
 ; RUN: llvm-readobj -S %t/fat-pic-relocatable.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
 
 ; HAS_LLVM_LTO: Name: .llvm.lto
