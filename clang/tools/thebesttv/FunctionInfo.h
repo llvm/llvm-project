@@ -46,6 +46,8 @@ struct FunctionInfo {
 
   private:
     void buildStmtBlockPairs() {
+        // cfg->begin() & cfg->end() 返回的 Block ID 是递增的
+        // CFG 中的 succ 的 ID 更小，对应也就是先访问 succ 再 pred
         for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
             const CFGBlock &B = **BI;
 

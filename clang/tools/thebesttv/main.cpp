@@ -98,7 +98,13 @@ struct VarLocResult {
 };
 
 /**
+ * isStmt: 匹配语句或变量（目前 source、stmt、sink 都当作语句处理）
+ *
  * requireExact: 只对路径有效，表示是否需要精确匹配
+ *
+ * succFirst：在 CFG 中，对于语句 `p = foo()`，`foo()` 会在 pred，`p = foo()`
+ * 会在 succ。如果想进入函数，需要优先访问 pred。对于 input.json 的 stmt
+ * 类型，需要优先进入函数。但 source 和 sink 则不需要。
  */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             int line, int column, bool isStmt,
