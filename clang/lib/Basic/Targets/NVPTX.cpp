@@ -61,6 +61,10 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   NoAsmVariants = true;
   GPU = CudaArch::UNUSED;
 
+  // PTX supports f16 as a fundamental type.
+  HasLegalHalfType = true;
+  HasFloat16 = true;
+
   if (TargetPointerWidth == 32)
     resetDataLayout("e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
   else if (Opts.NVPTXUseShortPointers)
@@ -235,7 +239,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "210";
       case CudaArch::SM_30:
         return "300";
-      case CudaArch::SM_32:
+      case CudaArch::SM_32_:
         return "320";
       case CudaArch::SM_35:
         return "350";

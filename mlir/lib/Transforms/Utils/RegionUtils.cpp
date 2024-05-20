@@ -159,9 +159,9 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
     rewriter.replaceUsesWithIf(capturedVal, arg, replaceIfFn);
   }
   rewriter.setInsertionPointToStart(newEntryBlock);
-  for (auto clonedOp : clonedOperations) {
+  for (auto *clonedOp : clonedOperations) {
     Operation *newOp = rewriter.clone(*clonedOp, map);
-    rewriter.replaceOpWithIf(clonedOp, newOp->getResults(), replaceIfFn);
+    rewriter.replaceOpUsesWithIf(clonedOp, newOp->getResults(), replaceIfFn);
   }
   rewriter.mergeBlocks(
       entryBlock, newEntryBlock,
@@ -837,7 +837,7 @@ LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
                  mergedIdenticalBlocks);
 }
 
-SetVector<Block *> mlir::getTopologicallySortedBlocks(Region &region) {
+SetVector<Block *> mlir::getBlocksSortedByDominance(Region &region) {
   // For each block that has not been visited yet (i.e. that has no
   // predecessors), add it to the list as well as its successors.
   SetVector<Block *> blocks;

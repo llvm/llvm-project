@@ -361,35 +361,39 @@ typedef enum {
 } LLVMAtomicOrdering;
 
 typedef enum {
-    LLVMAtomicRMWBinOpXchg, /**< Set the new value and return the one old */
-    LLVMAtomicRMWBinOpAdd, /**< Add a value and return the old one */
-    LLVMAtomicRMWBinOpSub, /**< Subtract a value and return the old one */
-    LLVMAtomicRMWBinOpAnd, /**< And a value and return the old one */
-    LLVMAtomicRMWBinOpNand, /**< Not-And a value and return the old one */
-    LLVMAtomicRMWBinOpOr, /**< OR a value and return the old one */
-    LLVMAtomicRMWBinOpXor, /**< Xor a value and return the old one */
-    LLVMAtomicRMWBinOpMax, /**< Sets the value if it's greater than the
-                             original using a signed comparison and return
-                             the old one */
-    LLVMAtomicRMWBinOpMin, /**< Sets the value if it's Smaller than the
-                             original using a signed comparison and return
-                             the old one */
-    LLVMAtomicRMWBinOpUMax, /**< Sets the value if it's greater than the
-                             original using an unsigned comparison and return
-                             the old one */
-    LLVMAtomicRMWBinOpUMin, /**< Sets the value if it's greater than the
-                              original using an unsigned comparison and return
-                              the old one */
-    LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
-                              old one */
-    LLVMAtomicRMWBinOpFSub, /**< Subtract a floating point value and return the
+  LLVMAtomicRMWBinOpXchg, /**< Set the new value and return the one old */
+  LLVMAtomicRMWBinOpAdd,  /**< Add a value and return the old one */
+  LLVMAtomicRMWBinOpSub,  /**< Subtract a value and return the old one */
+  LLVMAtomicRMWBinOpAnd,  /**< And a value and return the old one */
+  LLVMAtomicRMWBinOpNand, /**< Not-And a value and return the old one */
+  LLVMAtomicRMWBinOpOr,   /**< OR a value and return the old one */
+  LLVMAtomicRMWBinOpXor,  /**< Xor a value and return the old one */
+  LLVMAtomicRMWBinOpMax,  /**< Sets the value if it's greater than the
+                            original using a signed comparison and return
+                            the old one */
+  LLVMAtomicRMWBinOpMin,  /**< Sets the value if it's Smaller than the
+                            original using a signed comparison and return
+                            the old one */
+  LLVMAtomicRMWBinOpUMax, /**< Sets the value if it's greater than the
+                           original using an unsigned comparison and return
+                           the old one */
+  LLVMAtomicRMWBinOpUMin, /**< Sets the value if it's greater than the
+                            original using an unsigned comparison and return
+                            the old one */
+  LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
                             old one */
-    LLVMAtomicRMWBinOpFMax, /**< Sets the value if it's greater than the
-                             original using an floating point comparison and
-                             return the old one */
-    LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
-                             original using an floating point comparison and
-                             return the old one */
+  LLVMAtomicRMWBinOpFSub, /**< Subtract a floating point value and return the
+                          old one */
+  LLVMAtomicRMWBinOpFMax, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpUIncWrap, /**< Increments the value, wrapping back to zero
+                               when incremented above input value */
+  LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
+                               the input value when decremented below zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -670,6 +674,18 @@ LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
 LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A);
 
 /**
+ * Create a ConstantRange attribute.
+ *
+ * LowerWords and UpperWords need to be NumBits divided by 64 rounded up
+ * elements long.
+ */
+LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
+                                                  unsigned KindID,
+                                                  unsigned NumBits,
+                                                  const uint64_t LowerWords[],
+                                                  const uint64_t UpperWords[]);
+
+/**
  * Create a string attribute.
  */
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
@@ -743,6 +759,24 @@ LLVMModuleRef LLVMCloneModule(LLVMModuleRef M);
  * leaked.
  */
 void LLVMDisposeModule(LLVMModuleRef M);
+
+/**
+ * Soon to be deprecated.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * Returns true if the module is in the new debug info mode which uses
+ * non-instruction debug records instead of debug intrinsics for variable
+ * location tracking.
+ */
+LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M);
+
+/**
+ * Soon to be deprecated.
+ * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * Convert module into desired debug info format.
+ */
+void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat);
 
 /**
  * Obtain the identifier of a module.
@@ -1849,6 +1883,14 @@ void LLVMDumpValue(LLVMValueRef Val);
 char *LLVMPrintValueToString(LLVMValueRef Val);
 
 /**
+ * Return a string representation of the DbgRecord. Use
+ * LLVMDisposeMessage to free the string.
+ *
+ * @see llvm::DbgRecord::print()
+ */
+char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record);
+
+/**
  * Replace all uses of a value with another one.
  *
  * @see llvm::Value::replaceAllUsesWith()
@@ -2165,10 +2207,21 @@ double LLVMConstRealGetDouble(LLVMValueRef ConstantVal, LLVMBool *losesInfo);
 /**
  * Create a ConstantDataSequential and initialize it with a string.
  *
+ * @deprecated LLVMConstStringInContext is deprecated in favor of the API
+ * accurate LLVMConstStringInContext2
  * @see llvm::ConstantDataArray::getString()
  */
 LLVMValueRef LLVMConstStringInContext(LLVMContextRef C, const char *Str,
                                       unsigned Length, LLVMBool DontNullTerminate);
+
+/**
+ * Create a ConstantDataSequential and initialize it with a string.
+ *
+ * @see llvm::ConstantDataArray::getString()
+ */
+LLVMValueRef LLVMConstStringInContext2(LLVMContextRef C, const char *Str,
+                                       size_t Length,
+                                       LLVMBool DontNullTerminate);
 
 /**
  * Create a ConstantDataSequential with string content in the global context.
@@ -2287,7 +2340,9 @@ LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty);
 LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty);
 LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal);
 LLVMValueRef LLVMConstNSWNeg(LLVMValueRef ConstantVal);
-LLVMValueRef LLVMConstNUWNeg(LLVMValueRef ConstantVal);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstNUWNeg(LLVMValueRef ConstantVal),
+    "Use LLVMConstNull instead.");
 LLVMValueRef LLVMConstNot(LLVMValueRef ConstantVal);
 LLVMValueRef LLVMConstAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
@@ -2327,6 +2382,16 @@ LLVMValueRef LLVMConstShuffleVector(LLVMValueRef VectorAConstant,
                                     LLVMValueRef VectorBConstant,
                                     LLVMValueRef MaskConstant);
 LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB);
+
+/**
+ * Gets the function associated with a given BlockAddress constant value.
+ */
+LLVMValueRef LLVMGetBlockAddressFunction(LLVMValueRef BlockAddr);
+
+/**
+ * Gets the basic block associated with a given BlockAddress constant value.
+ */
+LLVMBasicBlockRef LLVMGetBlockAddressBasicBlock(LLVMValueRef BlockAddr);
 
 /** Deprecated: Use LLVMGetInlineAsm instead. */
 LLVMValueRef LLVMConstInlineAsm(LLVMTypeRef Ty,
@@ -2708,6 +2773,44 @@ const char *LLVMGetGC(LLVMValueRef Fn);
  * @see llvm::Function::setGC()
  */
 void LLVMSetGC(LLVMValueRef Fn, const char *Name);
+
+/**
+ * Gets the prefix data associated with a function. Only valid on functions, and
+ * only if LLVMHasPrefixData returns true.
+ * See https://llvm.org/docs/LangRef.html#prefix-data
+ */
+LLVMValueRef LLVMGetPrefixData(LLVMValueRef Fn);
+
+/**
+ * Check if a given function has prefix data. Only valid on functions.
+ * See https://llvm.org/docs/LangRef.html#prefix-data
+ */
+LLVMBool LLVMHasPrefixData(LLVMValueRef Fn);
+
+/**
+ * Sets the prefix data for the function. Only valid on functions.
+ * See https://llvm.org/docs/LangRef.html#prefix-data
+ */
+void LLVMSetPrefixData(LLVMValueRef Fn, LLVMValueRef prefixData);
+
+/**
+ * Gets the prologue data associated with a function. Only valid on functions,
+ * and only if LLVMHasPrologueData returns true.
+ * See https://llvm.org/docs/LangRef.html#prologue-data
+ */
+LLVMValueRef LLVMGetPrologueData(LLVMValueRef Fn);
+
+/**
+ * Check if a given function has prologue data. Only valid on functions.
+ * See https://llvm.org/docs/LangRef.html#prologue-data
+ */
+LLVMBool LLVMHasPrologueData(LLVMValueRef Fn);
+
+/**
+ * Sets the prologue data for the function. Only valid on functions.
+ * See https://llvm.org/docs/LangRef.html#prologue-data
+ */
+void LLVMSetPrologueData(LLVMValueRef Fn, LLVMValueRef prologueData);
 
 /**
  * Add an attribute to a function.
@@ -3635,6 +3738,28 @@ void LLVMSetNormalDest(LLVMValueRef InvokeInst, LLVMBasicBlockRef B);
 void LLVMSetUnwindDest(LLVMValueRef InvokeInst, LLVMBasicBlockRef B);
 
 /**
+ * Get the default destination of a CallBr instruction.
+ *
+ * @see llvm::CallBrInst::getDefaultDest()
+ */
+LLVMBasicBlockRef LLVMGetCallBrDefaultDest(LLVMValueRef CallBr);
+
+/**
+ * Get the number of indirect destinations of a CallBr instruction.
+ *
+ * @see llvm::CallBrInst::getNumIndirectDests()
+
+ */
+unsigned LLVMGetCallBrNumIndirectDests(LLVMValueRef CallBr);
+
+/**
+ * Get the indirect destination of a CallBr instruction at the given index.
+ *
+ * @see llvm::CallBrInst::getIndirectDest()
+ */
+LLVMBasicBlockRef LLVMGetCallBrIndirectDest(LLVMValueRef CallBr, unsigned Idx);
+
+/**
  * @}
  */
 
@@ -3920,6 +4045,12 @@ LLVMValueRef LLVMBuildSwitch(LLVMBuilderRef, LLVMValueRef V,
                              LLVMBasicBlockRef Else, unsigned NumCases);
 LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
                                  unsigned NumDests);
+LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
+                             LLVMBasicBlockRef DefaultDest,
+                             LLVMBasicBlockRef *IndirectDests,
+                             unsigned NumIndirectDests, LLVMValueRef *Args,
+                             unsigned NumArgs, LLVMOperandBundleRef *Bundles,
+                             unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
@@ -4075,8 +4206,10 @@ LLVMValueRef LLVMBuildBinOp(LLVMBuilderRef B, LLVMOpcode Op,
 LLVMValueRef LLVMBuildNeg(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildNSWNeg(LLVMBuilderRef B, LLVMValueRef V,
                              const char *Name);
-LLVMValueRef LLVMBuildNUWNeg(LLVMBuilderRef B, LLVMValueRef V,
-                             const char *Name);
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMValueRef LLVMBuildNUWNeg(LLVMBuilderRef B,
+                                                         LLVMValueRef V,
+                                                         const char *Name),
+                            "Use LLVMBuildNeg + LLVMSetNUW instead.");
 LLVMValueRef LLVMBuildFNeg(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildNot(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 

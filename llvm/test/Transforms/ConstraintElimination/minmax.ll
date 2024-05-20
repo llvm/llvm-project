@@ -601,6 +601,123 @@ else:
   ret i32 -1
 }
 
+define i64 @pr82271(i32 %a, i32 %b){
+; CHECK-LABEL: define i64 @pr82271
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    ret i64 [[SB]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sa = sext i32 %a to i64
+  %sb = sext i32 %b to i64
+  %add = add nsw i64 %sa, 1
+  %smax = call i64 @llvm.smax.i64(i64 %sb, i64 %add)
+  ret i64 %smax
+
+else:
+  ret i64 0
+}
+
+define i64 @pr82271_sext_zext_nneg(i32 %a, i32 %b){
+; CHECK-LABEL: define i64 @pr82271_sext_zext_nneg
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[SB:%.*]] = zext nneg i32 [[B]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    ret i64 [[SB]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sa = sext i32 %a to i64
+  %sb = zext nneg i32 %b to i64
+  %add = add nsw i64 %sa, 1
+  %smax = call i64 @llvm.smax.i64(i64 %sb, i64 %add)
+  ret i64 %smax
+
+else:
+  ret i64 0
+}
+
+define i64 @pr82271_zext_nneg(i32 %a, i32 %b){
+; CHECK-LABEL: define i64 @pr82271_zext_nneg
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SA:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[SB:%.*]] = zext nneg i32 [[B]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    ret i64 [[SB]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sa = zext nneg i32 %a to i64
+  %sb = zext nneg i32 %b to i64
+  %add = add nsw i64 %sa, 1
+  %smax = call i64 @llvm.smax.i64(i64 %sb, i64 %add)
+  ret i64 %smax
+
+else:
+  ret i64 0
+}
+
+define i64 @pr82271_zext(i32 %a, i32 %b){
+; CHECK-LABEL: define i64 @pr82271_zext
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SA:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[SB:%.*]] = zext i32 [[B]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SB]], i64 [[ADD]])
+; CHECK-NEXT:    ret i64 [[SMAX]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sa = zext i32 %a to i64
+  %sb = zext i32 %b to i64
+  %add = add nsw i64 %sa, 1
+  %smax = call i64 @llvm.smax.i64(i64 %sb, i64 %add)
+  ret i64 %smax
+
+else:
+  ret i64 0
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)

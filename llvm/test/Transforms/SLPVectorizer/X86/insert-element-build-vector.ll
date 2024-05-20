@@ -104,8 +104,10 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; THRESHOLD-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[S3]], i32 3
 ; THRESHOLD-NEXT:    [[Q0:%.*]] = extractelement <4 x float> [[RD]], i32 0
 ; THRESHOLD-NEXT:    [[Q1:%.*]] = extractelement <4 x float> [[RD]], i32 1
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[RD]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; THRESHOLD-NEXT:    [[Q2:%.*]] = extractelement <4 x float> [[RD]], i32 2
 ; THRESHOLD-NEXT:    [[Q3:%.*]] = extractelement <4 x float> [[RD]], i32 3
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[RD]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; THRESHOLD-NEXT:    [[Q4:%.*]] = fadd float [[Q0]], [[Q1]]
 ; THRESHOLD-NEXT:    [[Q5:%.*]] = fadd float [[Q2]], [[Q3]]
 ; THRESHOLD-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]

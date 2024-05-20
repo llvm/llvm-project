@@ -14,16 +14,12 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 
-#include <cstdint>
-
-#include "llvm/ADT/ArrayRef.h"
-
 namespace llvm {
+template <typename T> class ArrayRef;
 class Constant;
 class CallBase;
 class CastInst;
 class Function;
-class GlobalVariable;
 class Instruction;
 class MDNode;
 class Value;
@@ -66,24 +62,15 @@ CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
 ///
 /// This function is expected to be used on virtual calls (a subset of indirect
 /// calls). \p VPtr is the virtual table address stored in the objects, and
-/// \p AddressPoints contains address points of vtables to be compared with.
+/// \p AddressPoints contains vtable address points. A vtable address point is
+/// a location inside the vtable that's referenced by vpointer in C++ objects.
 ///
-/// It's the responsibility of caller to guarantee the transformation
-/// correctness (by specifying \p VPtr and \p AddressPoints properly).
-///
-/// This function doesn't sink the address-calculation instructions of indirect
-/// callee to the indirect call fallback. The subsequent passes (e.g.
-/// inst-combine) should sink them if possible and handle the sink of debug
-/// intrinsics together.
+/// TODO: sink the address-calculation instructions of indirect callee to the
+/// indirect call fallback after transformation.
 CallBase &promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
                                    Function *Callee,
                                    ArrayRef<Constant *> AddressPoints,
                                    MDNode *BranchWeights);
-
-/// Returns a constant representing the vtable's address point specified by the
-/// offset. Caller should ensure \p AddressPointOffset is valid.
-Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
-                                      uint32_t AddressPointOffset);
 
 /// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
 /// success.
@@ -107,10 +94,6 @@ Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
 ///     i8* bitcast (void (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
 ///
 bool tryPromoteCall(CallBase &CB);
-
-/// Predicate and clone the given call site using the given condition.
-CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
-                                  MDNode *BranchWeights);
 
 /// Predicate and clone the given call site.
 ///

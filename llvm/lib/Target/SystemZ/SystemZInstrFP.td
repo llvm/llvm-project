@@ -129,8 +129,8 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 //===----------------------------------------------------------------------===//
 
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
-  defm LE : UnaryRXPair<"le", 0x78, 0xED64, load, FP32, 4>;
-  defm LD : UnaryRXPair<"ld", 0x68, 0xED65, load, FP64, 8>;
+  defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
+  defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
 
   // For z13 we prefer LDE over LE to avoid partial register dependencies.
   let isCodeGenOnly = 1 in
@@ -200,14 +200,14 @@ let Predicates = [FeatureNoVectorEnhancements1] in {
 
 // Extend memory floating-point values to wider representations.
 let Uses = [FPC], mayRaiseFPException = 1 in {
-  def LDEB : UnaryRXE<"ldeb", 0xED04, any_extloadf32, FP64, 4>;
+  def LDEB : UnaryRXE<"ldeb", 0xED04, z_any_extloadf32, FP64, 4>;
   def LXEB : UnaryRXE<"lxeb", 0xED06, null_frag, FP128, 4>;
   def LXDB : UnaryRXE<"lxdb", 0xED05, null_frag, FP128, 8>;
 }
 let Predicates = [FeatureNoVectorEnhancements1] in {
-  def : Pat<(f128 (any_extloadf32 bdxaddr12only:$src)),
+  def : Pat<(f128 (z_any_extloadf32 bdxaddr12only:$src)),
             (LXEB bdxaddr12only:$src)>;
-  def : Pat<(f128 (any_extloadf64 bdxaddr12only:$src)),
+  def : Pat<(f128 (z_any_extloadf64 bdxaddr12only:$src)),
             (LXDB bdxaddr12only:$src)>;
 }
 
@@ -430,8 +430,10 @@ let Uses = [FPC], mayRaiseFPException = 1,
     def ADBR : BinaryRRE<"adbr", 0xB31A, any_fadd, FP64,  FP64>;
     def AXBR : BinaryRRE<"axbr", 0xB34A, any_fadd, FP128, FP128>;
   }
-  defm AEB : BinaryRXEAndPseudo<"aeb", 0xED0A, any_fadd, FP32, load, 4>;
-  defm ADB : BinaryRXEAndPseudo<"adb", 0xED1A, any_fadd, FP64, load, 8>;
+  defm AEB : BinaryRXEAndPseudo<"aeb", 0xED0A, z_any_fadd_noreassoc, FP32,
+                                z_load, 4>;
+  defm ADB : BinaryRXEAndPseudo<"adb", 0xED1A, z_any_fadd_noreassoc, FP64,
+                                z_load, 8>;
 }
 
 // Subtraction.
@@ -441,8 +443,10 @@ let Uses = [FPC], mayRaiseFPException = 1,
   def SDBR : BinaryRRE<"sdbr", 0xB31B, any_fsub, FP64,  FP64>;
   def SXBR : BinaryRRE<"sxbr", 0xB34B, any_fsub, FP128, FP128>;
 
-  defm SEB : BinaryRXEAndPseudo<"seb",  0xED0B, any_fsub, FP32, load, 4>;
-  defm SDB : BinaryRXEAndPseudo<"sdb",  0xED1B, any_fsub, FP64, load, 8>;
+  defm SEB : BinaryRXEAndPseudo<"seb",  0xED0B, z_any_fsub_noreassoc, FP32,
+                                z_load, 4>;
+  defm SDB : BinaryRXEAndPseudo<"sdb",  0xED1B, z_any_fsub_noreassoc, FP64,
+                                z_load, 8>;
 }
 
 // Multiplication.
@@ -452,8 +456,10 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
     def MDBR  : BinaryRRE<"mdbr",  0xB31C, any_fmul, FP64,  FP64>;
     def MXBR  : BinaryRRE<"mxbr",  0xB34C, any_fmul, FP128, FP128>;
   }
-  defm MEEB : BinaryRXEAndPseudo<"meeb", 0xED17, any_fmul, FP32, load, 4>;
-  defm MDB  : BinaryRXEAndPseudo<"mdb",  0xED1C, any_fmul, FP64, load, 8>;
+  defm MEEB : BinaryRXEAndPseudo<"meeb", 0xED17, z_any_fmul_noreassoc, FP32,
+                                  z_load, 4>;
+  defm MDB  : BinaryRXEAndPseudo<"mdb",  0xED1C, z_any_fmul_noreassoc, FP64,
+                                  z_load, 8>;
 }
 
 // f64 multiplication of two FP32 registers.
@@ -466,7 +472,7 @@ def : Pat<(any_fmul (f64 (any_fpextend FP32:$src1)),
 
 // f64 multiplication of an FP32 register and an f32 memory.
 let Uses = [FPC], mayRaiseFPException = 1 in
-  def MDEB : BinaryRXE<"mdeb", 0xED0C, null_frag, FP64, load, 4>;
+  def MDEB : BinaryRXE<"mdeb", 0xED0C, null_frag, FP64, z_load, 4>;
 def : Pat<(any_fmul (f64 (any_fpextend FP32:$src1)),
                     (f64 (any_extloadf32 bdxaddr12only:$addr))),
           (MDEB (INSERT_SUBREG (f64 (IMPLICIT_DEF)), FP32:$src1, subreg_h32),
@@ -483,7 +489,7 @@ let Predicates = [FeatureNoVectorEnhancements1] in
 
 // f128 multiplication of an FP64 register and an f64 memory.
 let Uses = [FPC], mayRaiseFPException = 1 in
-  def MXDB : BinaryRXE<"mxdb", 0xED07, null_frag, FP128, load, 8>;
+  def MXDB : BinaryRXE<"mxdb", 0xED07, null_frag, FP128, z_load, 8>;
 let Predicates = [FeatureNoVectorEnhancements1] in
   def : Pat<(any_fmul (f128 (any_fpextend FP64:$src1)),
                       (f128 (any_extloadf64 bdxaddr12only:$addr))),
@@ -495,8 +501,8 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
   def MAEBR : TernaryRRD<"maebr", 0xB30E, z_any_fma, FP32, FP32>;
   def MADBR : TernaryRRD<"madbr", 0xB31E, z_any_fma, FP64, FP64>;
 
-  defm MAEB : TernaryRXFAndPseudo<"maeb", 0xED0E, z_any_fma, FP32, FP32, load, 4>;
-  defm MADB : TernaryRXFAndPseudo<"madb", 0xED1E, z_any_fma, FP64, FP64, load, 8>;
+  defm MAEB : TernaryRXFAndPseudo<"maeb", 0xED0E, z_any_fma, FP32, FP32, z_load, 4>;
+  defm MADB : TernaryRXFAndPseudo<"madb", 0xED1E, z_any_fma, FP64, FP64, z_load, 8>;
 }
 
 // Fused multiply-subtract.
@@ -504,8 +510,8 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
   def MSEBR : TernaryRRD<"msebr", 0xB30F, z_any_fms, FP32, FP32>;
   def MSDBR : TernaryRRD<"msdbr", 0xB31F, z_any_fms, FP64, FP64>;
 
-  defm MSEB : TernaryRXFAndPseudo<"mseb", 0xED0F, z_any_fms, FP32, FP32, load, 4>;
-  defm MSDB : TernaryRXFAndPseudo<"msdb", 0xED1F, z_any_fms, FP64, FP64, load, 8>;
+  defm MSEB : TernaryRXFAndPseudo<"mseb", 0xED0F, z_any_fms, FP32, FP32, z_load, 4>;
+  defm MSDB : TernaryRXFAndPseudo<"msdb", 0xED1F, z_any_fms, FP64, FP64, z_load, 8>;
 }
 
 // Division.
@@ -514,8 +520,8 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
   def DDBR : BinaryRRE<"ddbr", 0xB31D, any_fdiv, FP64,  FP64>;
   def DXBR : BinaryRRE<"dxbr", 0xB34D, any_fdiv, FP128, FP128>;
 
-  defm DEB : BinaryRXEAndPseudo<"deb", 0xED0D, any_fdiv, FP32, load, 4>;
-  defm DDB : BinaryRXEAndPseudo<"ddb", 0xED1D, any_fdiv, FP64, load, 8>;
+  defm DEB : BinaryRXEAndPseudo<"deb", 0xED0D, any_fdiv, FP32, z_load, 4>;
+  defm DDB : BinaryRXEAndPseudo<"ddb", 0xED1D, any_fdiv, FP64, z_load, 8>;
 }
 
 // Divide to integer.
@@ -533,15 +539,15 @@ let Uses = [FPC], mayRaiseFPException = 1, Defs = [CC], CCValues = 0xF in {
   def CDBR : CompareRRE<"cdbr", 0xB319, z_any_fcmp, FP64,  FP64>;
   def CXBR : CompareRRE<"cxbr", 0xB349, z_any_fcmp, FP128, FP128>;
 
-  def CEB : CompareRXE<"ceb", 0xED09, z_any_fcmp, FP32, load, 4>;
-  def CDB : CompareRXE<"cdb", 0xED19, z_any_fcmp, FP64, load, 8>;
+  def CEB : CompareRXE<"ceb", 0xED09, z_any_fcmp, FP32, z_load, 4>;
+  def CDB : CompareRXE<"cdb", 0xED19, z_any_fcmp, FP64, z_load, 8>;
 
   def KEBR : CompareRRE<"kebr", 0xB308, z_strict_fcmps, FP32,  FP32>;
   def KDBR : CompareRRE<"kdbr", 0xB318, z_strict_fcmps, FP64,  FP64>;
   def KXBR : CompareRRE<"kxbr", 0xB348, z_strict_fcmps, FP128, FP128>;
 
-  def KEB : CompareRXE<"keb", 0xED08, z_strict_fcmps, FP32, load, 4>;
-  def KDB : CompareRXE<"kdb", 0xED18, z_strict_fcmps, FP64, load, 8>;
+  def KEB : CompareRXE<"keb", 0xED08, z_strict_fcmps, FP32, z_load, 4>;
+  def KDB : CompareRXE<"kdb", 0xED18, z_strict_fcmps, FP64, z_load, 8>;
 }
 
 // Test Data Class.

@@ -37,13 +37,13 @@ function(merge_relocatable_object name)
   add_dependencies(${fq_name} ${relocatable_target})
   target_link_libraries(${fq_name} INTERFACE ${fq_link_libraries})
   set_target_properties(
-    ${fq_name} 
+    ${fq_name}
     PROPERTIES
       LINKER_LANGUAGE CXX
       IMPORTED_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o
       TARGET_TYPE ${OBJECT_LIBRARY_TARGET_TYPE}
       DEPS "${fq_link_libraries}"
-  ) 
+  )
 endfunction()
 
 function(add_startup_object name)
@@ -56,7 +56,7 @@ function(add_startup_object name)
   )
 
   get_fq_target_name(${name} fq_target_name)
-  
+
   add_object_library(
     ${name}
     SRCS ${ADD_STARTUP_OBJECT_SRC}
@@ -131,7 +131,8 @@ foreach(target IN LISTS startup_components)
   set(fq_target_name libc.startup.linux.${target})
   add_dependencies(libc-startup ${fq_target_name})
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-          DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
           RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+          EXCLUDE_FROM_ALL
           COMPONENT libc)
 endforeach()

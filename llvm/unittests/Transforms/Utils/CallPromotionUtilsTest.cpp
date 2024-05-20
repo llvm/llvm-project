@@ -27,6 +27,21 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   return Mod;
 }
 
+// Returns a constant representing the vtable's address point specified by the
+// offset.
+static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
+                                             uint32_t AddressPointOffset) {
+  Module &M = *VTable->getParent();
+  LLVMContext &Context = M.getContext();
+  assert(AddressPointOffset <
+             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+         "Out-of-bound access");
+
+  return ConstantExpr::getInBoundsGetElementPtr(
+      Type::getInt8Ty(Context), VTable,
+      llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
+}
+
 TEST(CallPromotionUtilsTest, TryPromoteCall) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
@@ -40,7 +55,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -174,7 +189,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -216,7 +231,7 @@ define void @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -259,7 +274,7 @@ entry:
   %a = alloca %struct.A, align 8
   %0 = bitcast %struct.A* %a to i8*
   %1 = getelementptr %struct.A, %struct.A* %a, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
   %2 = bitcast %struct.A* %a to i8*
   %3 = bitcast i8* %2 to i8**
   %vtable.i = load i8*, i8** %3, align 8
@@ -274,7 +289,7 @@ entry:
   %a = alloca %struct.A, align 8
   %0 = bitcast %struct.A* %a to i8*
   %1 = getelementptr %struct.A, %struct.A* %a, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV1A, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %1, align 8
   %2 = bitcast %struct.A* %a to i8*
   %3 = bitcast i8* %2 to i8**
   %vtable.i = load i8*, i8** %3, align 8
@@ -343,7 +358,7 @@ define %struct1 @f() {
 entry:
   %o = alloca %class.Impl
   %base = getelementptr %class.Impl, %class.Impl* %o, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV4Impl, i64 0, i32 0, i64 2) to i32 (...)**), i32 (...)*** %base
   %f = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 1
   store i32 3, i32* %f
   %base.i = getelementptr inbounds %class.Impl, %class.Impl* %o, i64 0, i32 0
@@ -372,38 +387,6 @@ declare %struct2 @_ZN4Impl3RunEv(%class.Impl* %this)
   EXPECT_FALSE(IsPromoted);
 }
 
-TEST(CallPromotionUtilsTest, getVTableAddressPointOffset) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"IR(
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
-@_ZTV8Derived2 = constant { [3 x ptr], [3 x ptr], [4 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base35func3Ev], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN5Base25func2Ev], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev] }
-
-declare i32 @_ZN5Base15func1Ev(ptr)
-declare i32 @_ZN5Base25func2Ev(ptr)
-declare i32 @_ZN5Base15func0Ev(ptr)
-declare void @_ZN5Base35func3Ev(ptr)
-)IR");
-  GlobalVariable *GV = M->getGlobalVariable("_ZTV8Derived2");
-
-  for (auto [AddressPointOffset, Index] :
-       {std::pair{16, 0}, {40, 1}, {64, 2}}) {
-    Constant *AddressPoint =
-        getVTableAddressPointOffset(GV, AddressPointOffset);
-
-    ConstantExpr *GEP = dyn_cast<ConstantExpr>(AddressPoint);
-    ASSERT_TRUE(GEP);
-    SmallVector<Constant *> Indices = {
-        llvm::ConstantInt::get(Type::getInt32Ty(C), 0U),
-        llvm::ConstantInt::get(Type::getInt32Ty(C), Index),
-        llvm::ConstantInt::get(Type::getInt32Ty(C), 2U)};
-    EXPECT_EQ(GEP, ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(),
-                                                          GV, Indices));
-  }
-}
-
 TEST(CallPromotionUtilsTest, promoteCallWithVTableCmp) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
@@ -412,19 +395,15 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @_ZTV5Base1 = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev] }, !type !0
-@_ZTV8Derived1 = constant { [4 x ptr], [3 x ptr] } { [4 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev], [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base25func2Ev] }, !type !1, !type !2, !type !3
-@_ZTV5Base2 = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base25func2Ev] }, !type !2
-@_ZTV8Derived2 = constant { [3 x ptr], [3 x ptr], [4 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base35func3Ev], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN5Base25func2Ev], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev] }, !type !4, !type !5, !type !6, !type !7
-@_ZTV5Base3 = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base35func3Ev] }, !type !6
+@_ZTV8Derived1 = constant { [4 x ptr], [3 x ptr] } { [4 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev], [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base25func2Ev] }, !type !0, !type !1, !type !2
+@_ZTV8Derived2 = constant { [3 x ptr], [3 x ptr], [4 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base35func3Ev], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN5Base25func2Ev], [4 x ptr] [ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN5Base15func0Ev, ptr @_ZN5Base15func1Ev] }, !type !3, !type !4, !type !5, !type !6
 
 define i32 @testfunc(ptr %d) {
 entry:
-  %vtable = load ptr, ptr %d, !prof !8
-  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS5Base1")
-  tail call void @llvm.assume(i1 %0)
+  %vtable = load ptr, ptr %d, !prof !7
   %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1
-  %1 = load ptr, ptr %vfn
-  %call = tail call i32 %1(ptr %d), !prof !9
+  %0 = load ptr, ptr %vfn
+  %call = tail call i32 %0(ptr %d), !prof !8
   ret i32 %call
 }
 
@@ -433,39 +412,23 @@ entry:
   ret i32 2
 }
 
-
-declare i1 @llvm.type.test(ptr, metadata)
-declare void @llvm.assume(i1)
 declare i32 @_ZN5Base25func2Ev(ptr)
 declare i32 @_ZN5Base15func0Ev(ptr)
 declare void @_ZN5Base35func3Ev(ptr)
 
 !0 = !{i64 16, !"_ZTS5Base1"}
-!1 = !{i64 16, !"_ZTS5Base1"}
-!2 = !{i64 48, !"_ZTS5Base2"}
-!3 = !{i64 16, !"_ZTS8Derived1"}
-!4 = !{i64 64, !"_ZTS5Base1"}
-!5 = !{i64 40, !"_ZTS5Base2"}
-!6 = !{i64 16, !"_ZTS5Base3"}
-!7 = !{i64 16, !"_ZTS8Derived2"}
-!8 = !{!"VP", i32 2, i64 1600, i64 -9064381665493407289, i64 800, i64 5035968517245772950, i64 500, i64 3215870116411581797, i64 300}
-!9 = !{!"VP", i32 0, i64 1600, i64 6804820478065511155, i64 1600})IR");
+!1 = !{i64 48, !"_ZTS5Base2"}
+!2 = !{i64 16, !"_ZTS8Derived1"}
+!3 = !{i64 64, !"_ZTS5Base1"}
+!4 = !{i64 40, !"_ZTS5Base2"}
+!5 = !{i64 16, !"_ZTS5Base3"}
+!6 = !{i64 16, !"_ZTS8Derived2"}
+!7 = !{!"VP", i32 2, i64 1600, i64 -9064381665493407289, i64 800, i64 5035968517245772950, i64 500, i64 3215870116411581797, i64 300}
+!8 = !{!"VP", i32 0, i64 1600, i64 6804820478065511155, i64 1600})IR");
 
   Function *F = M->getFunction("testfunc");
-  ASSERT_TRUE(F);
   CallInst *CI = dyn_cast<CallInst>(&*std::next(F->front().rbegin()));
   ASSERT_TRUE(CI && CI->isIndirectCall());
-
-  LoadInst *FuncPtr = dyn_cast<LoadInst>(CI->getCalledOperand());
-  ASSERT_TRUE(FuncPtr);
-
-  GetElementPtrInst *GEP =
-      dyn_cast<GetElementPtrInst>(FuncPtr->getPointerOperand());
-  ASSERT_TRUE(GEP);
-
-  LoadInst *VPtr = dyn_cast<LoadInst>(&*F->front().begin());
-
-  Function *Callee = M->getFunction("_ZN5Base15func1Ev");
 
   // Create the constant and the branch weights
   SmallVector<Constant *, 3> VTableAddressPoints;
@@ -481,15 +444,13 @@ declare void @_ZN5Base35func3Ev(ptr)
 
   size_t OrigEntryBBSize = F->front().size();
 
+  LoadInst *VPtr = dyn_cast<LoadInst>(&*F->front().begin());
+
+  Function *Callee = M->getFunction("_ZN5Base15func1Ev");
   // Tests that promoted direct call is returned.
   CallBase &DirectCB = promoteCallWithVTableCmp(
       *CI, VPtr, Callee, VTableAddressPoints, BranchWeights);
   EXPECT_EQ(DirectCB.getCalledOperand(), Callee);
-
-  // Tests that GEP and FuncPtr sink to the basic block of indirect call.
-  BasicBlock *EntryBB = &F->front();
-  EXPECT_EQ(EntryBB, GEP->getParent());
-  EXPECT_EQ(EntryBB, FuncPtr->getParent());
 
   // Promotion inserts 3 icmp instructions and 2 or instructions, and removes
   // 1 call instruction from the entry block.

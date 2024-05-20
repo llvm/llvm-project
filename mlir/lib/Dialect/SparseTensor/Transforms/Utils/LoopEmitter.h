@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "SparseTensorLevel.h"
+#include "SparseTensorIterator.h"
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -220,9 +220,11 @@ public:
   ///
   /// Getters.
   ///
-  Value getValPosits(TensorId tid) const {
-    Value lastLvlPos = iters[tid].back().back()->getCurPosition().first;
-    return lastLvlPos;
+  SmallVector<Value> getValPosits(TensorId tid) const {
+    SmallVector<Value> batchCrds = iters[tid].back().back()->getBatchCrds();
+    Value lastLvlPos = iters[tid].back().back()->getCurPosition().front();
+    batchCrds.push_back(lastLvlPos);
+    return batchCrds;
   };
   Value getCoord(TensorId tid, Level lvl) const {
     return getCurIterator(tid, lvl).getCrd();
@@ -380,6 +382,7 @@ private:
   /// tensor.
   bool hasOutput;
   bool isSparseOut;
+  SparseEmitStrategy emitStrategy;
 
   //
   // Fields which have `numTensor` many entries.

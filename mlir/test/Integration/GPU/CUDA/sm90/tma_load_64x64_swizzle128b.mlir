@@ -119,7 +119,8 @@ module @mymod {
       }
 
       // Step 7. Wait until TMA is done
-      nvgpu.mbarrier.try_wait.parity %9[%c0], %c0, %c10000000 : !barrierType
+      %phase_c0 = arith.constant 0 : i1
+      nvgpu.mbarrier.try_wait.parity %9[%c0], %phase_c0, %c10000000 : !barrierType
 
       // Step 8. Print loaded data in 128b swizzled
       scf.if %10 {        

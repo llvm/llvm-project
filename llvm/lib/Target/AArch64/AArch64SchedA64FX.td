@@ -22,7 +22,8 @@ def A64FXModel : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F, SVEUnsupported.F,
                                                     [HasMTE, HasMatMulInt8, HasBF16,
-                                                    HasPAuth, HasPAuthLR, HasCPA]);
+                                                    HasPAuth, HasPAuthLR, HasCPA,
+                                                    HasCSSC]);
   let FullInstRWOverlapCheck = 0;
 }
 

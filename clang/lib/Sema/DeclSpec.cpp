@@ -293,7 +293,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
 
 void Declarator::setDecompositionBindings(
     SourceLocation LSquareLoc,
-    ArrayRef<DecompositionDeclarator::Binding> Bindings,
+    MutableArrayRef<DecompositionDeclarator::Binding> Bindings,
     SourceLocation RSquareLoc) {
   assert(!hasName() && "declarator given multiple names!");
 
@@ -317,7 +317,7 @@ void Declarator::setDecompositionBindings(
           new DecompositionDeclarator::Binding[Bindings.size()];
       BindingGroup.DeleteBindings = true;
     }
-    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
+    std::uninitialized_move(Bindings.begin(), Bindings.end(),
                             BindingGroup.Bindings);
   }
 }
@@ -1102,18 +1102,13 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {
-  if (Friend_specified) {
+  if (isFriendSpecified()) {
     PrevSpec = "friend";
-    // Keep the later location, so that we can later diagnose ill-formed
-    // declarations like 'friend class X friend;'. Per [class.friend]p3,
-    // 'friend' must be the first token in a friend declaration that is
-    // not a function declaration.
-    FriendLoc = Loc;
     DiagID = diag::warn_duplicate_declspec;
     return true;
   }
 
-  Friend_specified = true;
+  FriendSpecifiedFirst = isEmpty();
   FriendLoc = Loc;
   return false;
 }
@@ -1207,7 +1202,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
         !S.Context.getTargetInfo().hasFeature("power8-vector"))
       S.Diag(TSTLoc, diag::err_invalid_vector_int128_decl_spec);
 
-    if (TypeAltiVecBool) {
+    // Complex vector types are not supported.
+    if (TypeSpecComplex != TSC_unspecified)
+      S.Diag(TSCLoc, diag::err_invalid_vector_complex_decl_spec);
+    else if (TypeAltiVecBool) {
       // Sign specifiers are not allowed with vector bool. (PIM 2.1)
       if (getTypeSpecSign() != TypeSpecifierSign::Unspecified) {
         S.Diag(TSSLoc, diag::err_invalid_vector_bool_decl_spec)
@@ -1382,6 +1380,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
     }
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+  }
+
+  if (S.getLangOpts().C23 &&
+      getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
+      StorageClassSpec == SCS_extern) {
+    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getStorageClassSpec())
+        << SourceRange(getStorageClassSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where

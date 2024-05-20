@@ -59,6 +59,19 @@ def NVVM_Dialect : Dialect {
     /// Get the name of the attribute used to annotate max number of
     /// registers that can be allocated per thread.
     static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
+
+    /// Get the name of the attribute used to annotate kernel arguments that
+    /// are grid constants.
+    static StringRef getGridConstantAttrName() { return "nvvm.grid_constant"; }
+
+    /// Verify an attribute from this dialect on the argument at 'argIndex' for
+    /// the region at 'regionIndex' on the given operation. Returns failure if
+    /// the verification failed, success otherwise. This hook may optionally be
+    /// invoked from any operation containing a region.
+    LogicalResult verifyRegionArgAttribute(Operation *op,
+                                           unsigned regionIndex,
+                                           unsigned argIndex,
+                                           NamedAttribute argAttr) override;
   }];
 
   let useDefaultAttributePrinterParser = 1;
@@ -377,6 +390,52 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let arguments = (ins     
+    Optional<I32>:$barrierId,
+    Optional<I32>:$numberOfThreads);
+  string llvmBuilder = [{
+    if ($numberOfThreads && $barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
+    } else {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+    }
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+}
+
+def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
+{
+  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
+
+  let description = [{
+    Thread that executes this op announces their arrival at the barrier with 
+    given id and continue their execution.
+
+    The default barrier id is 0 that is similar to `nvvm.barrier` Op. When 
+    `barrierId` is not present, the default barrier id is used. 
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+  
+  let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      std::string ptx = "bar.arrive ";
+      if (getBarrierId()) { ptx += "%0, %1"; } 
+      else { ptx += "0, %0;"; }
+      return ptx;
+    }
+  }];
+}
+
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
@@ -560,20 +619,33 @@ def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync">,
   Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins I32:$dst,
+  Arguments<(ins I32:$thread_mask,
                  LLVM_Type:$val,
                  I32:$offset,
                  I32:$mask_and_clamp,
                  ShflKindAttr:$kind,
                  OptionalAttr<UnitAttr>:$return_value_and_is_valid)> {
+  let summary = "NVVM Dialect Op for shfl.sync";
+  let description = [{
+    The `shfl.sync` Op implements data shuffle within threads of a warp.
+    The `thread_mask` denotes the threads participating in the Op where
+    the bit position corresponds to a particular thread’s laneid.
+    The `offset` specifies a source lane or source lane offset
+    (depending on `kind`). The `val` is the input value to be copied from
+    the source. The `mask_and_clamp` contains two packed values specifying
+    a mask for logically splitting warps into sub-segments and an upper bound
+    for clamping the source lane index.
+    [For more information, refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
+  }];
   string llvmBuilder = [{
       auto intId = getShflIntrinsicId(
           $_resultType, $kind, static_cast<bool>($return_value_and_is_valid));
       $res = createIntrinsicCall(builder,
-          intId, {$dst, $val, $offset, $mask_and_clamp});
+          intId, {$thread_mask, $val, $offset, $mask_and_clamp});
   }];
   let assemblyFormat = [{
-    $kind $dst `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
+    $kind $thread_mask `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
      `:` type($val) `->` type($res)
    }];
    let hasVerifier = 1;

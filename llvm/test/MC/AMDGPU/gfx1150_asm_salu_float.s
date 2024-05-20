@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1150 -show-encoding %s | FileCheck --check-prefixes=GFX1150 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1150 -show-encoding %s | FileCheck --check-prefixes=GFX1150 %s
 
 s_cvt_f32_i32 s5, s1
 // GFX1150: encoding: [0x01,0x64,0x85,0xbe]

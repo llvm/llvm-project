@@ -8,6 +8,95 @@ declare void @use(i64)
 declare void @usei32(i32)
 declare void @usei1(i1)
 
+; usub_sat((sub nuw C1, A), C2) to usub_sat(usub_sat(C1 - C2), A)
+define i32 @usub_sat_C1_C2(i32 %a){
+; CHECK-LABEL: @usub_sat_C1_C2(
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.usub.sat.i32(i32 50, i32 [[A:%.*]])
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %add = sub nuw i32 64, %a
+  %cond = call i32 @llvm.usub.sat.i32(i32 %add, i32 14)
+  ret i32 %cond
+}
+
+define i32 @usub_sat_C1_C2_produce_0(i32 %a){
+; CHECK-LABEL: @usub_sat_C1_C2_produce_0(
+; CHECK-NEXT:    ret i32 0
+;
+  %add = sub nuw i32 14, %a
+  %cond = call i32 @llvm.usub.sat.i32(i32 %add, i32 14)
+  ret i32 %cond
+}
+
+define i32 @usub_sat_C1_C2_produce_0_too(i32 %a){
+; CHECK-LABEL: @usub_sat_C1_C2_produce_0_too(
+; CHECK-NEXT:    ret i32 0
+;
+  %add = sub nuw i32 12, %a
+  %cond = call i32 @llvm.usub.sat.i32(i32 %add, i32 14)
+  ret i32 %cond
+}
+
+; vector tests
+define <2 x i16> @usub_sat_C1_C2_splat(<2 x i16> %a) {
+; CHECK-LABEL: @usub_sat_C1_C2_splat(
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> <i16 50, i16 50>, <2 x i16> [[A:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[COND]]
+;
+  %add = sub nuw <2 x i16> <i16 64, i16 64>, %a
+  %cond = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %add, <2 x i16> <i16 14, i16 14>)
+  ret <2 x i16> %cond
+}
+
+define <2 x i16> @usub_sat_C1_C2_non_splat(<2 x i16> %a) {
+; CHECK-LABEL: @usub_sat_C1_C2_non_splat(
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> <i16 30, i16 50>, <2 x i16> [[A:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[COND]]
+;
+  %add = sub nuw <2 x i16> <i16 50, i16 64>, %a
+  %cond = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %add, <2 x i16> <i16 20, i16 14>)
+  ret <2 x i16> %cond
+}
+
+define <2 x i16> @usub_sat_C1_C2_splat_produce_0(<2 x i16> %a){
+; CHECK-LABEL: @usub_sat_C1_C2_splat_produce_0(
+; CHECK-NEXT:    ret <2 x i16> zeroinitializer
+;
+  %add = sub nuw <2 x i16> <i16 14, i16 14>, %a
+  %cond = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %add, <2 x i16> <i16 14, i16 14>)
+  ret <2 x i16> %cond
+}
+
+define <2 x i16> @usub_sat_C1_C2_splat_produce_0_too(<2 x i16> %a){
+; CHECK-LABEL: @usub_sat_C1_C2_splat_produce_0_too(
+; CHECK-NEXT:    ret <2 x i16> zeroinitializer
+;
+  %add = sub nuw <2 x i16> <i16 12, i16 12>, %a
+  %cond = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %add, <2 x i16> <i16 14, i16 14>)
+  ret <2 x i16> %cond
+}
+
+define <2 x i16> @usub_sat_C1_C2_non_splat_produce_0_too(<2 x i16> %a){
+; CHECK-LABEL: @usub_sat_C1_C2_non_splat_produce_0_too(
+; CHECK-NEXT:    ret <2 x i16> zeroinitializer
+;
+  %add = sub nuw <2 x i16> <i16 12, i16 13>, %a
+  %cond = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %add, <2 x i16> <i16 14, i16 15>)
+  ret <2 x i16> %cond
+}
+
+; negative tests this souldn't work
+define i32 @usub_sat_C1_C2_without_nuw(i32 %a){
+; CHECK-LABEL: @usub_sat_C1_C2_without_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 12, [[A:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[ADD]], i32 14)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %add = sub i32 12, %a
+  %cond = call i32 @llvm.usub.sat.i32(i32 %add, i32 14)
+  ret i32 %cond
+}
+
 ; (a > b) ? a - b : 0 -> usub.sat(a, b)
 
 define i64 @max_sub_ugt(i64 %a, i64 %b) {

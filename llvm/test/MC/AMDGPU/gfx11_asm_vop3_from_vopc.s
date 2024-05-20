@@ -702,7 +702,7 @@ v_cmp_eq_i16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x32,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x32,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 s5, exec_lo, -1
@@ -722,7 +722,7 @@ v_cmp_eq_i16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x32,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x32,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 ttmp15, src_scc, vcc_lo
@@ -758,7 +758,7 @@ v_cmp_eq_i16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x32,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x32,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 s[10:11], exec_lo, -1
@@ -778,7 +778,7 @@ v_cmp_eq_i16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x32,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x32,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -1023,7 +1023,7 @@ v_cmp_eq_u16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x3a,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x3a,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 s5, exec_lo, -1
@@ -1043,7 +1043,7 @@ v_cmp_eq_u16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x3a,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x3a,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 ttmp15, src_scc, vcc_lo
@@ -1079,7 +1079,7 @@ v_cmp_eq_u16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x3a,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x3a,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 s[10:11], exec_lo, -1
@@ -1099,7 +1099,7 @@ v_cmp_eq_u16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x3a,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x3a,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -2398,7 +2398,7 @@ v_cmp_ge_i16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x36,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x36,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 s5, exec_lo, -1
@@ -2418,7 +2418,7 @@ v_cmp_ge_i16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x36,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x36,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 ttmp15, src_scc, vcc_lo
@@ -2454,7 +2454,7 @@ v_cmp_ge_i16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x36,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x36,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 s[10:11], exec_lo, -1
@@ -2474,7 +2474,7 @@ v_cmp_ge_i16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x36,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x36,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -2719,7 +2719,7 @@ v_cmp_ge_u16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x3e,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x3e,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 s5, exec_lo, -1
@@ -2739,7 +2739,7 @@ v_cmp_ge_u16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x3e,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x3e,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 ttmp15, src_scc, vcc_lo
@@ -2775,7 +2775,7 @@ v_cmp_ge_u16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x3e,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x3e,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 s[10:11], exec_lo, -1
@@ -2795,7 +2795,7 @@ v_cmp_ge_u16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x3e,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x3e,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -3361,7 +3361,7 @@ v_cmp_gt_i16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x34,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x34,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 s5, exec_lo, -1
@@ -3381,7 +3381,7 @@ v_cmp_gt_i16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x34,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x34,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 ttmp15, src_scc, vcc_lo
@@ -3417,7 +3417,7 @@ v_cmp_gt_i16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x34,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x34,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 s[10:11], exec_lo, -1
@@ -3437,7 +3437,7 @@ v_cmp_gt_i16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x34,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x34,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -3682,7 +3682,7 @@ v_cmp_gt_u16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x3c,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x3c,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 s5, exec_lo, -1
@@ -3702,7 +3702,7 @@ v_cmp_gt_u16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x3c,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x3c,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 ttmp15, src_scc, vcc_lo
@@ -3738,7 +3738,7 @@ v_cmp_gt_u16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x3c,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x3c,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 s[10:11], exec_lo, -1
@@ -3758,7 +3758,7 @@ v_cmp_gt_u16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x3c,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x3c,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -4324,7 +4324,7 @@ v_cmp_le_i16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x33,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x33,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 s5, exec_lo, -1
@@ -4344,7 +4344,7 @@ v_cmp_le_i16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x33,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x33,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 ttmp15, src_scc, vcc_lo
@@ -4380,7 +4380,7 @@ v_cmp_le_i16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x33,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x33,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 s[10:11], exec_lo, -1
@@ -4400,7 +4400,7 @@ v_cmp_le_i16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x33,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x33,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -4645,7 +4645,7 @@ v_cmp_le_u16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x3b,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x3b,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 s5, exec_lo, -1
@@ -4665,7 +4665,7 @@ v_cmp_le_u16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x3b,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x3b,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 ttmp15, src_scc, vcc_lo
@@ -4701,7 +4701,7 @@ v_cmp_le_u16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x3b,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x3b,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 s[10:11], exec_lo, -1
@@ -4721,7 +4721,7 @@ v_cmp_le_u16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x3b,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x3b,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -5608,7 +5608,7 @@ v_cmp_lt_i16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x31,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x31,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 s5, exec_lo, -1
@@ -5628,7 +5628,7 @@ v_cmp_lt_i16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x31,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x31,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 ttmp15, src_scc, vcc_lo
@@ -5664,7 +5664,7 @@ v_cmp_lt_i16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x31,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x31,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 s[10:11], exec_lo, -1
@@ -5684,7 +5684,7 @@ v_cmp_lt_i16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x31,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x31,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -5929,7 +5929,7 @@ v_cmp_lt_u16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x39,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x39,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 s5, exec_lo, -1
@@ -5949,7 +5949,7 @@ v_cmp_lt_u16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x39,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x39,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 ttmp15, src_scc, vcc_lo
@@ -5985,7 +5985,7 @@ v_cmp_lt_u16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x39,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x39,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 s[10:11], exec_lo, -1
@@ -6005,7 +6005,7 @@ v_cmp_lt_u16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x39,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x39,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -6250,7 +6250,7 @@ v_cmp_ne_i16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x35,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x35,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 s5, exec_lo, -1
@@ -6270,7 +6270,7 @@ v_cmp_ne_i16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x35,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x35,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 ttmp15, src_scc, vcc_lo
@@ -6306,7 +6306,7 @@ v_cmp_ne_i16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x35,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x35,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 s[10:11], exec_lo, -1
@@ -6326,7 +6326,7 @@ v_cmp_ne_i16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x35,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x35,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 ttmp[14:15], src_scc, vcc_lo
@@ -6571,7 +6571,7 @@ v_cmp_ne_u16_e64 s5, ttmp15, src_scc
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 s5, m0, 0.5
-// W32: encoding: [0x05,0x00,0x3d,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x05,0x00,0x3d,0xd4,0x7d,0xe0,0x01,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 s5, exec_lo, -1
@@ -6591,7 +6591,7 @@ v_cmp_ne_u16_e64 vcc_lo, -1, exec_hi
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 vcc_hi, 0.5, m0
-// W32: encoding: [0x6b,0x00,0x3d,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32: encoding: [0x6b,0x00,0x3d,0xd4,0xf0,0xfa,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 ttmp15, src_scc, vcc_lo
@@ -6627,7 +6627,7 @@ v_cmp_ne_u16_e64 s[10:11], ttmp15, src_scc
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 s[10:11], m0, 0.5
-// W64: encoding: [0x0a,0x00,0x3d,0xd4,0x7d,0xfe,0x01,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x0a,0x00,0x3d,0xd4,0x7d,0xe0,0x01,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 s[10:11], exec_lo, -1
@@ -6647,7 +6647,7 @@ v_cmp_ne_u16_e64 s[104:105], -1, exec_hi
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 vcc, 0.5, m0
-// W64: encoding: [0x6a,0x00,0x3d,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64: encoding: [0x6a,0x00,0x3d,0xd4,0xf0,0xfa,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 ttmp[14:15], src_scc, vcc_lo

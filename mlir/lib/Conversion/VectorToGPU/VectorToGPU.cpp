@@ -77,7 +77,9 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
 static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
                                           bool useNvGpu) {
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+  auto infer = [&](MapList m) {
+    return AffineMap::inferFromExprList(m, contract.getContext());
+  };
   AffineExpr m, n, k;
   bindDims(contract.getContext(), m, n, k);
   auto iteratorTypes = contract.getIteratorTypes().getValue();
@@ -200,9 +202,7 @@ template <typename ExtOpTy>
 static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
   if (!isa<vector::TransferReadOp>(extOp.getOperand().getDefiningOp()))
     return false;
-  return llvm::all_of(extOp->getUsers(), [](Operation *user) {
-    return isa<vector::ContractionOp>(user);
-  });
+  return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
 }
 
 static bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
@@ -343,15 +343,13 @@ getSliceContract(Operation *op,
 static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
                                              bool useNvGpu) {
   auto hasVectorDest = [](Operation *op) {
-    return llvm::any_of(op->getResultTypes(),
-                        [](Type t) { return isa<VectorType>(t); });
+    return llvm::any_of(op->getResultTypes(), llvm::IsaPred<VectorType>);
   };
   BackwardSliceOptions backwardSliceOptions;
   backwardSliceOptions.filter = hasVectorDest;
 
   auto hasVectorSrc = [](Operation *op) {
-    return llvm::any_of(op->getOperandTypes(),
-                        [](Type t) { return isa<VectorType>(t); });
+    return llvm::any_of(op->getOperandTypes(), llvm::IsaPred<VectorType>);
   };
   ForwardSliceOptions forwardSliceOptions;
   forwardSliceOptions.filter = hasVectorSrc;
@@ -394,7 +392,9 @@ struct PrepareContractToGPUMMA
 
     // Set up the parallel/reduction structure in right form.
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr m, n, k;
     bindDims(rewriter.getContext(), m, n, k);
     static constexpr std::array<int64_t, 2> perm = {1, 0};
@@ -441,7 +441,7 @@ struct PrepareContractToGPUMMA
   }
 };
 
-// Fold transpose op into the transfer read op. Nvgpu mma.sync op only supports
+// Fold transpose op into the transfer read op. NVGPU mma.sync op only supports
 // row-, column-, and row-major layout for matrixA, matrixB, and matrixC,
 // respectively. We can fold the transpose operation when loading the data from
 // Shared Memory to registers.
@@ -515,6 +515,14 @@ struct CombineTransferReadOpTranspose final
 // TODO: Change the GPU dialect to abstract the layout at the this level and
 // only care about it during lowering to NVVM.
 static const char *inferFragType(Operation *op) {
+  // We can have arith.ext ops before reaching contract ops. See through them
+  // and other kinds of elementwise ops.
+  if (op->hasOneUse()) {
+    Operation *userOp = *op->user_begin();
+    if (userOp->hasTrait<OpTrait::Elementwise>())
+      return inferFragType(userOp);
+  }
+
   for (Operation *users : op->getUsers()) {
     auto contract = dyn_cast<vector::ContractionOp>(users);
     if (!contract)
@@ -560,13 +568,12 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   if (op->hasOneUse()) {
     auto *user = *op->user_begin();
     // Infer the signedness of the mma type from the integer extend.
-    bool isSignedExtend = isa<arith::ExtSIOp>(user);
-    if (isSignedExtend || isa<arith::ExtUIOp>(user)) {
+    if (isa<arith::ExtSIOp, arith::ExtUIOp>(user)) {
       elType = IntegerType::get(
           op.getContext(), cast<IntegerType>(elType).getWidth(),
-          isSignedExtend ? IntegerType::Signed : IntegerType::Unsigned);
+          isa<arith::ExtSIOp>(user) ? IntegerType::Signed
+                                    : IntegerType::Unsigned);
       mappingResult = user->getResult(0);
-      fragType = inferFragType(user);
     }
   }
   gpu::MMAMatrixType type =
@@ -1204,10 +1211,10 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
       return rewriter.notifyMatchFailure(op, "no mapping");
     matrixOperands.push_back(it->second);
   }
-  auto resultType = matrixOperands[0].getType().cast<gpu::MMAMatrixType>();
+  auto resultType = cast<gpu::MMAMatrixType>(matrixOperands[0].getType());
   if (opType == gpu::MMAElementwiseOp::EXTF) {
     // The floating point extension case has a different result type.
-    auto vectorType = op->getResultTypes()[0].cast<VectorType>();
+    auto vectorType = cast<VectorType>(op->getResultTypes()[0]);
     resultType = gpu::MMAMatrixType::get(resultType.getShape(),
                                          vectorType.getElementType(),
                                          resultType.getOperand());

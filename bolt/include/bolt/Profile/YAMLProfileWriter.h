@@ -9,11 +9,13 @@
 #ifndef BOLT_PROFILE_YAML_PROFILE_WRITER_H
 #define BOLT_PROFILE_YAML_PROFILE_WRITER_H
 
+#include "bolt/Profile/ProfileYAMLMapping.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
 namespace llvm {
 namespace bolt {
+class BoltAddressTranslation;
 class RewriteInstance;
 
 class YAMLProfileWriter {
@@ -29,6 +31,17 @@ public:
 
   /// Save execution profile for that instance.
   std::error_code writeProfile(const RewriteInstance &RI);
+
+  static yaml::bolt::BinaryFunctionProfile
+  convert(const BinaryFunction &BF, bool UseDFS,
+          const BoltAddressTranslation *BAT = nullptr);
+
+  /// Set CallSiteInfo destination fields from \p Symbol and return a target
+  /// BinaryFunction for that symbol.
+  static const BinaryFunction *
+  setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+                    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+                    uint32_t Offset = 0);
 };
 
 } // namespace bolt

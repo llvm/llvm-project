@@ -1,4 +1,4 @@
-//=- AnalysisBasedWarnings.cpp - Sema warnings based on libAnalysis -*- C++ -*-=//
+//=== AnalysisBasedWarnings.cpp - Sema warnings based on libAnalysis ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -2256,11 +2256,8 @@ public:
         Range = UO->getSubExpr()->getSourceRange();
         MsgParam = 1;
       }
-    } else if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
-      S.Diag(CtorExpr->getLocation(),
-             diag::warn_unsafe_buffer_usage_in_container);
     } else {
-      if (isa<CallExpr>(Operation)) {
+      if (isa<CallExpr>(Operation) || isa<CXXConstructExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
@@ -2295,9 +2292,30 @@ public:
     }
   }
 
+  void handleUnsafeOperationInContainer(const Stmt *Operation,
+                                        bool IsRelatedToDecl,
+                                        ASTContext &Ctx) override {
+    SourceLocation Loc;
+    SourceRange Range;
+    unsigned MsgParam = 0;
+
+    // This function only handles SpanTwoParamConstructorGadget so far, which
+    // always gives a CXXConstructExpr.
+    const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
+    Loc = CtorExpr->getLocation();
+
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    if (IsRelatedToDecl) {
+      assert(!SuggestSuggestions &&
+             "Variables blamed for unsafe buffer usage without suggestions!");
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
+    }
+  }
+
   void handleUnsafeVariableGroup(const VarDecl *Variable,
                                  const VariableGroupsManager &VarGrpMgr,
-                                 FixItList &&Fixes, const Decl *D) override {
+                                 FixItList &&Fixes, const Decl *D,
+                                 const FixitStrategy &VarTargetTypes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
@@ -2312,7 +2330,18 @@ public:
       // NOT explain how the variables are grouped as the reason is non-trivial
       // and irrelavant to users' experience:
       const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
-      unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
+      unsigned FixItStrategy = 0;
+      switch (VarTargetTypes.lookup(Variable)) {
+      case clang::FixitStrategy::Kind::Span:
+        FixItStrategy = 0;
+        break;
+      case clang::FixitStrategy::Kind::Array:
+        FixItStrategy = 1;
+        break;
+      default:
+        assert(false && "We support only std::span and std::array");
+      };
+
       const auto &FD =
           S.Diag(Variable->getLocation(),
                  BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together

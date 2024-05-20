@@ -100,12 +100,14 @@ tools = [
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
     "mlir-capi-ir-test",
+    "mlir-capi-irdl-test",
     "mlir-capi-llvm-test",
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
     "mlir-capi-quant-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-transform-interpreter-test",
     "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
@@ -160,6 +162,7 @@ tools.extend(
         ToolSubst("transform-opt-ch2", unresolved="ignore"),
         ToolSubst("transform-opt-ch3", unresolved="ignore"),
         ToolSubst("transform-opt-ch4", unresolved="ignore"),
+        ToolSubst("mlir-transform-opt", unresolved="ignore"),
         ToolSubst("%mlir_lib_dir", config.mlir_lib_dir, unresolved="ignore"),
         ToolSubst("%mlir_src_dir", config.mlir_src_root, unresolved="ignore"),
     ]
@@ -202,6 +205,7 @@ config.environment["FILECHECK_OPTS"] = "-enable-var-scope --allow-unused-prefixe
 # binaries come from the build tree. This should be unified to the build tree
 # by copying/linking sources to build.
 if config.enable_bindings_python:
+    config.environment["PYTHONPATH"] = os.getenv("MLIR_LIT_PYTHONPATH", "")
     llvm_config.with_environment(
         "PYTHONPATH",
         [

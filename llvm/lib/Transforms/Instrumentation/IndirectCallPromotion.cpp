@@ -167,6 +167,21 @@ getCompatibleTypeOffset(const ArrayRef<MDNode *> &Types,
   return Offset;
 }
 
+// Returns a constant representing the vtable's address point specified by the
+// offset.
+static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
+                                             uint32_t AddressPointOffset) {
+  Module &M = *VTable->getParent();
+  LLVMContext &Context = M.getContext();
+  assert(AddressPointOffset <
+             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+         "Out-of-bound access");
+
+  return ConstantExpr::getInBoundsGetElementPtr(
+      Type::getInt8Ty(Context), VTable,
+      llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
+}
+
 // Promote indirect calls to conditional direct calls, keeping track of
 // thresholds.
 class IndirectCallPromoter {

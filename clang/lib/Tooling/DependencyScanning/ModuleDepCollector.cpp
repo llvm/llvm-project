@@ -29,10 +29,11 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() {
   return std::get<std::vector<std::string>>(BuildInfo);
 }
 
-static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
-                                     ASTReader &Reader,
-                                     const serialization::ModuleFile &MF,
-                                     ScanningOptimizations OptimizeArgs) {
+static void
+optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
+                         const serialization::ModuleFile &MF,
+                         const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
+                         ScanningOptimizations OptimizeArgs) {
   if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
     // Only preserve search paths that were used during the dependency scan.
     std::vector<HeaderSearchOptions::Entry> Entries;
@@ -65,11 +66,25 @@ static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
     llvm::DenseSet<const serialization::ModuleFile *> Visited;
     std::function<void(const serialization::ModuleFile *)> VisitMF =
         [&](const serialization::ModuleFile *MF) {
-          VFSUsage |= MF->VFSUsage;
           Visited.insert(MF);
-          for (const serialization::ModuleFile *Import : MF->Imports)
-            if (!Visited.contains(Import))
-              VisitMF(Import);
+          if (MF->Kind == serialization::MK_ImplicitModule) {
+            VFSUsage |= MF->VFSUsage;
+            // We only need to recurse into implicit modules. Other module types
+            // will have the correct set of VFSs for anything they depend on.
+            for (const serialization::ModuleFile *Import : MF->Imports)
+              if (!Visited.contains(Import))
+                VisitMF(Import);
+          } else {
+            // This is not an implicitly built module, so it may have different
+            // VFS options. Fall back to a string comparison instead.
+            auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
+            if (VFSMap == PrebuiltModuleVFSMap.end())
+              return;
+            for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
+              if (VFSMap->second.contains(VFSOverlayFiles[I]))
+                VFSUsage[I] = true;
+            }
+          }
         };
     VisitMF(&MF);
 
@@ -139,10 +154,35 @@ void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
   }
 }
 
+void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                                             const LangOptions &LangOpts,
+                                             CodeGenOptions &CGOpts) {
+  // TODO: Figure out better way to set options to their default value.
+  if (ProgramAction == frontend::GenerateModule) {
+    CGOpts.MainFileName.clear();
+    CGOpts.DwarfDebugFlags.clear();
+  }
+  if (ProgramAction == frontend::GeneratePCH ||
+      (ProgramAction == frontend::GenerateModule && !LangOpts.ModulesCodegen)) {
+    CGOpts.DebugCompilationDir.clear();
+    CGOpts.CoverageCompilationDir.clear();
+    CGOpts.CoverageDataFile.clear();
+    CGOpts.CoverageNotesFile.clear();
+    CGOpts.ProfileInstrumentUsePath.clear();
+    CGOpts.SampleProfileFile.clear();
+    CGOpts.ProfileRemappingFile.clear();
+  }
+}
+
 static CowCompilerInvocation
 makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.resetNonModularOptions();
   CI.clearImplicitModuleBuildOptions();
+
+  // The scanner takes care to avoid passing non-affecting module maps to the
+  // explicit compiles. No need to do extra work just to find out there are no
+  // module map files to prune.
+  CI.getHeaderSearchOpts().ModulesPruneNonAffectingModuleMaps = false;
 
   // Remove options incompatible with explicit module build or are likely to
   // differ between identical modules discovered from different translation
@@ -152,15 +192,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // LLVM options are not going to affect the AST
   CI.getFrontendOpts().LLVMArgs.clear();
 
-  // TODO: Figure out better way to set options to their default value.
-  CI.getCodeGenOpts().MainFileName.clear();
-  CI.getCodeGenOpts().DwarfDebugFlags.clear();
-  if (!CI.getLangOpts().ModulesCodegen) {
-    CI.getCodeGenOpts().DebugCompilationDir.clear();
-    CI.getCodeGenOpts().CoverageCompilationDir.clear();
-    CI.getCodeGenOpts().CoverageDataFile.clear();
-    CI.getCodeGenOpts().CoverageNotesFile.clear();
-  }
+  resetBenignCodeGenOptions(frontend::GenerateModule, CI.getLangOpts(),
+                            CI.getCodeGenOpts());
 
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
@@ -324,6 +357,8 @@ static bool needsModules(FrontendInputFile FIF) {
 
 void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
+  resetBenignCodeGenOptions(CI.getFrontendOpts().ProgramAction,
+                            CI.getLangOpts(), CI.getCodeGenOpts());
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
@@ -430,14 +465,14 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
-  if (!File && !Imported) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  if (!File && !ModuleImported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
     MDC.addFileDep(FileName);
   }
-  handleImport(Imported);
+  handleImport(SuggestedModule);
 }
 
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
@@ -596,6 +631,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                         ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF,
+                                       MDC.PrebuiltModuleVFSMap,
                                        MDC.OptimizeArgs);
             if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
@@ -697,9 +733,11 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
+    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
     bool IsStdModuleP1689Format)
     : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
+      PrebuiltModuleVFSMap(std::move(PrebuiltModuleVFSMap)),
       Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))),

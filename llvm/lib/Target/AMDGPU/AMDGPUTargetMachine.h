@@ -37,6 +37,7 @@ public:
   static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableLowerModuleLDS;
+  static bool DisableStructurizer;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
@@ -50,6 +51,12 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opts,
+                             PassInstrumentationCallbacks *PIC) override;
 
   void registerPassBuilderCallbacks(PassBuilder &PB,
                                     bool PopulateClassToPassNames) override;

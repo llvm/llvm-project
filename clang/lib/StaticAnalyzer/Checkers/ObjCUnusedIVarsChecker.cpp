@@ -118,8 +118,7 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
     // (d) are unnamed bitfields
     if (Ivar->getAccessControl() != ObjCIvarDecl::Private ||
         Ivar->hasAttr<UnusedAttr>() || Ivar->hasAttr<IBOutletAttr>() ||
-        Ivar->hasAttr<IBOutletCollectionAttr>() ||
-        Ivar->isUnnamedBitfield())
+        Ivar->hasAttr<IBOutletCollectionAttr>() || Ivar->isUnnamedBitField())
       continue;
 
     M[Ivar] = Unused;
@@ -161,8 +160,8 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
 
       PathDiagnosticLocation L =
           PathDiagnosticLocation::create(Ivar, BR.getSourceManager());
-      BR.EmitBasicReport(D, Checker, "Unused instance variable", "Optimization",
-                         os.str(), L);
+      BR.EmitBasicReport(ID, Checker, "Unused instance variable",
+                         "Optimization", os.str(), L);
     }
 }
 

@@ -143,6 +143,10 @@ public:
 #include "RISCVGenSubtargetInfo.inc"
 
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
+  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
+  bool hasStdExtCOrZcfOrZce() const {
+    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
+  }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -188,6 +192,25 @@ public:
     unsigned VLen = getMaxRVVVectorSizeInBits();
     return VLen == 0 ? 65536 : VLen;
   }
+  // If we know the exact VLEN, return it.  Otherwise, return std::nullopt.
+  std::optional<unsigned> getRealVLen() const {
+    unsigned Min = getRealMinVLen();
+    if (Min != getRealMaxVLen())
+      return std::nullopt;
+    return Min;
+  }
+
+  /// If the ElementCount or TypeSize \p X is scalable and VScale (VLEN) is
+  /// exactly known, returns \p X converted to a fixed quantity. Otherwise
+  /// returns \p X unmodified.
+  template <typename Quantity> Quantity expandVScale(Quantity X) const {
+    if (auto VLen = getRealVLen(); VLen && X.isScalable()) {
+      const unsigned VScale = *VLen / RISCV::RVVBitsPerBlock;
+      X = Quantity::getFixed(X.getKnownMinValue() * VScale);
+    }
+    return X;
+  }
+
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||
@@ -242,6 +265,7 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
 
   bool useConstantPoolForLargeInts() const;
@@ -277,6 +301,8 @@ public:
   };
 
   unsigned getMinimumJumpTableEntries() const;
+
+  bool supportsInitUndef() const override { return hasVInstructions(); }
 };
 } // End llvm namespace
 

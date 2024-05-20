@@ -1,4 +1,4 @@
-; RUN: llc <%s -mtriple=aarch64-eabi -verify-machine-dom-info | FileCheck %s
+; RUN: llc <%s -mtriple=aarch64 -verify-machine-dom-info | FileCheck %s
 
 ; CHECK-LABEL: test:
 ; CHECK-LABEL: %cond.false12.i

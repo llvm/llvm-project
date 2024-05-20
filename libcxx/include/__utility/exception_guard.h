@@ -11,7 +11,7 @@
 
 #include <__assert>
 #include <__config>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/exchange.h>
 #include <__utility/move.h>
 

@@ -57,7 +57,7 @@ public:
     return numRefCountedObjects.load(std::memory_order_relaxed);
   }
 
-  llvm::ThreadPool &getThreadPool() { return threadPool; }
+  llvm::ThreadPoolInterface &getThreadPool() { return threadPool; }
 
 private:
   friend class RefCounted;
@@ -72,7 +72,7 @@ private:
   }
 
   std::atomic<int64_t> numRefCountedObjects;
-  llvm::ThreadPool threadPool;
+  llvm::DefaultThreadPool threadPool;
 };
 
 // -------------------------------------------------------------------------- //
@@ -437,7 +437,7 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
 }
 
 extern "C" int64_t mlirAsyncRuntimGetNumWorkerThreads() {
-  return getDefaultAsyncRuntime()->getThreadPool().getThreadCount();
+  return getDefaultAsyncRuntime()->getThreadPool().getMaxConcurrency();
 }
 
 //===----------------------------------------------------------------------===//

@@ -905,6 +905,11 @@ ConstString ObjectFileMachO::GetSegmentNameDWARF() {
   return g_section_name;
 }
 
+ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static ConstString g_section_name("__LLVM_COV");
+  return g_section_name;
+}
+
 ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
@@ -4889,14 +4894,12 @@ struct OSEnv {
     case llvm::MachO::PLATFORM_WATCHOS:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
       return;
-    // TODO: add BridgeOS & DriverKit once in llvm/lib/Support/Triple.cpp
-    // NEED_BRIDGEOS_TRIPLE
-    // case llvm::MachO::PLATFORM_BRIDGEOS:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
-    //   return;
-    // case llvm::MachO::PLATFORM_DRIVERKIT:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
-    //   return;
+    case llvm::MachO::PLATFORM_BRIDGEOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
+      return;
+    case llvm::MachO::PLATFORM_DRIVERKIT:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
+      return;
     case llvm::MachO::PLATFORM_MACCATALYST:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
       environment = llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
@@ -5137,8 +5140,17 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       case LC_LOADFVMLIB:
       case LC_LOAD_UPWARD_DYLIB: {
         uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+        bool is_delayed_init = false;
+        uint32_t use_command_marker = m_data.GetU32(&offset);
+        if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
+          offset += 4; /* uint32_t current_version */
+          offset += 4; /* uint32_t compat_version */
+          uint32_t flags = m_data.GetU32(&offset);
+          if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
+            is_delayed_init = true;
+        }
         const char *path = m_data.PeekCStr(name_offset);
-        if (path) {
+        if (path && !is_delayed_init) {
           if (load_cmd.cmd == LC_RPATH)
             rpath_paths.push_back(path);
           else {
@@ -6147,6 +6159,13 @@ bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
     return false;
   if (GetModule().get() != section->GetModule().get())
     return false;
+  // firmware style binaries with llvm gcov segment do
+  // not have that segment mapped into memory.
+  if (section->GetName() == GetSegmentNameLLVM_COV()) {
+    const Strata strata = GetStrata();
+    if (strata == eStrataKernel || strata == eStrataRawImage)
+      return false;
+  }
   // Be careful with __LINKEDIT and __DWARF segments
   if (section->GetName() == GetSegmentNameLINKEDIT() ||
       section->GetName() == GetSegmentNameDWARF()) {
@@ -6622,7 +6641,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Bits will be set to indicate which bits are NOT used in
         // addressing in this process or 0 for unknown.
         uint64_t address_mask = process_sp->GetCodeAddressMask();
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           // LC_NOTE "addrable bits"
           mach_header.ncmds++;
           mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6656,7 +6675,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
         // Add "addrable bits" LC_NOTE when an address mask is available
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
               new LCNoteEntry(addr_byte_size, byte_order));
           addrable_bits_lcnote_up->name = "addrable bits";

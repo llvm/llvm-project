@@ -25,6 +25,7 @@ using namespace Fortran::parser::literals;
 namespace Fortran::evaluate::characteristics {
 
 // Copy attributes from a symbol to dst based on the mapping in pairs.
+// An ASYNCHRONOUS attribute counts even if it is implied.
 template <typename A, typename B>
 static void CopyAttrs(const semantics::Symbol &src, A &dst,
     const std::initializer_list<std::pair<semantics::Attr, B>> &pairs) {
@@ -361,8 +362,9 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
     }
   }
   if (!attrs.test(Attr::Value) &&
-      !common::AreCompatibleCUDADataAttrs(
-          cudaDataAttr, actual.cudaDataAttr, ignoreTKR)) {
+      !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
+          ignoreTKR,
+          /*allowUnifiedMatchingRule=*/false)) {
     if (whyNot) {
       *whyNot = "incompatible CUDA data attributes";
     }
@@ -461,6 +463,34 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
   }
 }
 
+bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
+  constexpr TypeAndShape::Attrs shapeRequiringBox = {
+      TypeAndShape::Attr::AssumedShape, TypeAndShape::Attr::DeferredShape,
+      TypeAndShape::Attr::AssumedRank, TypeAndShape::Attr::Coarray};
+  if ((attrs & Attrs{Attr::Allocatable, Attr::Pointer}).any()) {
+    return true;
+  } else if ((type.attrs() & shapeRequiringBox).any()) {
+    // Need to pass shape/coshape info in a descriptor.
+    return true;
+  } else if (type.type().IsPolymorphic() && !type.type().IsAssumedType()) {
+    // Need to pass dynamic type info in a descriptor.
+    return true;
+  } else if (const auto *derived{GetDerivedTypeSpec(type.type())}) {
+    if (!derived->parameters().empty()) {
+      for (const auto &param : derived->parameters()) {
+        if (param.second.isLen()) {
+          // Need to pass length type parameters in a descriptor.
+          return true;
+        }
+      }
+    }
+  } else if (isBindC && type.type().IsAssumedLengthCharacter()) {
+    // Fortran 2018 18.3.6 point 2 (5)
+    return true;
+  }
+  return false;
+}
+
 llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
   if (intent != common::Intent::Default) {
@@ -505,7 +535,8 @@ bool DummyProcedure::IsCompatibleWith(
     }
     return false;
   }
-  if (!procedure.value().IsCompatibleWith(actual.procedure.value(), whyNot)) {
+  if (!procedure.value().IsCompatibleWith(actual.procedure.value(),
+          /*ignoreImplicitVsExplicit=*/false, whyNot)) {
     if (whyNot) {
       *whyNot = "incompatible dummy procedure interfaces: "s + *whyNot;
     }
@@ -546,11 +577,11 @@ static std::optional<DummyArgument> CharacterizeDummyArgument(
     semantics::UnorderedSymbolSet seenProcs);
 static std::optional<FunctionResult> CharacterizeFunctionResult(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::UnorderedSymbolSet seenProcs);
+    semantics::UnorderedSymbolSet seenProcs, bool emitError);
 
 static std::optional<Procedure> CharacterizeProcedure(
     const semantics::Symbol &original, FoldingContext &context,
-    semantics::UnorderedSymbolSet seenProcs) {
+    semantics::UnorderedSymbolSet seenProcs, bool emitError) {
   const auto &symbol{ResolveAssociations(original)};
   if (seenProcs.find(symbol) != seenProcs.end()) {
     std::string procsList{GetSeenProcs(seenProcs)};
@@ -561,6 +592,13 @@ static std::optional<Procedure> CharacterizeProcedure(
     return std::nullopt;
   }
   seenProcs.insert(symbol);
+  auto CheckForNested{[&](const Symbol &symbol) {
+    if (emitError) {
+      context.messages().Say(
+          "Procedure '%s' is referenced before being sufficiently defined in a context where it must be so"_err_en_US,
+          symbol.name());
+    }
+  }};
   auto result{common::visit(
       common::visitors{
           [&](const semantics::SubprogramDetails &subp)
@@ -568,7 +606,7 @@ static std::optional<Procedure> CharacterizeProcedure(
             Procedure result;
             if (subp.isFunction()) {
               if (auto fr{CharacterizeFunctionResult(
-                      subp.result(), context, seenProcs)}) {
+                      subp.result(), context, seenProcs, emitError)}) {
                 result.functionResult = std::move(fr);
               } else {
                 return std::nullopt;
@@ -611,8 +649,8 @@ static std::optional<Procedure> CharacterizeProcedure(
             }
             if (const semantics::Symbol *
                 interfaceSymbol{proc.procInterface()}) {
-              auto result{
-                  CharacterizeProcedure(*interfaceSymbol, context, seenProcs)};
+              auto result{CharacterizeProcedure(
+                  *interfaceSymbol, context, seenProcs, /*emitError=*/false)};
               if (result && (IsDummy(symbol) || IsPointer(symbol))) {
                 // Dummy procedures and procedure pointers may not be
                 // ELEMENTAL, but we do accept the use of elemental intrinsic
@@ -645,8 +683,8 @@ static std::optional<Procedure> CharacterizeProcedure(
             }
           },
           [&](const semantics::ProcBindingDetails &binding) {
-            if (auto result{CharacterizeProcedure(
-                    binding.symbol(), context, seenProcs)}) {
+            if (auto result{CharacterizeProcedure(binding.symbol(), context,
+                    seenProcs, /*emitError=*/false)}) {
               if (binding.symbol().attrs().test(semantics::Attr::INTRINSIC)) {
                 result->attrs.reset(Procedure::Attr::Elemental);
               }
@@ -665,7 +703,8 @@ static std::optional<Procedure> CharacterizeProcedure(
             }
           },
           [&](const semantics::UseDetails &use) {
-            return CharacterizeProcedure(use.symbol(), context, seenProcs);
+            return CharacterizeProcedure(
+                use.symbol(), context, seenProcs, /*emitError=*/false);
           },
           [](const semantics::UseErrorDetails &) {
             // Ambiguous use-association will be handled later during symbol
@@ -673,25 +712,23 @@ static std::optional<Procedure> CharacterizeProcedure(
             return std::optional<Procedure>{};
           },
           [&](const semantics::HostAssocDetails &assoc) {
-            return CharacterizeProcedure(assoc.symbol(), context, seenProcs);
+            return CharacterizeProcedure(
+                assoc.symbol(), context, seenProcs, /*emitError=*/false);
           },
           [&](const semantics::GenericDetails &generic) {
             if (const semantics::Symbol * specific{generic.specific()}) {
-              return CharacterizeProcedure(*specific, context, seenProcs);
+              return CharacterizeProcedure(
+                  *specific, context, seenProcs, emitError);
             } else {
               return std::optional<Procedure>{};
             }
           },
           [&](const semantics::EntityDetails &) {
-            context.messages().Say(
-                "Procedure '%s' is referenced before being sufficiently defined in a context where it must be so"_err_en_US,
-                symbol.name());
+            CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
           [&](const semantics::SubprogramNameDetails &) {
-            context.messages().Say(
-                "Procedure '%s' is referenced before being sufficiently defined in a context where it must be so"_err_en_US,
-                symbol.name());
+            CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
           [&](const auto &) {
@@ -722,7 +759,8 @@ static std::optional<Procedure> CharacterizeProcedure(
 static std::optional<DummyProcedure> CharacterizeDummyProcedure(
     const semantics::Symbol &symbol, FoldingContext &context,
     semantics::UnorderedSymbolSet seenProcs) {
-  if (auto procedure{CharacterizeProcedure(symbol, context, seenProcs)}) {
+  if (auto procedure{CharacterizeProcedure(
+          symbol, context, seenProcs, /*emitError=*/true)}) {
     // Dummy procedures may not be elemental.  Elemental dummy procedure
     // interfaces are errors when the interface is not intrinsic, and that
     // error is caught elsewhere.  Elemental intrinsic interfaces are
@@ -824,7 +862,8 @@ std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
                 std::move(name), std::move(obj));
           },
           [&](const ProcedureDesignator &designator) {
-            if (auto proc{Procedure::Characterize(designator, context)}) {
+            if (auto proc{Procedure::Characterize(
+                    designator, context, /*emitError=*/true)}) {
               return std::make_optional<DummyArgument>(
                   std::move(name), DummyProcedure{std::move(*proc)});
             } else {
@@ -958,7 +997,7 @@ bool FunctionResult::operator==(const FunctionResult &that) const {
 
 static std::optional<FunctionResult> CharacterizeFunctionResult(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::UnorderedSymbolSet seenProcs) {
+    semantics::UnorderedSymbolSet seenProcs, bool emitError) {
   if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (auto type{TypeAndShape::Characterize(
             symbol, context, /*invariantOnly=*/false)}) {
@@ -972,8 +1011,8 @@ static std::optional<FunctionResult> CharacterizeFunctionResult(
       result.cudaDataAttr = object->cudaDataAttr();
       return result;
     }
-  } else if (auto maybeProc{
-                 CharacterizeProcedure(symbol, context, seenProcs)}) {
+  } else if (auto maybeProc{CharacterizeProcedure(
+                 symbol, context, seenProcs, emitError)}) {
     FunctionResult result{std::move(*maybeProc)};
     result.attrs.set(FunctionResult::Attr::Pointer);
     return result;
@@ -984,7 +1023,8 @@ static std::optional<FunctionResult> CharacterizeFunctionResult(
 std::optional<FunctionResult> FunctionResult::Characterize(
     const Symbol &symbol, FoldingContext &context) {
   semantics::UnorderedSymbolSet seenProcs;
-  return CharacterizeFunctionResult(symbol, context, seenProcs);
+  return CharacterizeFunctionResult(
+      symbol, context, seenProcs, /*emitError=*/false);
 }
 
 bool FunctionResult::IsAssumedLengthCharacter() const {
@@ -1178,7 +1218,8 @@ bool FunctionResult::IsCompatibleWith(
     CHECK(ifaceProc != nullptr);
     if (const auto *actualProc{
             std::get_if<CopyableIndirection<Procedure>>(&actual.u)}) {
-      if (ifaceProc->value().IsCompatibleWith(actualProc->value(), whyNot)) {
+      if (ifaceProc->value().IsCompatibleWith(actualProc->value(),
+              /*ignoreImplicitVsExplicit=*/false, whyNot)) {
         return true;
       }
       if (whyNot) {
@@ -1223,7 +1264,8 @@ bool Procedure::operator==(const Procedure &that) const {
       cudaSubprogramAttrs == that.cudaSubprogramAttrs;
 }
 
-bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
+bool Procedure::IsCompatibleWith(const Procedure &actual,
+    bool ignoreImplicitVsExplicit, std::string *whyNot,
     const SpecificIntrinsic *specificIntrinsic,
     std::optional<std::string> *warning) const {
   // 15.5.2.9(1): if dummy is not pure, actual need not be.
@@ -1237,6 +1279,9 @@ bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
   }
   Attrs differences{attrs ^ actualAttrs};
   differences.reset(Attr::Subroutine); // dealt with specifically later
+  if (ignoreImplicitVsExplicit) {
+    differences.reset(Attr::ImplicitInterface);
+  }
   if (!differences.empty()) {
     if (whyNot) {
       auto sep{": "s};
@@ -1325,27 +1370,26 @@ bool Procedure::CanOverride(
 }
 
 std::optional<Procedure> Procedure::Characterize(
-    const semantics::Symbol &original, FoldingContext &context) {
+    const semantics::Symbol &symbol, FoldingContext &context) {
   semantics::UnorderedSymbolSet seenProcs;
-  return CharacterizeProcedure(original, context, seenProcs);
+  return CharacterizeProcedure(symbol, context, seenProcs, /*emitError=*/true);
 }
 
 std::optional<Procedure> Procedure::Characterize(
-    const ProcedureDesignator &proc, FoldingContext &context) {
+    const ProcedureDesignator &proc, FoldingContext &context, bool emitError) {
   if (const auto *symbol{proc.GetSymbol()}) {
-    if (auto result{
-            characteristics::Procedure::Characterize(*symbol, context)}) {
-      return result;
-    }
+    semantics::UnorderedSymbolSet seenProcs;
+    return CharacterizeProcedure(*symbol, context, seenProcs, emitError);
   } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
     return intrinsic->characteristics.value();
+  } else {
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 std::optional<Procedure> Procedure::Characterize(
     const ProcedureRef &ref, FoldingContext &context) {
-  if (auto callee{Characterize(ref.proc(), context)}) {
+  if (auto callee{Characterize(ref.proc(), context, /*emitError=*/true)}) {
     if (callee->functionResult) {
       if (const Procedure *
           proc{callee->functionResult->IsProcedurePointer()}) {
@@ -1362,7 +1406,7 @@ std::optional<Procedure> Procedure::Characterize(
     return Characterize(*procRef, context);
   } else if (const auto *procDesignator{
                  std::get_if<ProcedureDesignator>(&expr.u)}) {
-    return Characterize(*procDesignator, context);
+    return Characterize(*procDesignator, context, /*emitError=*/true);
   } else if (const Symbol * symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
     return Characterize(*symbol, context);
   } else {
@@ -1374,7 +1418,7 @@ std::optional<Procedure> Procedure::Characterize(
 
 std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
     const ActualArguments &args, FoldingContext &context) {
-  auto callee{Characterize(proc, context)};
+  auto callee{Characterize(proc, context, /*emitError=*/true)};
   if (callee) {
     if (callee->dummyArguments.empty() &&
         callee->attrs.test(Procedure::Attr::ImplicitInterface)) {
@@ -1711,8 +1755,9 @@ bool DistinguishUtils::Distinguishable(
   } else if (y.attrs.test(Attr::Allocatable) && x.attrs.test(Attr::Pointer) &&
       x.intent != common::Intent::In) {
     return true;
-  } else if (!common::AreCompatibleCUDADataAttrs(
-                 x.cudaDataAttr, y.cudaDataAttr, x.ignoreTKR | y.ignoreTKR)) {
+  } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
+                 x.ignoreTKR | y.ignoreTKR,
+                 /*allowUnifiedMatchingRule=*/false)) {
     return true;
   } else if (features_.IsEnabled(
                  common::LanguageFeature::DistinguishableSpecifics) &&

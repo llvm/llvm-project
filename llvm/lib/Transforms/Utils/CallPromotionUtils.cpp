@@ -170,12 +170,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
-  Instruction *InsertBefore = nullptr;
+  BasicBlock::iterator InsertBefore;
   if (auto *Invoke = dyn_cast<InvokeInst>(&CB))
     InsertBefore =
-        &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
+        SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->begin();
   else
-    InsertBefore = &*std::next(CB.getIterator());
+    InsertBefore = std::next(CB.getIterator());
 
   // Bitcast the return value to the correct type.
   auto *Cast = CastInst::CreateBitOrPointerCast(&CB, RetTy, "", InsertBefore);
@@ -221,6 +221,7 @@ static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
 /// Is replace by the following:
 ///
 ///   orig_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -250,6 +251,7 @@ static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
 /// Is replace by the following:
 ///
 ///   orig_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -284,6 +286,7 @@ static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
 /// Is replaced by the following:
 ///
 ///   cond_bb:
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %orig_bb
 ///
 ///   then_bb:
@@ -296,8 +299,8 @@ static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-CallBase &llvm::versionCallSiteWithCond(CallBase &CB, Value *Cond,
-                                        MDNode *BranchWeights) {
+static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                         MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;
@@ -535,7 +538,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", &CB);
+      auto *Cast =
+          CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
@@ -585,26 +589,6 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
   return promoteCall(NewInst, Callee);
 }
 
-Constant *llvm::getVTableAddressPointOffset(GlobalVariable *VTable,
-                                            uint32_t AddressPointOffset) {
-  Module &M = *VTable->getParent();
-  const DataLayout &DL = M.getDataLayout();
-  LLVMContext &Context = M.getContext();
-  Type *VTableType = VTable->getValueType();
-  assert(AddressPointOffset < DL.getTypeAllocSize(VTableType) &&
-         "Out-of-bound access");
-  APInt AddressPointOffsetAPInt(32, AddressPointOffset, false);
-  SmallVector<APInt> Indices =
-      DL.getGEPIndicesForOffset(VTableType, AddressPointOffsetAPInt);
-  SmallVector<llvm::Constant *> GEPIndices;
-  for (const auto &Index : Indices)
-    GEPIndices.push_back(llvm::ConstantInt::get(Type::getInt32Ty(Context),
-                                                Index.getZExtValue()));
-
-  return ConstantExpr::getInBoundsGetElementPtr(VTable->getValueType(), VTable,
-                                                GEPIndices);
-}
-
 CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
                                          Function *Callee,
                                          ArrayRef<Constant *> AddressPoints,
@@ -615,7 +599,8 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   for (auto &AddressPoint : AddressPoints)
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
 
-  Value *Cond = getOrResult(ICmps, Builder);
+  // TODO: Perform tree height reduction if the number of ICmps is high.
+  Value *Cond = Builder.CreateOr(ICmps);
 
   // Version the indirect call site. If Cond is true, 'NewInst' will be
   // executed, otherwise the original call site will be executed.

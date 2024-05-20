@@ -12,6 +12,19 @@
 // RUN: %clang_cc1 -std=c++20 %t/f.cppm -emit-module-interface -fmodule-file=c=%t/c.pcm -o %t/f.pcm
 // RUN: %clang_cc1 -std=c++20 %t/g.cpp -fmodule-file=f=%t/f.pcm -fmodule-file=c=%t/c.pcm  -verify -fsyntax-only
 
+// Test again with reduced BMI
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -I%t -emit-reduced-module-interface -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 %t/b.cpp -fmodule-file=a=%t/a.pcm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 %t/c.cppm -I%t -emit-reduced-module-interface -o %t/c.pcm
+// RUN: %clang_cc1 -std=c++20 %t/d.cppm -emit-reduced-module-interface -fmodule-file=c=%t/c.pcm -o %t/d.pcm
+// RUN: %clang_cc1 -std=c++20 %t/e.cpp -fmodule-file=d=%t/d.pcm -fmodule-file=c=%t/c.pcm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 %t/f.cppm -emit-reduced-module-interface -fmodule-file=c=%t/c.pcm -o %t/f.pcm
+// RUN: %clang_cc1 -std=c++20 %t/g.cpp -fmodule-file=f=%t/f.pcm -fmodule-file=c=%t/c.pcm  -verify -fsyntax-only
+
 //--- initializer_list.h
 namespace std {
   typedef decltype(sizeof(int)) size_t;

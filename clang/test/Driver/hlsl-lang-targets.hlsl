@@ -32,7 +32,7 @@
 // Invalid shader stages
 //
 // RUN: not %clang -target dxil--shadermodel6.2-unknown %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
-// RUN: not %clang -target dxil--shadermodel6.2-invalidenvironment %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
+// RUN: not %clang --target=dxil--shadermodel6.2-invalidenvironment %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV-DRV %s
 // RUN: not %clang -target dxil--shadermodel6.2-eabi %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
 // RUN: not %clang -target dxil--shadermodel6.2-msvc %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
 
@@ -47,6 +47,7 @@
 // CHECK-BAD-OS: error: shader model '{{.*}}' in target '{{.*}}' is invalid for HLSL code generation
 // CHECK-NO-ENV: error: shader stage is required as environment in target '{{.*}}' for HLSL code generation
 // CHECK-BAD-ENV: error: shader stage '{{.*}}' in target '{{.*}}' is invalid for HLSL code generation
+// CHECK-BAD-ENV-DRV: error: version '{{.*}}' in target triple '{{.*}}' is invalid
 // CHECK-BAD-TARGET: error: HLSL code generation is unsupported for target '{{.*}}'
 
 [shader("pixel")]

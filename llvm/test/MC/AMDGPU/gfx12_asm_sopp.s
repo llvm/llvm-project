@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
 
 s_wait_loadcnt 0x1234
 // GFX12: encoding: [0x34,0x12,0xc0,0xbf]
@@ -269,9 +269,6 @@ s_cbranch_execnz 0x0
 
 s_cbranch_execnz 0x1234
 // GFX12: s_cbranch_execnz 4660 ; encoding: [0x34,0x12,0xa6,0xbf]
-
-s_barrier
-// GFX12: s_barrier ; encoding: [0x00,0x00,0xbd,0xbf]
 
 s_setkill 0x0
 // GFX12: s_setkill 0 ; encoding: [0x00,0x00,0x81,0xbf]

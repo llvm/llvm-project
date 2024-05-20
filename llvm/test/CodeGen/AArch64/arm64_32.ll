@@ -759,5 +759,19 @@ define void @test_bzero(i64 %in)  {
 
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
 
+define i1 @test_stackguard(ptr %p1) {
+; CHECK-LABEL: test_stackguard:
+; CHECK: adrp x[[TMP:[0-9]+]], ___stack_chk_guard@GOTPAGE
+; CHECK: ldr [[GUARD:w[0-9]+]], [x[[TMP]], ___stack_chk_guard@GOTPAGEOFF]
+; CHECK: cmp [[GUARD]], w
+
+  %p2 = call ptr @llvm.stackguard()
+  %res = icmp ne ptr %p2, %p1
+  ret i1 %res
+}
+declare ptr @llvm.stackguard()
+@__stack_chk_guard = external global i32
+
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"PIC Level", i32 2}

@@ -258,13 +258,14 @@ Sema::UpdateExceptionSpec(FunctionDecl *FD,
 }
 
 static bool exceptionSpecNotKnownYet(const FunctionDecl *FD) {
-  auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD)
+  ExceptionSpecificationType EST =
+      FD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
+  if (EST == EST_Unparsed)
+    return true;
+  else if (EST != EST_Unevaluated)
     return false;
-
-  auto EST = MD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
-  return EST == EST_Unparsed ||
-         (EST == EST_Unevaluated && MD->getParent()->isBeingDefined());
+  const DeclContext *DC = FD->getLexicalDeclContext();
+  return DC->isRecord() && cast<RecordDecl>(DC)->isBeingDefined();
 }
 
 static bool CheckEquivalentExceptionSpecImpl(
@@ -1017,13 +1018,13 @@ CanThrowResult Sema::canCalleeThrow(Sema &S, const Expr *E, const Decl *D,
                                     SourceLocation Loc) {
   // As an extension, we assume that __attribute__((nothrow)) functions don't
   // throw.
-  if (D && isa<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
+  if (isa_and_nonnull<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
     return CT_Cannot;
 
   QualType T;
 
   // In C++1z, just look at the function type of the callee.
-  if (S.getLangOpts().CPlusPlus17 && E && isa<CallExpr>(E)) {
+  if (S.getLangOpts().CPlusPlus17 && isa_and_nonnull<CallExpr>(E)) {
     E = cast<CallExpr>(E)->getCallee();
     T = E->getType();
     if (T->isSpecificPlaceholderType(BuiltinType::BoundMember)) {
@@ -1314,7 +1315,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     // Some might be dependent for other reasons.
   case Expr::ArraySubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
-  case Expr::OMPArraySectionExprClass:
+  case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::BinaryOperatorClass:
@@ -1423,6 +1424,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     llvm_unreachable("Invalid class for expression");
 
     // Most statements can throw if any substatement can throw.
+  case Stmt::OpenACCComputeConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:

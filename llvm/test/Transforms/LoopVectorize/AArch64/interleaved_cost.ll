@@ -5,7 +5,7 @@
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64--linux-gnueabi"
+target triple = "aarch64"
 
 %i8.2 = type {i8, i8}
 define void @i8_factor_2(ptr %data, i64 %n) {

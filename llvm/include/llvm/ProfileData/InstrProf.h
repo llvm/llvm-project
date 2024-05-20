@@ -17,6 +17,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -109,9 +111,7 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 
 /// Return the name of the variable holding the strings (possibly compressed)
 /// of all function's PGO names.
-inline StringRef getInstrProfNamesVarName() {
-  return "__llvm_prf_nm";
-}
+inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
 
 inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
@@ -145,7 +145,8 @@ inline StringRef getInstrProfRegFuncName() {
   return "__llvm_profile_register_function";
 }
 
-/// Return the name of the runtime interface that registers the PGO name strings.
+/// Return the name of the runtime interface that registers the PGO name
+/// strings.
 inline StringRef getInstrProfNamesRegFuncName() {
   return "__llvm_profile_register_names_function";
 }
@@ -317,7 +318,7 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
-bool needsComdatForCounter(const GlobalValue &GV, const Module &M);
+bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
@@ -451,10 +452,10 @@ uint64_t ComputeHash(StringRef K);
 class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
-  using RangeHashMap =
-      std::vector<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>;
 
 private:
+  using AddrIntervalMap =
+      IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
   StringRef Data;
   uint64_t Address = 0;
   // Unique name strings. Used to ensure entries in MD5NameMap (a vector that's
@@ -467,43 +468,43 @@ private:
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
-  // A map from MD5 keys to virtual table definitions. Only populated when
-  // building the Symtab from a module.
-  std::vector<std::pair<uint64_t, GlobalVariable *>> MD5VTableMap;
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
+  // A map from MD5 to the global variable. This map is only populated when
+  // building the symtab from a module. Use separate container instances for
+  // `MD5FuncMap` and `MD5VTableMap`.
+  // TODO: Unify the container type and the lambda function 'mapName' inside
+  // add{Func,VTable}WithName.
+  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
-  // A map from virtual table runtime address to function name MD5 hash.
+
+  AddrIntervalMap::Allocator VTableAddrMapAllocator;
   // This map is only populated and used by raw instr profile reader.
-  // This is a different map from 'AddrToMD5Map' for readability and
-  // debuggability.
-  RangeHashMap VTableAddrRangeToMD5Map;
+  AddrIntervalMap VTableAddrMap;
   bool Sorted = false;
 
-  static StringRef getExternalSymbol() {
-    return "** External Symbol **";
-  }
+  static StringRef getExternalSymbol() { return "** External Symbol **"; }
 
-  // Returns the canonical name of the given PGOName by stripping the names
-  // suffixes that begins with ".". If MayHaveUniqueSuffix is true, ".__uniq."
-  // suffix is kept in the canonical name.
-  StringRef getCanonicalName(StringRef PGOName, bool MayHaveUniqueSuffix);
+  // Returns the canonial name of the given PGOName. In a canonical name, all
+  // suffixes that begins with "." except ".__uniq." are stripped.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  static StringRef getCanonicalName(StringRef PGOName);
 
   // Add the function into the symbol table, by creating the following
   // map entries:
-  // - <MD5Hash(PGOFuncName), PGOFuncName>
-  // - <MD5Hash(PGOFuncName), F>
-  // - <MD5Hash(getCanonicalName(PGOFuncName), F)
+  // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
+  // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
-  // - <MD5Hash(PGOVTableName), PGOVTableName>
-  // - <MD5Hash(PGOVTableName), V>
-  // - <MD5Hash(getCanonicalName(PGOVTableName), V)
+  // name-set = {PGOName} union {getCanonicalName(PGOName)}
+  // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
   Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
@@ -513,7 +514,14 @@ private:
   inline void finalizeSymtab();
 
 public:
-  InstrProfSymtab() = default;
+  InstrProfSymtab() : VTableAddrMap(VTableAddrMapAllocator) {}
+
+  // Not copyable or movable.
+  // Consider std::unique_ptr for move.
+  InstrProfSymtab(const InstrProfSymtab &) = delete;
+  InstrProfSymtab &operator=(const InstrProfSymtab &) = delete;
+  InstrProfSymtab(InstrProfSymtab &&) = delete;
+  InstrProfSymtab &operator=(InstrProfSymtab &&) = delete;
 
   /// Create InstrProfSymtab from an object file section which
   /// contains function PGO names. When section may contain raw
@@ -528,10 +536,10 @@ public:
   /// This method is a wrapper to \c readAndDecodeStrings method.
   Error create(StringRef NameStrings);
 
-  /// \c FuncNameStrings is a string composed of one or more encoded function
-  /// name strings, and \c VTableNameStrings composes of one or more encoded
-  /// vtable names. This function is a wrapper to \c readAndDecodeStrings
-  /// method.
+  /// Initialize symtab states with function names and vtable names. \c
+  /// FuncNameStrings is a string composed of one or more encoded function name
+  /// strings, and \c VTableNameStrings composes of one or more encoded vtable
+  /// names. This interface is solely used by raw profile reader.
   Error create(StringRef FuncNameStrings, StringRef VTableNameStrings);
 
   /// Initialize 'this' with the set of vtable names encoded in
@@ -587,7 +595,7 @@ public:
     if (Error E = addSymbolName(VTableName))
       return E;
 
-    // Record VTableName. InstrProfWriter uses this map. The comment around
+    // Record VTableName. InstrProfWriter uses this set. The comment around
     // class member explains why.
     VTableNames.insert(VTableName);
     return Error::success();
@@ -601,12 +609,11 @@ public:
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
 
-  /// Map the address range (i.e., [start_address, end_address]) of a variable
+  /// Map the address range (i.e., [start_address, end_address)) of a variable
   /// to  its names' MD5 hash. This interface is only used by the raw profile
   /// reader.
   void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
-    VTableAddrRangeToMD5Map.push_back(
-        std::make_pair(std::make_pair(StartAddr, EndAddr), MD5Val));
+    VTableAddrMap.insert(StartAddr, EndAddr, MD5Val);
   }
 
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
@@ -636,8 +643,10 @@ public:
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
   inline Function *getFunction(uint64_t FuncMD5Hash);
-  // Return vtable from the name's MD5 hash. Return nullptr if not found.
-  inline GlobalVariable *getGlobalVariable(uint64_t GlobalVariableMD5Hash);
+
+  /// Return the global variable corresponding to md5 hash. Return nullptr if
+  /// not found.
+  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash);
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -665,15 +674,16 @@ Error InstrProfSymtab::create(const NameIterRange &IterRange) {
 template <typename FuncNameIterRange, typename VTableNameIterRange>
 Error InstrProfSymtab::create(const FuncNameIterRange &FuncIterRange,
                               const VTableNameIterRange &VTableIterRange) {
-  for (auto Name : FuncIterRange)
+  // Iterate elements by StringRef rather than by const reference.
+  // StringRef is small enough, so the loop is efficient whether
+  // element in the range is std::string or StringRef.
+  for (StringRef Name : FuncIterRange)
     if (Error E = addFuncName(Name))
       return E;
 
-  for (auto VTableName : VTableIterRange) {
-    if (Error E = addVTableName(VTableName)) {
+  for (StringRef VTableName : VTableIterRange)
+    if (Error E = addVTableName(VTableName))
       return E;
-    }
-  }
 
   finalizeSymtab();
   return Error::success();
@@ -683,18 +693,10 @@ void InstrProfSymtab::finalizeSymtab() {
   if (Sorted)
     return;
   llvm::sort(MD5NameMap, less_first());
-  llvm::sort(MD5VTableMap, less_first());
   llvm::sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
-  // VTable object address ranges should not overlap; so sort by either
-  // beginning address or end address is fine.
-  llvm::sort(VTableAddrRangeToMD5Map, less_first());
-  // std::unique uses == operator for std::pair.
-  VTableAddrRangeToMD5Map.erase(std::unique(VTableAddrRangeToMD5Map.begin(),
-                                            VTableAddrRangeToMD5Map.end()),
-                                VTableAddrRangeToMD5Map.end());
   Sorted = true;
 }
 
@@ -725,16 +727,9 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
   return nullptr;
 }
 
-GlobalVariable *
-InstrProfSymtab::getGlobalVariable(uint64_t GlobalVariableMD5Hash) {
-  finalizeSymtab();
-  auto Result =
-      llvm::lower_bound(MD5VTableMap, GlobalVariableMD5Hash,
-                        [](const std::pair<uint64_t, GlobalVariable *> &LHS,
-                           uint64_t RHS) { return LHS.first < RHS; });
-
-  if (Result != MD5VTableMap.end() && Result->first == GlobalVariableMD5Hash)
-    return Result->second;
+GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
+  if (auto Iter = MD5VTableMap.find(MD5Hash); Iter != MD5VTableMap.end())
+    return Iter->second;
   return nullptr;
 }
 
@@ -1190,14 +1185,20 @@ inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic;
+  // The lower 32 bits specify the version of the indexed profile.
+  // The most significant 32 bits are reserved to specify the variant types of
+  // the profile.
   uint64_t Version;
   uint64_t Unused; // Becomes unused since version 4
   uint64_t HashType;
+  // This field records the offset of this hash table's metadata (i.e., the
+  // number of buckets and entries), which follows right after the payload of
+  // the entire hash table.
   uint64_t HashOffset;
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;
   uint64_t TemporalProfTracesOffset;
-  uint64_t VTableNamesOffset; // Organize virtual table names.
+  uint64_t VTableNamesOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
@@ -1317,6 +1318,7 @@ namespace RawInstrProf {
 // Version 7: Reorder binary id and include version in signature.
 // Version 8: Use relative counter pointer.
 // Version 9: Added relative bitmap bytes pointer and count used by MC/DC.
+// Version 10: Added vtable, a new type of value profile data.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();

@@ -9,11 +9,6 @@
 #ifndef MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES_H
 
-#include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
-#include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
-#include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
-#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
-#include "mlir/Dialect/LLVMIR/Transforms/TypeConsistency.h"
 #include "mlir/Pass/Pass.h"
 
 #define GEN_PASS_DECL

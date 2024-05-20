@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 
 v_min3_f32 v5, v1, v2, v3
 // GFX12: v_min3_num_f32 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x29,0xd6,0x01,0x05,0x0e,0x04]
@@ -43,7 +43,7 @@ v_min_f64 v[5:6], s[2:3], s[4:5]
 // GFX12: v_min_num_f64_e64 v[5:6], s[2:3], s[4:5] ; encoding: [0x05,0x00,0x0d,0xd5,0x02,0x08,0x00,0x00]
 
 v_cvt_pknorm_i16_f16 v5, v1, v2
-// GFX11: v_cvt_pk_norm_i16_f16 {{.*}} encoding: [0x05,0x00,0x12,0xd7,0x01,0x05,0x02,0x00]
+// GFX12: v_cvt_pk_norm_i16_f16 v5, v1, v2        ; encoding: [0x05,0x00,0x12,0xd7,0x01,0x05,0x02,0x00]
 
 v_cvt_pknorm_u16_f16 v5, v1, v2
-// GFX11: v_cvt_pk_norm_u16_f16 {{.*}} encoding: [0x05,0x00,0x13,0xd7,0x01,0x05,0x02,0x00]
+// GFX12: v_cvt_pk_norm_u16_f16 v5, v1, v2        ; encoding: [0x05,0x00,0x13,0xd7,0x01,0x05,0x02,0x00]

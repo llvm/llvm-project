@@ -713,7 +713,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
+  DAG.addMutation(
+      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PreRAReentry));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -855,7 +856,9 @@ bool GCNSchedStage::initGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
     bool IsInitialStage = StageID == GCNSchedStageID::OccInitialSchedule ||
                           StageID == GCNSchedStageID::ILPInitialSchedule;
-    DAG.addMutation(createIGroupLPDAGMutation(/*IsReentry=*/!IsInitialStage));
+    DAG.addMutation(createIGroupLPDAGMutation(
+        IsInitialStage ? AMDGPU::SchedulingPhase::Initial
+                       : AMDGPU::SchedulingPhase::PreRAReentry));
   }
 
   return true;
@@ -970,11 +973,17 @@ void GCNSchedStage::checkScheduling() {
     LLVM_DEBUG(dbgs() << "Occupancy lowered for the function to "
                       << DAG.MinOccupancy << ".\n");
   }
-
+  // The maximum number of arch VGPR on non-unified register file, or the
+  // maximum VGPR + AGPR in the unified register file case.
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+  // The maximum number of arch VGPR for both unified and non-unified register
+  // file.
+  unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
-  if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
-      PressureAfter.getAGPRNum() > MaxVGPRs ||
+
+  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
+      PressureAfter.getVGPRNum(false) > MaxArchVGPRs ||
+      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RescheduleRegions[RegionIdx] = true;
     DAG.RegionsWithHighRP[RegionIdx] = true;
@@ -1195,9 +1204,8 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
-  if (WavesAfter <= MFI.getMinWavesPerEU() &&
-      !PressureAfter.less(ST, PressureBefore) &&
-      isRegionWithExcessRP()) {
+  if (WavesAfter <= MFI.getMinWavesPerEU() && isRegionWithExcessRP() &&
+      !PressureAfter.less(MF, PressureBefore)) {
     LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     return true;
   }
@@ -1569,7 +1577,7 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
-    addMutation(createIGroupLPDAGMutation(/*IsReentry=*/true));
+    addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
   }
 
   ScheduleDAGMI::schedule();

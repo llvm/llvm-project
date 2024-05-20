@@ -52,7 +52,7 @@
 
 namespace llvm {
 class raw_ostream;
-class ThreadPool;
+class ThreadPoolInterface;
 } // namespace llvm
 
 namespace lldb_private {
@@ -78,17 +78,9 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
 public:
-  /// Broadcaster event bits definitions.
-  enum {
-    eBroadcastBitProgress = (1 << 0),
-    eBroadcastBitWarning = (1 << 1),
-    eBroadcastBitError = (1 << 2),
-    eBroadcastSymbolChange = (1 << 3),
-  };
-
   using DebuggerList = std::vector<lldb::DebuggerSP>;
 
-  static ConstString GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
   /// Get the public broadcaster for this debugger.
   Broadcaster &GetBroadcaster() { return m_broadcaster; }
@@ -498,8 +490,8 @@ public:
     return m_broadcaster_manager_sp;
   }
 
-  /// Shared thread poll. Use only with ThreadPoolTaskGroup.
-  static llvm::ThreadPool &GetThreadPool();
+  /// Shared thread pool. Use only with ThreadPoolTaskGroup.
+  static llvm::ThreadPoolInterface &GetThreadPool();
 
   /// Report warning events.
   ///
@@ -592,6 +584,7 @@ protected:
   friend class CommandInterpreter;
   friend class REPL;
   friend class Progress;
+  friend class ProgressManager;
 
   /// Report progress events.
   ///
@@ -622,13 +615,13 @@ protected:
   ///   debugger identifier that this progress should be delivered to. If this
   ///   optional parameter does not have a value, the progress will be
   ///   delivered to all debuggers.
-  static void ReportProgress(uint64_t progress_id, std::string title,
-                             std::string details, uint64_t completed,
-                             uint64_t total,
-                             std::optional<lldb::user_id_t> debugger_id);
+  static void
+  ReportProgress(uint64_t progress_id, std::string title, std::string details,
+                 uint64_t completed, uint64_t total,
+                 std::optional<lldb::user_id_t> debugger_id,
+                 uint32_t progress_category_bit = lldb::eBroadcastBitProgress);
 
-  static void ReportDiagnosticImpl(DiagnosticEventData::Type type,
-                                   std::string message,
+  static void ReportDiagnosticImpl(lldb::Severity severity, std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
                                    std::once_flag *once);
 

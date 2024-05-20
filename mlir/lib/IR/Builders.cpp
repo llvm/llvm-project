@@ -346,6 +346,24 @@ TypedAttr Builder::getZeroAttr(Type type) {
   return {};
 }
 
+TypedAttr Builder::getOneAttr(Type type) {
+  if (llvm::isa<FloatType>(type))
+    return getFloatAttr(type, 1.0);
+  if (llvm::isa<IndexType>(type))
+    return getIndexAttr(1);
+  if (llvm::dyn_cast<IntegerType>(type))
+    return getIntegerAttr(type,
+                          APInt(llvm::cast<IntegerType>(type).getWidth(), 1));
+  if (llvm::isa<RankedTensorType, VectorType>(type)) {
+    auto vtType = llvm::cast<ShapedType>(type);
+    auto element = getOneAttr(vtType.getElementType());
+    if (!element)
+      return {};
+    return DenseElementsAttr::get(vtType, element);
+  }
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // Affine Expressions, Affine Maps, and Integer Sets.
 //===----------------------------------------------------------------------===//
@@ -458,16 +476,14 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-/// Attempts to fold the given operation and places new results within
-/// 'results'. Returns success if the operation was folded, failure otherwise.
-/// Note: This function does not erase the operation on a successful fold.
 LogicalResult OpBuilder::tryFold(Operation *op,
                                  SmallVectorImpl<Value> &results) {
+  assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
   results.reserve(opResults.size());
   auto cleanupFailure = [&] {
-    results.assign(opResults.begin(), opResults.end());
+    results.clear();
     return failure();
   };
 
@@ -477,8 +493,12 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
-  if (failed(op->fold(foldResults)) || foldResults.empty())
+  if (failed(op->fold(foldResults)))
     return cleanupFailure();
+
+  // An in-place fold does not require generation of any constants.
+  if (foldResults.empty())
+    return success();
 
   // A temporary builder used for creating constants during folding.
   OpBuilder cstBuilder(context);
@@ -486,11 +506,11 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
-  for (auto it : llvm::zip_equal(foldResults, opResults.getTypes())) {
-    Type expectedType = std::get<1>(it);
+  for (auto [foldResult, expectedType] :
+       llvm::zip_equal(foldResults, opResults.getTypes())) {
 
     // Normal values get pushed back directly.
-    if (auto value = llvm::dyn_cast_if_present<Value>(std::get<0>(it))) {
+    if (auto value = llvm::dyn_cast_if_present<Value>(foldResult)) {
       results.push_back(value);
       continue;
     }
@@ -500,7 +520,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
       return cleanupFailure();
 
     // Ask the dialect to materialize a constant operation for this value.
-    Attribute attr = std::get<0>(it).get<Attribute>();
+    Attribute attr = foldResult.get<Attribute>();
     auto *constOp = dialect->materializeConstant(cstBuilder, attr, expectedType,
                                                  op->getLoc());
     if (!constOp) {

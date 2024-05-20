@@ -479,7 +479,7 @@ AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -498,6 +498,11 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
     return TTI::PSK_FastHardware;
   // TODO: AArch64TargetLowering::LowerCTPOP() supports 128bit popcount.
   return TTI::PSK_Software;
+}
+
+static bool isUnpackedVectorVT(EVT VecVT) {
+  return VecVT.isScalableVector() &&
+         VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
 InstructionCost
@@ -567,6 +572,39 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       Cost += AddCost * (LT.first - 1);
     }
     return Cost;
+  }
+  case Intrinsic::vector_extract:
+  case Intrinsic::vector_insert: {
+    // If both the vector and subvector types are legal types and the index
+    // is 0, then this should be a no-op or simple operation; return a
+    // relatively low cost.
+
+    // If arguments aren't actually supplied, then we cannot determine the
+    // value of the index. We also want to skip predicate types.
+    if (ICA.getArgs().size() != ICA.getArgTypes().size() ||
+        ICA.getReturnType()->getScalarType()->isIntegerTy(1))
+      break;
+
+    LLVMContext &C = RetTy->getContext();
+    EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    bool IsExtract = ICA.getID() == Intrinsic::vector_extract;
+    EVT SubVecVT = IsExtract ? getTLI()->getValueType(DL, RetTy)
+                             : getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    // Skip this if either the vector or subvector types are unpacked
+    // SVE types; they may get lowered to stack stores and loads.
+    if (isUnpackedVectorVT(VecVT) || isUnpackedVectorVT(SubVecVT))
+      break;
+
+    TargetLoweringBase::LegalizeKind SubVecLK =
+        getTLI()->getTypeConversion(C, SubVecVT);
+    TargetLoweringBase::LegalizeKind VecLK =
+        getTLI()->getTypeConversion(C, VecVT);
+    const Value *Idx = IsExtract ? ICA.getArgs()[1] : ICA.getArgs()[2];
+    const ConstantInt *CIdx = cast<ConstantInt>(Idx);
+    if (SubVecLK.first == TargetLoweringBase::TypeLegal &&
+        VecLK.first == TargetLoweringBase::TypeLegal && CIdx->isZero())
+      return TTI::TCC_Free;
+    break;
   }
   case Intrinsic::bitreverse: {
     static const CostTblEntry BitreverseTbl[] = {
@@ -751,6 +789,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     else
       break;
     return TyL.first + ExtraCost;
+  }
+  case Intrinsic::get_active_lane_mask: {
+    auto *RetTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
+    if (RetTy) {
+      EVT RetVT = getTLI()->getValueType(DL, RetTy);
+      EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+      if (!getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) &&
+          !getTLI()->isTypeLegal(RetVT)) {
+        // We don't have enough context at this point to determine if the mask
+        // is going to be kept live after the block, which will force the vXi1
+        // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
+        // For now, we just assume the vectorizer created this intrinsic and
+        // the result will be the input for a PHI. In this case the cost will
+        // be extremely high for fixed-width vectors.
+        // NOTE: getScalarizationOverhead returns a cost that's far too
+        // pessimistic for the actual generated codegen. In reality there are
+        // two instructions generated per lane.
+        return RetTy->getNumElements() * 2;
+      }
+    }
+    break;
   }
   default:
     break;
@@ -1091,7 +1150,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
       auto *NewRHS =
           IC.Builder.CreateIntrinsic(IntrinsicID, {Vec->getType()}, {Pg, RHS});
       auto *NewBinOp = BinaryOperator::CreateWithCopiedFlags(
-          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), &II);
+          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), II.getIterator());
       return IC.replaceInstUsesWith(II, NewBinOp);
     }
   }
@@ -1630,6 +1689,36 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
+static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *A, *B;
+  Type *RetTy = II.getType();
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
+
+  // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
+  // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+  if ((match(II.getArgOperand(0),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
+       match(II.getArgOperand(1),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
+    auto *TyA = cast<ScalableVectorType>(A->getType());
+    if (TyA == B->getType() &&
+        RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
+      auto *SubVec = IC.Builder.CreateInsertVector(
+          RetTy, PoisonValue::get(RetTy), A, IC.Builder.getInt64(0));
+      auto *ConcatVec = IC.Builder.CreateInsertVector(
+          RetTy, SubVec, B, IC.Builder.getInt64(TyA->getMinNumElements()));
+      ConcatVec->takeName(&II);
+      return IC.replaceInstUsesWith(II, ConcatVec);
+    }
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // zip1(uzp1(A, B), uzp2(A, B)) --> A
@@ -2012,6 +2101,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_uzp1:
+    return instCombineSVEUzp1(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
@@ -2940,6 +3031,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::FREM:
+    // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
+    // those functions are not declared in the module.
+    if (!Ty->isVectorTy())
+      return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info);
   }
 }
 
@@ -3738,18 +3836,38 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
   return LegalizationCost * LT.first;
 }
 
-InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                               VectorType *Tp,
-                                               ArrayRef<int> Mask,
-                                               TTI::TargetCostKind CostKind,
-                                               int Index, VectorType *SubTp,
-                                               ArrayRef<const Value *> Args) {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
   // into smaller vectors and sum the cost of each shuffle.
   if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
+
+    // Check for LD3/LD4 instructions, which are represented in llvm IR as
+    // deinterleaving-shuffle(load). The shuffle cost could potentially be free,
+    // but we model it with a cost of LT.first so that LD3/LD4 have a higher
+    // cost than just the load.
+    if (Args.size() >= 1 && isa<LoadInst>(Args[0]) &&
+        (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3) ||
+         ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4)))
+      return std::max<InstructionCost>(1, LT.first / 4);
+
+    // Check for ST3/ST4 instructions, which are represented in llvm IR as
+    // store(interleaving-shuffle). The shuffle cost could potentially be free,
+    // but we model it with a cost of LT.first so that ST3/ST4 have a higher
+    // cost than just the store.
+    if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+        (ShuffleVectorInst::isInterleaveMask(
+             Mask, 4, Tp->getElementCount().getKnownMinValue() * 2) ||
+         ShuffleVectorInst::isInterleaveMask(
+             Mask, 3, Tp->getElementCount().getKnownMinValue() * 2)))
+      return LT.first;
+
     unsigned TpNumElts = Mask.size();
     unsigned LTNumElts = LT.second.getVectorNumElements();
     unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
@@ -3797,7 +3915,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, CostKind, 0, nullptr, Args);
+                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
       else if (any_of(enumerate(NMask), [&](const auto &ME) {
                  return ME.value() % LTNumElts == ME.index();
                }))
@@ -3809,6 +3927,10 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  // Treat extractsubvector as single op permutation.
+  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
+  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+    Kind = TTI::SK_PermuteSingleSrc;
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -3831,6 +3953,27 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       (Tp->getScalarSizeInBits() == 16 || Tp->getScalarSizeInBits() == 32) &&
       all_of(Mask, [](int E) { return E < 8; }))
     return getPerfectShuffleCost(Mask);
+
+  // Check for identity masks, which we can treat as free.
+  if (!Mask.empty() && LT.second.isFixedLengthVector() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      all_of(enumerate(Mask), [](const auto &M) {
+        return M.value() < 0 || M.value() == (int)M.index();
+      }))
+    return 0;
+
+  // Check for other shuffles that are not SK_ kinds but we have native
+  // instructions for, for example ZIP and UZP.
+  unsigned Unused;
+  if (LT.second.isFixedLengthVector() &&
+      LT.second.getVectorNumElements() == Mask.size() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       // Check for non-zero lane splats
+       all_of(drop_begin(Mask),
+              [&Mask](int M) { return M < 0 || M == Mask[0]; })))
+    return 1;
 
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
@@ -3971,7 +4114,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
+  // Restore optimal kind.
+  if (IsExtractSubvector)
+    Kind = TTI::SK_ExtractSubvector;
+  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args,
+                               CxtI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
@@ -4036,7 +4183,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
 
 InstructionCost
 AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                     int64_t BaseOffset, bool HasBaseReg,
+                                     StackOffset BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
@@ -4047,9 +4194,10 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   // Rt, [Xn, Wm, <extend> #imm]  |
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.

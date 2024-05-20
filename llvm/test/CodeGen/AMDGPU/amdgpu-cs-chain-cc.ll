@@ -365,8 +365,8 @@ define amdgpu_cs_chain void @alloca_and_call() {
 ; GISEL-GFX11-NEXT:    s_mov_b32 s0, use@abs32@lo
 ; GISEL-GFX11-NEXT:    s_mov_b32 s1, use@abs32@hi
 ; GISEL-GFX11-NEXT:    s_mov_b32 s32, 16
-; GISEL-GFX11-NEXT:    scratch_store_b32 off, v0, off offset:4
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, 4
+; GISEL-GFX11-NEXT:    scratch_store_b32 off, v0, off
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL-GFX11-NEXT:    s_endpgm
 ;
@@ -378,8 +378,8 @@ define amdgpu_cs_chain void @alloca_and_call() {
 ; GISEL-GFX10-NEXT:    s_mov_b32 s4, use@abs32@lo
 ; GISEL-GFX10-NEXT:    s_mov_b32 s5, use@abs32@hi
 ; GISEL-GFX10-NEXT:    s_mov_b64 s[2:3], s[50:51]
-; GISEL-GFX10-NEXT:    buffer_store_dword v0, off, s[48:51], 0 offset:4
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 4
+; GISEL-GFX10-NEXT:    buffer_store_dword v0, off, s[48:51], 0
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-GFX10-NEXT:    s_movk_i32 s32, 0x200
 ; GISEL-GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-GFX10-NEXT:    s_endpgm
@@ -391,8 +391,8 @@ define amdgpu_cs_chain void @alloca_and_call() {
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s1, use@abs32@hi
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s0, use@abs32@lo
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s32, 16
-; DAGISEL-GFX11-NEXT:    scratch_store_b32 off, v0, off offset:4
-; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v0, 4
+; DAGISEL-GFX11-NEXT:    scratch_store_b32 off, v0, off
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; DAGISEL-GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL-GFX11-NEXT:    s_endpgm
 ;
@@ -404,8 +404,8 @@ define amdgpu_cs_chain void @alloca_and_call() {
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s5, use@abs32@hi
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s4, use@abs32@lo
 ; DAGISEL-GFX10-NEXT:    s_mov_b64 s[2:3], s[50:51]
-; DAGISEL-GFX10-NEXT:    buffer_store_dword v0, off, s[48:51], 0 offset:4
-; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 4
+; DAGISEL-GFX10-NEXT:    buffer_store_dword v0, off, s[48:51], 0
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; DAGISEL-GFX10-NEXT:    s_movk_i32 s32, 0x200
 ; DAGISEL-GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; DAGISEL-GFX10-NEXT:    s_endpgm
@@ -867,7 +867,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
 ; GISEL-GFX11-NEXT:    s_mov_b32 s0, 1
 ; GISEL-GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v8
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_add_nc_u32_e32 v4, 32, v0
+; GISEL-GFX11-NEXT:    v_add_nc_u32_e32 v4, 0, v0
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GISEL-GFX11-NEXT:    scratch_store_b128 v4, v[0:3], off dlc
@@ -882,7 +882,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v2, 2
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v3, 3
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v4, 4
-; GISEL-GFX10-NEXT:    v_add_nc_u32_e32 v0, 32, v0
+; GISEL-GFX10-NEXT:    v_add_nc_u32_e32 v0, 0, v0
 ; GISEL-GFX10-NEXT:    buffer_store_dword v1, v0, s[48:51], 0 offen
 ; GISEL-GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX10-NEXT:    buffer_store_dword v2, v0, s[48:51], 0 offen offset:4
@@ -898,7 +898,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
 ; DAGISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v0, 1 :: v_dual_mov_b32 v1, 2
 ; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v2, 3 :: v_dual_mov_b32 v3, 4
-; DAGISEL-GFX11-NEXT:    v_lshl_add_u32 v4, v8, 4, 32
+; DAGISEL-GFX11-NEXT:    v_lshl_add_u32 v4, v8, 4, 0
 ; DAGISEL-GFX11-NEXT:    scratch_store_b128 v4, v[0:3], off dlc
 ; DAGISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; DAGISEL-GFX11-NEXT:    s_endpgm
@@ -907,7 +907,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
 ; DAGISEL-GFX10:       ; %bb.0:
 ; DAGISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v0, 4
-; DAGISEL-GFX10-NEXT:    v_lshl_add_u32 v1, v8, 4, 32
+; DAGISEL-GFX10-NEXT:    v_lshl_add_u32 v1, v8, 4, 0
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v2, 3
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v3, 2
 ; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v4, 1

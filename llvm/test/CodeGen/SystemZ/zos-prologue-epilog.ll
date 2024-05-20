@@ -15,7 +15,7 @@
 ; CHECK64: aghi  4, 192
 ; CHECK64: b 2(7)
 
-; CHECK64: @@PPA1_func0_0:
+; CHECK64: L#PPA1_func0_0:
 ; CHECK64: .short	0  * Length/4 of Parms
 define void @func0() {
   call i64 (i64) @fun(i64 10) 
@@ -31,7 +31,7 @@ define void @func0() {
 ; CHECK64: aghi  4, 160
 ; CHECK64: b 2(7)
 
-; CHECK64: @@PPA1_func1_0:
+; CHECK64: L#PPA1_func1_0:
 ; CHECK64: .short	2  * Length/4 of Parms
 define void @func1(ptr %ptr) {
   %l01 = load volatile i64, ptr %ptr
@@ -336,16 +336,16 @@ define void @large_stack0() {
 ; CHECK64: lgr 0, 3
 ; CHECK64: llgt  3, 1208
 ; CHECK64: cg  4, 64(3)
-; CHECK64: jhe @BB7_2
+; CHECK64: jhe L#BB7_2
 ; CHECK64: %bb.1:
 ; CHECK64: lg  3, 72(3)
 ; CHECK64: basr  3, 3
 ; CHECK64: bcr 0, 7
-; CHECK64: @BB7_2:
+; CHECK64: L#BB7_2:
 ; CHECK64: stmg  6, 7, 2064(4)
 ; CHECK64: lgr 3, 0
 
-; CHECK64: @@PPA1_large_stack1_0:
+; CHECK64: L#PPA1_large_stack1_0:
 ; CHECK64: .short	6  * Length/4 of Parms
 define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
   %arr = alloca [131072 x i64], align 8
@@ -361,12 +361,12 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK64: agfi  4, -1048768
 ; CHECK64: llgt  3, 1208
 ; CHECK64: cg  4, 64(3)
-; CHECK64: jhe @BB8_2
+; CHECK64: jhe L#BB8_2
 ; CHECK64: %bb.1:
 ; CHECK64: lg  3, 72(3)
 ; CHECK64: basr  3, 3
 ; CHECK64: bcr 0, 7
-; CHECK64: @BB8_2:
+; CHECK64: L#BB8_2:
 ; CHECK64: lgr 3, 0
 ; CHECK64: lg  3, 2192(3)
 ; CHECK64: stmg  4, 12, 2048(4)

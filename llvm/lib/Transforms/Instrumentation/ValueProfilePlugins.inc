@@ -90,8 +90,7 @@ public:
   }
 };
 
-///------------------------ VirtualTableValueProfilingPlugin
-///------------------------
+///--------------------- VirtualTableValueProfilingPlugin --------------------
 class VTableProfilingPlugin {
   Function &F;
 

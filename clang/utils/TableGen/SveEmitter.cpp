@@ -99,7 +99,7 @@ public:
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
-  bool isVoid() const { return Void & !Pointer; }
+  bool isVoid() const { return Void && !Pointer; }
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float && !BFloat; }
   bool isBFloat() const { return BFloat && !Float; }
@@ -1579,6 +1579,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
+  OS << "#include <stddef.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1604,6 +1605,11 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & 1;\n";
   OS << "}\n\n";
+
+  OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memchr(void *s, int c, size_t n) __arm_streaming_compatible;\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
         "__arm_streaming_compatible __arm_out(\"za\") "

@@ -386,11 +386,11 @@ define <2 x i32> @vwadd_v2i32_v2i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwadd_v2i32_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v11, v9
-; CHECK-NEXT:    vwadd.vv v8, v11, v10
+; CHECK-NEXT:    vwadd.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
   %b = load <2 x i8>, ptr %y
@@ -768,8 +768,8 @@ define <4 x i32> @vwadd_vx_v4i32_i32(ptr %x, ptr %y) {
 define <2 x i64> @vwadd_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
 ; RV32-LABEL: vwadd_vx_v2i64_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lb a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
 ; RV32-NEXT:    vmv.v.x v8, a1
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -796,8 +796,8 @@ define <2 x i64> @vwadd_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
 define <2 x i64> @vwadd_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
 ; RV32-LABEL: vwadd_vx_v2i64_i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lh a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
 ; RV32-NEXT:    vmv.v.x v8, a1
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -824,8 +824,8 @@ define <2 x i64> @vwadd_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
 define <2 x i64> @vwadd_vx_v2i64_i32(ptr %x, ptr %y) nounwind {
 ; RV32-LABEL: vwadd_vx_v2i64_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
 ; RV32-NEXT:    vmv.v.x v8, a1
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -853,9 +853,9 @@ define <2 x i64> @vwadd_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ; RV32-LABEL: vwadd_vx_v2i64_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    lw a2, 4(a1)
 ; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
 ; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
@@ -879,4 +879,58 @@ define <2 x i64> @vwadd_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
   %f = sext <2 x i32> %a to <2 x i64>
   %g = add <2 x i64> %e, %f
   ret <2 x i64> %g
+}
+
+define <2 x i32> @vwadd_v2i32_of_v2i8(ptr %x, ptr %y) {
+; CHECK-LABEL: vwadd_v2i32_of_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vsext.vf2 v11, v9
+; CHECK-NEXT:    vwadd.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %a = load <2 x i8>, ptr %x
+  %b = load <2 x i8>, ptr %y
+  %c = sext <2 x i8> %a to <2 x i32>
+  %d = sext <2 x i8> %b to <2 x i32>
+  %e = add <2 x i32> %c, %d
+  ret <2 x i32> %e
+}
+
+define <2 x i64> @vwadd_v2i64_of_v2i8(ptr %x, ptr %y) {
+; CHECK-LABEL: vwadd_v2i64_of_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vsext.vf4 v10, v8
+; CHECK-NEXT:    vsext.vf4 v11, v9
+; CHECK-NEXT:    vwadd.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %a = load <2 x i8>, ptr %x
+  %b = load <2 x i8>, ptr %y
+  %c = sext <2 x i8> %a to <2 x i64>
+  %d = sext <2 x i8> %b to <2 x i64>
+  %e = add <2 x i64> %c, %d
+  ret <2 x i64> %e
+}
+
+define <2 x i64> @vwadd_v2i64_of_v2i16(ptr %x, ptr %y) {
+; CHECK-LABEL: vwadd_v2i64_of_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vsext.vf2 v11, v9
+; CHECK-NEXT:    vwadd.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %x
+  %b = load <2 x i16>, ptr %y
+  %c = sext <2 x i16> %a to <2 x i64>
+  %d = sext <2 x i16> %b to <2 x i64>
+  %e = add <2 x i64> %c, %d
+  ret <2 x i64> %e
 }

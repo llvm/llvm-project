@@ -208,9 +208,14 @@ assignSections(MachineFunction &MF,
       if (I != FuncClusterInfo.end()) {
         MBB.setSectionID(I->second.ClusterID);
       } else {
-        // BB goes into the special cold section if it is not specified in the
-        // cluster info map.
-        MBB.setSectionID(MBBSectionID::ColdSectionID);
+        const TargetInstrInfo &TII =
+            *MBB.getParent()->getSubtarget().getInstrInfo();
+
+        if (TII.isMBBSafeToSplitToCold(MBB)) {
+          // BB goes into the special cold section if it is not specified in the
+          // cluster info map.
+          MBB.setSectionID(MBBSectionID::ColdSectionID);
+        }
       }
     }
 

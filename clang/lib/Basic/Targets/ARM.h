@@ -61,26 +61,41 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   llvm::ARM::ProfileKind ArchProfile;
   unsigned ArchVersion;
 
+  LLVM_PREFERRED_TYPE(FPUMode)
   unsigned FPU : 5;
+  LLVM_PREFERRED_TYPE(MVEMode)
   unsigned MVE : 2;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAAPCS : 1;
+  LLVM_PREFERRED_TYPE(HWDivMode)
   unsigned HWDiv : 2;
 
   // Initialized via features.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SoftFloat : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SoftFloatABI : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned CRC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Crypto : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SHA2 : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned AES : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
-  unsigned Unaligned : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasMatMul : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FPRegsDisabled : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasPAC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasBTI : 1;
 
   enum {
@@ -210,6 +225,10 @@ public:
   bool hasBitIntType() const override { return true; }
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

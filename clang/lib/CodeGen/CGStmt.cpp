@@ -43,6 +43,10 @@ using namespace CodeGen;
 //                              Statement Emission
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+extern cl::opt<bool> EnableSingleByteCoverage;
+} // namespace llvm
+
 void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   if (CGDebugInfo *DI = getDebugInfo()) {
     SourceLocation Loc;
@@ -435,6 +439,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
+  case Stmt::OpenACCComputeConstructClass:
+    EmitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*S));
+    break;
   }
 }
 
@@ -721,11 +728,19 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     case attr::AlwaysInline:
       alwaysinline = true;
       break;
-    case attr::MustTail:
+    case attr::MustTail: {
       const Stmt *Sub = S.getSubStmt();
       const ReturnStmt *R = cast<ReturnStmt>(Sub);
       musttail = cast<CallExpr>(R->getRetValue()->IgnoreParens());
-      break;
+    } break;
+    case attr::CXXAssume: {
+      const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
+      if (getLangOpts().CXXAssumptions &&
+          !Assumption->HasSideEffects(getContext())) {
+        llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
+        Builder.CreateAssumption(AssumptionVal);
+      }
+    } break;
     }
   }
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
@@ -853,7 +868,10 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
-  incrementProfileCounter(&S);
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(S.getThen());
+  else
+    incrementProfileCounter(&S);
   {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
@@ -867,6 +885,9 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBlock(ElseBlock);
     }
+    // When single byte coverage mode is enabled, add a counter to else block.
+    if (llvm::EnableSingleByteCoverage)
+      incrementProfileCounter(Else);
     {
       RunCleanupsScope ElseScope(*this);
       EmitStmt(Else);
@@ -880,6 +901,74 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
   // Emit the continuation block for code after the if.
   EmitBlock(ContBlock, true);
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(&S);
+}
+
+bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
+                                              bool HasEmptyBody) {
+  if (CGM.getCodeGenOpts().getFiniteLoops() ==
+      CodeGenOptions::FiniteLoopsKind::Never)
+    return false;
+
+  // Now apply rules for plain C (see  6.8.5.6 in C11).
+  // Loops with constant conditions do not have to make progress in any C
+  // version.
+  // As an extension, we consisider loops whose constant expression
+  // can be constant-folded.
+  Expr::EvalResult Result;
+  bool CondIsConstInt =
+      !ControllingExpression ||
+      (ControllingExpression->EvaluateAsInt(Result, getContext()) &&
+       Result.Val.isInt());
+
+  bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||
+                                       Result.Val.getInt().getBoolValue());
+
+  // Loops with non-constant conditions must make progress in C11 and later.
+  if (getLangOpts().C11 && !CondIsConstInt)
+    return true;
+
+  // [C++26][intro.progress] (DR)
+  // The implementation may assume that any thread will eventually do one of the
+  // following:
+  // [...]
+  // - continue execution of a trivial infinite loop ([stmt.iter.general]).
+  if (CGM.getCodeGenOpts().getFiniteLoops() ==
+          CodeGenOptions::FiniteLoopsKind::Always ||
+      getLangOpts().CPlusPlus11) {
+    if (HasEmptyBody && CondIsTrue) {
+      CurFn->removeFnAttr(llvm::Attribute::MustProgress);
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// [C++26][stmt.iter.general] (DR)
+// A trivially empty iteration statement is an iteration statement matching one
+// of the following forms:
+//  - while ( expression ) ;
+//  - while ( expression ) { }
+//  - do ; while ( expression ) ;
+//  - do { } while ( expression ) ;
+//  - for ( init-statement expression(opt); ) ;
+//  - for ( init-statement expression(opt); ) { }
+template <typename LoopStmt> static bool hasEmptyLoopBody(const LoopStmt &S) {
+  if constexpr (std::is_same_v<LoopStmt, ForStmt>) {
+    if (S.getInc())
+      return false;
+  }
+  const Stmt *Body = S.getBody();
+  if (!Body || isa<NullStmt>(Body))
+    return true;
+  if (const CompoundStmt *Compound = dyn_cast<CompoundStmt>(Body))
+    return Compound->body_empty();
+  return false;
 }
 
 void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
@@ -888,6 +977,10 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // the continue target.
   JumpDest LoopHeader = getJumpDestInCurrentScope("while.cond");
   EmitBlock(LoopHeader.getBlock());
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.push_back(emitConvergenceLoopToken(
+        LoopHeader.getBlock(), ConvergenceTokenStack.back()));
 
   // Create an exit block for when the condition fails, which will
   // also become the break target.
@@ -916,13 +1009,16 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
-  bool CondIsConstInt = C != nullptr;
-  bool EmitBoolCondBranch = !CondIsConstInt || !C->isOne();
+  bool EmitBoolCondBranch = !C || !C->isOne();
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), CGM.getCodeGenOpts(),
                  WhileAttrs, SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(CondIsConstInt));
+                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
+
+  // When single byte coverage mode is enabled, add a counter to loop condition.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(S.getCond());
 
   // As long as the condition is true, go to the loop body.
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
@@ -956,7 +1052,11 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   {
     RunCleanupsScope BodyScope(*this);
     EmitBlock(LoopBody);
-    incrementProfileCounter(&S);
+    // When single byte coverage mode is enabled, add a counter to the body.
+    if (llvm::EnableSingleByteCoverage)
+      incrementProfileCounter(S.getBody());
+    else
+      incrementProfileCounter(&S);
     EmitStmt(S.getBody());
   }
 
@@ -978,6 +1078,14 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // a branch, try to erase it.
   if (!EmitBoolCondBranch)
     SimplifyForwardingBlocks(LoopHeader.getBlock());
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(&S);
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.pop_back();
 }
 
 void CodeGenFunction::EmitDoStmt(const DoStmt &S,
@@ -993,13 +1101,24 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
 
-  EmitBlockWithFallThrough(LoopBody, &S);
+  if (llvm::EnableSingleByteCoverage)
+    EmitBlockWithFallThrough(LoopBody, S.getBody());
+  else
+    EmitBlockWithFallThrough(LoopBody, &S);
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.push_back(
+        emitConvergenceLoopToken(LoopBody, ConvergenceTokenStack.back()));
+
   {
     RunCleanupsScope BodyScope(*this);
     EmitStmt(S.getBody());
   }
 
   EmitBlock(LoopCond.getBlock());
+  // When single byte coverage mode is enabled, add a counter to loop condition.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(S.getCond());
 
   // C99 6.8.5.2: "The evaluation of the controlling expression takes place
   // after each execution of the loop body."
@@ -1014,14 +1133,13 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // "do {} while (0)" is common in macros, avoid extra blocks.  Be sure
   // to correctly handle break/continue though.
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
-  bool CondIsConstInt = C;
   bool EmitBoolCondBranch = !C || !C->isZero();
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(LoopBody, CGM.getContext(), CGM.getCodeGenOpts(), DoAttrs,
                  SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(CondIsConstInt));
+                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
@@ -1040,6 +1158,14 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // emitting a branch, try to erase it.
   if (!EmitBoolCondBranch)
     SimplifyForwardingBlocks(LoopCond.getBlock());
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(&S);
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.pop_back();
 }
 
 void CodeGenFunction::EmitForStmt(const ForStmt &S,
@@ -1059,15 +1185,15 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   llvm::BasicBlock *CondBlock = CondDest.getBlock();
   EmitBlock(CondBlock);
 
-  Expr::EvalResult Result;
-  bool CondIsConstInt =
-      !S.getCond() || S.getCond()->EvaluateAsInt(Result, getContext());
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.push_back(
+        emitConvergenceLoopToken(CondBlock, ConvergenceTokenStack.back()));
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
                  SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(CondIsConstInt));
+                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
   // Create a cleanup scope for the condition variable cleanups.
   LexicalScope ConditionScope(*this, S.getSourceRange());
@@ -1097,6 +1223,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       Continue = S.getInc() ? getJumpDestInCurrentScope("for.inc") : CondDest;
       BreakContinueStack.back().ContinueBlock = Continue;
     }
+
+    // When single byte coverage mode is enabled, add a counter to loop
+    // condition.
+    if (llvm::EnableSingleByteCoverage)
+      incrementProfileCounter(S.getCond());
 
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
@@ -1128,8 +1259,12 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // Treat it as a non-zero constant.  Don't even create a new block for the
     // body, just fall into it.
   }
-  incrementProfileCounter(&S);
 
+  // When single byte coverage mode is enabled, add a counter to the body.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(S.getBody());
+  else
+    incrementProfileCounter(&S);
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
@@ -1141,6 +1276,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   if (S.getInc()) {
     EmitBlock(Continue.getBlock());
     EmitStmt(S.getInc());
+    if (llvm::EnableSingleByteCoverage)
+      incrementProfileCounter(S.getInc());
   }
 
   BreakContinueStack.pop_back();
@@ -1156,6 +1293,14 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(&S);
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.pop_back();
 }
 
 void
@@ -1177,6 +1322,10 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // later.
   llvm::BasicBlock *CondBlock = createBasicBlock("for.cond");
   EmitBlock(CondBlock);
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.push_back(
+        emitConvergenceLoopToken(CondBlock, ConvergenceTokenStack.back()));
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
@@ -1208,7 +1357,10 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   }
 
   EmitBlock(ForBody);
-  incrementProfileCounter(&S);
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(S.getBody());
+  else
+    incrementProfileCounter(&S);
 
   // Create a block for the increment. In case of a 'continue', we jump there.
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");
@@ -1238,6 +1390,14 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    incrementProfileCounter(&S);
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.pop_back();
 }
 
 void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
@@ -1267,10 +1427,8 @@ struct SaveRetExprRAII {
 };
 } // namespace
 
-/// If we have 'return f(...);', where both caller and callee are SwiftAsync,
-/// codegen it as 'tail call ...; ret void;'.
-static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
-                                     const CGFunctionInfo *CurFnInfo) {
+/// Determine if the given call uses the swiftasync calling convention.
+static bool isSwiftAsyncCallee(const CallExpr *CE) {
   auto calleeQualType = CE->getCallee()->getType();
   const FunctionType *calleeType = nullptr;
   if (calleeQualType->isFunctionPointerType() ||
@@ -1285,18 +1443,12 @@ static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
       // getMethodDecl() doesn't handle member pointers at the moment.
       calleeType = methodDecl->getType()->castAs<FunctionType>();
     } else {
-      return;
+      return false;
     }
   } else {
-    return;
+    return false;
   }
-  if (calleeType->getCallConv() == CallingConv::CC_SwiftAsync &&
-      (CurFnInfo->getASTCallingConvention() == CallingConv::CC_SwiftAsync)) {
-    auto CI = cast<llvm::CallInst>(&Builder.GetInsertBlock()->back());
-    CI->setTailCallKind(llvm::CallInst::TCK_MustTail);
-    Builder.CreateRetVoid();
-    Builder.ClearInsertionPoint();
-  }
+  return calleeType->getCallConv() == CallingConv::CC_SwiftAsync;
 }
 
 /// EmitReturnStmt - Note that due to GCC extensions, this can have an operand
@@ -1336,6 +1488,19 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   RunCleanupsScope cleanupScope(*this);
   if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV))
     RV = EWC->getSubExpr();
+
+  // If we're in a swiftasynccall function, and the return expression is a
+  // call to a swiftasynccall function, mark the call as the musttail call.
+  std::optional<llvm::SaveAndRestore<const CallExpr *>> SaveMustTail;
+  if (RV && CurFnInfo &&
+      CurFnInfo->getASTCallingConvention() == CallingConv::CC_SwiftAsync) {
+    if (auto CE = dyn_cast<CallExpr>(RV)) {
+      if (isSwiftAsyncCallee(CE)) {
+        SaveMustTail.emplace(MustTailCall, CE);
+      }
+    }
+  }
+
   // FIXME: Clean this up by using an LValue for ReturnTemp,
   // EmitStoreThroughLValue, and EmitAnyExpr.
   // Check if the NRVO candidate was not globalized in OpenMP mode.
@@ -1358,8 +1523,6 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     // for side effects.
     if (RV) {
       EmitAnyExpr(RV);
-      if (auto *CE = dyn_cast<CallExpr>(RV))
-        makeTailCallIfSwiftAsync(CE, Builder, CurFnInfo);
     }
   } else if (!RV) {
     // Do nothing (return value is left uninitialized)
@@ -2217,7 +2380,7 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
 
   Address Addr = InputValue.getAddress(*this);
   ConstraintStr += '*';
-  return {Addr.getPointer(), Addr.getElementType()};
+  return {InputValue.getPointer(*this), Addr.getElementType()};
 }
 
 std::pair<llvm::Value *, llvm::Type *>
@@ -2624,7 +2787,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
       ArgTypes.push_back(DestAddr.getType());
       ArgElemTypes.push_back(DestAddr.getElementType());
-      Args.push_back(DestAddr.getPointer());
+      Args.push_back(DestAddr.emitRawPointer(*this));
       Constraints += "=*";
       Constraints += OutputConstraint;
       ReadOnly = ReadNone = false;
@@ -2999,8 +3162,8 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   CapturedStmtInfo->setContextValue(Builder.CreateLoad(DeclPtr));
 
   // Initialize variable-length arrays.
-  LValue Base = MakeNaturalAlignAddrLValue(CapturedStmtInfo->getContextValue(),
-                                           Ctx.getTagDeclType(RD));
+  LValue Base = MakeNaturalAlignRawAddrLValue(
+      CapturedStmtInfo->getContextValue(), Ctx.getTagDeclType(RD));
   for (auto *FD : RD->fields()) {
     if (FD->hasCapturedVLAType()) {
       auto *ExprArg =
@@ -3023,4 +3186,68 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   FinishFunction(CD->getBodyRBrace());
 
   return F;
+}
+
+namespace {
+// Returns the first convergence entry/loop/anchor instruction found in |BB|.
+// std::nullptr otherwise.
+llvm::IntrinsicInst *getConvergenceToken(llvm::BasicBlock *BB) {
+  for (auto &I : *BB) {
+    auto *II = dyn_cast<llvm::IntrinsicInst>(&I);
+    if (II && llvm::isConvergenceControlIntrinsic(II->getIntrinsicID()))
+      return II;
+  }
+  return nullptr;
+}
+
+} // namespace
+
+llvm::CallBase *
+CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
+                                            llvm::Value *ParentToken) {
+  llvm::Value *bundleArgs[] = {ParentToken};
+  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
+  auto Output = llvm::CallBase::addOperandBundle(
+      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input);
+  Input->replaceAllUsesWith(Output);
+  Input->eraseFromParent();
+  return Output;
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
+                                          llvm::Value *ParentToken) {
+  CGBuilderTy::InsertPoint IP = Builder.saveIP();
+  if (BB->empty())
+    Builder.SetInsertPoint(BB);
+  else
+    Builder.SetInsertPoint(BB->getFirstInsertionPt());
+
+  llvm::CallBase *CB = Builder.CreateIntrinsic(
+      llvm::Intrinsic::experimental_convergence_loop, {}, {});
+  Builder.restoreIP(IP);
+
+  llvm::CallBase *I = addConvergenceControlToken(CB, ParentToken);
+  return cast<llvm::IntrinsicInst>(I);
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
+  llvm::BasicBlock *BB = &F->getEntryBlock();
+  llvm::IntrinsicInst *Token = getConvergenceToken(BB);
+  if (Token)
+    return Token;
+
+  // Adding a convergence token requires the function to be marked as
+  // convergent.
+  F->setConvergent();
+
+  CGBuilderTy::InsertPoint IP = Builder.saveIP();
+  Builder.SetInsertPoint(&BB->front());
+  llvm::CallBase *I = Builder.CreateIntrinsic(
+      llvm::Intrinsic::experimental_convergence_entry, {}, {});
+  assert(isa<llvm::IntrinsicInst>(I));
+  Builder.restoreIP(IP);
+
+  return cast<llvm::IntrinsicInst>(I);
 }

@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,6 +57,8 @@
 #include <vector>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "instrprof"
 
 static cl::opt<bool> StaticFuncFullModulePrefix(
     "static-func-full-module-prefix", cl::init(true), cl::Hidden,
@@ -388,7 +391,7 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO) {
   // PGONameMetadata should be set by compiler at profile use time
   // and read by symtab creation to look up symbols corresponding to
   // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
+  return getIRPGOObjectName(V, InLTO, /*PGONameMetadata=*/nullptr);
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -475,16 +478,13 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
 
   SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &G : M.globals()) {
-    if (!G.hasName())
+    if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
-    Types.clear();
-    G.getMetadata(LLVMContext::MD_type, Types);
-    if (!Types.empty()) {
-      if (Error E = addVTableWithName(
-              G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
-        return E;
-    }
+    if (Error E = addVTableWithName(
+            G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+      return E;
   }
+
   Sorted = false;
   finalizeSymtab();
   return Error::success();
@@ -492,24 +492,23 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
 
 Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
                                          StringRef VTablePGOName) {
-  if (Error E = addVTableName(VTablePGOName))
-    return E;
-
-  MD5VTableMap.emplace_back(GlobalValue::getGUID(VTablePGOName), &VTable);
-
-  // NOTE: `-funique-internal-linkage-names` doesn't uniqufy vtables, so no
-  // need to check ".__uniq."
-
-  // If a local-linkage vtable is promoted to have external linkage in ThinLTO,
-  // it will have `.llvm.` in its name. Use the name before externalization.
-  StringRef CanonicalName =
-      getCanonicalName(VTablePGOName, /* MayHaveUniqueSuffix= */ false);
-  if (CanonicalName != VTablePGOName) {
-    if (Error E = addVTableName(CanonicalName))
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addSymbolName(Name))
       return E;
 
-    MD5VTableMap.emplace_back(GlobalValue::getGUID(CanonicalName), &VTable);
-  }
+    bool Inserted = true;
+    std::tie(std::ignore, Inserted) =
+        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    if (!Inserted)
+      LLVM_DEBUG(dbgs() << "GUID conflict within one module");
+    return Error::success();
+  };
+  if (Error E = mapName(VTablePGOName))
+    return E;
+
+  StringRef CanonicalName = getCanonicalName(VTablePGOName);
+  if (CanonicalName != VTablePGOName)
+    return mapName(CanonicalName);
 
   return Error::success();
 }
@@ -586,26 +585,22 @@ Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
       std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
 }
 
-StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName,
-                                            bool MayHaveUniqueSuffix) {
-  size_t pos = 0;
+StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // In ThinLTO, local function may have been promoted to global and have
   // suffix ".llvm." added to the function name. We need to add the
   // stripped function name to the symbol table so that we can find a match
   // from profile.
   //
   // ".__uniq." suffix is used to differentiate internal linkage functions in
-  // different modules and should be kept. Now this is the only suffix with the
+  // different modules and should be kept. This is the only suffix with the
   // pattern ".xxx" which is kept before matching, other suffixes similar as
   // ".llvm." will be stripped.
-  if (MayHaveUniqueSuffix) {
-    const std::string UniqSuffix = ".__uniq.";
-    pos = PGOName.find(UniqSuffix);
-    if (pos != StringRef::npos)
-      pos += UniqSuffix.length();
-    else
-      pos = 0;
-  }
+  const std::string UniqSuffix = ".__uniq.";
+  size_t pos = PGOName.find(UniqSuffix);
+  if (pos != StringRef::npos)
+    pos += UniqSuffix.length();
+  else
+    pos = 0;
 
   // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
   // the beginning.
@@ -617,42 +612,26 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName,
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  if (Error E = addFuncName(PGOFuncName))
-    return E;
-  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
-
-  StringRef CanonicalName =
-      getCanonicalName(PGOFuncName, /* MayHaveUniqueSuffix= */ true);
-
-  if (CanonicalName != PGOFuncName) {
-    if (Error E = addFuncName(CanonicalName))
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(CanonicalName), &F);
-  }
+    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    return Error::success();
+  };
+  if (Error E = mapName(PGOFuncName))
+    return E;
+
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName != PGOFuncName)
+    return mapName(CanonicalFuncName);
 
   return Error::success();
 }
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
-  finalizeSymtab();
-  auto It = lower_bound(
-      VTableAddrRangeToMD5Map, Address,
-      [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
-         uint64_t Addr) {
-        // Find the first address range of which end address is larger than
-        // `Addr`. Smaller-than-or-equal-to is used because the profiled address
-        // within a vtable should be [start-address, end-address).
-        return VTableRangeAddr.first.second <= Addr;
-      });
-
-  // Returns the MD5 hash if Address is within the address range of an entry.
-  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
-    return It->second;
-  }
-  // The virtual table address collected from value profiler could be defined
-  // in another module that is not instrumented. Force the value to be 0 in
-  // this case.
-  return 0;
+  // Given a runtime address, look up the hash value in the interval map, and
+  // fallback to value 0 if a hash value is not found.
+  return VTableAddrMap.lookup(Address, 0);
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
@@ -734,9 +713,8 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
 Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool doCompression) {
   std::vector<std::string> VTableNameStrs;
-  for (auto *VTable : VTables) {
+  for (auto *VTable : VTables)
     VTableNameStrs.push_back(getPGOName(*VTable));
-  }
   return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && doCompression,
       Result);
@@ -1189,9 +1167,9 @@ static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
   if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::little>(D);
   else
-    return endian::readNext<T, llvm::endianness::big, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::big>(D);
 }
 
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
@@ -1337,7 +1315,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || !Tag->getString().equals("VP"))
+  if (!Tag || Tag->getString() != "VP")
     return nullptr;
 
   // Now check kind:
@@ -1427,8 +1405,8 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
-bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
-  if (GV.hasComdat())
+bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
+  if (GO.hasComdat())
     return true;
 
   if (!Triple(M.getTargetTriple()).supportsCOMDAT())
@@ -1444,7 +1422,7 @@ bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
   // available_externally functions will end up being duplicated in raw profile
   // data. This can result in distorted profile as the counts of those dups
   // will be accumulated by the profile merger.
-  GlobalValue::LinkageTypes Linkage = GV.getLinkage();
+  GlobalValue::LinkageTypes Linkage = GO.getLinkage();
   if (Linkage != GlobalValue::ExternalWeakLinkage &&
       Linkage != GlobalValue::AvailableExternallyLinkage)
     return false;

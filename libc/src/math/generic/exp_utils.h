@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_EXP_UTILS_H
-#define LLVM_LIBC_SRC_MATH_EXP_UTILS_H
+#ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H
+#define LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H
 
 #include <stdint.h>
 
@@ -30,4 +30,4 @@ extern const Exp2fDataTable exp2f_data;
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MATH_EXP_UTILS_H
+#endif // LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H

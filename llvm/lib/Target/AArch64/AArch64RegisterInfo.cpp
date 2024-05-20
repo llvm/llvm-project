@@ -233,13 +233,9 @@ AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
     report_fatal_error(
         "Calling convention SVE_VectorCall is unsupported on Darwin.");
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
-    report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
-        "unsupported on Darwin.");
+    return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0_RegMask;
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
-    report_fatal_error(
-        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
-        "unsupported on Darwin.");
+    return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2_RegMask;
   if (CC == CallingConv::CFGuard_Check)
     report_fatal_error(
         "Calling convention CFGuard_Check is unsupported on Darwin.");
@@ -437,11 +433,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     markSuperRegs(Reserved, AArch64::W16);
 
+  // FFR is modelled as global state that cannot be allocated.
+  if (MF.getSubtarget<AArch64Subtarget>().hasSVE())
+    Reserved.set(AArch64::FFR);
+
   // SME tiles are not allocatable.
   if (MF.getSubtarget<AArch64Subtarget>().hasSME()) {
     for (MCPhysReg SubReg : subregs_inclusive(AArch64::ZA))
       Reserved.set(SubReg);
   }
+
+  // VG cannot be allocated
+  Reserved.set(AArch64::VG);
 
   if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
     for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
@@ -450,6 +453,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     markSuperRegs(Reserved, AArch64::X27);
@@ -544,7 +548,8 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     if (hasStackRealignment(MF))
       return true;
 
-    if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
+    auto &ST = MF.getSubtarget<AArch64Subtarget>();
+    if (ST.hasSVE() || ST.isStreaming()) {
       const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
@@ -1063,4 +1068,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
   }
 
   return true;
+}
+
+bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
+    MCRegister R) const {
+  return R == AArch64::VG;
 }

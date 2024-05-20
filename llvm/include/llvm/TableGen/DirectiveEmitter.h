@@ -51,6 +51,10 @@ public:
     return Def->getValueAsBit("enableBitmaskEnumInNamespace");
   }
 
+  std::vector<Record *> getAssociations() const {
+    return Records.getAllDerivedDefinitions("Association");
+  }
+
   std::vector<Record *> getDirectives() const {
     return Records.getAllDerivedDefinitions("Directive");
   }
@@ -121,6 +125,12 @@ public:
   std::vector<Record *> getRequiredClauses() const {
     return Def->getValueAsListOfDefs("requiredClauses");
   }
+
+  std::vector<Record *> getLeafConstructs() const {
+    return Def->getValueAsListOfDefs("leafConstructs");
+  }
+
+  Record *getAssociation() const { return Def->getValueAsDef("association"); }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td

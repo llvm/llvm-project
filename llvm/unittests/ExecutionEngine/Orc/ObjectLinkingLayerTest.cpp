@@ -178,6 +178,82 @@ TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
   EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_anchor"), Failed());
 }
 
+TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
+  class TestPlugin : public ObjectLinkingLayer::Plugin {
+  public:
+    TestPlugin(size_t &ActivationCount, bool &PluginDestroyed)
+        : ActivationCount(ActivationCount), PluginDestroyed(PluginDestroyed) {}
+
+    ~TestPlugin() { PluginDestroyed = true; }
+
+    void modifyPassConfig(MaterializationResponsibility &MR,
+                          jitlink::LinkGraph &G,
+                          jitlink::PassConfiguration &Config) override {
+      ++ActivationCount;
+    }
+
+    Error notifyFailed(MaterializationResponsibility &MR) override {
+      ADD_FAILURE() << "TestPlugin::notifyFailed called unexpectedly";
+      return Error::success();
+    }
+
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+      return Error::success();
+    }
+
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
+                                     ResourceKey SrcKey) override {}
+
+  private:
+    size_t &ActivationCount;
+    bool &PluginDestroyed;
+  };
+
+  size_t ActivationCount = 0;
+  bool PluginDestroyed = false;
+
+  auto P = std::make_shared<TestPlugin>(ActivationCount, PluginDestroyed);
+
+  ObjLinkingLayer.addPlugin(P);
+
+  {
+    auto G1 = std::make_unique<LinkGraph>("G1", Triple("x86_64-apple-darwin"),
+                                          8, llvm::endianness::little,
+                                          x86_64::getEdgeKindName);
+
+    auto &DataSec = G1->createSection("__data", MemProt::Read | MemProt::Write);
+    auto &DataBlock = G1->createContentBlock(DataSec, BlockContent,
+                                             orc::ExecutorAddr(0x1000), 8, 0);
+    G1->addDefinedSymbol(DataBlock, 4, "_anchor1", 4, Linkage::Weak,
+                         Scope::Default, false, true);
+
+    EXPECT_THAT_ERROR(ObjLinkingLayer.add(JD, std::move(G1)), Succeeded());
+    EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_anchor1"), Succeeded());
+    EXPECT_EQ(ActivationCount, 1U);
+  }
+
+  ObjLinkingLayer.removePlugin(*P);
+
+  {
+    auto G2 = std::make_unique<LinkGraph>("G2", Triple("x86_64-apple-darwin"),
+                                          8, llvm::endianness::little,
+                                          x86_64::getEdgeKindName);
+
+    auto &DataSec = G2->createSection("__data", MemProt::Read | MemProt::Write);
+    auto &DataBlock = G2->createContentBlock(DataSec, BlockContent,
+                                             orc::ExecutorAddr(0x1000), 8, 0);
+    G2->addDefinedSymbol(DataBlock, 4, "_anchor2", 4, Linkage::Weak,
+                         Scope::Default, false, true);
+
+    EXPECT_THAT_ERROR(ObjLinkingLayer.add(JD, std::move(G2)), Succeeded());
+    EXPECT_THAT_EXPECTED(ES.lookup(&JD, "_anchor2"), Succeeded());
+    EXPECT_EQ(ActivationCount, 1U);
+  }
+
+  P.reset();
+  EXPECT_TRUE(PluginDestroyed);
+}
+
 TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
   class TestEPC : public UnsupportedExecutorProcessControl {
   public:
@@ -189,8 +265,8 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
       return ExecutorAddr::fromPtr((void *)nullptr);
     }
 
-    Expected<std::vector<tpctypes::LookupResult>>
-    lookupSymbols(ArrayRef<LookupRequest> Request) override {
+    void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                            SymbolLookupCompleteFn Complete) override {
       std::vector<ExecutorSymbolDef> Result;
       EXPECT_EQ(Request.size(), 1u);
       for (auto &LR : Request) {
@@ -205,7 +281,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
           }
         }
       }
-      return std::vector<tpctypes::LookupResult>{1, Result};
+      Complete(std::vector<tpctypes::LookupResult>{1, Result});
     }
   };
 

@@ -10,8 +10,10 @@
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/mutex.h" // lock_guard
+#include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
-#include "src/__support/threads/linux/futex_word.h"
+#include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/mutex.h"
 
 #include <linux/futex.h> // For futex operations.
@@ -28,7 +30,7 @@ struct CndVar {
   };
 
   struct CndWaiter {
-    cpp::Atomic<uint32_t> futex_word = WS_Waiting;
+    Futex futex_word = WS_Waiting;
     CndWaiter *next = nullptr;
   };
 
@@ -58,7 +60,7 @@ struct CndVar {
 
     CndWaiter waiter;
     {
-      MutexLock ml(&qmtx);
+      cpp::lock_guard ml(qmtx);
       CndWaiter *old_back = nullptr;
       if (waitq_front == nullptr) {
         waitq_front = waitq_back = &waiter;
@@ -84,8 +86,7 @@ struct CndVar {
       }
     }
 
-    LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &waiter.futex_word.val,
-                                       FUTEX_WAIT, WS_Waiting, 0, 0, 0);
+    waiter.futex_word.wait(WS_Waiting, cpp::nullopt, true);
 
     // At this point, if locking |m| fails, we can simply return as the
     // queued up waiter would have been removed from the queue.
@@ -109,6 +110,7 @@ struct CndVar {
 
     qmtx.futex_word = FutexWordType(Mutex::LockState::Free);
 
+    // this is a special WAKE_OP, so we use syscall directly
     LIBC_NAMESPACE::syscall_impl<long>(
         FUTEX_SYSCALL_ID, &qmtx.futex_word.val, FUTEX_WAKE_OP, 1, 1,
         &first->futex_word.val,
@@ -117,7 +119,7 @@ struct CndVar {
   }
 
   int broadcast() {
-    MutexLock ml(&qmtx);
+    cpp::lock_guard ml(qmtx);
     uint32_t dummy_futex_word;
     CndWaiter *waiter = waitq_front;
     waitq_front = waitq_back = nullptr;

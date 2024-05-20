@@ -179,7 +179,10 @@ llvm::Error test::checkDataflowWithNoopAnalysis(
       // -fnodelayed-template-parsing is the default everywhere but on Windows.
       // Set it explicitly so that tests behave the same on Windows as on other
       // platforms.
-      "-fsyntax-only", "-fno-delayed-template-parsing",
+      // Set -Wno-unused-value because it's often desirable in tests to write
+      // expressions with unused value, and we don't want the output to be
+      // cluttered with warnings about them.
+      "-fsyntax-only", "-fno-delayed-template-parsing", "-Wno-unused-value",
       "-std=" +
           std::string(LangStandard::getLangStandardForKind(Std).getName())};
   AnalysisInputs<NoopAnalysis> AI(

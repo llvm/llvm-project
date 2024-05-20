@@ -442,7 +442,7 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
 ; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
-; CHECK-NEXT:    switch i32 [[S1]], label [[DEFAULT_UNREACHABLE:%.*]] [
+; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[EXIT1:%.*]]
 ; CHECK-NEXT:      i32 2, label [[EXIT2:%.*]]
 ; CHECK-NEXT:      i32 3, label [[EXIT1]]
@@ -451,8 +451,6 @@ define i32 @switch_range(i32 %cond) {
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       exit2:
 ; CHECK-NEXT:    ret i32 2
-; CHECK:       default.unreachable:
-; CHECK-NEXT:    unreachable
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -515,9 +513,10 @@ define i8 @switch_defaultdest_multipleuse(i8 %t0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[O:%.*]] = or i8 [[T0:%.*]], 1
 ; CHECK-NEXT:    [[R:%.*]] = srem i8 1, [[O]]
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       default.unreachable:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    switch i8 [[R]], label [[EXIT:%.*]] [
+; CHECK-NEXT:      i8 0, label [[EXIT]]
+; CHECK-NEXT:      i8 1, label [[EXIT]]
+; CHECK-NEXT:    ]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
 ;
@@ -871,6 +870,33 @@ out:
   ret i1 false
 }
 
+define i1 @clamp_high1_or(i32 noundef %a) {
+; CHECK-LABEL: @clamp_high1_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
+; CHECK:       a_guard:
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[ADD]]
+; CHECK-NEXT:    ret i1 false
+; CHECK:       out:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp eq i32 %a, 5
+  %add = or disjoint i32 %a, 1
+  %sel = select i1 %sel_cmp, i32 5, i32 %add
+  %res = icmp eq i32 %sel, 6
+  ret i1 %res
+out:
+  ret i1 false
+}
+
 define i1 @clamp_high2(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high2(
 ; CHECK-NEXT:  entry:
@@ -897,6 +923,35 @@ a_guard:
 out:
   ret i1 false
 }
+
+
+define i1 @clamp_high2_or_disjoint(i32 noundef %a) {
+; CHECK-LABEL: @clamp_high2_or_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
+; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
+; CHECK:       a_guard:
+; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[ADD]], i32 5
+; CHECK-NEXT:    ret i1 false
+; CHECK:       out:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp ne i32 %a, 5
+  %add = or disjoint i32 %a, 1
+  %sel = select i1 %sel_cmp, i32 %add, i32 5
+  %res = icmp eq i32 %sel, 6
+  ret i1 %res
+out:
+  ret i1 false
+}
+
 
 define i1 @clamp_high3(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high3(

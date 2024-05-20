@@ -454,6 +454,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"erf", {{"x", SameReal}}, SameReal},
     {"erfc", {{"x", SameReal}}, SameReal},
     {"erfc_scaled", {{"x", SameReal}}, SameReal},
+    {"etime",
+        {{"values", TypePattern{RealType, KindCode::exactKind, 4}, Rank::vector,
+            Optionality::required, common::Intent::Out}},
+        TypePattern{RealType, KindCode::exactKind, 4}},
     {"exp", {{"x", SameFloating}}, SameFloating},
     {"exp", {{"x", SameFloating}}, SameFloating},
     {"exponent", {{"x", AnyReal}}, DefaultInt},
@@ -777,7 +781,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"repeat", {{"string", SameCharNoLen, Rank::scalar}, {"ncopies", AnyInt}},
+    {"repeat",
+        {{"string", SameCharNoLen, Rank::scalar},
+            {"ncopies", AnyInt, Rank::scalar}},
         SameCharNoLen, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"reshape",
         {{"source", SameType, Rank::array}, {"shape", AnyInt, Rank::shape},
@@ -903,6 +909,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"__builtin_compiler_options", {}, DefaultChar},
+    {"__builtin_compiler_version", {}, DefaultChar},
     {"__builtin_fma", {{"f1", SameReal}, {"f2", SameReal}, {"f3", SameReal}},
         SameReal},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
@@ -941,8 +949,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_support_underflow_control",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
-    {"__builtin_compiler_options", {}, DefaultChar},
-    {"__builtin_compiler_version", {}, DefaultChar},
+    {"__builtin_numeric_storage_size", {}, DefaultInt},
 };
 
 // TODO: Coarray intrinsic functions
@@ -1120,6 +1127,12 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"iiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 2}}},
          TypePattern{IntType, KindCode::exactKind, 2}},
         "abs"},
+    // The definition of the unrestricted specific intrinsic function INDEX
+    // in F'77 and F'90 has only two arguments; later standards omit the
+    // argument information for all unrestricted specific intrinsic
+    // procedures.  No compiler supports an implementation that allows
+    // INDEX with BACK= to work when associated as an actual procedure or
+    // procedure pointer target.
     {{"index", {{"string", DefaultChar}, {"substring", DefaultChar}},
         DefaultInt}},
     {{"isign", {{"a", DefaultInt}, {"b", DefaultInt}}, DefaultInt}, "sign"},
@@ -1332,6 +1345,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"values", AnyInt, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"etime",
+        {{"values", TypePattern{RealType, KindCode::exactKind, 4}, Rank::vector,
+             Optionality::required, common::Intent::Out},
+            {"time", TypePattern{RealType, KindCode::exactKind, 4},
+                Rank::scalar, Optionality::required, common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
@@ -2274,7 +2293,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
           if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
             if (context.languageFeatures().ShouldWarn(
-                    common::UsageWarning::DimMustBePresent)) {
+                    common::UsageWarning::OptionalMustBePresent)) {
               if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
                 messages.Say(
                     "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
@@ -2475,6 +2494,7 @@ public:
   bool IsIntrinsic(const std::string &) const;
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
+  bool IsDualIntrinsic(const std::string &) const;
 
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
   std::string GetGenericIntrinsicName(const std::string &) const;
@@ -2505,6 +2525,8 @@ private:
   std::multimap<std::string, const IntrinsicInterface *> subroutines_;
   const semantics::Scope *builtinsScope_{nullptr};
   std::map<std::string, std::string> aliases_;
+  semantics::ParamValue assumedLen_{
+      semantics::ParamValue::Assumed(common::TypeParamAttr::Len)};
 };
 
 bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
@@ -2533,6 +2555,17 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
 bool IntrinsicProcTable::Implementation::IsIntrinsic(
     const std::string &name) const {
   return IsIntrinsicFunction(name) || IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
+    const std::string &name) const {
+  // Collection for some intrinsics with function and subroutine form,
+  // in order to pass the semantic check.
+  static const std::string dualIntrinsic[]{{"etime"}};
+
+  return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
+             [&name](const std::string &dualName) {
+               return dualName == name;
+             }) != std::end(dualIntrinsic);
 }
 
 IntrinsicClass IntrinsicProcTable::Implementation::GetIntrinsicClass(
@@ -2627,19 +2660,30 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   static const char *const keywords[]{"mold", nullptr};
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1) &&
       arguments[0]) {
-    if (Expr<SomeType> * mold{arguments[0]->UnwrapExpr()}) {
-      bool isProcPtrTarget{IsProcedurePointerTarget(*mold)};
+    Expr<SomeType> *mold{arguments[0]->UnwrapExpr()};
+    bool isBareNull{IsBareNullPointer(mold)};
+    if (isBareNull) {
+      // NULL(NULL()), NULL(NULL(NULL())), &c. are all just NULL()
+      mold = nullptr;
+    }
+    if (mold) {
+      bool isProcPtrTarget{
+          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
         if (isProcPtrTarget) {
           // MOLD= procedure pointer
-          const Symbol *last{GetLastSymbol(*mold)};
-          CHECK(last);
-          auto procPointer{IsProcedure(*last)
-                  ? characteristics::Procedure::Characterize(*last, context)
-                  : std::nullopt};
-          // procPointer is null if there was an error with the analysis
+          std::optional<characteristics::Procedure> procPointer;
+          if (IsNullProcedurePointer(*mold)) {
+            procPointer =
+                characteristics::Procedure::Characterize(*mold, context);
+          } else {
+            const Symbol *last{GetLastSymbol(*mold)};
+            procPointer =
+                characteristics::Procedure::Characterize(DEREF(last), context);
+          }
+          // procPointer is vacant if there was an error with the analysis
           // associated with the procedure pointer
           if (procPointer) {
             args.emplace_back("mold"s,
@@ -2668,8 +2712,10 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
         }
       }
     }
-    context.messages().Say(arguments[0]->sourceLocation(),
-        "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
+    if (!isBareNull) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
+    }
   }
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);
@@ -2717,16 +2763,21 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
         } else if (type->category() == TypeCategory::Derived) {
-          if (type->IsUnlimitedPolymorphic()) {
-            context.messages().Say(at,
-                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                         semantics::Attr::BIND_C)) {
-            context.messages().Say(at,
-                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+          if (context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::Interoperability)) {
+            if (type->IsUnlimitedPolymorphic()) {
+              context.messages().Say(at,
+                  "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
+            } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
+                           semantics::Attr::BIND_C)) {
+              context.messages().Say(at,
+                  "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+            }
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures())) {
+                       *type, &context.languageFeatures()) &&
+            context.languageFeatures().ShouldWarn(
+                common::UsageWarning::Interoperability)) {
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type %s"_warn_en_US,
               type->AsFortran());
@@ -2826,7 +2877,9 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type())) {
+          !IsInteroperableIntrinsicType(typeAndShape->type()) &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::Interoperability)) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
       }
@@ -2840,7 +2893,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
                                       characteristics::DummyArgument{"x"s,
                                           characteristics::DummyDataObject{
                                               std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{}}},
+                                  characteristics::Procedure::Attrs{
+                                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }
@@ -3051,7 +3105,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
         return specificCall;
       }
     }
-    if (IsIntrinsicFunction(call.name)) {
+    if (IsIntrinsicFunction(call.name) && !IsDualIntrinsic(call.name)) {
       context.messages().Say(
           "Cannot use intrinsic function '%s' as a subroutine"_err_en_US,
           call.name);
@@ -3186,7 +3240,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   }
 
   if (specificBuffer.empty() && genericBuffer.empty() &&
-      IsIntrinsicSubroutine(call.name)) {
+      IsIntrinsicSubroutine(call.name) && !IsDualIntrinsic(call.name)) {
     context.messages().Say(
         "Cannot use intrinsic subroutine '%s' as a function"_err_en_US,
         call.name);
@@ -3241,6 +3295,10 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   TypeCategory category{set.LeastElement().value()};
   if (pattern.kindCode == KindCode::doublePrecision) {
     return DynamicType{category, defaults_.doublePrecisionKind()};
+  } else if (category == TypeCategory::Character) {
+    // All character arguments to specific intrinsic functions are
+    // assumed-length.
+    return DynamicType{defaults_.GetDefaultKind(category), assumedLen_};
   } else {
     return DynamicType{category, defaults_.GetDefaultKind(category)};
   }

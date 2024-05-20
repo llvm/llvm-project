@@ -309,7 +309,7 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
         if (PI->readsRegister(Reg, TRI))
           return true;
         // Check for interference with non-dead defs
-        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
+        auto *DefOp = PI->findRegisterDefOperand(Reg, TRI, false, true);
         if (DefOp && !DefOp->isDead())
           return true;
       }
@@ -1949,13 +1949,8 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
   for (unsigned DefReg : DefedRegsInCopy)
     for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
       SuccBB->removeLiveIn(S);
-  for (auto U : UsedOpsInCopy) {
-    Register SrcReg = MI->getOperand(U).getReg();
-    LaneBitmask Mask;
-    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S)
-      Mask |= (*S).second;
-    SuccBB->addLiveIn(SrcReg, Mask);
-  }
+  for (auto U : UsedOpsInCopy)
+    SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();
 }
 

@@ -201,7 +201,10 @@ set_target_properties(unwind_static_objects
 
 if(LIBUNWIND_HIDE_SYMBOLS)
   target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility=hidden)
-  target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+  target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+  if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+    target_add_compile_flags_if_supported(unwind_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+  endif()
   target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
 endif()
 

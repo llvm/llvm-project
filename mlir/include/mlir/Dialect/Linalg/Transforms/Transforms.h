@@ -460,7 +460,8 @@ LogicalResult promoteSubviewsPrecondition(Operation *op,
 LogicalResult vectorizeOpPrecondition(Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes = {},
                                       ArrayRef<bool> inputScalableVecDims = {},
-                                      bool vectorizeNDExtract = false);
+                                      bool vectorizeNDExtract = false,
+                                      bool flatten1DDepthwiseConv = false);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as functional-style API calls.
@@ -480,6 +481,10 @@ struct ControlDropUnitDims {
   ControlFnTy controlFn = [](Operation *op) {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
+    }
+    if (auto padOp = dyn_cast_or_null<tensor::PadOp>(op)) {
+      return llvm::to_vector(
+          llvm::seq<unsigned>(0, padOp.getSourceType().getRank()));
     }
     return SmallVector<unsigned>{};
   };
@@ -1074,6 +1079,11 @@ bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
                               ArrayRef<ReassociationIndices> dimSequences);
 
+struct CollapseResult {
+  SmallVector<Value> results;
+  LinalgOp collapsedOp;
+};
+
 /// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition
 /// to calling this method is that for each list in `foldedIterationDim`, the
 /// sequence of dimensions is contiguous in domains of all `indexing_maps` of
@@ -1081,9 +1091,8 @@ bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
 /// When valid, the method also collapses the operands of the op. Returns
 /// replacement values of the results of the original `linalgOp` by inserting
 /// reshapes to get back values of compatible types.
-template <typename LinalgType>
-FailureOr<SmallVector<Value>>
-collapseOpIterationDims(LinalgType op,
+FailureOr<CollapseResult>
+collapseOpIterationDims(LinalgOp op,
                         ArrayRef<ReassociationIndices> foldedIterationDims,
                         RewriterBase &rewriter);
 
@@ -1152,6 +1161,66 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
                    ArrayRef<OpFoldResult> mnkPackedSizes,
                    ArrayRef<int64_t> mnkPaddedSizesNextMultipleOf,
                    ArrayRef<int64_t> mnkOrder);
+
+struct BlockPackMatmulOptions {
+  /// Minor block factors (mb, nb, kb) for packing relayout where mb, mn are
+  /// the parallel dimensions and kb is the reduction dimension.
+  SmallVector<int64_t, 3> blockFactors;
+
+  /// If true, allows packing of dimensions that only partially fit into the
+  /// block factors.
+  bool allowPadding = true;
+
+  /// Next multiples of the packing sizes.
+  SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
+
+  /// Permutation of matmul (M, N, K) dimensions order.
+  SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
+
+  /// Transpose LHS outer block layout [MB][KB] -> [KB][MB].
+  bool lhsTransposeOuterBlocks = false;
+
+  /// Transpose LHS inner block layout [mb][kb] -> [kb][mb].
+  bool lhsTransposeInnerBlocks = false;
+
+  /// Transpose RHS outer block layout [KB][NB] -> [NB][KB].
+  bool rhsTransposeOuterBlocks = true;
+
+  /// Transpose RHS inner block layout [kb][nb] -> [nb][kb].
+  bool rhsTransposeInnerBlocks = true;
+};
+
+/// Function type which is used to control matmul packing.
+/// It is expected to return valid packing configuration for each operation.
+/// Lack of packing options indicates that no valid configuration could be
+/// assigned and the operation will not be packed.
+using ControlBlockPackMatmulFn =
+    std::function<std::optional<BlockPackMatmulOptions>(linalg::LinalgOp)>;
+
+/// Pack a matmul operation into blocked 4D layout.
+///
+/// Relayout a matmul operation into blocked layout with two levels of
+/// subdivision:
+///   - major 2D blocks - outer dimensions, consist of minor blocks
+///   - minor 2D blocks - inner dimensions, consist of scalar elements
+///
+/// A 2D matmul MxNxK gets reshaped into blocked 4D representation
+/// as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][nb][kb]
+/// where the (MB, NB, KB) dimensions represent the major blocks,
+/// and the (mb, nb, kb) are the minor blocks of their respective
+/// original 2D dimensions (M, N, K).
+///
+/// Depending on the initial operands' data layout and the specified
+/// packing options, the major blocks dimensions might get transposed
+/// e.g., [MB][KB] -> [KB][MB]. The minor blocks can also be transposed
+/// e.g., [mb][kb] -> [kb][mb].
+/// Any present batch dimensions remain unchanged.
+/// The final result is unpacked back to the original shape.
+///
+/// Return failure if no valid packing options are provided.
+FailureOr<PackResult>
+blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
+                const ControlBlockPackMatmulFn &controlPackMatmul);
 
 /// Rewrite tensor.from_elements to linalg.generic.
 FailureOr<Operation *>
@@ -1234,6 +1303,14 @@ FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
                                        linalg::Conv2DNhwcFhwcOp op);
 FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
                                        linalg::Conv2DNhwcFhwcQOp op);
+
+/// Convert Linalg matmul ops to transposed variants.
+FailureOr<Operation *> transposeMatmul(RewriterBase &rewriter,
+                                       linalg::MatmulOp op,
+                                       bool transposeLHS = true);
+FailureOr<Operation *> transposeBatchMatmul(RewriterBase &rewriter,
+                                            linalg::BatchMatmulOp op,
+                                            bool transposeLHS = true);
 
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
@@ -1606,6 +1683,14 @@ void populateSplitReductionPattern(
     RewritePatternSet &patterns,
     const ControlSplitReductionFn &controlSplitReductionFn,
     bool useAlloc = false);
+
+/// Patterns to convert Linalg matmul ops to transposed variants.
+void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
+                                     bool transposeLHS = true);
+
+/// Patterns to block pack Linalg matmul ops.
+void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
+                                     const ControlBlockPackMatmulFn &controlFn);
 
 } // namespace linalg
 } // namespace mlir

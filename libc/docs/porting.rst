@@ -30,7 +30,7 @@ If you are starting to bring up LLVM's libc on a new operating system, the first
 step is to add a directory for that OS in the ``libc/config`` directory. Both
 `Linux <https://github.com/llvm/llvm-project/tree/main/libc/config/linux>`_ and
 `Windows <https://github.com/llvm/llvm-project/tree/main/libc/config/windows>`_,
-the two operating systems on which LLVM's libc is being actively developed, 
+the two operating systems on which LLVM's libc is being actively developed,
 have their own config directory.
 
 .. note:: Windows development is not as active as the development on Linux.

@@ -8,19 +8,22 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/nanl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include <signal.h>
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_LONG_DOUBLE(val, _, __) val
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_LONG_DOUBLE(_, val, __) val
-#else
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 #define SELECT_LONG_DOUBLE(_, __, val) val
+#else
+#error "Unknown long double type"
 #endif
 
-class LlvmLibcNanlTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcNanlTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using StorageType = LIBC_NAMESPACE::fputil::FPBits<long double>::StorageType;
 

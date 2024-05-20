@@ -122,9 +122,11 @@ public:
   /// `exprs.size()`, as many dims as the largest dim in `exprs` and as many
   /// symbols as the largest symbol in `exprs`.
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList);
+  inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                    MLIRContext *context);
   static SmallVector<AffineMap, 4>
-  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList);
+  inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                    MLIRContext *context);
 
   MLIRContext *getContext() const;
 

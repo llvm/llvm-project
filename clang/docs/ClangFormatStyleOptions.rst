@@ -318,9 +318,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveAssignments: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveAssignments:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -460,9 +460,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveBitFields: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveBitFields:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -602,9 +602,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    AlignConsecutiveMacros: AcrossEmptyLines
+    AlignConsecutiveDeclarations: AcrossEmptyLines
 
-    AlignConsecutiveMacros:
+    AlignConsecutiveDeclarations:
       Enabled: true
       AcrossEmptyLines: true
       AcrossComments: false
@@ -861,7 +861,8 @@ the configuration (without a prefix: ``Auto``).
 
 **AlignConsecutiveShortCaseStatements** (``ShortCaseStatementsAlignmentStyle``) :versionbadge:`clang-format 17` :ref:`¶ <AlignConsecutiveShortCaseStatements>`
   Style of aligning consecutive short case labels.
-  Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+  Only applies if ``AllowShortCaseExpressionOnASingleLine`` or
+  ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
 
 
   .. code-block:: yaml
@@ -935,8 +936,26 @@ the configuration (without a prefix: ``Auto``).
       default: return "";
       }
 
-  * ``bool AlignCaseColons`` Whether aligned case labels are aligned on the colon, or on the
-    , or on the tokens after the colon.
+  * ``bool AlignCaseArrows`` Whether to align the case arrows when aligning short case expressions.
+
+    .. code-block:: java
+
+      true:
+      i = switch (day) {
+        case THURSDAY, SATURDAY -> 8;
+        case WEDNESDAY          -> 9;
+        default                 -> 0;
+      };
+
+      false:
+      i = switch (day) {
+        case THURSDAY, SATURDAY -> 8;
+        case WEDNESDAY ->          9;
+        default ->                 0;
+      };
+
+  * ``bool AlignCaseColons`` Whether aligned case labels are aligned on the colon, or on the tokens
+    after the colon.
 
     .. code-block:: c++
 
@@ -953,6 +972,431 @@ the configuration (without a prefix: ``Auto``).
       case log::warning: return "warning:";
       default:           return "";
       }
+
+
+.. _AlignConsecutiveTableGenBreakingDAGArgColons:
+
+**AlignConsecutiveTableGenBreakingDAGArgColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenBreakingDAGArgColons>`
+  Style of aligning consecutive TableGen DAGArg operator colons.
+  If enabled, align the colon inside DAGArg which have line break inside.
+  This works only when TableGenBreakInsideDAGArg is BreakElements or
+  BreakAll and the DAGArg is not excepted by
+  TableGenBreakingDAGArgOperators's effect.
+
+  .. code-block:: c++
+
+    let dagarg = (ins
+        a  :$src1,
+        aa :$src2,
+        aaa:$src3
+    )
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveTableGenBreakingDAGArgColons: AcrossEmptyLines
+
+    AlignConsecutiveTableGenBreakingDAGArgColons:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
+.. _AlignConsecutiveTableGenCondOperatorColons:
+
+**AlignConsecutiveTableGenCondOperatorColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenCondOperatorColons>`
+  Style of aligning consecutive TableGen cond operator colons.
+  Align the colons of cases inside !cond operators.
+
+  .. code-block:: c++
+
+    !cond(!eq(size, 1) : 1,
+          !eq(size, 16): 1,
+          true         : 0)
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveTableGenCondOperatorColons: AcrossEmptyLines
+
+    AlignConsecutiveTableGenCondOperatorColons:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+
+.. _AlignConsecutiveTableGenDefinitionColons:
+
+**AlignConsecutiveTableGenDefinitionColons** (``AlignConsecutiveStyle``) :versionbadge:`clang-format 19` :ref:`¶ <AlignConsecutiveTableGenDefinitionColons>`
+  Style of aligning consecutive TableGen definition colons.
+  This aligns the inheritance colons of consecutive definitions.
+
+  .. code-block:: c++
+
+    def Def       : Parent {}
+    def DefDef    : Parent {}
+    def DefDefDef : Parent {}
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  They can also be read as a whole for compatibility. The choices are:
+  - None
+  - Consecutive
+  - AcrossEmptyLines
+  - AcrossComments
+  - AcrossEmptyLinesAndComments
+
+  For example, to align across empty lines and not across comments, either
+  of these work.
+
+  .. code-block:: c++
+
+    AlignConsecutiveTableGenDefinitionColons: AcrossEmptyLines
+
+    AlignConsecutiveTableGenDefinitionColons:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: false
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      #define SHORT_NAME       42
+      #define LONGER_NAME      0x007f
+      #define EVEN_LONGER_NAME (2)
+      #define foo(x)           (x * x)
+      #define bar(y, z)        (y + z)
+
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int aaaa : 1;
+      int b    : 12;
+      int ccc  : 8;
+
+      int         aaaa = 12;
+      float       b = 23;
+      std::string ccc;
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d            = 3;
+
+      false:
+      int a            = 1;
+      int somelongname = 2;
+      double c         = 3;
+
+      int d = 3;
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      int d    = 3;
+      /* A comment. */
+      double e = 4;
+
+      false:
+      int d = 3;
+      /* A comment. */
+      double e = 4;
+
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
+
+    .. code-block:: c++
+
+      true:
+      a   &= 2;
+      bbb  = 2;
+
+      false:
+      a &= 2;
+      bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
+
+    .. code-block:: c++
+
+      true:
+      a   >>= 2;
+      bbb   = 2;
+
+      a     = 2;
+      bbb >>= 2;
+
+      false:
+      a >>= 2;
+      bbb = 2;
+
+      a     = 2;
+      bbb >>= 2;
 
 
 .. _AlignEscapedNewlines:
@@ -1267,6 +1711,21 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _AllowShortCaseExpressionOnASingleLine:
+
+**AllowShortCaseExpressionOnASingleLine** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <AllowShortCaseExpressionOnASingleLine>`
+  Whether to merge a short switch labeled rule into a single line.
+
+  .. code-block:: java
+
+    true:                               false:
+    switch (a) {           vs.          switch (a) {
+    case 1 -> 1;                        case 1 ->
+    default -> 0;                         1;
+    };                                  default ->
+                                          0;
+                                        };
+
 .. _AllowShortCaseLabelsOnASingleLine:
 
 **AllowShortCaseLabelsOnASingleLine** (``Boolean``) :versionbadge:`clang-format 3.6` :ref:`¶ <AllowShortCaseLabelsOnASingleLine>`
@@ -1531,114 +1990,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakAfterReturnType:
 
-**AlwaysBreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlwaysBreakAfterReturnType>`
-  The function declaration return type breaking style to use.
-
-  Possible values:
-
-  * ``RTBS_None`` (in configuration: ``None``)
-    This is **deprecated**. See ``Automatic`` below.
-
-  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
-    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int f() { return 1; }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
-    Same as ``Automatic`` above, except that there is no break after short
-    return types.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int f() { return 1; }
-      int LongName::
-          AnotherLongName();
-
-  * ``RTBS_All`` (in configuration: ``All``)
-    Always break after the return type.
-
-    .. code-block:: c++
-
-      class A {
-        int
-        f() {
-          return 0;
-        };
-      };
-      int
-      f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
-    Always break after the return types of top-level functions.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int
-      f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
-    Always break after the return type of function definitions.
-
-    .. code-block:: c++
-
-      class A {
-        int
-        f() {
-          return 0;
-        };
-      };
-      int f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
-    Always break after the return type of top-level definitions.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int
-      f() {
-        return 1;
-      }
-      int
-      LongName::AnotherLongName();
-
-
+**AlwaysBreakAfterReturnType** (``deprecated``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlwaysBreakAfterReturnType>`
+  This option is renamed to ``BreakAfterReturnType``.
 
 .. _AlwaysBreakBeforeMultilineStrings:
 
@@ -1659,62 +2012,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakTemplateDeclarations:
 
-**AlwaysBreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
-  The template declaration breaking style to use.
-
-  Possible values:
-
-  * ``BTDS_Leave`` (in configuration: ``Leave``)
-    Do not change the line breaking before the declaration.
-
-    .. code-block:: c++
-
-       template <typename T>
-       T foo() {
-       }
-       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-                                   int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_No`` (in configuration: ``No``)
-    Do not force break before declaration.
-    ``PenaltyBreakTemplateDeclaration`` is taken into account.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-                                   int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
-    Force break after template declaration only when the following
-    declaration spans multiple lines.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_Yes`` (in configuration: ``Yes``)
-    Always break after template declaration.
-
-    .. code-block:: c++
-
-       template <typename T>
-       T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-
+**AlwaysBreakTemplateDeclarations** (``deprecated``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
+  This option is renamed to ``BreakTemplateDeclarations``.
 
 .. _AttributeMacros:
 
@@ -2272,6 +2571,117 @@ the configuration (without a prefix: ``Auto``).
      @Partial                       vs.     @Partial @Mock DataLoad loader;
      @Mock
      DataLoad loader;
+
+.. _BreakAfterReturnType:
+
+**BreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakAfterReturnType>`
+  The function declaration return type breaking style to use.
+
+  Possible values:
+
+  * ``RTBS_None`` (in configuration: ``None``)
+    This is **deprecated**. See ``Automatic`` below.
+
+  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
+    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
+    Same as ``Automatic`` above, except that there is no break after short
+    return types.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int LongName::
+          AnotherLongName();
+
+  * ``RTBS_All`` (in configuration: ``All``)
+    Always break after the return type.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
+    Always break after the return types of top-level functions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Always break after the return type of function definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Always break after the return type of top-level definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+
 
 .. _BreakArrays:
 
@@ -2919,6 +3329,21 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakFunctionDefinitionParameters:
+
+**BreakFunctionDefinitionParameters** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <BreakFunctionDefinitionParameters>`
+  If ``true``, clang-format will always break before function definition
+  parameters.
+
+  .. code-block:: c++
+
+     true:
+     void functionDefinition(
+              int A, int B) {}
+
+     false:
+     void functionDefinition(int A, int B) {}
+
 .. _BreakInheritanceList:
 
 **BreakInheritanceList** (``BreakInheritanceListStyle``) :versionbadge:`clang-format 7` :ref:`¶ <BreakInheritanceList>`
@@ -3013,6 +3438,65 @@ the configuration (without a prefix: ``Auto``).
      false:
      string x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+.. _BreakTemplateDeclarations:
+
+**BreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakTemplateDeclarations>`
+  The template declaration breaking style to use.
+
+  Possible values:
+
+  * ``BTDS_Leave`` (in configuration: ``Leave``)
+    Do not change the line breaking before the declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_No`` (in configuration: ``No``)
+    Do not force break before declaration.
+    ``PenaltyBreakTemplateDeclaration`` is taken into account.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
+    Force break after template declaration only when the following
+    declaration spans multiple lines.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_Yes`` (in configuration: ``Yes``)
+    Always break after template declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+
 
 .. _ColumnLimit:
 
@@ -4156,7 +4640,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _MainIncludeChar:
 
-**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 18` :ref:`¶ <MainIncludeChar>`
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
   When guessing whether a #include is the "main" include, only the include
   directives that use the specified character are considered.
 
@@ -4834,7 +5318,8 @@ the configuration (without a prefix: ``Auto``).
 .. _RemoveSemicolon:
 
 **RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <RemoveSemicolon>`
-  Remove semicolons after the closing brace of a non-empty function.
+  Remove semicolons after the closing braces of functions and
+  constructors/destructors.
 
   .. warning::
 
@@ -5866,6 +6351,70 @@ the configuration (without a prefix: ``Auto``).
 
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
+
+.. _TableGenBreakInsideDAGArg:
+
+**TableGenBreakInsideDAGArg** (``DAGArgStyle``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakInsideDAGArg>`
+  The styles of the line break inside the DAGArg in TableGen.
+
+  Possible values:
+
+  * ``DAS_DontBreak`` (in configuration: ``DontBreak``)
+    Never break inside DAGArg.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1, i32:$src2);
+
+  * ``DAS_BreakElements`` (in configuration: ``BreakElements``)
+    Break inside DAGArg after each list element but for the last.
+    This aligns to the first element.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins i32:$src1,
+                           i32:$src2);
+
+  * ``DAS_BreakAll`` (in configuration: ``BreakAll``)
+    Break inside DAGArg after the operator and the all elements.
+
+    .. code-block:: c++
+
+      let DAGArgIns = (ins
+          i32:$src1,
+          i32:$src2
+      );
+
+
+
+.. _TableGenBreakingDAGArgOperators:
+
+**TableGenBreakingDAGArgOperators** (``List of Strings``) :versionbadge:`clang-format 19` :ref:`¶ <TableGenBreakingDAGArgOperators>`
+  Works only when TableGenBreakInsideDAGArg is not DontBreak.
+  The string list needs to consist of identifiers in TableGen.
+  If any identifier is specified, this limits the line breaks by
+  TableGenBreakInsideDAGArg option only on DAGArg values beginning with
+  the specified identifiers.
+
+  For example the configuration,
+
+  .. code-block:: yaml
+
+    TableGenBreakInsideDAGArg: BreakAll
+    TableGenBreakingDAGArgOperators: ['ins', 'outs']
+
+  makes the line break only occurs inside DAGArgs beginning with the
+  specified identifiers 'ins' and 'outs'.
+
+
+  .. code-block:: c++
+
+    let DAGArgIns = (ins
+        i32:$src1,
+        i32:$src2
+    );
+    let DAGArgOtherID = (other i32:$other1, i32:$other2);
+    let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
 
 .. _TypeNames:
 

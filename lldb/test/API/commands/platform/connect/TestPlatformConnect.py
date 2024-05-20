@@ -13,6 +13,13 @@ class TestPlatformProcessConnect(TestBase):
     @expectedFailureAll(hostoslist=["windows"], triple=".*-android")
     @skipIfDarwin  # lldb-server not found correctly
     @expectedFailureAll(oslist=["windows"])  # process modules not loaded
+    # lldb-server platform times out waiting for the gdbserver port number to be
+    # written to the pipe, yet it seems the gdbserver already has written it.
+    @expectedFailureAll(
+        archs=["aarch64"],
+        oslist=["freebsd"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/84327",
+    )
     @add_test_categories(["lldb-server"])
     def test_platform_process_connect(self):
         self.build()

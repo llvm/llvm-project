@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple i686 -verify %s
-// RUN: %clang_cc1 -verify=ref %s
-// RUN: %clang_cc1 -verify=ref -std=c++14 %s
-// RUN: %clang_cc1 -verify=ref -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref -triple i686 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 /// Used to crash.
 struct Empty {};
@@ -90,9 +90,7 @@ struct Ints2 {
   int a = 10;
   int b;
 };
-constexpr Ints2 ints22; // expected-error {{without a user-provided default constructor}} \
-                        // expected-error {{must be initialized by a constant expression}} \
-                        // ref-error {{without a user-provided default constructor}}
+constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}}
 
 constexpr Ints2 I2 = Ints2{12, 25};
 static_assert(I2.a == 12, "");
@@ -164,17 +162,13 @@ constexpr C RVOAndParams(int a) {
 }
 constexpr C RVOAndParamsResult2 = RVOAndParams(12);
 
-class Bar { // expected-note {{definition of 'Bar' is not complete}} \
-            // ref-note {{definition of 'Bar' is not complete}}
+class Bar { // both-note {{definition of 'Bar' is not complete}}
 public:
   constexpr Bar(){}
-  constexpr Bar b; // expected-error {{cannot be constexpr}} \
-                   // expected-error {{has incomplete type 'const Bar'}} \
-                   // ref-error {{cannot be constexpr}} \
-                   // ref-error {{has incomplete type 'const Bar'}}
+  constexpr Bar b; // both-error {{cannot be constexpr}} \
+                   // both-error {{has incomplete type 'const Bar'}}
 };
-constexpr Bar B; // expected-error {{must be initialized by a constant expression}} \
-                 // ref-error {{must be initialized by a constant expression}}
+constexpr Bar B; // both-error {{must be initialized by a constant expression}}
 constexpr Bar *pb = nullptr;
 
 constexpr int locals() {
@@ -198,17 +192,13 @@ namespace thisPointer {
     constexpr int get12() { return 12; }
   };
 
-  constexpr int foo() { // ref-error {{never produces a constant expression}} \
-                        // expected-error {{never produces a constant expression}}
+  constexpr int foo() { // both-error {{never produces a constant expression}}
     S *s = nullptr;
-    return s->get12(); // ref-note 2{{member call on dereferenced null pointer}} \
-                       // expected-note 2{{member call on dereferenced null pointer}}
+    return s->get12(); // both-note 2{{member call on dereferenced null pointer}}
 
   }
-  static_assert(foo() == 12, ""); // ref-error {{not an integral constant expression}} \
-                                  // ref-note {{in call to 'foo()'}} \
-                                  // expected-error {{not an integral constant expression}} \
-                                  // expected-note {{in call to 'foo()'}}
+  static_assert(foo() == 12, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to 'foo()'}}
 };
 
 struct FourBoolPairs {
@@ -244,20 +234,16 @@ constexpr A a{};
 static_assert(a.i == 100, "");
 constexpr A a2{12};
 static_assert(a2.i == 12, "");
-static_assert(a2.i == 200, ""); // ref-error {{static assertion failed}} \
-                                // ref-note {{evaluates to '12 == 200'}} \
-                                // expected-error {{static assertion failed}} \
-                                // expected-note {{evaluates to '12 == 200'}}
+static_assert(a2.i == 200, ""); // both-error {{static assertion failed}} \
+                                // both-note {{evaluates to '12 == 200'}}
 
 
 struct S {
   int a = 0;
   constexpr int get5() const { return 5; }
   constexpr void fo() const {
-    this; // expected-warning {{expression result unused}} \
-          // ref-warning {{expression result unused}}
-    this->a; // expected-warning {{expression result unused}} \
-             // ref-warning {{expression result unused}}
+    this; // both-warning {{expression result unused}}
+    this->a; // both-warning {{expression result unused}}
     get5();
     getInts();
   }
@@ -342,23 +328,18 @@ namespace InitializerTemporaries {
   // Invalid destructor.
   struct S {
     constexpr S() {}
-    constexpr ~S() noexcept(false) { throw 12; } // expected-error {{cannot use 'throw'}} \
-                                                 // expected-error {{never produces a constant expression}} \
-                                                 // expected-note 2{{subexpression not valid}} \
-                                                 // ref-error {{cannot use 'throw'}} \
-                                                 // ref-error {{never produces a constant expression}} \
-                                                 // ref-note 2{{subexpression not valid}}
+    constexpr ~S() noexcept(false) { throw 12; } // both-error {{cannot use 'throw'}} \
+                                                 // both-error {{never produces a constant expression}} \
+                                                 // both-note 2{{subexpression not valid}}
   };
 
   constexpr int f() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}}
-    /// FIXME: Wrong source location below.
-    return 12; // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // ref-note {{in call to 'S{}.~S()'}} \
+         // expected-note {{in call to '&S{}->~S()'}}
+    return 12;
   }
-  static_assert(f() == 12); // expected-error {{not an integral constant expression}} \
-                            // expected-note {{in call to 'f()'}} \
-                            // ref-error {{not an integral constant expression}} \
-                            // ref-note {{in call to 'f()'}}
+  static_assert(f() == 12); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to 'f()'}}
 
 
 #endif
@@ -423,7 +404,8 @@ namespace MI {
 
 namespace DeriveFailures {
 #if __cplusplus < 202002L
-  struct Base { // ref-note 2{{declared here}} expected-note {{declared here}}
+  struct Base { // both-note {{declared here}} \
+                // ref-note {{declared here}}
     int Val;
   };
 
@@ -431,35 +413,28 @@ namespace DeriveFailures {
     int OtherVal;
 
     constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
-                                              // ref-note 2{{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
-                                              // expected-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
+                                              // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
+                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} 
   };
 
-  constexpr Derived D(12); // ref-error {{must be initialized by a constant expression}} \
-                           // ref-note {{in call to 'Derived(12)'}} \
-                           // ref-note {{declared here}} \
-                           // expected-error {{must be initialized by a constant expression}} \
-                           // expected-note {{in call to 'Derived(12)'}}
+  constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
+                           // both-note {{in call to 'Derived(12)'}} \
+                           // both-note {{declared here}}
 
-  static_assert(D.Val == 0, ""); // ref-error {{not an integral constant expression}} \
-                                 // ref-note {{initializer of 'D' is not a constant expression}} \
-                                 // expected-error {{not an integral constant expression}} \
-                                 // expected-note {{read of uninitialized object}}
+  static_assert(D.Val == 0, ""); // both-error {{not an integral constant expression}} \
+                                 // both-note {{initializer of 'D' is not a constant expression}}
 #endif
 
   struct AnotherBase {
     int Val;
-    constexpr AnotherBase(int i) : Val(12 / i) {} //ref-note {{division by zero}} \
-                                                  //expected-note {{division by zero}}
+    constexpr AnotherBase(int i) : Val(12 / i) {} // both-note {{division by zero}}
   };
 
   struct AnotherDerived : AnotherBase {
     constexpr AnotherDerived(int i) : AnotherBase(i) {}
   };
-  constexpr AnotherBase Derp(0); // ref-error {{must be initialized by a constant expression}} \
-                                 // ref-note {{in call to 'AnotherBase(0)'}} \
-                                 // expected-error {{must be initialized by a constant expression}} \
-                                 // expected-note {{in call to 'AnotherBase(0)'}}
+  constexpr AnotherBase Derp(0); // both-error {{must be initialized by a constant expression}} \
+                                 // both-note {{in call to 'AnotherBase(0)'}}
 
   struct YetAnotherBase {
     int Val;
@@ -467,17 +442,14 @@ namespace DeriveFailures {
   };
 
   struct YetAnotherDerived : YetAnotherBase {
-    using YetAnotherBase::YetAnotherBase; // ref-note {{declared here}} \
-                                          // expected-note {{declared here}}
+    using YetAnotherBase::YetAnotherBase; // both-note {{declared here}}
     int OtherVal;
 
     constexpr bool doit() const { return Val == OtherVal; }
   };
 
-  constexpr YetAnotherDerived Oops(0); // ref-error {{must be initialized by a constant expression}} \
-                                       // ref-note {{constructor inherited from base class 'YetAnotherBase' cannot be used in a constant expression}} \
-                                       // expected-error {{must be initialized by a constant expression}} \
-                                       // expected-note {{constructor inherited from base class 'YetAnotherBase' cannot be used in a constant expression}}
+  constexpr YetAnotherDerived Oops(0); // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{constructor inherited from base class 'YetAnotherBase' cannot be used in a constant expression}}
 };
 
 namespace EmptyCtor {
@@ -504,10 +476,11 @@ namespace ConditionalInit {
 namespace DeclRefs {
   struct A{ int m; const int &f = m; }; // expected-note {{implicit use of 'this'}}
 
-  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}}
+  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{declared here}}
   static_assert(a.m == 10, "");
   static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
-                                // expected-note {{read of uninitialized object}}
+                                // expected-note {{initializer of 'a' is not a constant expression}}
 
   class Foo {
   public:
@@ -543,18 +516,10 @@ namespace PointerArith {
   constexpr B *b1 = &b + 1;
   constexpr B *b2 = &b + 0;
 
-#if 0
-  constexpr A *a2 = &b + 1; // expected-error {{must be initialized by a constant expression}} \
-                            // expected-note {{cannot access base class of pointer past the end of object}} \
-                            // ref-error {{must be initialized by a constant expression}} \
-                            // ref-note {{cannot access base class of pointer past the end of object}}
-
-#endif
-  constexpr const int *pn = &(&b + 1)->n; // expected-error {{must be initialized by a constant expression}} \
-                                          // expected-note {{cannot access field of pointer past the end of object}} \
-                                          // ref-error {{must be initialized by a constant expression}} \
-                                          // ref-note {{cannot access field of pointer past the end of object}}
-
+  constexpr A *a2 = &b + 1; // both-error {{must be initialized by a constant expression}} \
+                            // both-note {{cannot access base class of pointer past the end of object}}
+  constexpr const int *pn = &(&b + 1)->n; // both-error {{must be initialized by a constant expression}} \
+                                          // both-note {{cannot access field of pointer past the end of object}}
 }
 
 #if __cplusplus >= 202002L
@@ -632,23 +597,18 @@ namespace Destructors {
 
   struct S {
     constexpr S() {}
-    constexpr ~S() { // expected-error {{never produces a constant expression}} \
-                     // ref-error {{never produces a constant expression}}
-      int i = 1 / 0; // expected-warning {{division by zero}} \
-                     // expected-note 2{{division by zero}} \
-                     // ref-warning {{division by zero}} \
-                     // ref-note 2{{division by zero}}
+    constexpr ~S() { // both-error {{never produces a constant expression}}
+      int i = 1 / 0; // both-warning {{division by zero}} \
+                     // both-note 2{{division by zero}}
     }
   };
   constexpr int testS() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}}
-    return 1; // expected-note {{in call to '&S{}->~S()'}}
-              // FIXME: ^ Wrong line
+    S{}; // ref-note {{in call to 'S{}.~S()'}} \
+         // expected-note {{in call to '&S{}->~S()'}}
+    return 1;
   }
-  static_assert(testS() == 1); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{in call to 'testS()'}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'testS()'}}
+  static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to 'testS()'}}
 }
 
 namespace BaseToDerived {
@@ -657,10 +617,8 @@ namespace A {
   struct B : A { int n; };
   struct C : B {};
   C c = {};
-  constexpr C *pb = (C*)((A*)&c + 1); // expected-error {{must be initialized by a constant expression}} \
-                                      // expected-note {{cannot access derived class of pointer past the end of object}} \
-                                      // ref-error {{must be initialized by a constant expression}} \
-                                      // ref-note {{cannot access derived class of pointer past the end of object}}
+  constexpr C *pb = (C*)((A*)&c + 1); // both-error {{must be initialized by a constant expression}} \
+                                      // both-note {{cannot access derived class of pointer past the end of object}}
 }
 namespace B {
   struct A {};
@@ -894,10 +852,8 @@ namespace VirtualFromBase {
   // Virtual f(), not OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(X<S2>), ""); // ref-error {{not an integral constant expression}} \
-                                              // ref-note {{cannot evaluate call to virtual function}} \
-                                              // expected-error {{not an integral constant expression}} \
-                                              // expected-note {{cannot evaluate call to virtual function}}
+  static_assert(q->f() == sizeof(X<S2>), ""); // both-error {{not an integral constant expression}} \
+                                              // both-note {{cannot evaluate call to virtual function}}
 }
 #endif
 
@@ -1043,10 +999,9 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}}
+      return x.a;
     }
-    static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}}
+    static_assert(foo(S()) == 0, "");
   };
 #endif
 }
@@ -1070,14 +1025,16 @@ namespace ParenInit {
 
   /// Not constexpr!
   O o1(0);
-  constinit O o2(0); // ref-error {{variable does not have a constant initializer}} \
-                     // ref-note {{required by 'constinit' specifier}} \
-                     // ref-note {{reference to temporary is not a constant expression}} \
-                     // ref-note {{temporary created here}} \
-                     // expected-error {{variable does not have a constant initializer}} \
-                     // expected-note {{required by 'constinit' specifier}} \
-                     // expected-note {{reference to temporary is not a constant expression}} \
-                     // expected-note {{temporary created here}}
+  constinit O o2(0); // both-error {{variable does not have a constant initializer}} \
+                     // both-note {{required by 'constinit' specifier}} \
+                     // both-note {{reference to temporary is not a constant expression}} \
+                     // both-note {{temporary created here}}
+
+
+  /// Initializing an array.
+  constexpr void bar(int i, int j) {
+    int arr[4](i, j);
+  }
 }
 #endif
 
@@ -1109,32 +1066,24 @@ namespace AccessOnNullptr {
     int a;
   };
 
-  constexpr int a() { // expected-error {{never produces a constant expression}} \
-                      // ref-error {{never produces a constant expression}}
+  constexpr int a() { // both-error {{never produces a constant expression}}
     F *f = nullptr;
 
-    f->a = 0; // expected-note 2{{cannot access field of null pointer}} \
-              // ref-note 2{{cannot access field of null pointer}}
+    f->a = 0; // both-note 2{{cannot access field of null pointer}}
     return f->a;
   }
-  static_assert(a() == 0, ""); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{in call to 'a()'}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'a()'}}
+  static_assert(a() == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to 'a()'}}
 
-  constexpr int a2() { // expected-error {{never produces a constant expression}} \
-                      // ref-error {{never produces a constant expression}}
+  constexpr int a2() { // both-error {{never produces a constant expression}}
     F *f = nullptr;
 
 
-    const int *a = &(f->a); // expected-note 2{{cannot access field of null pointer}} \
-                            // ref-note 2{{cannot access field of null pointer}}
+    const int *a = &(f->a); // both-note 2{{cannot access field of null pointer}}
     return f->a;
   }
-  static_assert(a2() == 0, ""); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{in call to 'a2()'}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'a2()'}}
+  static_assert(a2() == 0, ""); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to 'a2()'}}
 }
 
 namespace IndirectFieldInit {
@@ -1221,5 +1170,292 @@ namespace IndirectFieldInit {
   constexpr S2 s2(1, 2);
   static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
 
+#endif
+}
+
+namespace InheritedConstructor {
+  namespace PR47555 {
+    struct A {
+      int c;
+      int d;
+      constexpr A(int c, int d) : c(c), d(d){}
+    };
+    struct B : A { using A::A; };
+
+    constexpr B b = {13, 1};
+    static_assert(b.c == 13, "");
+    static_assert(b.d == 1, "");
+  }
+
+  namespace PR47555_2 {
+    struct A {
+      int c;
+      int d;
+      double e;
+      constexpr A(int c, int &d, double e) : c(c), d(++d), e(e){}
+    };
+    struct B : A { using A::A; };
+
+    constexpr int f() {
+      int a = 10;
+      B b = {10, a, 40.0};
+      return a;
+    }
+    static_assert(f() == 11, "");
+  }
+
+  namespace AaronsTest {
+    struct T {
+      constexpr T(float) {}
+    };
+
+    struct Base {
+      constexpr Base(T t = 1.0f) {}
+      constexpr Base(float) {}
+    };
+
+    struct FirstMiddle : Base {
+      using Base::Base;
+      constexpr FirstMiddle() : Base(2.0f) {}
+    };
+
+    struct SecondMiddle : Base {
+      constexpr SecondMiddle() : Base(3.0f) {}
+      constexpr SecondMiddle(T t) : Base(t) {}
+    };
+
+    struct S : FirstMiddle, SecondMiddle {
+      using FirstMiddle::FirstMiddle;
+      constexpr S(int i) : S(4.0f) {}
+    };
+
+    constexpr S s(1);
+  }
+}
+
+namespace InvalidCtorInitializer {
+  struct X {
+    int Y;
+    constexpr X()
+        : Y(fo_o_()) {} // both-error {{use of undeclared identifier 'fo_o_'}}
+  };
+  // no crash on evaluating the constexpr ctor.
+  constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}}
+}
+
+extern int f(); // both-note {{here}}
+struct HasNonConstExprMemInit {
+  int x = f(); // both-note {{non-constexpr function}}
+  constexpr HasNonConstExprMemInit() {} // both-error {{never produces a constant expression}}
+};
+
+namespace {
+  template <class Tp, Tp v>
+  struct integral_constant {
+    static const Tp value = v;
+  };
+
+  template <class Tp, Tp v>
+  const Tp integral_constant<Tp, v>::value;
+
+  typedef integral_constant<bool, true> true_type;
+  typedef integral_constant<bool, false> false_type;
+
+  /// This might look innocent, but we get an evaluateAsInitializer call for the
+  /// static bool member before evaluating the first static_assert, but we do NOT
+  /// get such a call for the second one. So the second one needs to lazily visit
+  /// the data member itself.
+  static_assert(true_type::value, "");
+  static_assert(true_type::value, "");
+}
+
+#if __cplusplus >= 202002L
+namespace {
+  /// Used to crash because the CXXDefaultInitExpr is of compound type.
+  struct A {
+    int &x;
+    constexpr ~A() { --x; }
+  };
+  struct B {
+    int &x;
+    const A &a = A{x};
+  };
+  constexpr int a() {
+    int x = 1;
+    int f = B{x}.x;
+    B{x}; // both-warning {{expression result unused}}
+
+    return 1;
+  }
+}
+#endif
+
+namespace pr18633 {
+  struct A1 {
+    static const int sz;
+    static const int sz2;
+  };
+  const int A1::sz2 = 11;
+  template<typename T>
+  void func () {
+    int arr[A1::sz];
+    // both-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+    // both-note@-2 {{initializer of 'sz' is unknown}}
+    // both-note@-9 {{declared here}}
+  }
+  template<typename T>
+  void func2 () {
+    int arr[A1::sz2];
+  }
+  const int A1::sz = 12;
+  void func2() {
+    func<int>();
+    func2<int>();
+  }
+}
+
+namespace {
+  struct F {
+    static constexpr int Z = 12;
+  };
+  F f;
+  static_assert(f.Z == 12, "");
+}
+
+namespace UnnamedBitFields {
+  struct A {
+    int : 1;
+    double f;
+    int : 1;
+    char c;
+  };
+
+  constexpr A a = (A){1.0, 'a'};
+  static_assert(a.f == 1.0, "");
+  static_assert(a.c == 'a', "");
+}
+
+/// FIXME: This still doesn't work in the new interpreter because
+/// we lack type information for dummy pointers.
+namespace VirtualBases {
+  /// This used to crash.
+  namespace One {
+    class A {
+    protected:
+      int x;
+    };
+    class B : public virtual A {
+    public:
+      int getX() { return x; } // ref-note {{declared here}}
+    };
+
+    class DV : virtual public B{};
+
+    void foo() {
+      DV b;
+      int a[b.getX()]; // both-warning {{variable length arrays}} \
+                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+    }
+  }
+
+  namespace Two {
+    struct U { int n; };
+    struct A : virtual U { int n; };
+    struct B : A {};
+    B a;
+    static_assert((U*)(A*)(&a) == (U*)(&a), "");
+
+    struct C : virtual A {};
+    struct D : B, C {};
+    D d;
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+    static_assert((A*)p == (A*)q, ""); // both-error {{failed}}
+  }
+
+  namespace Three {
+    struct U { int n; };
+    struct V : U { int n; };
+    struct A : virtual V { int n; };
+    struct Aa { int n; };
+    struct B : virtual A, Aa {};
+
+    struct C : virtual A, Aa {};
+
+    struct D : B, C {};
+
+    D d;
+
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+
+    static_assert((void*)p != (void*)q, "");
+    static_assert((A*)p == (A*)q, "");
+    static_assert((Aa*)p != (Aa*)q, "");
+
+    constexpr V *v = p;
+    constexpr V *w = q;
+    constexpr V *x = (A*)p;
+    static_assert(v == w, "");
+    static_assert(v == x, "");
+
+    static_assert((U*)&d == p, "");
+    static_assert((U*)&d == q, "");
+    static_assert((U*)&d == v, "");
+    static_assert((U*)&d == w, "");
+    static_assert((U*)&d == x, "");
+
+    struct X {};
+    struct Y1 : virtual X {};
+    struct Y2 : X {};
+    struct Z : Y1, Y2 {};
+    Z z;
+    static_assert((X*)(Y1*)&z != (X*)(Y2*)&z, "");
+  }
+}
+
+namespace ZeroInit {
+  struct S3 {
+    S3() = default;
+    S3(const S3&) = default;
+    S3(S3&&) = default;
+    constexpr S3(int n) : n(n) {}
+    int n;
+  };
+  constexpr S3 s3d; // both-error {{default initialization of an object of const type 'const S3' without a user-provided default constructor}}
+  static_assert(s3d.n == 0, "");
+
+  struct P {
+    int a = 10;
+  };
+  static_assert(P().a == 10, "");
+}
+
+namespace {
+#if __cplusplus >= 202002L
+  struct C {
+    template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
+    unsigned n;
+  };
+  template <C c>
+  constexpr auto operator""_c() { return c.n; }
+
+  constexpr auto waldo = "abc"_c;
+  static_assert(waldo == 4, "");
+#endif
+}
+
+
+namespace TemporaryWithInvalidDestructor {
+#if __cplusplus >= 202002L
+  struct A {
+    bool a = true;
+    constexpr ~A() noexcept(false) { // both-error {{never produces a constant expression}}
+      throw; // both-note 2{{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  static_assert(A().a, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
 #endif
 }
