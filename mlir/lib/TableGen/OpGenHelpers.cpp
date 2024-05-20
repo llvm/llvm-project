@@ -12,7 +12,6 @@
 
 #include "mlir/TableGen/OpGenHelpers.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TableGen/Error.h"
@@ -20,21 +19,6 @@
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
-
-cl::OptionCategory opDefGenCat("Options for op definition generators");
-
-static cl::opt<std::string> opIncFilter(
-    "op-include-regex",
-    cl::desc("Regex of name of op's to include (no filter if empty)"),
-    cl::cat(opDefGenCat));
-static cl::opt<std::string> opExcFilter(
-    "op-exclude-regex",
-    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
-    cl::cat(opDefGenCat));
-static cl::opt<unsigned> opShardCount(
-    "op-shard-count",
-    cl::desc("The number of shards into which the op classes will be divided"),
-    cl::cat(opDefGenCat), cl::init(1));
 
 static std::string getOperationName(const Record &def) {
   auto prefix = def.getValueAsDef("opDialect")->getValueAsString("name");
@@ -45,7 +29,9 @@ static std::string getOperationName(const Record &def) {
 }
 
 std::vector<Record *>
-mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper) {
+mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &recordKeeper,
+                                        const std::string &opIncFilter,
+                                        const std::string &opExcFilter) {
   Record *classDef = recordKeeper.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
@@ -87,7 +73,8 @@ bool mlir::tblgen::isPythonReserved(StringRef str) {
 
 void mlir::tblgen::shardOpDefinitions(
     ArrayRef<llvm::Record *> defs,
-    SmallVectorImpl<ArrayRef<llvm::Record *>> &shardedDefs) {
+    SmallVectorImpl<ArrayRef<llvm::Record *>> &shardedDefs,
+    unsigned opShardCount) {
   assert(opShardCount > 0 && "expected a positive shard count");
   if (opShardCount == 1) {
     shardedDefs.push_back(defs);

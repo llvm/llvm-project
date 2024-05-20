@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/OpFormatGen.h"
-#include "mlir/TableGen/FormatGen.h"
-#include "mlir/TableGen/OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
+#include "mlir/TableGen/FormatGen.h"
+#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/MapVector.h"
@@ -3621,7 +3621,8 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
 // Interface
 //===----------------------------------------------------------------------===//
 
-void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
+void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
+                                    bool formatErrorIsFatal) {
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);

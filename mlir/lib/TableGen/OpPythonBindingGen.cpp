@@ -16,7 +16,6 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -270,18 +269,6 @@ constexpr const char *valueBuilderTemplate = R"Py(
 def {0}({2}) -> {4}:
   return _get_op_result_or_op_results({1}({3}))
 )Py";
-
-static llvm::cl::OptionCategory
-    clOpPythonBindingCat("Options for -gen-python-op-bindings");
-
-static llvm::cl::opt<std::string>
-    clDialectName("bind-dialect",
-                  llvm::cl::desc("The dialect to run the generator for"),
-                  llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
-
-static llvm::cl::opt<std::string> clDialectExtensionName(
-    "dialect-extension", llvm::cl::desc("The prefix of the dialect extension"),
-    llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
 
 using AttributeClasses = DenseMap<StringRef, StringRef>;
 
@@ -1038,24 +1025,20 @@ static void emitOpBindings(const Operator &op, raw_ostream &os) {
 /// Emits bindings for the dialect specified in the command line, including file
 /// headers and utilities. Returns `false` on success to comply with Tablegen
 /// registration requirements.
-static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
-  if (clDialectName.empty())
-    llvm::PrintFatalError("dialect name not provided");
-
+bool mlir::tblgen::emitAllPythonOps(const llvm::RecordKeeper &records,
+                                    raw_ostream &os,
+                                    const std::string &clDialectName,
+                                    const std::string &clDialectExtensionName) {
   os << fileHeader;
   if (!clDialectExtensionName.empty())
-    os << llvm::formatv(dialectExtensionTemplate, clDialectName.getValue());
+    os << llvm::formatv(dialectExtensionTemplate, clDialectName);
   else
-    os << llvm::formatv(dialectClassTemplate, clDialectName.getValue());
+    os << llvm::formatv(dialectClassTemplate, clDialectName);
 
   for (const llvm::Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
-    if (op.getDialectName() == clDialectName.getValue())
+    if (op.getDialectName() == clDialectName)
       emitOpBindings(op, os);
   }
   return false;
 }
-
-static GenRegistration
-    genPythonBindings("gen-python-op-bindings",
-                      "Generate Python bindings for MLIR Ops", &emitAllOps);

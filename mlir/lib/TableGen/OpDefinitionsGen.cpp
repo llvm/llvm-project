@@ -11,9 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/OpClass.h"
-#include "mlir/TableGen/OpFormatGen.h"
-#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Class.h"
@@ -21,6 +18,9 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "mlir/TableGen/OpClass.h"
+#include "mlir/TableGen/OpFormatGen.h"
+#include "mlir/TableGen/OpGenHelpers.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/SideEffects.h"
@@ -544,14 +544,17 @@ class OpEmitter {
 public:
   static void
   emitDecl(const Operator &op, raw_ostream &os,
-           const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+           const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+           bool formatErrorIsFatal);
   static void
   emitDef(const Operator &op, raw_ostream &os,
-          const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+          const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+          bool formatErrorIsFatal);
 
 private:
   OpEmitter(const Operator &op,
-            const StaticVerifierFunctionEmitter &staticVerifierEmitter);
+            const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+            bool formatErrorIsFatal);
 
   void emitDecl(raw_ostream &os);
   void emitDef(raw_ostream &os);
@@ -733,6 +736,9 @@ private:
 
   // Helper for emitting op code.
   OpOrAdaptorHelper emitHelper;
+
+  /// Whether a failure in parsing the assembly format should be a fatal error.
+  bool formatErrorIsFatal;
 };
 
 } // namespace
@@ -1019,12 +1025,14 @@ static std::string formatExtraDefinitions(const Operator &op) {
 }
 
 OpEmitter::OpEmitter(const Operator &op,
-                     const StaticVerifierFunctionEmitter &staticVerifierEmitter)
+                     const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+                     bool formatErrorIsFatal)
     : def(op.getDef()), op(op),
       opClass(op.getCppClassName(), formatExtraDeclarations(op),
               formatExtraDefinitions(op)),
       staticVerifierEmitter(staticVerifierEmitter),
-      emitHelper(op, /*emitForOp=*/true) {
+      emitHelper(op, /*emitForOp=*/true),
+      formatErrorIsFatal(formatErrorIsFatal) {
   verifyCtx.addSubst("_op", "(*this->getOperation())");
   verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
 
@@ -1054,19 +1062,22 @@ OpEmitter::OpEmitter(const Operator &op,
   genFolderDecls();
   genTypeInterfaceMethods();
   genOpInterfaceMethods();
-  generateOpFormat(op, opClass);
+  generateOpFormat(op, opClass, formatErrorIsFatal);
   genSideEffectInterfaceMethods();
 }
+
 void OpEmitter::emitDecl(
     const Operator &op, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
-  OpEmitter(op, staticVerifierEmitter).emitDecl(os);
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    bool formatErrorIsFatal) {
+  OpEmitter(op, staticVerifierEmitter, formatErrorIsFatal).emitDecl(os);
 }
 
 void OpEmitter::emitDef(
     const Operator &op, raw_ostream &os,
-    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
-  OpEmitter(op, staticVerifierEmitter).emitDef(os);
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter,
+    bool formatErrorIsFatal) {
+  OpEmitter(op, staticVerifierEmitter, formatErrorIsFatal).emitDef(os);
 }
 
 void OpEmitter::emitDecl(raw_ostream &os) {
@@ -2481,8 +2492,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
 
       // Avoid emitting "resultTypes.size() >= 0u" which is always true.
       if (!hasVariadicResult || numNonVariadicResults != 0)
-        body << "  "
-             << "assert(resultTypes.size() "
+        body << "  " << "assert(resultTypes.size() "
              << (hasVariadicResult ? ">=" : "==") << " "
              << numNonVariadicResults
              << "u && \"mismatched number of results\");\n";
@@ -4362,7 +4372,7 @@ static void
 emitOpClasses(const RecordKeeper &recordKeeper,
               const std::vector<Record *> &defs, raw_ostream &os,
               const StaticVerifierFunctionEmitter &staticVerifierEmitter,
-              bool emitDecl) {
+              bool emitDecl, bool formatErrorIsFatal) {
   if (defs.empty())
     return;
 
@@ -4374,7 +4384,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
         os << formatv(opCommentHeader, op.getQualCppClassName(),
                       "declarations");
         OpOperandAdaptorEmitter::emitDecl(op, staticVerifierEmitter, os);
-        OpEmitter::emitDecl(op, os, staticVerifierEmitter);
+        OpEmitter::emitDecl(op, os, staticVerifierEmitter, formatErrorIsFatal);
       }
       // Emit the TypeID explicit specialization to have a single definition.
       if (!op.getCppNamespace().empty())
@@ -4385,7 +4395,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
         NamespaceEmitter emitter(os, op.getCppNamespace());
         os << formatv(opCommentHeader, op.getQualCppClassName(), "definitions");
         OpOperandAdaptorEmitter::emitDef(op, staticVerifierEmitter, os);
-        OpEmitter::emitDef(op, os, staticVerifierEmitter);
+        OpEmitter::emitDef(op, os, staticVerifierEmitter, formatErrorIsFatal);
       }
       // Emit the TypeID explicit specialization to have a single definition.
       if (!op.getCppNamespace().empty())
@@ -4398,7 +4408,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &recordKeeper,
                              const std::vector<Record *> &defs,
-                             raw_ostream &os) {
+                             bool formatErrorIsFatal, raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
   for (auto *def : defs) {
@@ -4414,13 +4424,13 @@ static void emitOpClassDecls(const RecordKeeper &recordKeeper,
   StaticVerifierFunctionEmitter staticVerifierEmitter(os, recordKeeper);
   staticVerifierEmitter.collectOpConstraints(defs);
   emitOpClasses(recordKeeper, defs, os, staticVerifierEmitter,
-                /*emitDecl=*/true);
+                /*emitDecl=*/true, formatErrorIsFatal);
 }
 
 /// Emit the definitions for the provided op classes.
 static void emitOpClassDefs(const RecordKeeper &recordKeeper,
-                            ArrayRef<Record *> defs, raw_ostream &os,
-                            StringRef constraintPrefix = "") {
+                            ArrayRef<Record *> defs, bool formatErrorIsFatal,
+                            raw_ostream &os, StringRef constraintPrefix = "") {
   if (defs.empty())
     return;
 
@@ -4433,20 +4443,24 @@ static void emitOpClassDefs(const RecordKeeper &recordKeeper,
 
   // Emit the classes.
   emitOpClasses(recordKeeper, defs, os, staticVerifierEmitter,
-                /*emitDecl=*/false);
+                /*emitDecl=*/false, formatErrorIsFatal);
 }
 
 /// Emit op declarations for all op records.
-static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
+bool mlir::tblgen::emitOpDecls(const RecordKeeper &recordKeeper,
+                               raw_ostream &os, const std::string &opIncFilter,
+                               const std::string &opExcFilter,
+                               unsigned opShardCount, bool formatErrorIsFatal) {
   emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  emitOpClassDecls(recordKeeper, defs, os);
+  std::vector<Record *> defs =
+      getRequestedOpDefinitions(recordKeeper, opIncFilter, opExcFilter);
+  emitOpClassDecls(recordKeeper, defs, formatErrorIsFatal, os);
 
   // If we are generating sharded op definitions, emit the sharded op
   // registration hooks.
   SmallVector<ArrayRef<Record *>, 4> shardedDefs;
-  shardOpDefinitions(defs, shardedDefs);
+  shardOpDefinitions(defs, shardedDefs, opShardCount);
   if (defs.empty() || shardedDefs.size() <= 1)
     return false;
 
@@ -4470,7 +4484,7 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 static void emitOpDefShard(const RecordKeeper &recordKeeper,
                            ArrayRef<Record *> defs, const Dialect &dialect,
                            unsigned shardIndex, unsigned shardCount,
-                           raw_ostream &os) {
+                           bool formatErrorIsFatal, raw_ostream &os) {
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
@@ -4501,16 +4515,20 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
   os << "}\n";
 
   // Generate the per-shard op definitions.
-  emitOpClassDefs(recordKeeper, defs, os, indexStr);
+  emitOpClassDefs(recordKeeper, defs, formatErrorIsFatal, os, indexStr);
 }
 
 /// Emit op definitions for all op records.
-static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
+bool mlir::tblgen::emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os,
+                              const std::string &opIncFilter,
+                              const std::string &opExcFilter,
+                              unsigned opShardCount, bool formatErrorIsFatal) {
   emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  std::vector<Record *> defs =
+      getRequestedOpDefinitions(recordKeeper, opIncFilter, opExcFilter);
   SmallVector<ArrayRef<Record *>, 4> shardedDefs;
-  shardOpDefinitions(defs, shardedDefs);
+  shardOpDefinitions(defs, shardedDefs, opShardCount);
 
   // If no shard was requested, emit the regular op list and class definitions.
   if (shardedDefs.size() == 1) {
@@ -4523,7 +4541,7 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
     }
     {
       IfDefScope scope("GET_OP_CLASSES", os);
-      emitOpClassDefs(recordKeeper, defs, os);
+      emitOpClassDefs(recordKeeper, defs, formatErrorIsFatal, os);
     }
     return false;
   }
@@ -4532,19 +4550,8 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
     return false;
   Dialect dialect = Operator(defs.front()).getDialect();
   for (auto [idx, value] : llvm::enumerate(shardedDefs)) {
-    emitOpDefShard(recordKeeper, value, dialect, idx, shardedDefs.size(), os);
+    emitOpDefShard(recordKeeper, value, dialect, idx, shardedDefs.size(),
+                   formatErrorIsFatal, os);
   }
   return false;
 }
-
-static mlir::GenRegistration
-    genOpDecls("gen-op-decls", "Generate op declarations",
-               [](const RecordKeeper &records, raw_ostream &os) {
-                 return emitOpDecls(records, os);
-               });
-
-static mlir::GenRegistration genOpDefs("gen-op-defs", "Generate op definitions",
-                                       [](const RecordKeeper &records,
-                                          raw_ostream &os) {
-                                         return emitOpDefs(records, os);
-                                       });

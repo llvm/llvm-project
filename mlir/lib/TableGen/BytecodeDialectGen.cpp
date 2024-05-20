@@ -18,12 +18,6 @@
 
 using namespace llvm;
 
-static llvm::cl::OptionCategory dialectGenCat("Options for -gen-bytecode");
-static llvm::cl::opt<std::string>
-    selectedBcDialect("bytecode-dialect",
-                      llvm::cl::desc("The dialect to gen for"),
-                      llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
-
 namespace {
 
 /// Helper class to generate C++ bytecode parser helpers.
@@ -134,7 +128,9 @@ void Generator::emitParse(StringRef kind, Record &x) {
       R"(static {0} read{1}(MLIRContext* context, DialectBytecodeReader &reader) )";
   mlir::raw_indented_ostream os(output);
   std::string returnType = getCType(&x);
-  os << formatv(head, kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type", x.getName());
+  os << formatv(head,
+                kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type",
+                x.getName());
   DagInit *members = x.getValueAsDag("members");
   SmallVector<std::string> argNames =
       llvm::to_vector(map_range(members->getArgNames(), [](StringInit *init) {
@@ -427,7 +423,8 @@ struct AttrOrType {
 };
 } // namespace
 
-static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
+bool mlir::tblgen::emitBCRW(const RecordKeeper &records, raw_ostream &os,
+                            const std::string &selectedBcDialect) {
   MapVector<StringRef, AttrOrType> dialectAttrOrType;
   for (auto &it : records.getAllDerivedDefinitions("DialectAttributes")) {
     if (!selectedBcDialect.empty() &&
@@ -478,9 +475,3 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
 
   return false;
 }
-
-static mlir::GenRegistration
-    genBCRW("gen-bytecode", "Generate dialect bytecode readers/writers",
-            [](const RecordKeeper &records, raw_ostream &os) {
-              return emitBCRW(records, os);
-            });

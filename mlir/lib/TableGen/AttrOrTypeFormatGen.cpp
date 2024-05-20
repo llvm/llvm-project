@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/AttrOrTypeFormatGen.h"
-#include "mlir/TableGen/FormatGen.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Format.h"
-#include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/FormatGen.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -21,7 +20,6 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
-#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -1191,7 +1189,8 @@ FailureOr<FormatElement *> DefFormatParser::parseStructDirective(SMLoc loc,
 
 void mlir::tblgen::generateAttrOrTypeFormat(const AttrOrTypeDef &def,
                                             MethodBody &parser,
-                                            MethodBody &printer) {
+                                            MethodBody &printer,
+                                            bool formatErrorIsFatal) {
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()), SMLoc());

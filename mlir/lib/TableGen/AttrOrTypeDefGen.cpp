@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/AttrOrTypeFormatGen.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/AttrOrTypeFormatGen.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
-#include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -64,7 +63,7 @@ namespace {
 class DefGen {
 public:
   /// Create the attribute or type class.
-  DefGen(const AttrOrTypeDef &def);
+  DefGen(const AttrOrTypeDef &def, bool formatErrorIsFatal);
 
   void emitDecl(raw_ostream &os) const {
     if (storageCls && def.genStorageClass()) {
@@ -159,13 +158,16 @@ private:
   StringRef valueType;
   /// The prefix/suffix of the TableGen def name, either "Attr" or "Type".
   StringRef defType;
+  /// Whether a failure in parsing the assembly format should be a fatal error.
+  bool formatErrorIsFatal;
 };
 } // namespace
 
-DefGen::DefGen(const AttrOrTypeDef &def)
+DefGen::DefGen(const AttrOrTypeDef &def, bool formatErrorIsFatal)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
-      defType(isa<AttrDef>(def) ? "Attr" : "Type") {
+      defType(isa<AttrDef>(def) ? "Attr" : "Type"),
+      formatErrorIsFatal(formatErrorIsFatal) {
   // Check that all parameters have names.
   for (const AttrOrTypeParameter &param : def.getParameters())
     if (param.isAnonymous())
@@ -328,7 +330,8 @@ void DefGen::emitParserPrinter() {
                        MethodParameter("::mlir::AsmPrinter &", "odsPrinter"));
   // Emit the bodies if we are using the declarative format.
   if (hasAssemblyFormat)
-    return generateAttrOrTypeFormat(def, parser->body(), printer->body());
+    return generateAttrOrTypeFormat(def, parser->body(), printer->body(),
+                                    formatErrorIsFatal);
 }
 
 void DefGen::emitAccessors() {
@@ -590,61 +593,6 @@ void DefGen::emitStorageClass() {
 }
 
 //===----------------------------------------------------------------------===//
-// DefGenerator
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// This struct is the base generator used when processing tablegen interfaces.
-class DefGenerator {
-public:
-  bool emitDecls(StringRef selectedDialect);
-  bool emitDefs(StringRef selectedDialect);
-
-protected:
-  DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
-               StringRef defType, StringRef valueType, bool isAttrGenerator)
-      : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {
-    // Sort by occurrence in file.
-    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
-      return lhs->getID() < rhs->getID();
-    });
-  }
-
-  /// Emit the list of def type names.
-  void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
-  /// Emit the code to dispatch between different defs during parsing/printing.
-  void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
-
-  /// The set of def records to emit.
-  std::vector<llvm::Record *> defRecords;
-  /// The attribute or type class to emit.
-  /// The stream to emit to.
-  raw_ostream &os;
-  /// The prefix of the tablegen def name, e.g. Attr or Type.
-  StringRef defType;
-  /// The C++ base value type of the def, e.g. Attribute or Type.
-  StringRef valueType;
-  /// Flag indicating if this generator is for Attributes. False if the
-  /// generator is for types.
-  bool isAttrGenerator;
-};
-
-/// A specialized generator for AttrDefs.
-struct AttrDefGenerator : public DefGenerator {
-  AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : DefGenerator(records.getAllDerivedDefinitionsIfDefined("AttrDef"), os,
-                     "Attr", "Attribute", /*isAttrGenerator=*/true) {}
-};
-/// A specialized generator for TypeDefs.
-struct TypeDefGenerator : public DefGenerator {
-  TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : DefGenerator(records.getAllDerivedDefinitionsIfDefined("TypeDef"), os,
-                     "Type", "Type", /*isAttrGenerator=*/false) {}
-};
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // GEN: Declarations
 //===----------------------------------------------------------------------===//
 
@@ -677,7 +625,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
 
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs)
-      DefGen(def).emitDecl(os);
+      DefGen(def, formatErrorIsFatal).emitDecl(os);
   }
   // Emit the TypeID explicit specializations to have a single definition for
   // each of these.
@@ -891,7 +839,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   for (const AttrOrTypeDef &def : defs) {
     {
       NamespaceEmitter ns(os, def.getDialect());
-      DefGen gen(def);
+      DefGen gen(def, formatErrorIsFatal);
       gen.emitDef(os);
     }
     // Emit the TypeID explicit specializations to have a single symbol def.
@@ -933,51 +881,3 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 
   return false;
 }
-
-//===----------------------------------------------------------------------===//
-// GEN: Registration hooks
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// AttrDef
-
-static llvm::cl::OptionCategory attrdefGenCat("Options for -gen-attrdef-*");
-static llvm::cl::opt<std::string>
-    attrDialect("attrdefs-dialect",
-                llvm::cl::desc("Generate attributes for this dialect"),
-                llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
-
-static mlir::GenRegistration
-    genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
-                  AttrDefGenerator generator(records, os);
-                  return generator.emitDefs(attrDialect);
-                });
-static mlir::GenRegistration
-    genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
-                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
-                   AttrDefGenerator generator(records, os);
-                   return generator.emitDecls(attrDialect);
-                 });
-
-//===----------------------------------------------------------------------===//
-// TypeDef
-
-static llvm::cl::OptionCategory typedefGenCat("Options for -gen-typedef-*");
-static llvm::cl::opt<std::string>
-    typeDialect("typedefs-dialect",
-                llvm::cl::desc("Generate types for this dialect"),
-                llvm::cl::cat(typedefGenCat), llvm::cl::CommaSeparated);
-
-static mlir::GenRegistration
-    genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
-                  TypeDefGenerator generator(records, os);
-                  return generator.emitDefs(typeDialect);
-                });
-static mlir::GenRegistration
-    genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
-                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
-                   TypeDefGenerator generator(records, os);
-                   return generator.emitDecls(typeDialect);
-                 });

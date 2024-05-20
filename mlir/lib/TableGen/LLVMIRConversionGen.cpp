@@ -24,7 +24,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 using namespace mlir;
@@ -178,7 +177,8 @@ static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
 
 // Emit all builders.  Returns false on success because of the generator
 // registration requirements.
-static bool emitBuilders(const RecordKeeper &recordKeeper, raw_ostream &os) {
+bool mlir::tblgen::emitLLVMBuilders(const RecordKeeper &recordKeeper,
+                                    raw_ostream &os) {
   for (const Record *def :
        recordKeeper.getAllDerivedDefinitions("LLVM_OpBase")) {
     if (failed(emitOneBuilder(*def, os)))
@@ -306,8 +306,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
 
 // Emit all intrinsic MLIR builders. Returns false on success because of the
 // generator registration requirements.
-static bool emitIntrMLIRBuilders(const RecordKeeper &recordKeeper,
-                                 raw_ostream &os) {
+bool mlir::tblgen::emitLLVMIntrMLIRBuilders(
+    const llvm::RecordKeeper &recordKeeper, raw_ostream &os) {
   // Emit condition to check if "llvmEnumName" matches the intrinsic id.
   auto emitIntrCond = [](const Record &record) {
     return "intrinsicID == llvm::Intrinsic::" +
@@ -323,8 +323,8 @@ static bool emitIntrMLIRBuilders(const RecordKeeper &recordKeeper,
 
 // Emit all op builders. Returns false on success because of the
 // generator registration requirements.
-static bool emitOpMLIRBuilders(const RecordKeeper &recordKeeper,
-                               raw_ostream &os) {
+bool mlir::tblgen::emitLLVMOpMLIRBuilders(
+    const llvm::RecordKeeper &recordKeeper, raw_ostream &os) {
   // Emit condition to check if "llvmInstName" matches the instruction opcode.
   auto emitOpcodeCond = [](const Record &record) {
     return "inst->getOpcode() == llvm::Instruction::" +
@@ -541,8 +541,8 @@ static void emitOneCEnumFromConversion(const llvm::Record *record,
 // Emits conversion functions between MLIR enum attribute case and corresponding
 // LLVM API enumerants for all registered LLVM dialect enum attributes.
 template <bool ConvertTo>
-static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
-                                   raw_ostream &os) {
+bool mlir::tblgen::emitLLVMEnumConversionDefs(
+    const llvm::RecordKeeper &recordKeeper, raw_ostream &os) {
   for (const Record *def :
        recordKeeper.getAllDerivedDefinitions("LLVM_EnumAttr"))
     if (ConvertTo)
@@ -560,6 +560,11 @@ static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
   return false;
 }
 
+template bool mlir::tblgen::emitLLVMEnumConversionDefs<true>(
+    const llvm::RecordKeeper &recordKeeper, raw_ostream &os);
+template bool mlir::tblgen::emitLLVMEnumConversionDefs<false>(
+    const llvm::RecordKeeper &recordKeeper, raw_ostream &os);
+
 static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
   auto op = tblgen::Operator(record);
   os << "llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ",\n";
@@ -567,38 +572,11 @@ static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
 
 // Emit the list of LLVM IR intrinsics identifiers that are convertible to a
 // matching MLIR LLVM dialect intrinsic operation.
-static bool emitConvertibleIntrinsics(const RecordKeeper &recordKeeper,
-                                      raw_ostream &os) {
+bool mlir::tblgen::emitLLVMConvertibleIntrinsics(
+    const llvm::RecordKeeper &recordKeeper, raw_ostream &os) {
   for (const Record *def :
        recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase"))
     emitOneIntrinsic(*def, os);
 
   return false;
 }
-
-static mlir::GenRegistration
-    genLLVMIRConversions("gen-llvmir-conversions",
-                         "Generate LLVM IR conversions", emitBuilders);
-
-static mlir::GenRegistration genOpFromLLVMIRConversions(
-    "gen-op-from-llvmir-conversions",
-    "Generate conversions of operations from LLVM IR", emitOpMLIRBuilders);
-
-static mlir::GenRegistration genIntrFromLLVMIRConversions(
-    "gen-intr-from-llvmir-conversions",
-    "Generate conversions of intrinsics from LLVM IR", emitIntrMLIRBuilders);
-
-static mlir::GenRegistration
-    genEnumToLLVMConversion("gen-enum-to-llvmir-conversions",
-                            "Generate conversions of EnumAttrs to LLVM IR",
-                            emitEnumConversionDefs</*ConvertTo=*/true>);
-
-static mlir::GenRegistration
-    genEnumFromLLVMConversion("gen-enum-from-llvmir-conversions",
-                              "Generate conversions of EnumAttrs from LLVM IR",
-                              emitEnumConversionDefs</*ConvertTo=*/false>);
-
-static mlir::GenRegistration genConvertibleLLVMIRIntrinsics(
-    "gen-convertible-llvmir-intrinsics",
-    "Generate list of convertible LLVM IR intrinsics",
-    emitConvertibleIntrinsics);

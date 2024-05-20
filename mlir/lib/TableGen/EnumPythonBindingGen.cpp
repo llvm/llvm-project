@@ -133,8 +133,8 @@ static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
 
 /// Emits Python bindings for all enums in the record keeper. Returns
 /// `false` on success, `true` on failure.
-static bool emitPythonEnums(const llvm::RecordKeeper &recordKeeper,
-                            raw_ostream &os) {
+bool mlir::tblgen::emitPythonEnums(const llvm::RecordKeeper &recordKeeper,
+                                   raw_ostream &os) {
   os << fileHeader;
   for (auto &it :
        recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
@@ -169,9 +169,3 @@ static bool emitPythonEnums(const llvm::RecordKeeper &recordKeeper,
 
   return false;
 }
-
-// Registers the enum utility generator to mlir-tblgen.
-static mlir::GenRegistration
-    genPythonEnumBindings("gen-python-enum-bindings",
-                          "Generate Python bindings for enum attributes",
-                          &emitPythonEnums);

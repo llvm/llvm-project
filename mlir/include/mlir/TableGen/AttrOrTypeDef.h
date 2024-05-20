@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Builder.h"
 #include "mlir/TableGen/Trait.h"
+#include "llvm/TableGen/Record.h"
 
 namespace llvm {
 class DagInit;
@@ -275,6 +276,67 @@ public:
 
   /// Get the unique type name "dialect.typename".
   StringRef getTypeName() const;
+};
+
+//===----------------------------------------------------------------------===//
+// DefGenerator
+//===----------------------------------------------------------------------===//
+
+/// This struct is the base generator used when processing tablegen interfaces.
+class DefGenerator {
+public:
+  bool emitDecls(StringRef selectedDialect);
+  bool emitDefs(StringRef selectedDialect);
+
+protected:
+  DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
+               StringRef defType, StringRef valueType, bool isAttrGenerator,
+               bool formatErrorIsFatal)
+      : defRecords(std::move(defs)), os(os), defType(defType),
+        valueType(valueType), isAttrGenerator(isAttrGenerator),
+        formatErrorIsFatal(formatErrorIsFatal) {
+    // Sort by occurrence in file.
+    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
+      return lhs->getID() < rhs->getID();
+    });
+  }
+
+  /// Emit the list of def type names.
+  void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
+  /// Emit the code to dispatch between different defs during parsing/printing.
+  void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
+
+  /// The set of def records to emit.
+  std::vector<llvm::Record *> defRecords;
+  /// The attribute or type class to emit.
+  /// The stream to emit to.
+  raw_ostream &os;
+  /// The prefix of the tablegen def name, e.g. Attr or Type.
+  StringRef defType;
+  /// The C++ base value type of the def, e.g. Attribute or Type.
+  StringRef valueType;
+  /// Flag indicating if this generator is for Attributes. False if the
+  /// generator is for types.
+  bool isAttrGenerator;
+  /// Whether a failure in parsing the assembly format should be a fatal error.
+  bool formatErrorIsFatal;
+};
+
+/// A specialized generator for AttrDefs.
+struct AttrDefGenerator : public DefGenerator {
+  AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os,
+                   bool formatErrorIsFatal)
+      : DefGenerator(records.getAllDerivedDefinitionsIfDefined("AttrDef"), os,
+                     "Attr", "Attribute", /*isAttrGenerator=*/true,
+                     formatErrorIsFatal) {}
+};
+/// A specialized generator for TypeDefs.
+struct TypeDefGenerator : public DefGenerator {
+  TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os,
+                   bool formatErrorIsFatal)
+      : DefGenerator(records.getAllDerivedDefinitionsIfDefined("TypeDef"), os,
+                     "Type", "Type", /*isAttrGenerator=*/false,
+                     formatErrorIsFatal) {}
 };
 
 } // namespace tblgen

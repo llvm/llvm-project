@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/TableGen/FormatGen.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
+#include "mlir/TableGen/FormatGen.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -642,7 +642,8 @@ public:
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
-static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
+bool mlir::tblgen::emitEnumDecls(const RecordKeeper &recordKeeper,
+                                 raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
@@ -680,7 +681,8 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
+bool mlir::tblgen::emitEnumDefs(const RecordKeeper &recordKeeper,
+                                raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Definitions", os, recordKeeper);
 
   auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
@@ -689,17 +691,3 @@ static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
   return false;
 }
-
-// Registers the enum utility generator to mlir-tblgen.
-static mlir::GenRegistration
-    genEnumDecls("gen-enum-decls", "Generate enum utility declarations",
-                 [](const RecordKeeper &records, raw_ostream &os) {
-                   return emitEnumDecls(records, os);
-                 });
-
-// Registers the enum utility generator to mlir-tblgen.
-static mlir::GenRegistration
-    genEnumDefs("gen-enum-defs", "Generate enum utility definitions",
-                [](const RecordKeeper &records, raw_ostream &os) {
-                  return emitEnumDefs(records, os);
-                });
