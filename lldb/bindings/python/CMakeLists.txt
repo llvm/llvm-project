@@ -15,6 +15,7 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${LLDB_SOURCE_DIR}/bindings/prepare_bindings.py
       ${framework_arg}
       --srcRoot=${LLDB_SOURCE_DIR}
+      --buildRoot=${LLDB_BINARY_DIR}
       --targetDir=${CMAKE_CURRENT_BINARY_DIR}
       --cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}
       --prefix=${CMAKE_BINARY_DIR}

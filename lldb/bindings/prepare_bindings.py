@@ -136,6 +136,11 @@ def process_args(args):
                 os.path.pardir)),
         help="Specifies the LLDB source root directory.")
     parser.add_argument(
+        "--build-root",
+        "--buildRoot",
+        "-b",
+        help="Specifies the LLDB build root directory.")
+    parser.add_argument(
         "--swig-executable",
         "--swigExecutable",
         help="Path to the swig executable.")

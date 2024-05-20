@@ -209,6 +209,7 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
             "-features", "autodoc",
             "-threads",
             "-I" + os.path.normpath(os.path.join(options.src_root, "include")),
+            "-I" + os.path.normpath(os.path.join(options.build_root, "include")),
             "-I" + bindings_dir,
             "-I" + bindings_python_dir,
             "-D__STDC_LIMIT_MACROS",
