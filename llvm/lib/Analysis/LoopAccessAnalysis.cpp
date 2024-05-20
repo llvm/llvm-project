@@ -213,16 +213,14 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
 
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
-  } else {
-    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr);
-    assert(AR && "Invalid addrec expression");
+  } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
     const SCEV *Ex = PSE.getBackedgeTakenCount();
 
     ScStart = AR->getStart();
     ScEnd = AR->evaluateAtIteration(Ex, *SE);
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
-    // For expressions with negative step, the upper bound is ScStart and the
+    // For expressions with negative step, the& upper bound is ScStart and the
     // lower bound is ScEnd.
     if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
       if (CStep->getValue()->isNegative())
@@ -234,7 +232,9 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
       ScStart = SE->getUMinExpr(ScStart, ScEnd);
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
-  }
+  } else
+    return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+
   assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
   assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
 
@@ -256,6 +256,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     bool NeedsFreeze) {
   const auto &[ScStart, ScEnd] =
       getStartAndEndForAccess(Lp, PtrExpr, AccessTy, PSE);
+  assert(!isa<SCEVCouldNotCompute>(ScStart) &&
+         !isa<SCEVCouldNotCompute>(ScEnd) &&
+         "must be able to compute both start and end expressions");
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
                         NeedsFreeze);
 }
@@ -1987,33 +1990,20 @@ getDependenceDistanceStrideAndSize(
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
-  // Conservatively use size of 0. Users of the sizes already check and ignore
-  // the size if it is 0.
-  uint64_t TypeByteSizeA = 0;
-  uint64_t TypeByteSizeB = 0;
-  if (!ATy->isScalableTy() && !BTy->isScalableTy()) {
-    TypeByteSizeA = DL.getTypeAllocSize(ATy);
-    TypeByteSizeB = DL.getTypeAllocSize(BTy);
-  }
-  // If either Src or Sink are loop invariant, check if Src + AccessSize <= Sink
-  // (or vice versa). This is done by checking (Sink - (Src + AccessSize)) s>=
-  // 0.
-  if (SE.isLoopInvariant(Src, InnermostLoop) && TypeByteSizeA > 0) {
-    const SCEV *SrcLastAccess =
-        SE.getAddExpr(Src, SE.getConstant(Src->getType(), TypeByteSizeA));
-    const SCEV *D = SE.getMinusSCEV(Sink, SrcLastAccess);
-    if (!isa<SCEVCouldNotCompute>(D) &&
-        SE.isKnownPredicate(CmpInst::ICMP_SGE, D,
-                            SE.getConstant(Src->getType(), 0)))
+  // Check if we can prove that Sink only accesses memory after Src's end or
+  // vice versa.
+  const auto &[SrcStart, SrcEnd] =
+      getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE);
+  const auto &[SinkStart, SinkEnd] =
+      getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE);
+
+  if (!isa<SCEVCouldNotCompute>(SrcStart) &&
+      !isa<SCEVCouldNotCompute>(SrcEnd) &&
+      !isa<SCEVCouldNotCompute>(SinkStart) &&
+      !isa<SCEVCouldNotCompute>(SinkEnd)) {
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
       return MemoryDepChecker::Dependence::NoDep;
-  }
-  if (SE.isLoopInvariant(Sink, InnermostLoop) && TypeByteSizeB > 0) {
-    const SCEV *SinkLastAccess =
-        SE.getAddExpr(Sink, SE.getConstant(Src->getType(), TypeByteSizeB));
-    const SCEV *D = SE.getMinusSCEV(Src, SinkLastAccess);
-    if (!isa<SCEVCouldNotCompute>(D) &&
-        SE.isKnownPredicate(CmpInst::ICMP_SGE, D,
-                            SE.getConstant(Src->getType(), 0)))
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
       return MemoryDepChecker::Dependence::NoDep;
   }
 
@@ -2026,12 +2016,13 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
+  uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   if (!HasSameSize)
-    TypeByteSizeA = 0;
+    TypeByteSize = 0;
   return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtr),
-                                      std::abs(StrideBPtr), TypeByteSizeA,
+                                      std::abs(StrideBPtr), TypeByteSize,
                                       AIsWrite, BIsWrite);
 }
 
