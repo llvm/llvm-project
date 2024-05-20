@@ -36,7 +36,7 @@
 
 // -----
 
-// expected-error@below {{unknown attrribute type: unknown}}
+// expected-error@below {{unknown attribute `unknown` in dialect `dlti`}}
 "test.unknown_op"() { test.unknown_attr = #dlti.unknown } : () -> ()
 
 // -----
@@ -90,3 +90,132 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown
   // expected-note@above {{enclosing op with data layout}}
   "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>>} : () -> ()
 }
+
+// -----
+
+// expected-error@below {{'dlti.target_system_desc_spec' is expected to be a #dlti.target_system_desc_spec attribute}}
+"test.unknown_op"() { dlti.target_system_desc_spec = 42 } : () -> ()
+
+// -----
+
+// expected-error@below {{invalid kind of attribute specified}}
+"test.unknown_op"() { dlti.target_system_desc_spec = #dlti.target_system_desc_spec<[]> } : () -> ()
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{target_device_desc_spec requires key: dlti.device_id and its value of ui32 type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_type", "CPU">> 
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{target_device_desc_spec requires key: dlti.device_type and its value of string type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0: ui32>> 
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{target_device_desc_spec requires key: dlti.device_id and its value of ui32 type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0: i32>> 
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{target_device_desc_spec requires key: dlti.device_type and its value of string type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
+      #dlti.dl_entry<"dlti.device_type", 0: i32>> 
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{repeated layout entry key: dlti.device_id}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
+      #dlti.dl_entry<"dlti.device_id", 1 : ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">,
+      #dlti.dl_entry<"dlti.L1_cache_size", 4096 : i32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{repeated layout entry key: dlti.device_type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">,
+      #dlti.dl_entry<"dlti.device_type", "GPU">,
+      #dlti.dl_entry<"dlti.L1_cache_size", 4096 : i32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{target_device_desc_spec requires value of key: dlti.L1_cache_size_in_bytes to be of ui32 type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">,
+      #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096.1 : f32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{target_device_desc_spec requires value of key: dlti.max_vector_op_width to be of ui32 type}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">,
+      #dlti.dl_entry<"dlti.max_vector_op_width", 4096.1 : f32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{unknown target device desc key name: dlti.L2_cache_size_in_bytes}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0 : ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">,
+      #dlti.dl_entry<"dlti.L2_cache_size_in_bytes", 4096 : i32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // expected-error@+2 {{unknown target device desc key name: dlti.unknown_key}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">,
+      #dlti.dl_entry<"dlti.unknown_key", 42>>
+  >} {}
+
+// -----
+
+module attributes {
+  // unexpected-error@below {{repeated Device ID in dlti.target_system_desc_spec: 0}}
+  dlti.target_system_desc_spec = #dlti.target_system_desc_spec<
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0: ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">>,
+    #dlti.target_device_desc_spec<
+      #dlti.dl_entry<"dlti.device_id", 0: ui32>,
+      #dlti.dl_entry<"dlti.device_type", "CPU">>
+  >} {}
+  

@@ -253,6 +253,12 @@ def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface
     InterfaceMethod<
       /*description=*/"Returns the L1 cache size identifier.",
       /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getL1CacheSizeInBytesIdentifier",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the max vector op width identifier.",
+      /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getMaxVectorOpWidthIdentifier",
       /*args=*/(ins)
     >,

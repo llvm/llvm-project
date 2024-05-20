@@ -23,8 +23,6 @@ namespace mlir {
 
 using namespace mlir;
 
-#define DEBUG_TYPE "canonicalizer"
-
 namespace {
 /// Canonicalize operations in nested regions.
 struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {

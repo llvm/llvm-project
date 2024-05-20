@@ -172,9 +172,9 @@ def DLTI_TargetSystemDescSpecAttr :
   let extraClassDefinition = [{
     std::optional<TargetDeviceDescSpecInterface>
     $cppClass::getDeviceDescForDeviceID(
-        TargetDeviceDescSpecInterface::DeviceID DeviceID) {
+        TargetDeviceDescSpecInterface::DeviceID deviceID) {
       for (TargetDeviceDescSpecInterface entry : getEntries()) {
-        if (entry.getDeviceID() == DeviceID)
+        if (entry.getDeviceID() == deviceID)
           return entry;
       }
       return std::nullopt;

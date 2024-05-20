@@ -302,8 +302,21 @@ TargetDeviceDescSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
       if (auto value = llvm::dyn_cast<StringAttr>(entry.getValue())) {
         targetDeviceTypeKeyPresentAndValid = true;
       }
-    } else if (entryName != DLTIDialect::kTargetDeviceMaxVectorOpWidthKey &&
-               entryName != DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey) {
+    } else if (entryName == DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey) {
+      IntegerAttr value =
+          llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
+      if (!value || !value.getType().isUnsignedInteger(32))
+        return emitError() << "target_device_desc_spec requires value of key: "
+                           << DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey
+                           << " to be of ui32 type";
+    } else if (entryName == DLTIDialect::kTargetDeviceMaxVectorOpWidthKey) {
+      IntegerAttr value =
+          llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
+      if (!value || !value.getType().isUnsignedInteger(32))
+        return emitError() << "target_device_desc_spec requires value of key: "
+                           << DLTIDialect::kTargetDeviceMaxVectorOpWidthKey
+                           << " to be of ui32 type";
+    } else {
       return emitError() << "unknown target device desc key name: "
                          << entryName;
     }
