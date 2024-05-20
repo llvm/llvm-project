@@ -31,9 +31,9 @@ class Module;
 /// based on the provided summary informations.
 class FunctionImporter {
 public:
-  /// The functions to import from a source module and their import type.
-  using FunctionsToImportTy =
-      DenseMap<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
+  /// Set of functions to import from a source module. Each entry is a set
+  /// containing all the GUIDs of all functions to import for a source module.
+  using FunctionsToImportTy = std::unordered_set<GlobalValue::GUID>;
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
@@ -99,13 +99,8 @@ public:
   /// index's module path string table).
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The map contains an entry for every global value the module exports.
-  /// The key is ValueInfo, and the value indicates whether the definition
-  /// or declaration is visible to another module. If a function's definition is
-  /// visible to other modules, the global values this function referenced are
-  /// visible and shouldn't be internalized.
-  /// TODO: Rename to `ExportMapTy`.
-  using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
+  /// The set contains an entry for every global value the module exports.
+  using ExportSetTy = DenseSet<ValueInfo>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
