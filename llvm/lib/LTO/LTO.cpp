@@ -199,19 +199,13 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
-  std::vector<uint64_t> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-
-    ImportedGUIDs.clear();
     for (auto &Fn : Entry.getFunctions())
-      ImportedGUIDs.push_back(Fn);
-    llvm::sort(ImportedGUIDs);
-    for (auto &GUID : ImportedGUIDs)
-      AddUint64(GUID);
+      AddUint64(Fn);
   }
 
   // Include the hash for the resolved ODR.

@@ -1910,11 +1910,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                     [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
                       return CIEKey(X) < CIEKey(Y);
                     });
-  // Disable AttemptToFoldSymbolOffsetDifference folding of fdeStart-cieStart
-  // for EmitFDE due to the the performance issue. The label differences will be
-  // evaluate at write time.
-  assert(Streamer.getUseAssemblerInfoForParsing());
-  Streamer.setUseAssemblerInfoForParsing(false);
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
@@ -1935,7 +1930,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
 
     Emitter.EmitFDE(*CIEStart, Frame, I == E, *SectionStart);
   }
-  Streamer.setUseAssemblerInfoForParsing(true);
 }
 
 void MCDwarfFrameEmitter::encodeAdvanceLoc(MCContext &Context,

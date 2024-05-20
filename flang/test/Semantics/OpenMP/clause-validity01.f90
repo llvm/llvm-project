@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !

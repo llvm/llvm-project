@@ -16,7 +16,6 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DynoStats.h"
-#include "bolt/Profile/BoltAddressTranslation.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <set>
@@ -400,11 +399,8 @@ public:
 /// Prints a list of the top 100 functions sorted by a set of
 /// dyno stats categories.
 class PrintProgramStats : public BinaryFunctionPass {
-  BoltAddressTranslation *BAT = nullptr;
-
 public:
-  explicit PrintProgramStats(BoltAddressTranslation *BAT = nullptr)
-      : BinaryFunctionPass(false), BAT(BAT) {}
+  explicit PrintProgramStats() : BinaryFunctionPass(false) {}
 
   const char *getName() const override { return "print-stats"; }
   bool shouldPrint(const BinaryFunction &) const override { return false; }

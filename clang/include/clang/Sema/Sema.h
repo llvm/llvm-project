@@ -39,7 +39,6 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/PragmaKinds.h"
@@ -3581,13 +3580,13 @@ public:
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
 
-  AvailabilityAttr *mergeAvailabilityAttr(
-      NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
-      bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
-      VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
-      bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-      int Priority, IdentifierInfo *IIEnvironment);
-
+  AvailabilityAttr *
+  mergeAvailabilityAttr(NamedDecl *D, const AttributeCommonInfo &CI,
+                        IdentifierInfo *Platform, bool Implicit,
+                        VersionTuple Introduced, VersionTuple Deprecated,
+                        VersionTuple Obsoleted, bool IsUnavailable,
+                        StringRef Message, bool IsStrict, StringRef Replacement,
+                        AvailabilityMergeKind AMK, int Priority);
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                           TypeVisibilityAttr::VisibilityType Vis);
@@ -11397,7 +11396,8 @@ public:
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 
-  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
+  QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
+                                                  Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);

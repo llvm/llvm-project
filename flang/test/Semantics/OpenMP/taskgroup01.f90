@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 
 use omp_lib
   implicit none

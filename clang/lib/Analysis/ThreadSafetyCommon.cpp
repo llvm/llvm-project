@@ -197,7 +197,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
     if (UO->getOpcode() == UO_LNot) {
       Neg = true;
-      AttrExp = UO->getSubExpr()->IgnoreImplicit();
+      AttrExp = UO->getSubExpr();
     }
   }
 

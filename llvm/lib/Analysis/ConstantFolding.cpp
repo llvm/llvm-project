@@ -992,8 +992,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
                                        ArrayRef<Constant *> Ops,
                                        const DataLayout &DL,
-                                       const TargetLibraryInfo *TLI,
-                                       bool AllowNonDeterministic) {
+                                       const TargetLibraryInfo *TLI) {
   Type *DestTy = InstOrCE->getType();
 
   if (Instruction::isUnaryOp(Opcode))
@@ -1012,8 +1011,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
       // TODO: If a constant expression is being folded rather than an
       // instruction, denormals will not be flushed/treated as zero
       if (const auto *I = dyn_cast<Instruction>(InstOrCE)) {
-        return ConstantFoldFPInstOperands(Opcode, Ops[0], Ops[1], DL, I,
-                                          AllowNonDeterministic);
+        return ConstantFoldFPInstOperands(Opcode, Ops[0], Ops[1], DL, I);
       }
     }
     return ConstantFoldBinaryOpOperands(Opcode, Ops[0], Ops[1], DL);
@@ -1055,8 +1053,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
     if (auto *F = dyn_cast<Function>(Ops.back())) {
       const auto *Call = cast<CallBase>(InstOrCE);
       if (canConstantFoldCallTo(Call, F))
-        return ConstantFoldCall(Call, F, Ops.slice(0, Ops.size() - 1), TLI,
-                                AllowNonDeterministic);
+        return ConstantFoldCall(Call, F, Ops.slice(0, Ops.size() - 1), TLI);
     }
     return nullptr;
   case Instruction::Select:
@@ -1117,8 +1114,8 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
   }
 
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    if (Constant *Res = ConstantFoldInstOperandsImpl(
-            CE, CE->getOpcode(), Ops, DL, TLI, /*AllowNonDeterministic=*/true))
+    if (Constant *Res =
+            ConstantFoldInstOperandsImpl(CE, CE->getOpcode(), Ops, DL, TLI))
       return Res;
     return const_cast<Constant *>(C);
   }
@@ -1186,10 +1183,8 @@ Constant *llvm::ConstantFoldConstant(const Constant *C, const DataLayout &DL,
 Constant *llvm::ConstantFoldInstOperands(Instruction *I,
                                          ArrayRef<Constant *> Ops,
                                          const DataLayout &DL,
-                                         const TargetLibraryInfo *TLI,
-                                         bool AllowNonDeterministic) {
-  return ConstantFoldInstOperandsImpl(I, I->getOpcode(), Ops, DL, TLI,
-                                      AllowNonDeterministic);
+                                         const TargetLibraryInfo *TLI) {
+  return ConstantFoldInstOperandsImpl(I, I->getOpcode(), Ops, DL, TLI);
 }
 
 Constant *llvm::ConstantFoldCompareInstOperands(
@@ -1362,8 +1357,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *I,
 
 Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                            Constant *RHS, const DataLayout &DL,
-                                           const Instruction *I,
-                                           bool AllowNonDeterministic) {
+                                           const Instruction *I) {
   if (Instruction::isBinaryOp(Opcode)) {
     // Flush denormal inputs if needed.
     Constant *Op0 = FlushFPConstant(LHS, I, /* IsOutput */ false);
@@ -1373,30 +1367,13 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
     if (!Op1)
       return nullptr;
 
-    // If nsz or an algebraic FMF flag is set, the result of the FP operation
-    // may change due to future optimization. Don't constant fold them if
-    // non-deterministic results are not allowed.
-    if (!AllowNonDeterministic)
-      if (auto *FP = dyn_cast_or_null<FPMathOperator>(I))
-        if (FP->hasNoSignedZeros() || FP->hasAllowReassoc() ||
-            FP->hasAllowContract() || FP->hasAllowReciprocal())
-          return nullptr;
-
     // Calculate constant result.
     Constant *C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
     if (!C)
       return nullptr;
 
     // Flush denormal output if needed.
-    C = FlushFPConstant(C, I, /* IsOutput */ true);
-    if (!C)
-      return nullptr;
-
-    // The precise NaN value is non-deterministic.
-    if (!AllowNonDeterministic && C->isNaN())
-      return nullptr;
-
-    return C;
+    return FlushFPConstant(C, I, /* IsOutput */ true);
   }
   // If instruction lacks a parent/function and the denormal mode cannot be
   // determined, use the default (IEEE).
@@ -3424,8 +3401,7 @@ Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
                                  ArrayRef<Constant *> Operands,
-                                 const TargetLibraryInfo *TLI,
-                                 bool AllowNonDeterministic) {
+                                 const TargetLibraryInfo *TLI) {
   if (Call->isNoBuiltin())
     return nullptr;
   if (!F->hasName())
@@ -3441,13 +3417,8 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
       return nullptr;
   }
 
-  // Conservatively assume that floating-point libcalls may be
-  // non-deterministic.
-  Type *Ty = F->getReturnType();
-  if (!AllowNonDeterministic && Ty->isFPOrFPVectorTy())
-    return nullptr;
-
   StringRef Name = F->getName();
+  Type *Ty = F->getReturnType();
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
     return ConstantFoldFixedVectorCall(
         Name, IID, FVTy, Operands, F->getParent()->getDataLayout(), TLI, Call);

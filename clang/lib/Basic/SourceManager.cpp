@@ -276,14 +276,14 @@ void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
   std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
 
   bool Invalid = false;
-  SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
+  const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
   if (!Entry.isFile() || Invalid)
     return;
 
-  SrcMgr::FileInfo &FileInfo = Entry.getFile();
+  const SrcMgr::FileInfo &FileInfo = Entry.getFile();
 
   // Remember that this file has #line directives now if it doesn't already.
-  FileInfo.setHasLineDirectives();
+  const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
 
   (void) getLineTable();
 

@@ -2940,7 +2940,7 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
       if (!BB)
         return error("Invalid bbentry record");
 
-      BB->setName(ValueName.str());
+      BB->setName(StringRef(ValueName.data(), ValueName.size()));
       ValueName.clear();
       break;
     }

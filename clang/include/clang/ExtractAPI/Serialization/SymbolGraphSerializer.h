@@ -102,8 +102,6 @@ private:
 
   const bool EmitSymbolLabelsForTesting = false;
 
-  const bool SkipSymbolsInCategoriesToExternalTypes = false;
-
   /// The object instantiated by the last call to serializeAPIRecord.
   Object *CurrentSymbol = nullptr;
 
@@ -273,13 +271,10 @@ public:
 
   SymbolGraphSerializer(const APISet &API, const APIIgnoresList &IgnoresList,
                         bool EmitSymbolLabelsForTesting = false,
-                        bool ForceEmitToMainModule = false,
-                        bool SkipSymbolsInCategoriesToExternalTypes = false)
+                        bool ForceEmitToMainModule = false)
       : Base(API), ForceEmitToMainModule(ForceEmitToMainModule),
         IgnoresList(IgnoresList),
-        EmitSymbolLabelsForTesting(EmitSymbolLabelsForTesting),
-        SkipSymbolsInCategoriesToExternalTypes(
-            SkipSymbolsInCategoriesToExternalTypes) {}
+        EmitSymbolLabelsForTesting(EmitSymbolLabelsForTesting) {}
 };
 
 } // namespace extractapi

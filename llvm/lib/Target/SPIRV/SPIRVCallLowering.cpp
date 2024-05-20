@@ -171,9 +171,9 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   if (!ArgAttribute)
     return SPIRV::AccessQualifier::ReadWrite;
 
-  if (ArgAttribute->getString() == "read_only")
+  if (ArgAttribute->getString().compare("read_only") == 0)
     return SPIRV::AccessQualifier::ReadOnly;
-  if (ArgAttribute->getString() == "write_only")
+  if (ArgAttribute->getString().compare("write_only") == 0)
     return SPIRV::AccessQualifier::WriteOnly;
   return SPIRV::AccessQualifier::ReadWrite;
 }
@@ -181,7 +181,7 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
 static std::vector<SPIRV::Decoration::Decoration>
 getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
   MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString() == "volatile")
+  if (ArgAttribute && ArgAttribute->getString().compare("volatile") == 0)
     return {SPIRV::Decoration::Volatile};
   return {};
 }
