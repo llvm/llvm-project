@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 typedef double A;
 template<typename T> class B {
@@ -334,8 +334,9 @@ int arr[sizeof(Sub)];
 namespace PR11421 {
 template < unsigned > struct X {
   static const unsigned dimension = 3;
-  template<unsigned dim=dimension> 
-  struct Y: Y<dim> { }; // expected-error{{circular inheritance between 'Y<dim>' and 'Y<dim>'}}
+  template<unsigned dim=dimension>
+  struct Y: Y<dim> { }; // expected-error{{base class has incomplete type}}
+                        // expected-note@-1{{definition of 'Y<dim>' is not complete until the closing '}'}}
 };
 typedef X<3> X3;
 X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::X<3>::Y<>'}}
@@ -344,11 +345,12 @@ X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::
 namespace rdar12629723 {
   template<class T>
   struct X {
-    struct C : public C { }; // expected-error{{circular inheritance between 'C' and 'rdar12629723::X::C'}}
+    struct C : public C { }; // expected-error{{base class has incomplete type}}
+                             // expected-note@-1{{definition of 'rdar12629723::X::C' is not complete until the closing '}'}}
 
     struct B;
 
-    struct A : public B {  // expected-note{{'A' declared here}}
+    struct A : public B {
       virtual void foo() { }
     };
 
@@ -357,7 +359,7 @@ namespace rdar12629723 {
   };
 
   template<class T>
-  struct X<T>::B : public A {  // expected-error{{circular inheritance between 'A' and 'rdar12629723::X::B'}}
+  struct X<T>::B : public A {
     virtual void foo() { }
   };
 }
