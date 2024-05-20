@@ -46,9 +46,7 @@ void ExpectNotRealtime(const char *InterceptedFunctionName) {
 }
 } // namespace __radsan
 
-/*
-    Filesystem
-*/
+// Filesystem
 
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   // TODO Establish whether we should intercept here if the flag contains
@@ -121,19 +119,13 @@ INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
   return REAL(fputs)(s, stream);
 }
 
-/*
-    Streams
-*/
-
+// Streams
 INTERCEPTOR(int, puts, const char *s) {
   __radsan::ExpectNotRealtime("puts");
   return REAL(puts)(s);
 }
 
-/*
-    Concurrency
-*/
-
+ // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
@@ -213,9 +205,7 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
   return REAL(pthread_rwlock_wrlock)(lock);
 }
 
-/*
-    Sleeping
-*/
+// Sleeping
 
 INTERCEPTOR(unsigned int, sleep, unsigned int s) {
   __radsan::ExpectNotRealtime("sleep");
@@ -233,9 +223,7 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
   return REAL(nanosleep)(rqtp, rmtp);
 }
 
-/*
-    Memory
-*/
+// Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
   __radsan::ExpectNotRealtime("calloc");
@@ -298,10 +286,7 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
 }
 #endif
 
-/*
-    Sockets
-*/
-
+// Sockets
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   __radsan::ExpectNotRealtime("socket");
   return REAL(socket)(domain, type, protocol);
@@ -345,10 +330,7 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
-/*
-    Preinit
-*/
-
+// Preinit
 namespace __radsan {
 void InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
