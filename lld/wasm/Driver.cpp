@@ -555,9 +555,8 @@ static void readConfigs(opt::InputArgList &args) {
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
 
   // -Bdynamic by default if -pie or -shared is specified.
-  if (config->pie || config->shared) {
+  if (config->pie || config->shared)
     config->isStatic = false;
-  }
 
   if (config->maxMemory != 0 && config->noGrowableMemory) {
     // Erroring out here is simpler than defining precedence rules.
