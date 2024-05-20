@@ -317,7 +317,8 @@ inline void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    pm.addPass(hlfir::createSimplifyHLFIRIntrinsicsPass());
+    addNestedPassToAllTopLevelOperations(
+        pm, hlfir::createSimplifyHLFIRIntrinsics);
   }
   pm.addPass(hlfir::createInlineElementalsPass());
   if (optLevel.isOptimizingForSpeed()) {
