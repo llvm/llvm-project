@@ -281,6 +281,18 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
           " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
     }
 
+    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_FRAMES) {
+      unsigned V = MI->getOperand(0).getImm();
+      OutStreamer->AddComment(" vsrc0_idx=" + Twine((V >> 0) & 3) +
+                              " vsrc1_idx=" + Twine((V >> 2) & 3) +
+                              " vsrc2_idx=" + Twine((V >> 4) & 3) +
+                              " vdst_idx=" + Twine((V >> 6) & 3) +
+                              " vsrc0_msb=" + Twine((V >> 8) & 3) +
+                              " vsrc1_msb=" + Twine((V >> 10) & 3) +
+                              " vsrc2_msb=" + Twine((V >> 12) & 3) +
+                              " vdst_msb=" + Twine((V >> 14) & 3));
+    }
+
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
