@@ -4381,16 +4381,17 @@ class PackIndexingExpr final
   unsigned TransformedExpressions : 31;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned EmptyPack : 1;
+  unsigned ExpandedToEmptyPack : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
                    ArrayRef<Expr *> SubstitutedExprs = {},
-                   bool EmptyPack = false)
+                   bool ExpandedToEmptyPack = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()), EmptyPack(EmptyPack) {
+        TransformedExpressions(SubstitutedExprs.size()),
+        ExpandedToEmptyPack(ExpandedToEmptyPack) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4414,12 +4415,12 @@ public:
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
                                   ArrayRef<Expr *> SubstitutedExprs = {},
-                                  bool EmptyPack = false);
+                                  bool ExpandedToEmptyPack = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
   /// Determine if the expression was expanded to empty.
-  bool isEmptyPack() const { return EmptyPack; }
+  bool expandsToEmptyPack() const { return ExpandedToEmptyPack; }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }

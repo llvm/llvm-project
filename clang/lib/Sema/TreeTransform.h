@@ -14975,7 +14975,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
     return ExprError();
 
   SmallVector<Expr *, 5> ExpandedExprs;
-  if (!E->isEmptyPack() && E->getExpressions().empty()) {
+  if (!E->expandsToEmptyPack() && E->getExpressions().empty()) {
     Expr *Pattern = E->getPackIdExpression();
     SmallVector<UnexpandedParameterPack, 2> Unexpanded;
     getSema().collectUnexpandedParameterPacks(E->getPackIdExpression(),
@@ -15029,7 +15029,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
         return true;
       ExpandedExprs.push_back(Out.get());
     }
-  } else if (!E->isEmptyPack()) {
+  } else if (!E->expandsToEmptyPack()) {
     if (getDerived().TransformExprs(E->getExpressions().data(),
                                     E->getExpressions().size(), false,
                                     ExpandedExprs))
