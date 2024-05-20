@@ -691,12 +691,12 @@ private:
       bool supported_identifier{false};
       if (x.symbol && x.symbol->GetType()) {
         const auto *type{x.symbol->GetType()};
-        auto type_mismatch = [&](const char *suitable_types) {
+        auto type_mismatch{[&](const char *suitable_types) {
           context_.Say(currentStatementSourcePosition_,
               "Reduction variable '%s' ('%s') does not have a "
               "suitable type ('%s')."_err_en_US,
               x.symbol->name(), type->AsFortran(), suitable_types);
-        };
+        }};
         supported_identifier = true;
         switch (reductionOperator.v) {
         case parser::ReductionOperator::Operator::Plus:
