@@ -2506,9 +2506,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
-  if (D->hasAttr<UnnamedAddrAttr>()) {
+  if (D->hasAttr<UnnamedAddrAttr>())
     F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  }
 
   F->addFnAttrs(B);
 
