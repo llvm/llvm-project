@@ -1677,9 +1677,9 @@ let Predicates = [HasVInstructions] in {
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
-                      SchedBinaryMC<"WriteVRGatherVVEEW",
-                                    "ReadVRGatherVVEEW_data",
-                                    "ReadVRGatherVVEEW_index">;
+                      SchedBinaryMC<"WriteVRGatherEI16VV",
+                                    "ReadVRGatherEI16VV_data",
+                                    "ReadVRGatherEI16VV_index">;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
 
 // Vector Compress Instruction
