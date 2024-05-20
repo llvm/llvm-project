@@ -27,6 +27,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -69,7 +70,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteNamespaceDecl(getCurScope());
+    Actions.CodeCompletion().CodeCompleteNamespaceDecl(getCurScope());
     return nullptr;
   }
 
@@ -309,7 +310,7 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteNamespaceAliasDecl(getCurScope());
+    Actions.CodeCompletion().CodeCompleteNamespaceAliasDecl(getCurScope());
     return nullptr;
   }
 
@@ -492,7 +493,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDirectiveOrDeclaration(
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteUsing(getCurScope());
+    Actions.CodeCompletion().CodeCompleteUsing(getCurScope());
     return nullptr;
   }
 
@@ -542,7 +543,7 @@ Decl *Parser::ParseUsingDirective(DeclaratorContext Context,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteUsingDirective(getCurScope());
+    Actions.CodeCompletion().CodeCompleteUsingDirective(getCurScope());
     return nullptr;
   }
 
@@ -733,7 +734,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompleteUsing(getCurScope());
+      Actions.CodeCompletion().CodeCompleteUsing(getCurScope());
       return nullptr;
     }
 
@@ -1661,7 +1662,7 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
 ///         'union'
 void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                  SourceLocation StartLoc, DeclSpec &DS,
-                                 const ParsedTemplateInfo &TemplateInfo,
+                                 ParsedTemplateInfo &TemplateInfo,
                                  AccessSpecifier AS, bool EnteringContext,
                                  DeclSpecContext DSC,
                                  ParsedAttributes &Attributes) {
@@ -1680,7 +1681,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (Tok.is(tok::code_completion)) {
     // Code completion for a struct, class, or union name.
     cutOffParsing();
-    Actions.CodeCompleteTag(getCurScope(), TagType);
+    Actions.CodeCompletion().CodeCompleteTag(getCurScope(), TagType);
     return;
   }
 
@@ -1861,18 +1862,14 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         TemplateParams->pop_back();
       } else {
         TemplateParams = nullptr;
-        const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
-            ParsedTemplateInfo::NonTemplate;
+        TemplateInfo.Kind = ParsedTemplateInfo::NonTemplate;
       }
     } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
       // Pretend this is just a forward declaration.
       TemplateParams = nullptr;
-      const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
-          ParsedTemplateInfo::NonTemplate;
-      const_cast<ParsedTemplateInfo &>(TemplateInfo).TemplateLoc =
-          SourceLocation();
-      const_cast<ParsedTemplateInfo &>(TemplateInfo).ExternLoc =
-          SourceLocation();
+      TemplateInfo.Kind = ParsedTemplateInfo::NonTemplate;
+      TemplateInfo.TemplateLoc = SourceLocation();
+      TemplateInfo.ExternLoc = SourceLocation();
     }
   };
 
@@ -1883,6 +1880,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
+    DS.SetRangeEnd(NameLoc);
 
     if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
       // The name was supposed to refer to a template, but didn't.
@@ -2722,7 +2720,7 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   ParseTypeQualifierListOpt(
       DS, AR_NoAttributesParsed, false,
       /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
-        Actions.CodeCompleteFunctionQualifiers(DS, D, &VS);
+        Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D, &VS);
       }));
   D.ExtendWithDeclSpec(DS);
 
@@ -2803,11 +2801,9 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
 ///       constant-initializer:
 ///         '=' constant-expression
 ///
-Parser::DeclGroupPtrTy
-Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
-                                       ParsedAttributes &AccessAttrs,
-                                       const ParsedTemplateInfo &TemplateInfo,
-                                       ParsingDeclRAIIObject *TemplateDiags) {
+Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
+    AccessSpecifier AS, ParsedAttributes &AccessAttrs,
+    ParsedTemplateInfo &TemplateInfo, ParsingDeclRAIIObject *TemplateDiags) {
   assert(getLangOpts().CPlusPlus &&
          "ParseCXXClassMemberDeclaration should only be called in C++ mode");
   if (Tok.is(tok::at)) {
@@ -3085,7 +3081,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
           DefinitionKind = FunctionDefinitionKind::Deleted;
         else if (KW.is(tok::code_completion)) {
           cutOffParsing();
-          Actions.CodeCompleteAfterFunctionEquals(DeclaratorInfo);
+          Actions.CodeCompletion().CodeCompleteAfterFunctionEquals(
+              DeclaratorInfo);
           return nullptr;
         }
       }
@@ -3524,8 +3521,10 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
   case tok::kw_private:
     // FIXME: We don't accept GNU attributes on access specifiers in OpenCL mode
     // yet.
-    if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
-      return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
+    if (getLangOpts().OpenCL && !NextToken().is(tok::colon)) {
+      ParsedTemplateInfo TemplateInfo;
+      return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo);
+    }
     [[fallthrough]];
   case tok::kw_public:
   case tok::kw_protected: {
@@ -3581,7 +3580,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
       ConsumeAnnotationToken();
       return nullptr;
     }
-    return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
+    ParsedTemplateInfo TemplateInfo;
+    return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo);
   }
 }
 
@@ -3894,8 +3894,8 @@ void Parser::ParseConstructorInitializer(Decl *ConstructorDecl) {
   do {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompleteConstructorInitializer(ConstructorDecl,
-                                                 MemInitializers);
+      Actions.CodeCompletion().CodeCompleteConstructorInitializer(
+          ConstructorDecl, MemInitializers);
       return;
     }
 
@@ -4015,9 +4015,10 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     auto RunSignatureHelp = [&] {
       if (TemplateTypeTy.isInvalid())
         return QualType();
-      QualType PreferredType = Actions.ProduceCtorInitMemberSignatureHelp(
-          ConstructorDecl, SS, TemplateTypeTy.get(), ArgExprs, II,
-          T.getOpenLocation(), /*Braced=*/false);
+      QualType PreferredType =
+          Actions.CodeCompletion().ProduceCtorInitMemberSignatureHelp(
+              ConstructorDecl, SS, TemplateTypeTy.get(), ArgExprs, II,
+              T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -4402,10 +4403,9 @@ void Parser::PopParsingClass(Sema::ParsingClassState state) {
 ///   If a keyword or an alternative token that satisfies the syntactic
 ///   requirements of an identifier is contained in an attribute-token,
 ///   it is considered an identifier.
-IdentifierInfo *
-Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc,
-                                         Sema::AttributeCompletion Completion,
-                                         const IdentifierInfo *Scope) {
+IdentifierInfo *Parser::TryParseCXX11AttributeIdentifier(
+    SourceLocation &Loc, SemaCodeCompletion::AttributeCompletion Completion,
+    const IdentifierInfo *Scope) {
   switch (Tok.getKind()) {
   default:
     // Identifiers and keywords have identifier info attached.
@@ -4419,9 +4419,9 @@ Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc,
 
   case tok::code_completion:
     cutOffParsing();
-    Actions.CodeCompleteAttribute(getLangOpts().CPlusPlus ? ParsedAttr::AS_CXX11
-                                                          : ParsedAttr::AS_C23,
-                                  Completion, Scope);
+    Actions.CodeCompletion().CodeCompleteAttribute(
+        getLangOpts().CPlusPlus ? ParsedAttr::AS_CXX11 : ParsedAttr::AS_C23,
+        Completion, Scope);
     return nullptr;
 
   case tok::numeric_constant: {
@@ -4804,7 +4804,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     ConsumeToken();
 
     CommonScopeName = TryParseCXX11AttributeIdentifier(
-        CommonScopeLoc, Sema::AttributeCompletion::Scope);
+        CommonScopeLoc, SemaCodeCompletion::AttributeCompletion::Scope);
     if (!CommonScopeName) {
       Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
       SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
@@ -4833,7 +4833,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
 
     AttrName = TryParseCXX11AttributeIdentifier(
-        AttrLoc, Sema::AttributeCompletion::Attribute, CommonScopeName);
+        AttrLoc, SemaCodeCompletion::AttributeCompletion::Attribute,
+        CommonScopeName);
     if (!AttrName)
       // Break out to the "expected ']'" diagnostic.
       break;
@@ -4844,7 +4845,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       ScopeLoc = AttrLoc;
 
       AttrName = TryParseCXX11AttributeIdentifier(
-          AttrLoc, Sema::AttributeCompletion::Attribute, ScopeName);
+          AttrLoc, SemaCodeCompletion::AttributeCompletion::Attribute,
+          ScopeName);
       if (!AttrName) {
         Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
         SkipUntil(tok::r_square, tok::comma, StopAtSemi | StopBeforeMatch);
@@ -5068,9 +5070,10 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
                 StopAtSemi | StopBeforeMatch | StopAtCodeCompletion);
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteAttribute(AttributeCommonInfo::AS_Microsoft,
-                                      Sema::AttributeCompletion::Attribute,
-                                      /*Scope=*/nullptr);
+        Actions.CodeCompletion().CodeCompleteAttribute(
+            AttributeCommonInfo::AS_Microsoft,
+            SemaCodeCompletion::AttributeCompletion::Attribute,
+            /*Scope=*/nullptr);
         break;
       }
       if (Tok.isNot(tok::identifier)) // ']', but also eof
@@ -5166,8 +5169,9 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
       continue;
     }
 
+    ParsedTemplateInfo TemplateInfo;
     // Parse all the comma separated declarators.
-    ParseCXXClassMemberDeclaration(CurAS, AccessAttrs);
+    ParseCXXClassMemberDeclaration(CurAS, AccessAttrs, TemplateInfo);
   }
 
   Braces.consumeClose();

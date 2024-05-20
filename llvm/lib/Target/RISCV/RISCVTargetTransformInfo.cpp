@@ -14,9 +14,11 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscvtti"
 
@@ -613,14 +615,19 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
     if (LT.second.isVector()) {
-      auto *LegalVTy = VectorType::get(VTy->getElementType(),
-                                       LT.second.getVectorElementCount());
-      // FIXME: We use the memory op cost of the *legalized* type here, becuase
-      // it's getMemoryOpCost returns a really expensive cost for types like
-      // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
-      // Should the memory op cost of these be cheaper?
-      if (TLI->isLegalInterleavedAccessType(LegalVTy, Factor, Alignment,
+      auto *SubVecTy =
+          VectorType::get(VTy->getElementType(),
+                          VTy->getElementCount().divideCoefficientBy(Factor));
+
+      if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
+          TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
+        // FIXME: We use the memory op cost of the *legalized* type here,
+        // because it's getMemoryOpCost returns a really expensive cost for
+        // types like <6 x i8>, which show up when doing interleaves of
+        // Factor=3 etc. Should the memory op cost of these be cheaper?
+        auto *LegalVTy = VectorType::get(VTy->getElementType(),
+                                         LT.second.getVectorElementCount());
         InstructionCost LegalMemCost = getMemoryOpCost(
             Opcode, LegalVTy, Alignment, AddressSpace, CostKind);
         return LT.first + LegalMemCost;
@@ -1462,6 +1469,21 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     default:
       break;
     }
+  }
+
+  // With ShortForwardBranchOpt or ConditionalMoveFusion, scalar icmp + select
+  // instructions will lower to SELECT_CC and lower to PseudoCCMOVGPR which will
+  // generate a conditional branch + mv. The cost of scalar (icmp + select) will
+  // be (0 + select instr cost).
+  if (ST->hasConditionalMoveFusion() && I && isa<ICmpInst>(I) &&
+      ValTy->isIntegerTy() && !I->user_empty()) {
+    if (all_of(I->users(), [&](const User *U) {
+          return match(U, m_Select(m_Specific(I), m_Value(), m_Value())) &&
+                 U->getType()->isIntegerTy() &&
+                 !isa<ConstantData>(U->getOperand(1)) &&
+                 !isa<ConstantData>(U->getOperand(2));
+        }))
+      return 0;
   }
 
   // TODO: Add cost for scalar type.
