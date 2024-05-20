@@ -405,12 +405,14 @@ if (NOT UNIX)
     PRIVATE version)
 endif()
 
-target_link_libraries(amd_comgr
-  PRIVATE
-    pthread
-    rt
-    c
-    ${CMAKE_DL_LIBS})
+if (NOT WIN32)
+  target_link_libraries(amd_comgr
+    PRIVATE
+      pthread
+      rt
+      c
+      ${CMAKE_DL_LIBS})
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
