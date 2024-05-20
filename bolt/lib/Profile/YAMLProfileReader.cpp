@@ -99,9 +99,6 @@ bool YAMLProfileReader::parseFunctionProfile(
       FuncRawBranchCount += YamlSI.Count;
   BF.setRawBranchCount(FuncRawBranchCount);
 
-  if (BF.empty())
-    return true;
-
   if (!opts::IgnoreHash &&
       YamlBF.Hash != BF.computeHash(IsDFSOrder, HashFunction)) {
     if (opts::Verbosity >= 1)

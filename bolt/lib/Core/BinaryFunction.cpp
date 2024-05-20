@@ -1666,8 +1666,7 @@ void BinaryFunction::postProcessEntryPoints() {
     // In non-relocation mode there's potentially an external undetectable
     // reference to the entry point and hence we cannot move this entry
     // point. Optimizing without moving could be difficult.
-    // In BAT mode, register any known entry points for CFG construction.
-    if (!BC.HasRelocations && !BC.HasBATSection)
+    if (!BC.HasRelocations)
       setSimple(false);
 
     const uint32_t Offset = KV.first;

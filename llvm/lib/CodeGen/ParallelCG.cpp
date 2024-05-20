@@ -79,7 +79,9 @@ void llvm::splitCodeGen(
               [TMFactory, FileType, ThreadOS](const SmallString<0> &BC) {
                 LLVMContext Ctx;
                 Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
-                    MemoryBufferRef(BC.str(), "<split-module>"), Ctx);
+                    MemoryBufferRef(StringRef(BC.data(), BC.size()),
+                                    "<split-module>"),
+                    Ctx);
                 if (!MOrErr)
                   report_fatal_error("Failed to read bitcode");
                 std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());

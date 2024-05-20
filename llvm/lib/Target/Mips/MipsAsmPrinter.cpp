@@ -565,14 +565,11 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       }
       break;
     }
-    case 'w': {
-      MCRegister w = getMSARegFromFReg(MO.getReg());
-      if (w != Mips::NoRegister) {
-        O << '$' << MipsInstPrinter::getRegisterName(w);
-        return false;
-      }
+    case 'w':
+      // Print MSA registers for the 'f' constraint
+      // In LLVM, the 'w' modifier doesn't need to do anything.
+      // We can just call printOperand as normal.
       break;
-    }
     }
   }
 

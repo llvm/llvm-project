@@ -40,6 +40,9 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
 
 MCObjectStreamer::~MCObjectStreamer() = default;
 
+// AssemblerPtr is used for evaluation of expressions and causes
+// difference between asm and object outputs. Return nullptr to in
+// inline asm mode to limit divergence to assembly inputs.
 MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   if (getUseAssemblerInfoForParsing())
     return Assembler.get();
@@ -656,11 +659,6 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          unsigned MaxBytesToEmit) {
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
-}
-
-void MCObjectStreamer::emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
-                                               const MCSubtargetInfo &STI) {
-  insert(new MCNeverAlignFragment(ByteAlignment, STI));
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

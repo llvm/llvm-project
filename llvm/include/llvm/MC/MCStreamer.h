@@ -245,7 +245,7 @@ class MCStreamer {
   /// requires.
   unsigned NextWinCFIID = 0;
 
-  bool UseAssemblerInfoForParsing = true;
+  bool UseAssemblerInfoForParsing;
 
   /// Is the assembler allowed to insert padding automatically?  For
   /// correctness reasons, we sometimes need to ensure instructions aren't
@@ -296,8 +296,6 @@ public:
 
   MCContext &getContext() const { return Context; }
 
-  // MCObjectStreamer has an MCAssembler and allows more expression folding at
-  // parse time.
   virtual MCAssembler *getAssemblerPtr() { return nullptr; }
 
   void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
@@ -886,12 +884,6 @@ public:
   /// emitted.
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
-
-  /// If the end of the fragment following this NeverAlign fragment ever gets
-  /// aligned to \p ByteAlignment, this fragment emits a single nop before the
-  /// following fragment to break this end-alignment.
-  virtual void emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
-                                       const MCSubtargetInfo &STI);
 
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.

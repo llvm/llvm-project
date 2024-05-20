@@ -3304,7 +3304,7 @@ static bool IsInternalDeclFromFileContext(const Decl *D) {
 /// \returns the offset of the DECL_CONTEXT_LEXICAL block within the
 /// bitstream, or 0 if no block was written.
 uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
-                                                 const DeclContext *DC) {
+                                                 DeclContext *DC) {
   if (DC->decls_empty())
     return 0;
 
@@ -5698,8 +5698,8 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT:
-        Record.writeStmtRef(
-            cast<ParmVarDecl>(Update.getDecl())->getDefaultArg());
+        Record.AddStmt(const_cast<Expr *>(
+            cast<ParmVarDecl>(Update.getDecl())->getDefaultArg()));
         break;
 
       case UPD_CXX_INSTANTIATED_DEFAULT_MEMBER_INITIALIZER:
@@ -5713,7 +5713,8 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         Record.push_back(RD->isParamDestroyedInCallee());
         Record.push_back(llvm::to_underlying(RD->getArgPassingRestrictions()));
         Record.AddCXXDefinitionData(RD);
-        Record.AddOffset(WriteDeclContextLexicalBlock(*Context, RD));
+        Record.AddOffset(WriteDeclContextLexicalBlock(
+            *Context, const_cast<CXXRecordDecl *>(RD)));
 
         // This state is sometimes updated by template instantiation, when we
         // switch from the specialization referring to the template declaration
@@ -6074,31 +6075,6 @@ void ASTWriter::AddTypeRef(QualType T, RecordDataImpl &Record) {
   Record.push_back(GetOrCreateTypeID(T));
 }
 
-template <typename IdxForTypeTy>
-static TypeID MakeTypeID(ASTContext &Context, QualType T,
-                         IdxForTypeTy IdxForType) {
-  if (T.isNull())
-    return PREDEF_TYPE_NULL_ID;
-
-  unsigned FastQuals = T.getLocalFastQualifiers();
-  T.removeLocalFastQualifiers();
-
-  if (T.hasLocalNonFastQualifiers())
-    return IdxForType(T).asTypeID(FastQuals);
-
-  assert(!T.hasLocalQualifiers());
-
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(T.getTypePtr()))
-    return TypeIdxFromBuiltin(BT).asTypeID(FastQuals);
-
-  if (T == Context.AutoDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
-  if (T == Context.AutoRRefDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
-
-  return IdxForType(T).asTypeID(FastQuals);
-}
-
 TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
   assert(Context);
   return MakeTypeID(*Context, T, [&](QualType T) -> TypeIdx {
@@ -6119,6 +6095,19 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
       DeclTypesToEmit.push(T);
     }
     return Idx;
+  });
+}
+
+TypeID ASTWriter::getTypeID(QualType T) const {
+  assert(Context);
+  return MakeTypeID(*Context, T, [&](QualType T) -> TypeIdx {
+    if (T.isNull())
+      return TypeIdx();
+    assert(!T.getLocalFastQualifiers());
+
+    TypeIdxMap::const_iterator I = TypeIdxs.find(T);
+    assert(I != TypeIdxs.end() && "Type not emitted!");
+    return I->second;
   });
 }
 
@@ -6368,7 +6357,7 @@ void ASTRecordWriter::AddTemplateParameterList(
     AddDeclRef(P);
   if (const Expr *RequiresClause = TemplateParams->getRequiresClause()) {
     Record->push_back(true);
-    writeStmtRef(RequiresClause);
+    AddStmt(const_cast<Expr*>(RequiresClause));
   } else {
     Record->push_back(false);
   }
@@ -7825,7 +7814,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::If: {
     const auto *IC = cast<OpenACCIfClause>(C);
     writeSourceLocation(IC->getLParenLoc());
-    writeStmtRef(IC->getConditionExpr());
+    AddStmt(const_cast<Expr *>(IC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::Self: {
@@ -7833,7 +7822,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(SC->getLParenLoc());
     writeBool(SC->hasConditionExpr());
     if (SC->hasConditionExpr())
-      writeStmtRef(SC->getConditionExpr());
+      AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::NumGangs: {
@@ -7847,13 +7836,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::NumWorkers: {
     const auto *NWC = cast<OpenACCNumWorkersClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
-    writeStmtRef(NWC->getIntExpr());
+    AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::VectorLength: {
     const auto *NWC = cast<OpenACCVectorLengthClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
-    writeStmtRef(NWC->getIntExpr());
+    AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::Private: {
@@ -7932,7 +7921,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(AC->getLParenLoc());
     writeBool(AC->hasIntExpr());
     if (AC->hasIntExpr())
-      writeStmtRef(AC->getIntExpr());
+      AddStmt(const_cast<Expr *>(AC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::Wait: {
@@ -7940,7 +7929,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(WC->getLParenLoc());
     writeBool(WC->getDevNumExpr());
     if (const Expr *DNE = WC->getDevNumExpr())
-      writeStmtRef(DNE);
+      AddStmt(const_cast<Expr *>(DNE));
     writeSourceLocation(WC->getQueuesLoc());
 
     writeOpenACCIntExprList(WC->getQueueIdExprs());

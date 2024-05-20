@@ -656,10 +656,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
     // Emit only a declaration if the global does not exist.
     global = declareGlobal(converter, var, globalName, linkage);
   } else {
-    cuf::DataAttributeAttr dataAttr =
-        Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
-                                                        sym);
-    global = defineGlobal(converter, var, globalName, linkage, dataAttr);
+    global = defineGlobal(converter, var, globalName, linkage);
   }
   auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                               global.getSymbol());

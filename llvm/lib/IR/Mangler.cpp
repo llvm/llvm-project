@@ -292,7 +292,7 @@ void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
 
 std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
   bool IsCppFn = Name[0] == '?';
-  if (IsCppFn && Name.contains("$$h"))
+  if (IsCppFn && Name.find("$$h") != std::string::npos)
     return std::nullopt;
   if (!IsCppFn && Name[0] == '#')
     return std::nullopt;

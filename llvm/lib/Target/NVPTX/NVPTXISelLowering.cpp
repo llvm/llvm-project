@@ -1434,11 +1434,12 @@ std::string NVPTXTargetLowering::getPrototype(
 
     if (!Outs[OIdx].Flags.isByVal()) {
       if (IsTypePassedAsArray(Ty)) {
+        unsigned ParamAlign = 0;
         const CallInst *CallI = cast<CallInst>(&CB);
-        Align ParamAlign =
-            getAlign(*CallI, i + AttributeList::FirstArgIndex)
-                .value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
-        O << ".param .align " << ParamAlign.value() << " .b8 ";
+        // +1 because index 0 is reserved for return type alignment
+        if (!getAlign(*CallI, i + 1, ParamAlign))
+          ParamAlign = getFunctionParamOptimizedAlign(F, Ty, DL).value();
+        O << ".param .align " << ParamAlign << " .b8 ";
         O << "_";
         O << "[" << DL.getTypeAllocSize(Ty) << "]";
         // update the index for Outs
@@ -1488,11 +1489,6 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-Align NVPTXTargetLowering::getFunctionArgumentAlignment(
-    const Function *F, Type *Ty, unsigned Idx, const DataLayout &DL) const {
-  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
-}
-
 Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
                                                 unsigned Idx,
                                                 const DataLayout &DL) const {
@@ -1501,6 +1497,7 @@ Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
     return DL.getABITypeAlign(Ty);
   }
 
+  unsigned Alignment = 0;
   const Function *DirectCallee = CB->getCalledFunction();
 
   if (!DirectCallee) {
@@ -1510,16 +1507,21 @@ Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
     // With bitcast'd call targets, the instruction will be the call
     if (const auto *CI = dyn_cast<CallInst>(CB)) {
       // Check if we have call alignment metadata
-      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
-        return StackAlign.value();
+      if (getAlign(*CI, Idx, Alignment))
+        return Align(Alignment);
     }
     DirectCallee = getMaybeBitcastedCallee(CB);
   }
 
   // Check for function alignment information if we found that the
   // ultimate target is a Function
-  if (DirectCallee)
-    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
+  if (DirectCallee) {
+    if (getAlign(*DirectCallee, Idx, Alignment))
+      return Align(Alignment);
+    // If alignment information is not available, fall back to the
+    // default function param optimized type alignment
+    return getFunctionParamOptimizedAlign(DirectCallee, Ty, DL);
+  }
 
   // Call is indirect, fall back to the ABI type alignment
   return DL.getABITypeAlign(Ty);
@@ -3193,9 +3195,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       if (VTs.empty())
         report_fatal_error("Empty parameter types are not supported");
 
-      Align ArgAlign = getFunctionArgumentAlignment(
-          F, Ty, i + AttributeList::FirstArgIndex, DL);
-      auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
+      auto VectorInfo =
+          VectorizePTXValueVTs(VTs, Offsets, DL.getABITypeAlign(Ty));
 
       SDValue Arg = getParamSymbol(DAG, i, PtrVT);
       int VecIdx = -1; // Index of the first element of the current vector.

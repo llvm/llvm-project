@@ -3984,11 +3984,6 @@ void Block::printAsOperand(raw_ostream &os, AsmState &state) {
   printer.printBlockName(this);
 }
 
-raw_ostream &mlir::operator<<(raw_ostream &os, Block &block) {
-  block.print(os);
-  return os;
-}
-
 //===--------------------------------------------------------------------===//
 // Custom printers
 //===--------------------------------------------------------------------===//

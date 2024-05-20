@@ -156,7 +156,7 @@ void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
   m_opaque_up->SetLanguage(language);
 }
 
-void SBExpressionOptions::SetLanguage(lldb::SBSourceLanguageName name,
+void SBExpressionOptions::SetLanguage(SBSourceLanguageName name,
                                       uint32_t version) {
   LLDB_INSTRUMENT_VA(this, name, version);
 

@@ -37,7 +37,7 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   uint64_t properties = 0;
   SmallVector<unsigned> structured;
 
-  if (base == "structured") {
+  if (base.compare("structured") == 0) {
     ParseResult res = parser.parseCommaSeparatedList(
         mlir::OpAsmParser::Delimiter::OptionalSquare,
         [&]() -> ParseResult { return parseStructured(parser, &structured); },
@@ -60,18 +60,18 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   FAILURE_IF_FAILED(res)
 
   // Set the base bit for properties.
-  if (base == "dense") {
+  if (base.compare("dense") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Dense);
-  } else if (base == "batch") {
+  } else if (base.compare("batch") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Batch);
-  } else if (base == "compressed") {
+  } else if (base.compare("compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Compressed);
-  } else if (base == "structured") {
+  } else if (base.compare("structured") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::NOutOfM);
     properties |= nToBits(structured[0]) | mToBits(structured[1]);
-  } else if (base == "loose_compressed") {
+  } else if (base.compare("loose_compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::LooseCompressed);
-  } else if (base == "singleton") {
+  } else if (base.compare("singleton") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Singleton);
   } else {
     parser.emitError(loc, "unknown level format: ") << base;
