@@ -1771,26 +1771,22 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
 
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
 
-  auto OpCheck = [&](MachineOperand &Operand) {
-    if (!Operand.isReg())
-      return true;
-
-    return isGuaranteedNotToBeUndefOrPoison(Operand.getReg(), MRI, Depth + 1,
-                                            Kind);
-  };
-
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
     return true;
   case TargetOpcode::G_IMPLICIT_DEF:
     return !includesUndef(Kind);
-  default:
-    GenericMachineInstr *Opr = dyn_cast<GBinOp>(RegDef);
-    if (!Opr)
-      Opr = dyn_cast<GCastOp>(RegDef);
-
-    return Opr && !::llvm::canCreateUndefOrPoison(Reg, MRI) &&
-           all_of(Opr->operands(), OpCheck);
+  default: {
+    auto MOCheck = [&](const MachineOperand &MO) {
+      if (!MO.isReg())
+        return true;
+      return ::isGuaranteedNotToBeUndefOrPoison(MO.getReg(), MRI, Depth + 1,
+                                                Kind);
+    };
+    return !::canCreateUndefOrPoison(Reg, MRI,
+                                     /*ConsiderFlagsAndMetadata=*/true, Kind) &&
+           all_of(RegDef->uses(), MOCheck);
+  }
   }
 }
 
