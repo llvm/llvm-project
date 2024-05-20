@@ -184,7 +184,7 @@ llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
       break;
     }
     default:
-      if (RegexMetachars.find(C) != StringRef::npos)
+      if (RegexMetachars.contains(C))
         RegexString.push_back('\\');
       RegexString.push_back(C);
     }
