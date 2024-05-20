@@ -277,6 +277,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     }
   }
 
+  KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
 

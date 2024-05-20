@@ -15,8 +15,10 @@ def global_ptr_ty : LLVMQualPointerType<1>;
 // The amdgpu-no-* attributes (ex amdgpu-no-workitem-id-z) typically inferred
 // by the backend cause whole-program undefined behavior when violated, such as
 // by causing all other preload register intrinsics to return arbitrarily incorrect
-// values. Outside of such IR-level UB, these preloaded registers are always set
-// to a well-defined value and are thus `noundef`.
+// values. In non-entry-point functions, attempting to call a function that needs
+// some preloaded register from a function that is known to not need it is a violation
+// of the calling convention and also program-level UB. Outside of such IR-level UB,
+// these preloaded registers are always set to a well-defined value and are thus `noundef`.
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
@@ -159,12 +161,12 @@ def int_amdgcn_queue_ptr :
 def int_amdgcn_kernarg_segment_ptr :
   ClangBuiltin<"__builtin_amdgcn_kernarg_segment_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_implicitarg_ptr :
   ClangBuiltin<"__builtin_amdgcn_implicitarg_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 // Returns the amount of LDS statically allocated for this program.
 // This is no longer guaranteed to be a compile-time constant due to linking
@@ -184,8 +186,7 @@ def int_amdgcn_lds_kernel_id :
 def int_amdgcn_implicit_buffer_ptr :
   ClangBuiltin<"__builtin_amdgcn_implicit_buffer_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, Dereferenceable<RetIndex, 16>,
-    NoUndef<RetIndex>, NonNull<RetIndex>,
+  [Align<RetIndex, 4>, NoUndef<RetIndex>,
     IntrNoMem, IntrSpeculatable]>;
 
 // Set EXEC to the 64-bit value given.
