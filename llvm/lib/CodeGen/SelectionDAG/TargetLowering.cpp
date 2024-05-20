@@ -596,11 +596,14 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   // Op's type. For expedience, just check power-of-2 integer types.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned DemandedSize = DemandedBits.getActiveBits();
+  // Types of LHS and RHS may differ before legalization (e.g., shl), so we
+  // need to check both.
+  unsigned MinWidth =
+      std::min(Op.getOperand(0).getValueType().getScalarSizeInBits(),
+               Op.getOperand(1).getValueType().getScalarSizeInBits());
   for (unsigned SmallVTBits = llvm::bit_ceil(DemandedSize);
-       SmallVTBits < BitWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
+       SmallVTBits < MinWidth; SmallVTBits = NextPowerOf2(SmallVTBits)) {
     EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), SmallVTBits);
-    // Types of LHS and RHS may differ before legalization (e.g., shl), so we
-    // need to check both.
     if (TLI.isTruncateFree(Op.getOperand(0).getValueType(), SmallVT) &&
         TLI.isTruncateFree(Op.getOperand(1).getValueType(), SmallVT) &&
         TLI.isZExtFree(SmallVT, VT)) {
