@@ -208,9 +208,25 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
     `CIR.ptr` is a type returned by any op generating a pointer in C++.
   }];
 
-  let parameters = (ins "mlir::Type":$pointee);
+  let parameters = (ins "mlir::Type":$pointee,
+                        DefaultValuedParameter<"unsigned", "0">:$addrSpace);
 
-  let assemblyFormat = "`<` $pointee `>`";
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$pointee, CArg<"unsigned", "0">:$addrSpace), [{
+      return Base::get(pointee.getContext(), pointee, addrSpace);
+    }]>,
+    TypeBuilder<(ins
+      "mlir::Type":$pointee, CArg<"unsigned", "0">:$addrSpace), [{
+      return Base::get($_ctxt, pointee, addrSpace);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $pointee ( `,` `addrspace` `(` $addrSpace^ `)` )? `>`
+  }];
+
+  let skipDefaultBuilders = 1;
 
   let extraClassDeclaration = [{
     bool isVoidPtr() const {

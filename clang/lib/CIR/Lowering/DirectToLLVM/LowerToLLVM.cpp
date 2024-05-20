@@ -3182,7 +3182,8 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                           mlir::DataLayout &dataLayout) {
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
     // Drop pointee type since LLVM dialect only allows opaque pointers.
-    return mlir::LLVM::LLVMPointerType::get(type.getContext());
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(),
+                                            type.getAddrSpace());
   });
   converter.addConversion([&](mlir::cir::ArrayType type) -> mlir::Type {
     auto ty = converter.convertType(type.getEltType());

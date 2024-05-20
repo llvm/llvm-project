@@ -1,0 +1,20 @@
+// RUN: cir-translate %s -cir-to-llvmir -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  // LLVM: define void @foo(ptr %0)
+  cir.func @foo(%arg0: !cir.ptr<!s32i>) {
+    // LLVM-NEXT: alloca ptr,
+    %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // LLVM: define void @bar(ptr addrspace(1) %0)
+  cir.func @bar(%arg0: !cir.ptr<!s32i, addrspace(1)>) {
+    // LLVM-NEXT: alloca ptr addrspace(1)
+    %0 = cir.alloca !cir.ptr<!s32i, addrspace(1)>, !cir.ptr<!cir.ptr<!s32i, addrspace(1)>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+}
