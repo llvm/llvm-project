@@ -88,3 +88,13 @@ float subscript_float32(svfloat32_t a, size_t b) {
 double subscript_float64(svfloat64_t a, size_t b) {
   return a[b];
 }
+
+// CHECK-LABEL: @subscript_write_float32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 4 x float> [[A:%.*]], float 1.000000e+00, i64 [[B:%.*]]
+// CHECK-NEXT:    ret <vscale x 4 x float> [[VECINS]]
+//
+svfloat32_t subscript_write_float32(svfloat32_t a, size_t b) {
+  a[b] = 1.0f;
+  return a;
+}
