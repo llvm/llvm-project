@@ -226,7 +226,9 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
       firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       assert(loopIV && "loopIV was not set");
-      firOpBuilder.create<fir::StoreOp>(loopOp.getLoc(), v, loopIV);
+      mlir::Value cvtV = firOpBuilder.createConvert(
+          loc, fir::unwrapPassByRefType(loopIV.getType()), v);
+      firOpBuilder.create<fir::StoreOp>(loc, cvtV, loopIV);
       lastPrivIP = firOpBuilder.saveInsertionPoint();
     } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
       // Already handled by genOMP()
