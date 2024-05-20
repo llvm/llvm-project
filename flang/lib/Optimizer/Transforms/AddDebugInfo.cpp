@@ -122,7 +122,8 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   } else {
     modAttr = mlir::LLVM::DIModuleAttr::get(
         context, fileAttr, scope, mlir::StringAttr::get(context, name),
-        /* configMacros */ mlir::StringAttr(), /* includePath */mlir::StringAttr(),
+        /* configMacros */ mlir::StringAttr(),
+        /* includePath */ mlir::StringAttr(),
         /* apinotes */ mlir::StringAttr(), line, decl);
     moduleMap[name] = modAttr;
   }
@@ -162,8 +163,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
                                 line - 1, !globalOp.isInitialized());
 
-  mlir::LLVM::DITypeAttr diType = typeGen.convertType(globalOp.getType(), fileAttr, scope,
-                                    globalOp.getLoc());
+  mlir::LLVM::DITypeAttr diType = typeGen.convertType(
+      globalOp.getType(), fileAttr, scope, globalOp.getLoc());
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
       mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
