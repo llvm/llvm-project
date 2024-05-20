@@ -743,12 +743,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       continue;
     OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
-    // As a top-level guess, scalable vectors go in SVRs, non-scalable
-    // vectors go in FPRs, scalars and pointers in GPRs.
+    // As a top-level guess, vectors including both scalable and non-scalable
+    // ones go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
-    if (Ty.isScalableVector()) 
+    if (Ty.isVector())
       OpRegBankIdx[Idx] = PMI_FirstFPR;
-    else if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
+    else if (isPreISelGenericFloatingPointOpcode(Opc) ||
         Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
