@@ -9540,7 +9540,8 @@ static Constant *EvaluateExpression(Value *V, const Loop *L,
     Operands[i] = C;
   }
 
-  return ConstantFoldInstOperands(I, Operands, DL, TLI);
+  return ConstantFoldInstOperands(I, Operands, DL, TLI,
+                                  /*AllowNonDeterministic=*/false);
 }
 
 
@@ -10031,7 +10032,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
     Constant *C = nullptr;
     const DataLayout &DL = getDataLayout();
-    C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
+    C = ConstantFoldInstOperands(I, Operands, DL, &TLI,
+                                 /*AllowNonDeterministic=*/false);
     if (!C)
       return V;
     return getSCEV(C);
