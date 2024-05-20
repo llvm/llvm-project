@@ -746,6 +746,7 @@ Bug Fixes to C++ Support
   the ``constexpr`` specifier. Fixes (#GH61004).
 - Clang no longer transforms dependent qualified names into implicit class member access expressions
   until it can be determined whether the name is that of a non-static member.
+- Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
