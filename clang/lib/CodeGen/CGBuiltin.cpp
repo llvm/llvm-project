@@ -18493,7 +18493,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Src4 = EmitScalarExpr(E->getArg(4));
     llvm::Value *Src5 = EmitScalarExpr(E->getArg(5));
 
-    llvm::Function *F = CGM.getIntrinsic(IID, Src1->getType());
+    llvm::Function *F = CGM.getIntrinsic(IID, Src0->getType());
     return Builder.CreateCall(F, {Src0, Src1, Src2, Src3, Src4, Src5});
   }
   case AMDGPU::BI__builtin_amdgcn_permlane64:
