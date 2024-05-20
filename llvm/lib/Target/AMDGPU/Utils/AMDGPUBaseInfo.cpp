@@ -1229,8 +1229,7 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   KernelCode.amd_machine_version_minor = Version.Minor;
   KernelCode.amd_machine_version_stepping = Version.Stepping;
   KernelCode.kernel_code_entry_byte_offset = sizeof(amd_kernel_code_t);
-  if (Version.Major >= 10 &&
-      STI->getFeatureBits().test(FeatureWavefrontSize32)) {
+  if (STI->getFeatureBits().test(FeatureWavefrontSize32)) {
     KernelCode.wavefront_size = 5;
     KernelCode.code_properties |= AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   } else {

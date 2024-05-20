@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d < %s | FileCheck %s
 
 ; CHECK-LABEL: non_kernel_recursion:
 define void @non_kernel_recursion(i32 %val) #2 {

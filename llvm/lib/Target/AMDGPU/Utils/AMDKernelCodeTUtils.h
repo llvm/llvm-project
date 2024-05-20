@@ -32,6 +32,8 @@ namespace AMDGPU {
 struct AMDGPUMCKernelCodeT {
   AMDGPUMCKernelCodeT() = default;
 
+  // Names of most (if not all) members should match the ones used for table
+  // driven (array) generation in AMDKernelCodeTInfo.h.
   uint32_t amd_kernel_code_version_major = 0;
   uint32_t amd_kernel_code_version_minor = 0;
   uint16_t amd_machine_kind = 0;
@@ -66,8 +68,6 @@ struct AMDGPUMCKernelCodeT {
   const MCExpr *compute_pgm_resource1_registers = nullptr;
   const MCExpr *compute_pgm_resource2_registers = nullptr;
 
-  // Duplicated fields, but uses MCExpr instead.
-  // Name has to be the same as the ones used in AMDKernelCodeTInfo.h.
   const MCExpr *is_dynamic_callstack = nullptr;
   const MCExpr *wavefront_sgpr_count = nullptr;
   const MCExpr *workitem_vgpr_count = nullptr;
