@@ -338,7 +338,7 @@ static void symbolizeInput(const opt::InputArgList &Args,
   uint64_t Offset = 0;
   StringRef Symbol;
 
-  // Empty input string may be used to check if the process is alive. Do not
+  // An empty input string may be used to check if the process is alive and responding to input. Do not
   // emit a message on stderr in this case but respond on stdout.
   if (InputString.empty()) {
     printUnknownLineInfo(ModuleName, Printer);
