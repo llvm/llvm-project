@@ -2415,13 +2415,12 @@ void OmpStructureChecker::CheckReductionModifier(
   if (modifier == ReductionModifier::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
-        llvm::omp::Directive::OMPD_do,
-        // llvm::omp::Directive::OMPD_for, C++ only
-        llvm::omp::Directive::OMPD_scope,
+        llvm::omp::Directive::OMPD_do, llvm::omp::Directive::OMPD_scope,
         llvm::omp::Directive::OMPD_sections,
-        // "single" and "workshare" are worksharing directives, but
-        // they don't allow reduction clause.
-        // "loop" is also worksharing, but has different restrictions.
+        // There are more worksharing directives, but they do not apply:
+        // "for" is C++ only,
+        // "single" and "workshare" don't allow reduction clause,
+        // "loop" has different restrictions (checked above).
     };
     if (dirCtx.directive != llvm::omp::Directive::OMPD_parallel &&
         !llvm::is_contained(worksharing, dirCtx.directive)) {
