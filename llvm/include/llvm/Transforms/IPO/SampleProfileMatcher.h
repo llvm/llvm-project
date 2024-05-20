@@ -60,15 +60,15 @@ class SampleProfileMatcher {
   StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
       FuncCallsiteMatchStates;
 
-  struct RenameDecisionCacheHash {
+  struct FuncProfNameMapHash {
     uint64_t
     operator()(const std::pair<const Function *, FunctionId> &P) const {
       return hash_combine(P.first, P.second);
     }
   };
   std::unordered_map<std::pair<const Function *, FunctionId>, bool,
-                     RenameDecisionCacheHash>
-      RenameDecisionCache;
+                     FuncProfNameMapHash>
+      FunctionProfileNameMap;
 
   FunctionMap *SymbolMap;
 
@@ -118,7 +118,12 @@ private:
     StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
     return getFlattenedSamplesFor(FunctionId(CanonFName));
   }
-  void runBlockLevelMatching(Function &F);
+  void getFilteredAnchorList(const AnchorMap &IRAnchors,
+                             const AnchorMap &ProfileAnchors,
+                             AnchorList &FilteredIRAnchorsList,
+                             AnchorList &FilteredProfileAnchorList);
+  void runCFGMatching(Function &F);
+  void runOnFunction(Function &F);
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
   void findProfileAnchors(const FunctionSamples &FS,
                           AnchorMap &ProfileAnchors) const;
@@ -182,20 +187,16 @@ private:
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap);
-  void findIRNewCallees(Function &Caller,
-                        const StringMap<Function *> &IRNewFunctions,
-                        std::vector<Function *> &IRNewCallees);
-  float checkFunctionSimilarity(const Function &IRFunc,
-                                const FunctionId &ProfFunc);
-  bool functionIsRenamedImpl(const Function &IRFunc,
-                             const FunctionId &ProfFunc);
-  bool functionIsRenamed(const Function &IRFunc, const FunctionId &ProfFunc);
-  void
-  runFuncRenamingMatchingOnProfile(const StringMap<Function *> &IRNewFunctions,
+  void findNewIRCallees(Function &Caller,
+                        const StringMap<Function *> &newIRFunctions,
+                        std::vector<Function *> &NewIRCallees);
+  bool functionMatchesProfile(const Function &IRFunc,
+                              const FunctionId &ProfFunc);
+  void matchProfileForNewFunctions(const StringMap<Function *> &newIRFunctions,
                                    FunctionSamples &FS,
                                    FunctionMap &OldProfToNewSymbolMap);
-  void findIRNewFunctions(StringMap<Function *> &IRNewFunctions);
-  void runFuncLevelMatching();
+  void findnewIRFunctions(StringMap<Function *> &newIRFunctions);
+  void runCallGraphMatching();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm
