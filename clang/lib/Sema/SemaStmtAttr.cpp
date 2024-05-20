@@ -683,8 +683,11 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
     Assumption = Res.get();
   }
 
-  if (!getLangOpts().CPlusPlus23)
+  if (!getLangOpts().CPlusPlus23 &&
+      A.getSyntax() == AttributeCommonInfo::AS_CXX11) {
+    llvm::dbgs() << "Syntax: " << int(A.getSyntax()) << "\n";
     Diag(A.getLoc(), diag::ext_cxx23_attr) << A << Range;
+  }
 
   return Assumption;
 }
