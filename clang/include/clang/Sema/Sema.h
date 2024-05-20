@@ -11404,8 +11404,7 @@ public:
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 
-  QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                  Expr *CountExpr);
+  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
