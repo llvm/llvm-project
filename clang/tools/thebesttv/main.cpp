@@ -216,6 +216,10 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     if (!TUD->isUnavailable())
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
 
+    /*
+    由于精确匹配可能导致对于 p = foo() 这样的语句，
+    匹配不到 foo()，所以全部模糊匹配。
+
     auto exactResult = locateVariable(functionsInFile, loc.file, loc.line,
                                       loc.column, isStmt, true);
     if (exactResult.isValid())
@@ -223,6 +227,7 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     // 精确匹配失败
     logger.warn("Unable to find exact match! Trying inexact matching...");
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
+    */
     auto result = locateVariable(functionsInFile, loc.file, loc.line,
                                  loc.column, isStmt, false);
     return result;
