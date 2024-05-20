@@ -42,7 +42,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
