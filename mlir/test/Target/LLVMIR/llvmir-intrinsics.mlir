@@ -724,7 +724,7 @@ llvm.func @coro_promise(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : i1) {
 
 // CHECK-LABEL: @eh_typeid_for
 llvm.func @eh_typeid_for(%arg0 : !llvm.ptr) {
-    // CHECK: call i32 @llvm.eh.typeid.for
+    // CHECK: call i32 @llvm.eh.typeid.for.p0
     %0 = llvm.intr.eh.typeid.for %arg0 : (!llvm.ptr) -> i32
     llvm.return
 }

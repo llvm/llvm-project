@@ -780,16 +780,16 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       }
 
       bool addedToDeclSpec = false;
-      auto ObjCPropertyCallback = [&](ParsingFieldDeclarator &FD) -> Decl * {
+      auto ObjCPropertyCallback = [&](ParsingFieldDeclarator &FD) {
         if (FD.D.getIdentifier() == nullptr) {
           Diag(AtLoc, diag::err_objc_property_requires_field_name)
               << FD.D.getSourceRange();
-          return nullptr;
+          return;
         }
         if (FD.BitfieldSize) {
           Diag(AtLoc, diag::err_objc_property_bitfield)
               << FD.D.getSourceRange();
-          return nullptr;
+          return;
         }
 
         // Map a nullability property attribute to a context-sensitive keyword
@@ -818,7 +818,6 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
             MethodImplKind);
 
         FD.complete(Property);
-        return Property;
       };
 
       // Parse all the comma separated declarators.
@@ -2014,7 +2013,7 @@ void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
       continue;
     }
 
-    auto ObjCIvarCallback = [&](ParsingFieldDeclarator &FD) -> Decl * {
+    auto ObjCIvarCallback = [&](ParsingFieldDeclarator &FD) {
       assert(getObjCDeclContext() == interfaceDecl &&
              "Ivar should have interfaceDecl as its decl context");
       // Install the declarator into the interface decl.
@@ -2025,7 +2024,6 @@ void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
       if (Field)
         AllIvarDecls.push_back(Field);
       FD.complete(Field);
-      return Field;
     };
 
     // Parse all the comma separated declarators.

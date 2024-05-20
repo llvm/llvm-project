@@ -29,9 +29,10 @@ void DataSharingProcessor::processStep1(
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
+  collectPreDeterminedSymbols();
+
   privatize(clauseOps, privateSyms);
-  defaultPrivatize(clauseOps, privateSyms);
-  implicitPrivatize(clauseOps, privateSyms);
+
   insertBarrier();
 }
 
@@ -57,7 +58,7 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 }
 
 void DataSharingProcessor::insertDeallocs() {
-  for (const semantics::Symbol *sym : privatizedSymbols)
+  for (const semantics::Symbol *sym : allPrivatizedSymbols)
     if (semantics::IsAllocatable(sym->GetUltimate())) {
       if (!useDelayedPrivatization) {
         converter.createHostAssociateVarCloneDealloc(*sym);
@@ -92,10 +93,6 @@ void DataSharingProcessor::insertDeallocs() {
 }
 
 void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
-  // Privatization for symbols which are pre-determined (like loop index
-  // variables) happen separately, for everything else privatize here.
-  if (sym->test(semantics::Symbol::Flag::OmpPreDetermined))
-    return;
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
@@ -126,19 +123,23 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
-      collectOmpObjectListSymbol(privateClause->v, privatizedSymbols);
+      collectOmpObjectListSymbol(privateClause->v, explicitlyPrivatizedSymbols);
     } else if (const auto &firstPrivateClause =
                    std::get_if<omp::clause::Firstprivate>(&clause.u)) {
-      collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
+      collectOmpObjectListSymbol(firstPrivateClause->v,
+                                 explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
-      collectOmpObjectListSymbol(objects, privatizedSymbols);
+      collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       hasLastPrivateOp = true;
     } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
       hasCollapse = true;
     }
   }
+
+  for (auto *sym : explicitlyPrivatizedSymbols)
+    allPrivatizedSymbols.insert(sym);
 
   if (hasCollapse && hasLastPrivateOp)
     TODO(converter.getCurrentLocation(), "Collapse clause with lastprivate");
@@ -149,7 +150,7 @@ bool DataSharingProcessor::needBarrier() {
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.
   // Emit implicit barrier for linear clause. Maybe on somewhere else.
-  for (const semantics::Symbol *sym : privatizedSymbols) {
+  for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) &&
         sym->test(semantics::Symbol::Flag::OmpLastPrivate))
       return true;
@@ -283,10 +284,40 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
       if (nestedEval.isConstruct())
         // Recursively look for OpenMP constructs within `nestedEval`'s region
         collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
-      else
-        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
-                                   /*collectSymbols=*/true,
-                                   /*collectHostAssociatedSymbols=*/false);
+      else {
+        bool isOrderedConstruct = [&]() {
+          if (auto *ompConstruct =
+                  nestedEval.getIf<parser::OpenMPConstruct>()) {
+            if (auto *ompBlockConstruct =
+                    std::get_if<parser::OpenMPBlockConstruct>(
+                        &ompConstruct->u)) {
+              const auto &beginBlockDirective =
+                  std::get<parser::OmpBeginBlockDirective>(
+                      ompBlockConstruct->t);
+              const auto origDirective =
+                  std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
+
+              return origDirective == llvm::omp::Directive::OMPD_ordered;
+            }
+          }
+
+          return false;
+        }();
+
+        bool isCriticalConstruct = [&]() {
+          if (auto *ompConstruct =
+                  nestedEval.getIf<parser::OpenMPConstruct>()) {
+            return std::get_if<parser::OpenMPCriticalConstruct>(
+                       &ompConstruct->u) != nullptr;
+          }
+          return false;
+        }();
+
+        if (!isOrderedConstruct && !isCriticalConstruct)
+          converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                     /*collectSymbols=*/true,
+                                     /*collectHostAssociatedSymbols=*/false);
+      }
     }
   }
 }
@@ -322,24 +353,39 @@ void DataSharingProcessor::collectSymbols(
   converter.collectSymbolSet(eval, allSymbols, flag,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
+
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
   // Filter-out symbols that must not be privatized.
   bool collectImplicit = flag == semantics::Symbol::Flag::OmpImplicit;
+  bool collectPreDetermined = flag == semantics::Symbol::Flag::OmpPreDetermined;
+
   auto isPrivatizable = [](const semantics::Symbol &sym) -> bool {
     return !semantics::IsProcedure(sym) &&
            !sym.GetUltimate().has<semantics::DerivedTypeDetails>() &&
            !sym.GetUltimate().has<semantics::NamelistDetails>() &&
            !semantics::IsImpliedDoIndex(sym.GetUltimate());
   };
+
+  auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    if (collectImplicit)
+      return sym->test(semantics::Symbol::Flag::OmpImplicit);
+
+    if (collectPreDetermined)
+      return sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+
+    return !sym->test(semantics::Symbol::Flag::OmpImplicit) &&
+           !sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+  };
+
   for (const auto *sym : allSymbols) {
     assert(curScope && "couldn't find current scope");
     if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
-        !privatizedSymbols.contains(sym) &&
-        !sym->test(semantics::Symbol::Flag::OmpPreDetermined) &&
-        (collectImplicit || !sym->test(semantics::Symbol::Flag::OmpImplicit)) &&
-        clauseScopes.contains(&sym->owner()))
+        !explicitlyPrivatizedSymbols.contains(sym) &&
+        shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
+      allPrivatizedSymbols.insert(sym);
       symbols.insert(sym);
+    }
   }
 }
 
@@ -363,10 +409,16 @@ void DataSharingProcessor::collectImplicitSymbols() {
     collectSymbols(semantics::Symbol::Flag::OmpImplicit, implicitSymbols);
 }
 
+void DataSharingProcessor::collectPreDeterminedSymbols() {
+  if (shouldCollectPreDeterminedSymbols)
+    collectSymbols(semantics::Symbol::Flag::OmpPreDetermined,
+                   preDeterminedSymbols);
+}
+
 void DataSharingProcessor::privatize(
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
-  for (const semantics::Symbol *sym : privatizedSymbols) {
+  for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
@@ -378,7 +430,7 @@ void DataSharingProcessor::privatize(
 
 void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
   insertLastPrivateCompare(op);
-  for (const semantics::Symbol *sym : privatizedSymbols)
+  for (const semantics::Symbol *sym : allPrivatizedSymbols)
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects()) {
@@ -387,20 +439,6 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
     } else {
       copyLastPrivateSymbol(sym, &lastPrivIP);
     }
-}
-
-void DataSharingProcessor::defaultPrivatize(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
-  for (const semantics::Symbol *sym : defaultSymbols)
-    doPrivatize(sym, clauseOps, privateSyms);
-}
-
-void DataSharingProcessor::implicitPrivatize(
-    mlir::omp::PrivateClauseOps *clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms) {
-  for (const semantics::Symbol *sym : implicitSymbols)
-    doPrivatize(sym, clauseOps, privateSyms);
 }
 
 void DataSharingProcessor::doPrivatize(
