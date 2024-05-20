@@ -235,7 +235,7 @@ UseGnuStack("use-gnu-stack",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
-static cl::opt<bool>
+cl::opt<bool>
     TimeRewrite("time-rewrite",
                 cl::desc("print time spent in rewriting passes"), cl::Hidden,
                 cl::cat(BoltCategory));
