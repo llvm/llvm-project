@@ -47,9 +47,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     return genPlaceholderType(context);
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
-  auto elemTy = convertType(seqTy.getEleTy(), fileAttr, scope, loc);
+  mlir::LLVM::DITypeAttr elemTy =
+      convertType(seqTy.getEleTy(), fileAttr, scope, loc);
 
-  for (auto dim : seqTy.getShape()) {
+  for (fir::SequenceType::Extent dim : seqTy.getShape()) {
     auto intTy = mlir::IntegerType::get(context, 64);
     // FIXME: Only supporting lower bound of 1 at the moment. The
     // 'SequenceType' has information about the shape but not the shift. In
