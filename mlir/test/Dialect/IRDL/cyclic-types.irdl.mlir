@@ -6,14 +6,14 @@
 irdl.dialect @testd {
   // CHECK:   irdl.type @self_referencing {
   // CHECK:   %[[v0:[^ ]*]] = irdl.any
-  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @self_referencing<%[[v0]]>
+  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @testd::@self_referencing<%[[v0]]>
   // CHECK:   %[[v2:[^ ]*]] = irdl.is i32
   // CHECK:   %[[v3:[^ ]*]] = irdl.any_of(%[[v1]], %[[v2]])
   // CHECK:   irdl.parameters(%[[v3]])
   // CHECK: }
   irdl.type @self_referencing {
     %0 = irdl.any
-    %1 = irdl.parametric @self_referencing<%0>
+    %1 = irdl.parametric @testd::@self_referencing<%0>
     %2 = irdl.is i32
     %3 = irdl.any_of(%1, %2)
     irdl.parameters(%3)
@@ -22,13 +22,13 @@ irdl.dialect @testd {
 
   // CHECK:   irdl.type @type1 {
   // CHECK:   %[[v0:[^ ]*]] = irdl.any
-  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @type2<%[[v0]]>
+  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @testd::@type2<%[[v0]]>
   // CHECK:   %[[v2:[^ ]*]] = irdl.is i32
   // CHECK:   %[[v3:[^ ]*]] = irdl.any_of(%[[v1]], %[[v2]])
   // CHECK:   irdl.parameters(%[[v3]])
   irdl.type @type1 {
     %0 = irdl.any
-    %1 = irdl.parametric @type2<%0>
+    %1 = irdl.parametric @testd::@type2<%0>
     %2 = irdl.is i32
     %3 = irdl.any_of(%1, %2)
     irdl.parameters(%3)
@@ -36,13 +36,13 @@ irdl.dialect @testd {
 
   // CHECK:   irdl.type @type2 {
   // CHECK:   %[[v0:[^ ]*]] = irdl.any
-  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @type1<%[[v0]]>
+  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @testd::@type1<%[[v0]]>
   // CHECK:   %[[v2:[^ ]*]] = irdl.is i32
   // CHECK:   %[[v3:[^ ]*]] = irdl.any_of(%[[v1]], %[[v2]])
   // CHECK:   irdl.parameters(%[[v3]])
   irdl.type @type2 {
       %0 = irdl.any
-      %1 = irdl.parametric @type1<%0>
+      %1 = irdl.parametric @testd::@type1<%0>
       %2 = irdl.is i32
       %3 = irdl.any_of(%1, %2)
       irdl.parameters(%3)
