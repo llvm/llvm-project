@@ -77,7 +77,7 @@ if config.flang_test_triple:
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
-config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt", "Runtime", "Transforms"]
+config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt", "Runtime", "Semantics", "Transforms"]
 
 # If the flang examples are built, add examples to the config
 if config.flang_examples:
