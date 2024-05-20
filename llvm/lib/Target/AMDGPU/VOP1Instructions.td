@@ -1708,6 +1708,18 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst> : GCNPat <
   let OtherPredicates = [Pred];
 }
 
+//===----------------------------------------------------------------------===//
+// GFX13
+//===----------------------------------------------------------------------===//
+
+let OtherPredicates = [isGFX13Only] in {
+def : GCNPat <
+  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+  (V_MOV_B32_dpp8_gfx13 VGPR_32:$src, VGPR_32:$src,
+                        (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
+>;
+} // End OtherPredicates = [isGFX13Only]
+
 defm V_MOV_B64 : VOP1_Real_FULL_gfx1210_gfx13 <0x1d>;
 
 def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10>;
