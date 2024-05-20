@@ -195,15 +195,15 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
     if (!ref)
       continue;
 
-    DWARFUnit *cu = m_debug_info.GetUnit(*ref);
-    if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
-      incomplete_types.push_back(*ref);
-      continue;
-    }
-
-    DWARFDIE die = m_debug_info.GetDIE(*ref);
+    SymbolFileDWARF &dwarf = *llvm::cast<SymbolFileDWARF>(
+        m_module.GetSymbolFile()->GetBackingSymbolFile());
+    DWARFDIE die = dwarf.GetDIE(*ref);
     if (!die) {
       ReportInvalidDIERef(*ref, class_name.GetStringRef());
+      continue;
+    }
+    if (!die.GetCU()->Supports_DW_AT_APPLE_objc_complete_type()) {
+      incomplete_types.push_back(*ref);
       continue;
     }
 
