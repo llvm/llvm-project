@@ -157,13 +157,13 @@ static const MCPhysReg GPRArgRegs[] = {
 };
 
 static SDValue handleCMSEValue(const SDValue &Value, const ISD::InputArg &Arg,
-                               SelectionDAG &DAG, const SDLoc &DL, EVT RegVT) {
-  assert(Arg.ArgVT.isScalarInteger() && RegVT.isScalarInteger());
-  assert(Arg.ArgVT.bitsLT(RegVT));
+                               SelectionDAG &DAG, const SDLoc &DL) {
+  assert(Arg.ArgVT.isScalarInteger());
+  assert(Arg.ArgVT.bitsLT(MVT::i32));
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, Arg.ArgVT, Value);
   SDValue Ext =
       DAG.getNode(Arg.Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
-                  RegVT, Trunc);
+                  MVT::i32, Trunc);
   return Ext;
 }
 
@@ -2291,8 +2291,8 @@ SDValue ARMTargetLowering::LowerCallResult(
     // callee, the latter cannot be trusted to follow the rules of the ABI.
     const ISD::InputArg &Arg = Ins[VA.getValNo()];
     if (isCmseNSCall && Arg.ArgVT.isScalarInteger() &&
-        VA.getLocVT().isScalarInteger() && Arg.ArgVT.bitsLT(VA.getLocVT()))
-      Val = handleCMSEValue(Val, Arg, DAG, dl, VA.getLocVT());
+        VA.getLocVT().isScalarInteger() && Arg.ArgVT.bitsLT(MVT::i32))
+      Val = handleCMSEValue(Val, Arg, DAG, dl);
 
     InVals.push_back(Val);
   }
@@ -4642,8 +4642,8 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       // caller, the latter cannot be trusted to follow the rules of the ABI.
       const ISD::InputArg &Arg = Ins[VA.getValNo()];
       if (AFI->isCmseNSEntryFunction() && Arg.ArgVT.isScalarInteger() &&
-          RegVT.isScalarInteger() && Arg.ArgVT.bitsLT(RegVT))
-        ArgValue = handleCMSEValue(ArgValue, Arg, DAG, dl, RegVT);
+          RegVT.isScalarInteger() && Arg.ArgVT.bitsLT(MVT::i32))
+        ArgValue = handleCMSEValue(ArgValue, Arg, DAG, dl);
 
       InVals.push_back(ArgValue);
     } else { // VA.isRegLoc()
