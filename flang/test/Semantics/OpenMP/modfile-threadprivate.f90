@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_modfile.py %s %flang_fc1 -fopenmp
 ! Check correct modfile generation for OpenMP threadprivate directive.
 
