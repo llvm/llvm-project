@@ -2404,16 +2404,24 @@ void OmpStructureChecker::CheckReductionModifier(
   }
   ReductionModifier modifier{*maybeModifier};
   const DirectiveContext &dirCtx{GetContext()};
+  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop) {
+    // [5.2:257:33-34]
+    // If a reduction-modifier is specified in a reduction clause that
+    // appears on the directive, then the reduction modifier must be
+    // default.
+    context_.Say(GetContext().clauseSource,
+        "REDUCTION modifier on LOOP directive must be DEFAULT"_err_en_US);
+  }
   if (modifier == ReductionModifier::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
         llvm::omp::Directive::OMPD_do,
         // llvm::omp::Directive::OMPD_for, C++ only
-        llvm::omp::Directive::OMPD_loop,
         llvm::omp::Directive::OMPD_scope,
         llvm::omp::Directive::OMPD_sections,
-        llvm::omp::Directive::OMPD_single,
-        llvm::omp::Directive::OMPD_workshare,
+        // "single" and "workshare" are worksharing directives, but
+        // they don't allow reduction clause.
+        // "loop" is also worksharing, but has different restrictions.
     };
     if (dirCtx.directive != llvm::omp::Directive::OMPD_parallel &&
         !llvm::is_contained(worksharing, dirCtx.directive)) {
@@ -2439,7 +2447,7 @@ void OmpStructureChecker::CheckReductionModifier(
     }
   } else {
     // Catch-all for potential future modifiers to make sure that this
-    // function is up-tp-date.
+    // function is up-to-date.
     context_.Say(GetContext().clauseSource,
         "Unexpected modifier on REDUCTION clause"_err_en_US);
   }
