@@ -50,12 +50,15 @@ int main(int, char**)
         // responds with an empty message, which we probably want to
         // treat as a failure code otherwise, but we can detect that
         // with the preprocessor.
+#if defined(_NEWLIB_VERSION)
+        [[maybe_unused]] constexpr bool is_newlib = true;
+#else
+        [[maybe_unused]] constexpr bool is_newlib = false;
+#endif
         LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0       // AIX
                       || msg.rfind("No error information", 0) == 0 // Musl
                       || msg.rfind("Unknown error", 0) == 0        // Glibc
-#if defined(_NEWLIB_VERSION)
-                      || msg.empty()
-#endif
+                      || (is_newlib && msg.empty())
         );
         assert(errno == E2BIG);
     }
