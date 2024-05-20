@@ -2416,22 +2416,10 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
   if (Shl->hasOneUse() && Amt != 0 &&
       shouldChangeType(ShType->getScalarSizeInBits(), TypeBits - Amt)) {
-    auto FoldICmpShlToICmpTrunc = [&](ICmpInst::Predicate Pred,
-                                      const APInt &C) -> Instruction * {
-      if (C.countr_zero() < Amt)
-        return nullptr;
-      Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
-      Constant *NewC =
-          ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
-      return new ICmpInst(
-          Pred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
-          NewC);
-    };
+    ICmpInst::Predicate CmpPred = Pred;
+    APInt RHSC = C;
 
-    if (Instruction *Res = FoldICmpShlToICmpTrunc(Pred, C))
-      return Res;
-
-    if (ICmpInst::isStrictPredicate(Pred)) {
+    if (RHSC.countr_zero() < Amt && ICmpInst::isStrictPredicate(CmpPred)) {
       // Try the flipped strictness predicate.
       // e.g.:
       // icmp ult i64 (shl X, 32), 8589934593 ->
@@ -2441,12 +2429,18 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
       if (auto FlippedStrictness =
               InstCombiner::getFlippedStrictnessPredicateAndConstant(
                   Pred, ConstantInt::get(ShType->getContext(), C))) {
-        ICmpInst::Predicate NewPred = FlippedStrictness->first;
-        const APInt &NewC =
-            cast<ConstantInt>(FlippedStrictness->second)->getValue();
-        if (Instruction *Res = FoldICmpShlToICmpTrunc(NewPred, NewC))
-          return Res;
+        CmpPred = FlippedStrictness->first;
+        RHSC = cast<ConstantInt>(FlippedStrictness->second)->getValue();
       }
+    }
+
+    if (RHSC.countr_zero() >= Amt) {
+      Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
+      Constant *NewC =
+          ConstantInt::get(TruncTy, RHSC.ashr(*ShiftAmt).trunc(TypeBits - Amt));
+      return new ICmpInst(
+          CmpPred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
+          NewC);
     }
   }
 
