@@ -610,13 +610,15 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.NewAlignOverride = 0;
   }
 
-  // The -f[no-]raw-string-literals option is only valid in C.
+  // The -f[no-]raw-string-literals option is only valid in C and C++ standards
+  // before C++11.
   if ((Args.hasArg(OPT_fraw_string_literals) ||
        Args.hasArg(OPT_fno_raw_string_literals)) &&
-      LangOpts.CPlusPlus) {
-    Diags.Report(diag::warn_drv_fraw_string_literals_in_cxx)
+      LangOpts.CPlusPlus11) {
+    Diags.Report(diag::warn_drv_fraw_string_literals_in_cxx11)
         << bool(LangOpts.RawStringLiterals);
-    LangOpts.RawStringLiterals = LangOpts.CPlusPlus11;
+    // Do not allow disabling raw string literals in C++11 or later.
+    LangOpts.RawStringLiterals = true;
   }
 
   // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.

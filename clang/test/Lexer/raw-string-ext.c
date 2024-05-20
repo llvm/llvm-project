@@ -6,8 +6,8 @@
 
 // RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=c++03 -verify=unsupported,cxx-unsupported %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=gnu++03 -verify=unsupported,cxx-unsupported %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=c++03 -fraw-string-literals -verify=unsupported,cxx-unsupported,yes %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=gnu++03 -fraw-string-literals -verify=unsupported,cxx-unsupported,yes %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=c++03 -fraw-string-literals -verify=supported %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=gnu++03 -fraw-string-literals -verify=supported %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=c++11 -verify=supported,cxx %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=gnu++11 -verify=supported,cxx %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -Wno-unused -std=c++11 -fno-raw-string-literals -verify=supported,no %s
