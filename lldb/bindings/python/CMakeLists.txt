@@ -11,6 +11,7 @@ add_custom_command(
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
+  DEPENDS lldb-sbapi-dwarf-enums
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prepare_binding_python.py
   COMMAND ${Python3_EXECUTABLE} ${LLDB_SOURCE_DIR}/bindings/prepare_bindings.py
       ${framework_arg}
