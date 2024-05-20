@@ -1597,7 +1597,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
             // CUDA kernels assume that pointers are in global address space
             // See:
             // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parameter-state-space
-            assert(addrSpace == 0 && "Invalid address space");
             O << ".ptr .global ";
             if (I->getParamAlign().valueOrOne() != 1) {
               Align ParamAlign = I->getParamAlign().value();
