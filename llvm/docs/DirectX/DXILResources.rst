@@ -118,13 +118,19 @@ Buffers
 
 .. code-block:: llvm
 
-   target("dx.Buffer", ElementType, IsWriteable, IsROV)
+   target("dx.TypedBuffer", ElementType, IsWriteable, IsROV)
+   target("dx.RawBuffer", ElementType, IsWriteable, IsROV)
 
-There is only one buffer type. This can represent both UAVs and SRVs via the
-``IsWriteable`` field. Since the type that's encoded is an llvm type, it
-handles both ``Buffer`` and ``StructuredBuffer`` uniformly. For ``RawBuffer``,
-the type is ``i8``, which is unambiguous since ``char`` isn't a legal type in
-HLSL.
+We need two separate buffer types to account for the differences between the
+16-byte `bufferLoad`_ / `bufferStore`_ operations that work on DXIL's
+TypedBuffers and the `rawBufferLoad`_ / `rawBufferStore`_ operations that are
+used for DXIL's RawBuffers and StructuredBuffers. We call the latter
+"RawBuffer" to match the naming of the operations, but it can represent both
+the Raw and Structured variants.
+
+For TypedBuffer, the element type must be an integer or floating point type.
+For RawBuffer the type can be an integer, floating point, or struct type.
+HLSL's ByteAddressBuffer is represented by an `i8` element type.
 
 These types are generally used by BufferLoad and BufferStore operations, as
 well as atomics.
@@ -144,6 +150,11 @@ There are a few fields to describe variants of all of these types:
        writeable) and UAVs (writeable).
    * - IsROV
      - Whether the UAV is a rasterizer ordered view. Always ``0`` for SRVs.
+
+.. _bufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferload
+.. _bufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
+.. _rawBufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
+.. _rawBufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferstore
 
 Textures
 --------
@@ -402,9 +413,6 @@ intrinsics.
 
 .. note:: TODO: Can we always derive the alignment late, or do we need to
           parametrize these ops?
-
-.. _rawBufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
-.. _rawBufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferstore
 
 .. note:: TODO: We need to account for `CheckAccessFullyMapped`_ here.
 
