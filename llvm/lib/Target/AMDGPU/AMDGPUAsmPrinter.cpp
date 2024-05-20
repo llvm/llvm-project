@@ -1332,7 +1332,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
-  AMDGPU::initDefaultAMDKernelCodeT(Out, &STM);
+  Out.initDefault(&STM, Ctx, /*InitMCExpr=*/false);
 
   Out.compute_pgm_resource1_registers =
       CurrentProgramInfo.getComputePGMRSrc1(STM, Ctx);

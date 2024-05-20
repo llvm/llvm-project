@@ -32,6 +32,8 @@ using namespace llvm::AMDGPU;
 //     A check to see if AMDGPUMCKernelCodeT has a specific member so it can
 //     determine which of the original amd_kernel_code_t members are duplicated
 //     (if the names don't match, the table driven strategy won't work).
+//   - IsMCExprXXXXX class
+//     Check whether a AMDGPUMCKernelcodeT struct member is MCExpr-ified or not.
 //   - GetMemberXXXXX class
 //     A retrieval helper for said member (of type const MCExpr *&). Will return
 //     a `Phony` const MCExpr * initialized to nullptr to preserve reference
@@ -418,18 +420,56 @@ static void printAmdKernelCodeField(const AMDGPUMCKernelCodeT &C, int FldIndex,
     Printer(get_amd_kernel_code_t_FldNames()[FldIndex + 1], C, OS, Ctx);
 }
 
+AMDGPUMCKernelCodeT::AMDGPUMCKernelCodeT() {
+  amd_kernel_code_version_major = 0;
+  amd_kernel_code_version_minor = 0;
+  amd_machine_kind = 0;
+  amd_machine_version_major = 0;
+  amd_machine_version_minor = 0;
+  amd_machine_version_stepping = 0;
+  kernel_code_entry_byte_offset = 0;
+  kernel_code_prefetch_byte_offset = 0;
+  kernel_code_prefetch_byte_size = 0;
+  reserved0 = 0;
+  compute_pgm_resource_registers = 0;
+  code_properties = 0;
+  workgroup_group_segment_byte_size = 0;
+  gds_segment_byte_size = 0;
+  kernarg_segment_byte_size = 0;
+  workgroup_fbarrier_count = 0;
+  reserved_vgpr_first = 0;
+  reserved_vgpr_count = 0;
+  reserved_sgpr_first = 0;
+  reserved_sgpr_count = 0;
+  debug_wavefront_private_segment_offset_sgpr = 0;
+  debug_private_segment_buffer_sgpr = 0;
+  kernarg_segment_alignment = 0;
+  group_segment_alignment = 0;
+  private_segment_alignment = 0;
+  wavefront_size = 0;
+  call_convention = 0;
+  memset(reserved3, 0, sizeof(reserved3));
+  runtime_loader_kernel_symbol = 0;
+  memset(control_directives, 0, sizeof(control_directives));
+}
+
 void AMDGPUMCKernelCodeT::initDefault(const MCSubtargetInfo *STI,
-                                      MCContext &Ctx) {
+                                      MCContext &Ctx, bool InitMCExpr) {
+  AMDGPUMCKernelCodeT();
+
   AMDGPU::initDefaultAMDKernelCodeT(*this, STI);
-  const MCExpr *ZeroExpr = MCConstantExpr::create(0, Ctx);
-  compute_pgm_resource1_registers =
-      MCConstantExpr::create(Lo_32(compute_pgm_resource_registers), Ctx);
-  compute_pgm_resource2_registers =
-      MCConstantExpr::create(Hi_32(compute_pgm_resource_registers), Ctx);
-  is_dynamic_callstack = ZeroExpr;
-  wavefront_sgpr_count = ZeroExpr;
-  workitem_vgpr_count = ZeroExpr;
-  workitem_private_segment_byte_size = ZeroExpr;
+
+  if (InitMCExpr) {
+    const MCExpr *ZeroExpr = MCConstantExpr::create(0, Ctx);
+    compute_pgm_resource1_registers =
+        MCConstantExpr::create(Lo_32(compute_pgm_resource_registers), Ctx);
+    compute_pgm_resource2_registers =
+        MCConstantExpr::create(Hi_32(compute_pgm_resource_registers), Ctx);
+    is_dynamic_callstack = ZeroExpr;
+    wavefront_sgpr_count = ZeroExpr;
+    workitem_vgpr_count = ZeroExpr;
+    workitem_private_segment_byte_size = ZeroExpr;
+  }
 }
 
 void AMDGPUMCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {

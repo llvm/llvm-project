@@ -1222,37 +1222,6 @@ unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
 void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
                                const MCSubtargetInfo *STI) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  KernelCode.amd_kernel_code_version_major = 0;
-  KernelCode.amd_kernel_code_version_minor = 0;
-  KernelCode.amd_machine_kind = 0;
-  KernelCode.amd_machine_version_major = 0;
-  KernelCode.amd_machine_version_minor = 0;
-  KernelCode.amd_machine_version_stepping = 0;
-  KernelCode.kernel_code_prefetch_byte_offset = 0;
-  KernelCode.kernel_code_prefetch_byte_size = 0;
-  KernelCode.reserved0 = 0;
-  KernelCode.compute_pgm_resource_registers = 0;
-  KernelCode.code_properties = 0;
-  KernelCode.workgroup_group_segment_byte_size = 0;
-  KernelCode.gds_segment_byte_size = 0;
-  KernelCode.kernarg_segment_byte_size = 0;
-  KernelCode.workgroup_fbarrier_count = 0;
-  KernelCode.reserved_vgpr_first = 0;
-  KernelCode.reserved_vgpr_count = 0;
-  KernelCode.reserved_sgpr_first = 0;
-  KernelCode.reserved_sgpr_count = 0;
-  KernelCode.debug_wavefront_private_segment_offset_sgpr = 0;
-  KernelCode.debug_private_segment_buffer_sgpr = 0;
-  KernelCode.kernarg_segment_alignment = 0;
-  KernelCode.group_segment_alignment = 0;
-  KernelCode.private_segment_alignment = 0;
-  KernelCode.call_convention = 0;
-  memset(KernelCode.reserved3, 0, sizeof(KernelCode.reserved3));
-  KernelCode.runtime_loader_kernel_symbol = 0;
-  memset(KernelCode.control_directives, 0,
-         sizeof(KernelCode.control_directives));
-
   KernelCode.amd_kernel_code_version_major = 1;
   KernelCode.amd_kernel_code_version_minor = 2;
   KernelCode.amd_machine_kind = 1; // AMD_MACHINE_KIND_AMDGPU
