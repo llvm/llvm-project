@@ -131,10 +131,10 @@ void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
   if (Imm != 0) {
     O << " offset:";
 
-    // GFX12 uses a 24-bit signed offset for VBUFFER.
+    // GFX12+ uses a 24-bit signed offset for VBUFFER.
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     bool IsVBuffer = Desc.TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF);
-    if (AMDGPU::isGFX12(STI) && IsVBuffer)
+    if (AMDGPU::isGFX12Plus(STI) && IsVBuffer)
       O << formatDec(SignExtend32<24>(Imm));
     else
       printU16ImmDecOperand(MI, OpNo, O);
