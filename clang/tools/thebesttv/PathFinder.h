@@ -90,11 +90,6 @@ struct IntraProceduralBfs {
 
     int getIndex(int u) { return u - nodeRange.first; }
 
-  public:
-    IntraProceduralBfs(const ICFG &icfg, int fid)
-        : icfg(icfg), fid(fid), nodeRange(getNodeRange(icfg, fid)),
-          n(nodeRange.second - nodeRange.first + 1), visited(n), fa(n) {}
-
     // 在 fid 代表的函数中进行 BFS
     void bfs(int u, const std::set<int> &pointsToAvoid) {
         requireTrue(inFunction(u), "BFS source not in function");
@@ -124,6 +119,14 @@ struct IntraProceduralBfs {
                 fa[vi] = u;
             }
         }
+    }
+
+  public:
+    IntraProceduralBfs(const ICFG &icfg, const std::set<int> &pointsToAvoid,
+                       int fid, int u)
+        : icfg(icfg), fid(fid), nodeRange(getNodeRange(icfg, fid)),
+          n(nodeRange.second - nodeRange.first + 1), visited(n), fa(n) {
+        bfs(u, pointsToAvoid);
     }
 
     bool reachable(int v) {
@@ -163,9 +166,6 @@ struct InterProceduralDij {
         bool operator<(const Node &b) const { return d > b.d; }
     };
 
-  public:
-    InterProceduralDij(const ICFG &icfg) : icfg(icfg), d(icfg.n), fa(icfg.n) {}
-
     void dij(int s, const std::set<int> &pointsToAvoid) {
         std::fill(d.begin(), d.end(), INF);
         d[s] = 0;
@@ -197,6 +197,13 @@ struct InterProceduralDij {
                 }
             }
         }
+    }
+
+  public:
+    InterProceduralDij(const ICFG &icfg, const std::set<int> &pointsToAvoid,
+                       int s)
+        : icfg(icfg), d(icfg.n), fa(icfg.n) {
+        dij(s, pointsToAvoid);
     }
 
     std::vector<int> trace(int u) {
