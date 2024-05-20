@@ -18,9 +18,9 @@
 namespace radsan_testing {
 
 template <typename Function> void RealtimeInvoke(Function &&Func) {
-  radsan_realtime_enter();
+  __radsan_realtime_enter();
   std::forward<Function>(Func)();
-  radsan_realtime_exit();
+  __radsan_realtime_exit();
 }
 
 template <typename Function>

@@ -18,7 +18,7 @@ extern "C" {
 
   A call to this method is added to the preinit array on Linux systems.
 */
-SANITIZER_INTERFACE_ATTRIBUTE void radsan_init();
+SANITIZER_INTERFACE_ATTRIBUTE void __radsan_init();
 
 /** Enter real-time context.
 
@@ -26,25 +26,25 @@ SANITIZER_INTERFACE_ATTRIBUTE void radsan_init();
   violations are detected. Calls to this method are injected at the code
   generation stage when RADSan is enabled.
 */
-SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_enter();
+SANITIZER_INTERFACE_ATTRIBUTE void __radsan_realtime_enter();
 
 /** Exit the real-time context.
 
   When not in a real-time context, RADSan interceptors will simply forward
   intercepted method calls to the real methods.
 */
-SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_exit();
+SANITIZER_INTERFACE_ATTRIBUTE void __radsan_realtime_exit();
 
 /** Disable all RADSan error reporting.
 
   Injected into the code if "nosanitize(realtime)" is on a function.
 */
-SANITIZER_INTERFACE_ATTRIBUTE void radsan_off();
+SANITIZER_INTERFACE_ATTRIBUTE void __radsan_off();
 
 /** Re-enable all RADSan error reporting.
 
-  The counterpart to `radsan_off`.
+  The counterpart to `__radsan_off`.
 */
-SANITIZER_INTERFACE_ATTRIBUTE void radsan_on();
+SANITIZER_INTERFACE_ATTRIBUTE void __radsan_on();
 
 } // extern "C"
