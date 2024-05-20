@@ -1,5 +1,3 @@
-# -*- Python -*-
-
 import os
 
 # Setup config name.
