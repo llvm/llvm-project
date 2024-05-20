@@ -79,8 +79,8 @@ protected:
 
   bool IsLittle;
 
-  bool StreamingSVEMode;
-  bool StreamingCompatibleSVEMode;
+  bool IsStreaming;
+  bool IsStreamingCompatible;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -120,8 +120,7 @@ public:
                    StringRef FS, const TargetMachine &TM, bool LittleEndian,
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
-                   bool StreamingSVEMode = false,
-                   bool StreamingCompatibleSVEMode = false,
+                   bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
 // Getters for SubtargetFeatures defined in tablegen
@@ -165,7 +164,7 @@ public:
   bool isXRaySupported() const override { return true; }
 
   /// Returns true if the function has a streaming body.
-  bool isStreaming() const { return StreamingSVEMode; }
+  bool isStreaming() const { return IsStreaming; }
 
   /// Returns true if the function has a streaming-compatible body.
   bool isStreamingCompatible() const;

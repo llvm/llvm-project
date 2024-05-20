@@ -408,10 +408,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
   bool HasMinSize = F.hasMinSize();
 
-  bool StreamingSVEMode = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
-                          F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool StreamingCompatibleSVEMode =
-      F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  bool IsStreaming = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
+                     F.hasFnAttribute("aarch64_pstate_sm_body");
+  bool IsStreamingCompatible = F.hasFnAttribute("aarch64_pstate_sm_compatible");
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
@@ -439,10 +438,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   SmallString<512> Key;
   raw_svector_ostream(Key) << "SVEMin" << MinSVEVectorSize << "SVEMax"
-                           << MaxSVEVectorSize
-                           << "StreamingSVEMode=" << StreamingSVEMode
-                           << "StreamingCompatibleSVEMode="
-                           << StreamingCompatibleSVEMode << CPU << TuneCPU << FS
+                           << MaxSVEVectorSize << "IsStreaming=" << IsStreaming
+                           << "IsStreamingCompatible=" << IsStreamingCompatible
+                           << CPU << TuneCPU << FS
                            << "HasMinSize=" << HasMinSize;
 
   auto &I = SubtargetMap[Key];
@@ -453,12 +451,10 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, StreamingSVEMode, StreamingCompatibleSVEMode,
-        HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
   }
 
-  assert((!StreamingSVEMode || I->hasSME()) &&
-         "Expected SME to be available");
+  assert((!IsStreaming || I->hasSME()) && "Expected SME to be available");
 
   return I.get();
 }
