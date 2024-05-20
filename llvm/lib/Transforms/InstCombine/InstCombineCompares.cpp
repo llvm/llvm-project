@@ -2414,14 +2414,37 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant that may be more target-friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
-  if (Shl->hasOneUse() && Amt != 0 && C.countr_zero() >= Amt &&
-      DL.isLegalInteger(TypeBits - Amt)) {
-    Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
-    if (auto *ShVTy = dyn_cast<VectorType>(ShType))
-      TruncTy = VectorType::get(TruncTy, ShVTy->getElementCount());
-    Constant *NewC =
-        ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
-    return new ICmpInst(Pred, Builder.CreateTrunc(X, TruncTy), NewC);
+  if (Shl->hasOneUse() && Amt != 0 && DL.isLegalInteger(TypeBits - Amt)) {
+    auto FoldICmpShlToICmpTrunc = [&](ICmpInst::Predicate Pred,
+                                      const APInt &C) -> Instruction * {
+      if (C.countr_zero() < Amt)
+        return nullptr;
+      Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
+      Constant *NewC =
+          ConstantInt::get(TruncTy, C.ashr(*ShiftAmt).trunc(TypeBits - Amt));
+      return new ICmpInst(
+          Pred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
+          NewC);
+    };
+
+    if (Instruction *Res = FoldICmpShlToICmpTrunc(Pred, C))
+      return Res;
+
+    // Try the flipped strictness predicate.
+    // e.g.:
+    // icmp ult i64 (shl X, 32), 8589934593 ->
+    // icmp ule i64 (shl X, 32), 8589934592 ->
+    // icmp ule i32 (trunc X, i32), 2 ->
+    // icmp ult i32 (trunc X, i32), 3
+    if (auto FlippedStrictness =
+            InstCombiner::getFlippedStrictnessPredicateAndConstant(
+                Pred, ConstantInt::get(ShType->getContext(), C))) {
+      ICmpInst::Predicate NewPred = FlippedStrictness->first;
+      const APInt &NewC =
+          cast<ConstantInt>(FlippedStrictness->second)->getValue();
+      if (Instruction *Res = FoldICmpShlToICmpTrunc(NewPred, NewC))
+        return Res;
+    }
   }
 
   return nullptr;
