@@ -222,7 +222,8 @@ struct TransferWritePermutationLowering
         AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
-    // In memref case, MaskableOpRewritePattern cannot replaceOp with result.
+    // In the memref case there's no return value. Use empty value to signal
+    // success.
     return Value();
   }
 };
@@ -307,7 +308,8 @@ struct TransferWriteNonPermutationLowering
         AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
-    // In memref case, MaskableOpRewritePattern cannot replaceOp with result.
+    // In the memref case there's no return value. Use empty value to signal
+    // success.
     return Value();
   }
 };
