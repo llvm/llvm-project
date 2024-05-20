@@ -1988,6 +1988,7 @@ Error RewriteInstance::readSpecialSections() {
 
   if (ErrorOr<BinarySection &> BATSec =
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
+    BC->HasBATSection = true;
     // Do not read BAT when plotting a heatmap
     if (!opts::HeatmapMode) {
       if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
@@ -4787,11 +4788,20 @@ void RewriteInstance::updateELFSymbolTable(
     if (!IsDynSym && shouldStrip(Symbol))
       continue;
 
+    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
+    assert(SymbolName && "cannot get symbol name");
+
     const BinaryFunction *Function =
         BC->getBinaryFunctionAtAddress(Symbol.st_value);
     // Ignore false function references, e.g. when the section address matches
     // the address of the function.
     if (Function && Symbol.getType() == ELF::STT_SECTION)
+      Function = nullptr;
+
+    // Ignore input hot markers as function aliases – markers are handled
+    // separately.
+    if (Function &&
+        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end"))
       Function = nullptr;
 
     // For non-dynamic symtab, make sure the symbol section matches that of
@@ -4905,8 +4915,6 @@ void RewriteInstance::updateELFSymbolTable(
     }
 
     // Handle special symbols based on their name.
-    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
-    assert(SymbolName && "cannot get symbol name");
 
     auto updateSymbolValue = [&](const StringRef Name,
                                  std::optional<uint64_t> Value = std::nullopt) {
