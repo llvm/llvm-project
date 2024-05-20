@@ -1256,6 +1256,7 @@ void Parser::ParseAvailabilityAttribute(
   enum { Introduced, Deprecated, Obsoleted, Unknown };
   AvailabilityChange Changes[Unknown];
   ExprResult MessageExpr, ReplacementExpr;
+  IdentifierLoc *EnvironmentLoc = nullptr;
 
   // Opening '('.
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -1303,6 +1304,7 @@ void Parser::ParseAvailabilityAttribute(
     Ident_message = PP.getIdentifierInfo("message");
     Ident_strict = PP.getIdentifierInfo("strict");
     Ident_replacement = PP.getIdentifierInfo("replacement");
+    Ident_environment = PP.getIdentifierInfo("environment");
   }
 
   // Parse the optional "strict", the optional "replacement" and the set of
@@ -1350,6 +1352,13 @@ void Parser::ParseAvailabilityAttribute(
       continue;
     }
 
+    if (Keyword == Ident_environment) {
+      if (EnvironmentLoc != nullptr) {
+        Diag(KeywordLoc, diag::err_availability_redundant)
+            << Keyword << SourceRange(EnvironmentLoc->Loc);
+      }
+    }
+
     if (Tok.isNot(tok::equal)) {
       Diag(Tok, diag::err_expected_after) << Keyword << tok::equal;
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -1370,6 +1379,15 @@ void Parser::ParseAvailabilityAttribute(
         ReplacementExpr = ParseUnevaluatedStringLiteralExpression();
         continue;
       }
+    }
+    if (Keyword == Ident_environment) {
+      if (Tok.isNot(tok::identifier)) {
+        Diag(Tok, diag::err_availability_expected_environment);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return;
+      }
+      EnvironmentLoc = ParseIdentifierLoc();
+      continue;
     }
 
     // Special handling of 'NA' only when applied to introduced or
@@ -1452,7 +1470,7 @@ void Parser::ParseAvailabilityAttribute(
                SourceRange(AvailabilityLoc, T.getCloseLocation()), ScopeName,
                ScopeLoc, Platform, Changes[Introduced], Changes[Deprecated],
                Changes[Obsoleted], UnavailableLoc, MessageExpr.get(), Form,
-               StrictLoc, ReplacementExpr.get());
+               StrictLoc, ReplacementExpr.get(), EnvironmentLoc);
 }
 
 /// Parse the contents of the "external_source_symbol" attribute.

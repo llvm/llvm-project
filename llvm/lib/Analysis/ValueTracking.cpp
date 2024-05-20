@@ -4751,7 +4751,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass();
         return;
       }
-      if (isa<UndefValue>(Elt))
+      if (isa<PoisonValue>(Elt))
         continue;
       auto *CElt = dyn_cast<ConstantFP>(Elt);
       if (!CElt) {
