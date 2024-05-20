@@ -5275,3 +5275,23 @@ define <2 x i1> @test_icmp_shl_vec(<2 x i64> %x) {
   %cmp = icmp ult <2 x i64> %shl, splat(i64 8589934593)
   ret <2 x i1> %cmp
 }
+
+define i1 @test_icmp_shl_eq(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_eq(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl i64 %x, 32
+  %cmp = icmp eq i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_sgt(i64 %x) {
+; CHECK-LABEL: @test_icmp_shl_sgt(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i64 %x, 32
+  %cmp = icmp sgt i64 %shl, 8589934591
+  ret i1 %cmp
+}
