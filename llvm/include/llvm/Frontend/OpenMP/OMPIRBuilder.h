@@ -1770,7 +1770,7 @@ public:
                                Value *OutlinedFnID,
                                EmitFallbackCallbackTy EmitTargetCallFallbackCB,
                                TargetKernelArgs &Args, Value *DeviceID,
-                               Value *RTLoc);
+                               Value *RTLoc, InsertPointTy AllocaIP);
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
   /// ForEndCall, emit map types to be passed for the end of the region instead
