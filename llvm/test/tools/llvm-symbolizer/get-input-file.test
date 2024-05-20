@@ -1,7 +1,7 @@
 # If binary input file is not specified, llvm-symbolizer assumes it is the first
 # item in the command.
 
-# No input items at all. Report unknown line, but do not produce any output on stderr.
+# No input items at all. Report an unknown line, but do not produce any output on stderr.
 RUN: echo | llvm-symbolizer 2>%t.1.err | FileCheck %s --check-prefix=NOSOURCE
 RUN: FileCheck --input-file=%t.1.err --implicit-check-not={{.}} --allow-empty %s
 
