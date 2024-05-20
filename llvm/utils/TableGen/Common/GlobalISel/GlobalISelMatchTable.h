@@ -1692,7 +1692,7 @@ public:
   }
 };
 
-/// Generates code to check that the first result has only one non-debug user.
+/// Generates code to check that the first result has only one use.
 class OneUsePredicateMatcher : public InstructionPredicateMatcher {
 public:
   OneUsePredicateMatcher(unsigned InsnVarID)

@@ -602,8 +602,25 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         ToEraseMI.insert(Next);
     }
   }
-  for (MachineInstr *BlockAddrI : ToEraseMI)
+
+  // If we just delete G_BLOCK_ADDR instructions with BlockAddress operands,
+  // this leaves their BasicBlock counterparts in a "address taken" status. This
+  // would make AsmPrinter to generate a series of unneeded labels of a "Address
+  // of block that was removed by CodeGen" kind. Let's first ensure that we
+  // don't have a dangling BlockAddress constants by zapping the BlockAddress
+  // nodes, and only after that proceed with erasing G_BLOCK_ADDR instructions.
+  Constant *Replacement =
+      ConstantInt::get(Type::getInt32Ty(MF.getFunction().getContext()), 1);
+  for (MachineInstr *BlockAddrI : ToEraseMI) {
+    if (BlockAddrI->getOpcode() == TargetOpcode::G_BLOCK_ADDR) {
+      BlockAddress *BA = const_cast<BlockAddress *>(
+          BlockAddrI->getOperand(1).getBlockAddress());
+      BA->replaceAllUsesWith(
+          ConstantExpr::getIntToPtr(Replacement, BA->getType()));
+      BA->destroyConstant();
+    }
     BlockAddrI->eraseFromParent();
+  }
 }
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {

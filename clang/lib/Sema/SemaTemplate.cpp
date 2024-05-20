@@ -5653,6 +5653,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
           /*UpdateArgsWithConversions=*/false))
     return ExprError();
 
+  DiagnoseUseOfDecl(NamedConcept, ConceptNameInfo.getLoc());
+
   auto *CSD = ImplicitConceptSpecializationDecl::Create(
       Context, NamedConcept->getDeclContext(), NamedConcept->getLocation(),
       CanonicalConverted);
@@ -9859,7 +9861,8 @@ Decl *Sema::ActOnTemplateDeclarator(Scope *S,
 
 Decl *Sema::ActOnConceptDefinition(
     Scope *S, MultiTemplateParamsArg TemplateParameterLists,
-    const IdentifierInfo *Name, SourceLocation NameLoc, Expr *ConstraintExpr) {
+    const IdentifierInfo *Name, SourceLocation NameLoc, Expr *ConstraintExpr,
+    const ParsedAttributesView &Attrs) {
   DeclContext *DC = CurContext;
 
   if (!DC->getRedeclContext()->isFileContext()) {
@@ -9921,6 +9924,9 @@ Decl *Sema::ActOnConceptDefinition(
   ActOnDocumentableDecl(NewDecl);
   if (AddToScope)
     PushOnScopeChains(NewDecl, S);
+
+  ProcessDeclAttributeList(S, NewDecl, Attrs);
+
   return NewDecl;
 }
 
@@ -10494,7 +10500,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // specialization, with the template arguments from the previous
   // specialization.
   // Take copies of (semantic and syntactic) template argument lists.
-  const TemplateArgumentList *TemplArgs = TemplateArgumentList::CreateCopy(
+  TemplateArgumentList *TemplArgs = TemplateArgumentList::CreateCopy(
       Context, Specialization->getTemplateSpecializationArgs()->asArray());
   FD->setFunctionTemplateSpecialization(
       Specialization->getPrimaryTemplate(), TemplArgs, /*InsertPos=*/nullptr,
@@ -11118,8 +11124,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
       Def->setTemplateSpecializationKind(TSK);
 
       if (!getDLLAttr(Def) && getDLLAttr(Specialization) &&
-          (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-           !Context.getTargetInfo().getTriple().isPS())) {
+          Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
         // An explicit instantiation definition can add a dll attribute to a
         // template with a previous instantiation declaration. MinGW doesn't
         // allow this.
@@ -11136,8 +11141,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     bool NewlyDLLExported =
         !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
     if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
-        (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-         !Context.getTargetInfo().getTriple().isPS())) {
+        Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
       // An explicit instantiation definition can add a dll attribute to a
       // template with a previous implicit instantiation. MinGW doesn't allow
       // this. We limit clang to only adding dllexport, to avoid potentially

@@ -21,6 +21,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
@@ -944,20 +945,21 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     cutOffParsing();
     if (CurParsedObjCImpl) {
       // Code-complete Objective-C methods even without leading '-'/'+' prefix.
-      Actions.CodeCompleteObjCMethodDecl(getCurScope(),
-                                         /*IsInstanceMethod=*/std::nullopt,
-                                         /*ReturnType=*/nullptr);
+      Actions.CodeCompletion().CodeCompleteObjCMethodDecl(
+          getCurScope(),
+          /*IsInstanceMethod=*/std::nullopt,
+          /*ReturnType=*/nullptr);
     }
 
-    Sema::ParserCompletionContext PCC;
+    SemaCodeCompletion::ParserCompletionContext PCC;
     if (CurParsedObjCImpl) {
-      PCC = Sema::PCC_ObjCImplementation;
+      PCC = SemaCodeCompletion::PCC_ObjCImplementation;
     } else if (PP.isIncrementalProcessingEnabled()) {
-      PCC = Sema::PCC_TopLevelOrExpression;
+      PCC = SemaCodeCompletion::PCC_TopLevelOrExpression;
     } else {
-      PCC = Sema::PCC_Namespace;
+      PCC = SemaCodeCompletion::PCC_Namespace;
     };
-    Actions.CodeCompleteOrdinaryName(getCurScope(), PCC);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), PCC);
     return nullptr;
   case tok::kw_import: {
     Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
@@ -1562,7 +1564,8 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
     // Parse the common declaration-specifiers piece.
     DeclSpec DS(AttrFactory);
-    ParseDeclarationSpecifiers(DS);
+    ParsedTemplateInfo TemplateInfo;
+    ParseDeclarationSpecifiers(DS, TemplateInfo);
 
     // C99 6.9.1p6: 'each declaration in the declaration list shall have at
     // least one declarator'.
@@ -2280,54 +2283,57 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
     if (S->isFunctionScope()) {
       cutOffParsing();
-      Actions.CodeCompleteOrdinaryName(getCurScope(),
-                                       Sema::PCC_RecoveryInFunction);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(
+          getCurScope(), SemaCodeCompletion::PCC_RecoveryInFunction);
       return PrevTokLocation;
     }
 
     if (S->isClassScope()) {
       cutOffParsing();
-      Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
+      Actions.CodeCompletion().CodeCompleteOrdinaryName(
+          getCurScope(), SemaCodeCompletion::PCC_Class);
       return PrevTokLocation;
     }
   }
 
   cutOffParsing();
-  Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Namespace);
+  Actions.CodeCompletion().CodeCompleteOrdinaryName(
+      getCurScope(), SemaCodeCompletion::PCC_Namespace);
   return PrevTokLocation;
 }
 
 // Code-completion pass-through functions
 
 void Parser::CodeCompleteDirective(bool InConditional) {
-  Actions.CodeCompletePreprocessorDirective(InConditional);
+  Actions.CodeCompletion().CodeCompletePreprocessorDirective(InConditional);
 }
 
 void Parser::CodeCompleteInConditionalExclusion() {
-  Actions.CodeCompleteInPreprocessorConditionalExclusion(getCurScope());
+  Actions.CodeCompletion().CodeCompleteInPreprocessorConditionalExclusion(
+      getCurScope());
 }
 
 void Parser::CodeCompleteMacroName(bool IsDefinition) {
-  Actions.CodeCompletePreprocessorMacroName(IsDefinition);
+  Actions.CodeCompletion().CodeCompletePreprocessorMacroName(IsDefinition);
 }
 
 void Parser::CodeCompletePreprocessorExpression() {
-  Actions.CodeCompletePreprocessorExpression();
+  Actions.CodeCompletion().CodeCompletePreprocessorExpression();
 }
 
 void Parser::CodeCompleteMacroArgument(IdentifierInfo *Macro,
                                        MacroInfo *MacroInfo,
                                        unsigned ArgumentIndex) {
-  Actions.CodeCompletePreprocessorMacroArgument(getCurScope(), Macro, MacroInfo,
-                                                ArgumentIndex);
+  Actions.CodeCompletion().CodeCompletePreprocessorMacroArgument(
+      getCurScope(), Macro, MacroInfo, ArgumentIndex);
 }
 
 void Parser::CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) {
-  Actions.CodeCompleteIncludedFile(Dir, IsAngled);
+  Actions.CodeCompletion().CodeCompleteIncludedFile(Dir, IsAngled);
 }
 
 void Parser::CodeCompleteNaturalLanguage() {
-  Actions.CodeCompleteNaturalLanguage();
+  Actions.CodeCompletion().CodeCompleteNaturalLanguage();
 }
 
 bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
@@ -2681,7 +2687,7 @@ bool Parser::ParseModuleName(
     if (!Tok.is(tok::identifier)) {
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompleteModuleImport(UseLoc, Path);
+        Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
         return true;
       }
 

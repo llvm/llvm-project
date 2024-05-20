@@ -4751,7 +4751,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass();
         return;
       }
-      if (isa<UndefValue>(Elt))
+      if (isa<PoisonValue>(Elt))
         continue;
       auto *CElt = dyn_cast<ConstantFP>(Elt);
       if (!CElt) {
@@ -4940,11 +4940,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // subnormal input could produce a negative zero output.
       const Function *F = II->getFunction();
       if (Q.IIQ.hasNoSignedZeros(II) ||
-          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))) {
+          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType())))
         Known.knownNot(fcNegZero);
-        if (KnownSrc.isKnownNeverNaN())
-          Known.signBitMustBeZero();
-      }
 
       break;
     }
