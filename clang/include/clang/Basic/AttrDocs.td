@@ -4960,6 +4960,19 @@ templates.
   }];
 }
 
+def UnnamedAddrDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``unnamed_addr`` attribute instructs the backend that the pointer of
+the marked function is not significant.
+While this attribute opens a possibility of certain optimizations like
+function merging, it should be used carefully because it weakens C/C++'s
+pointer uniqueness guarantee. It's safe to use this attribute if it's known
+that the pointer of the marked function is never used for comparisons with
+other pointers.
+  }];
+}
+
 def DisableTailCallsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

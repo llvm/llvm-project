@@ -1947,7 +1947,7 @@ def ReturnsTwice : InheritableAttr {
 def UnnamedAddr : InheritableAttr {
   let Spellings = [Clang<"unnamed_addr">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [UnnamedAddrDocs];
   let SimpleHandler = 1;
 }
 
