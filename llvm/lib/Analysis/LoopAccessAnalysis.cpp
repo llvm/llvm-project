@@ -203,11 +203,9 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 ///
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
-void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
-                                    Type *AccessTy, bool WritePtr,
-                                    unsigned DepSetId, unsigned ASId,
-                                    PredicatedScalarEvolution &PSE,
-                                    bool NeedsFreeze) {
+static std::pair<const SCEV *, const SCEV *>
+getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
+                        PredicatedScalarEvolution &PSE) {
   ScalarEvolution *SE = PSE.getSE();
 
   const SCEV *ScStart;
@@ -242,10 +240,22 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
 
   // Add the size of the pointed element to ScEnd.
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
-  Type *IdxTy = DL.getIndexType(Ptr->getType());
+  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
+  return {ScStart, ScEnd};
+}
+
+/// Calculate Start and End points of memory access using
+/// getStartAndEndForAccess.
+void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+                                    Type *AccessTy, bool WritePtr,
+                                    unsigned DepSetId, unsigned ASId,
+                                    PredicatedScalarEvolution &PSE,
+                                    bool NeedsFreeze) {
+  const auto &[ScStart, ScEnd] =
+      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, PSE);
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
                         NeedsFreeze);
 }
