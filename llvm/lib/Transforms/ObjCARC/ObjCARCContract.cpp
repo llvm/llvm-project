@@ -71,6 +71,9 @@ class ObjCARCContract {
   ARCRuntimeEntryPoints EP;
   BundledRetainClaimRVs *BundledInsts = nullptr;
 
+  /// A flag indicating whether this optimization pass should run.
+  bool Run;
+
   /// The inline asm string to insert between calls and RetainRV calls to make
   /// the optimization work on targets which need it.
   const MDString *RVInstMarker;
@@ -97,7 +100,6 @@ class ObjCARCContract {
 
 public:
   bool init(Module &M);
-  bool moduleUsesARCIntrinsics();
   bool run(Function &F, AAResults *AA, DominatorTree *DT);
   bool hasCFGChanged() const { return CFGChanged; }
 };
@@ -528,6 +530,10 @@ bool ObjCARCContract::tryToPeepholeInstruction(
 //===----------------------------------------------------------------------===//
 
 bool ObjCARCContract::init(Module &M) {
+  Run = ModuleHasARC(M);
+  if (!Run)
+    return false;
+
   EP.init(&M);
 
   // Initialize RVInstMarker.
@@ -536,12 +542,11 @@ bool ObjCARCContract::init(Module &M) {
   return false;
 }
 
-bool ObjCARCContract::moduleUsesARCIntrinsics() {
-  return EP.moduleContainsARCEntryPoints();
-}
-
 bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   if (!EnableARCOpts)
+    return false;
+
+  if (!Run)
     return false;
 
   Changed = CFGChanged = false;
@@ -744,8 +749,6 @@ Pass *llvm::createObjCARCContractPass() {
 bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
   ObjCARCContract OCARCC;
   OCARCC.init(*F.getParent());
-  if (!OCARCC.moduleUsesARCIntrinsics())
-    return false;
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return OCARCC.run(F, AA, DT);
@@ -755,8 +758,6 @@ PreservedAnalyses ObjCARCContractPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   ObjCARCContract OCAC;
   OCAC.init(*F.getParent());
-  if (!OCAC.moduleUsesARCIntrinsics())
-    return PreservedAnalyses::all();
 
   bool Changed = OCAC.run(F, &AM.getResult<AAManager>(F),
                           &AM.getResult<DominatorTreeAnalysis>(F));
