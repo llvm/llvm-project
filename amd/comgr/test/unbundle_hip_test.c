@@ -55,7 +55,7 @@
 //
 //    // Manually unbundle object file bundle
 //    clang-offload-bundler -type=o \
-//    -targets=hipv4-amdgcn-amd-amdhsa-gfx900 \
+//    -targets=hip-amdgcn-amd-amdhsa-gfx900 \
 //    -input=double.o -output=double-gfx900.o \
 //    -unbundle -allow-missing-bundles
 //
@@ -133,11 +133,11 @@ int main(int Argc, char *Argv[]) {
     checkError(Status, "amd_comgr_action_info_set_language");
 
     const char *BundleEntryIDs[] = {"host-x86_64-unknown-linux-gnu",
-      "hip-amdgcn-amd-amdhsa-gfx900","hipv4-amdgcn-amd-amdhsa-gfx900"};
+      "hip-amdgcn-amd-amdhsa-gfx900"};
     size_t BundleEntryIDsCount =
       sizeof(BundleEntryIDs) / sizeof(BundleEntryIDs[0]);
     Status = amd_comgr_action_info_set_bundle_entry_ids(ActionInfoUnbundle,
-                                                        BundleEntryIDs, 3);
+                                                        BundleEntryIDs, 2);
 
     // Unbundle
     Status = amd_comgr_create_data_set(&DataSetUnbundled);
@@ -153,12 +153,13 @@ int main(int Argc, char *Argv[]) {
                                          AMD_COMGR_DATA_KIND_BC, &Count);
     checkError(Status, "amd_comgr_action_data_count");
 
-    if (Count != 3) {
-      printf("Unbundle: produced %zu bitcodes (expected 3)\n", Count);
+    if (Count != 2) {
+      printf("Unbundle: produced %zu bitcodes (expected 2)\n", Count);
       exit(1);
     }
 
     amd_comgr_data_t DataElement;
+
     // bitcode host element (empty)
     Status = amd_comgr_action_data_get_data(DataSetUnbundled,
                                             AMD_COMGR_DATA_KIND_BC,
@@ -217,35 +218,6 @@ int main(int Argc, char *Argv[]) {
       exit(1);
     }
 
-    // bitcode hipv4-gfx900 element (empty)
-    Status = amd_comgr_action_data_get_data(DataSetUnbundled,
-                                            AMD_COMGR_DATA_KIND_BC,
-                                            2, &DataElement);
-    checkError(Status, "amd_comgr_action_data_get_data");
-
-    Status = amd_comgr_get_data_name(DataElement, &name_size, NULL);
-    checkError(Status, "amd_comgr_get_data_name");
-    Status = amd_comgr_get_data_name(DataElement, &name_size, &Name[0]);
-    checkError(Status, "amd_comgr_get_data_name");
-
-    expectedName = "square-hipv4-amdgcn-amd-amdhsa-gfx900.bc";
-    if (strcmp(Name, expectedName)) {
-      printf("Bitcode hipv4-gfx900 element name mismatch: %s (expected %s)\n",
-             Name, expectedName);
-    }
-
-    bytesSize = 0;
-    Status = amd_comgr_get_data(DataElement, &bytesSize, NULL);
-    checkError(Status, "amd_comgr_get_data");
-    Status = amd_comgr_release_data(DataElement);
-    checkError(Status, "amd_comgr_release_data");
-
-    if (bytesSize != 0) {
-      printf("Bitcode hipv4-gfx900 element size: %ld (expected 0)\n",
-             bytesSize);
-      exit(1);
-    }
-
     // --------
     // Check ObjectFile count, element names, and element sizes
     Status = amd_comgr_action_data_count(DataSetUnbundled,
@@ -253,8 +225,8 @@ int main(int Argc, char *Argv[]) {
                                          &Count);
     checkError(Status, "amd_comgr_action_data_count");
 
-    if (Count != 3) {
-      printf("Unbundle: produced %zu object files (expected 3)\n", Count);
+    if (Count != 2) {
+      printf("Unbundle: produced %zu object files (expected 2)\n", Count);
       exit(1);
     }
 
@@ -286,7 +258,7 @@ int main(int Argc, char *Argv[]) {
       exit(1);
     }
 
-    // object hip-gfx900 element (empty)
+    // object hip-gfx900 element (non-empty)
     Status = amd_comgr_action_data_get_data(DataSetUnbundled,
                                             AMD_COMGR_DATA_KIND_EXECUTABLE,
                                             1, &DataElement);
@@ -309,36 +281,8 @@ int main(int Argc, char *Argv[]) {
     Status = amd_comgr_release_data(DataElement);
     checkError(Status, "amd_comgr_release_data");
 
-    if (bytesSize != 0) {
-      printf("Object hip-gfx900 element size: %ld (expected 0)\n", bytesSize);
-      exit(1);
-    }
-
-    // object hipv4-gfx900 element (non-empty)
-    Status = amd_comgr_action_data_get_data(DataSetUnbundled,
-                                            AMD_COMGR_DATA_KIND_EXECUTABLE,
-                                            2, &DataElement);
-    checkError(Status, "amd_comgr_action_data_get_data");
-
-    Status = amd_comgr_get_data_name(DataElement, &name_size, NULL);
-    checkError(Status, "amd_comgr_get_data_name");
-    Status = amd_comgr_get_data_name(DataElement, &name_size, &Name[0]);
-    checkError(Status, "amd_comgr_get_data_name");
-
-    expectedName = "double-hipv4-amdgcn-amd-amdhsa-gfx900.o";
-    if (strcmp(Name, expectedName)) {
-      printf("Object hipv4-gfx900 element name mismatch: %s (expected %s)\n",
-             Name, expectedName);
-    }
-
-    bytesSize = 0;
-    Status = amd_comgr_get_data(DataElement, &bytesSize, NULL);
-    checkError(Status, "amd_comgr_get_data");
-    Status = amd_comgr_release_data(DataElement);
-    checkError(Status, "amd_comgr_release_data");
-
     if (bytesSize == 0) {
-      printf("Object hipv4-gfx900 empty (expected non-empty)\n");
+      printf("Object hip-gfx900 empty (expected non-empty)\n");
       exit(1);
     }
 
@@ -348,8 +292,8 @@ int main(int Argc, char *Argv[]) {
                                          AMD_COMGR_DATA_KIND_AR, &Count);
     checkError(Status, "amd_comgr_action_data_count");
 
-    if (Count != 3) {
-      printf("Unbundle: produced %zu archives (expected 3)\n", Count);
+    if (Count != 2) {
+      printf("Unbundle: produced %zu archives (expected 2)\n", Count);
       exit(1);
     }
 
@@ -406,35 +350,6 @@ int main(int Argc, char *Argv[]) {
 
     if (bytesSize < 9) {
       printf("Archive hip-gfx900 element size: %ld (expected > 9)\n",
-             bytesSize);
-      exit(1);
-    }
-
-    // archive hip-gfx900 element (empty, size 8)
-    Status = amd_comgr_action_data_get_data(DataSetUnbundled,
-                                            AMD_COMGR_DATA_KIND_AR,
-                                            2, &DataElement);
-    checkError(Status, "amd_comgr_action_data_get_data");
-
-    Status = amd_comgr_get_data_name(DataElement, &name_size, NULL);
-    checkError(Status, "amd_comgr_get_data_name");
-    Status = amd_comgr_get_data_name(DataElement, &name_size, &Name[0]);
-    checkError(Status, "amd_comgr_get_data_name");
-
-    expectedName = "cube-hipv4-amdgcn-amd-amdhsa-gfx900.a";
-    if (strcmp(Name, expectedName)) {
-      printf("Archive hipv4-gfx900 bundle name mismatch: %s (expected %s)\n",
-             Name, expectedName);
-    }
-
-    bytesSize = 0;
-    Status = amd_comgr_get_data(DataElement, &bytesSize, NULL);
-    checkError(Status, "amd_comgr_get_data");
-    Status = amd_comgr_release_data(DataElement);
-    checkError(Status, "amd_comgr_release_data");
-
-    if (bytesSize != 8) {
-      printf("Arvhive hipv4-gfx900 element size: %ld (expected 8)\n",
              bytesSize);
       exit(1);
     }
