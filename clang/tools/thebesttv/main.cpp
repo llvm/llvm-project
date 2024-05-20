@@ -102,7 +102,7 @@ struct VarLocResult {
  */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             int line, int column, bool isStmt,
-                            bool requireExact = true) {
+                            bool requireExact) {
     FindVarVisitor visitor;
 
     for (const auto &fi : functionsInFile.at(file)) {
