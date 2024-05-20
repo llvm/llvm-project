@@ -2004,16 +2004,26 @@ value llvm_builder(value C) {
   return alloc_builder(LLVMCreateBuilderInContext(Context_val(C)));
 }
 
-/* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
-value llvm_position_builder(value Pos, value B) {
+static value llvm_position_builder_impl(value Pos, value B,
+                                        LLVMBool BeforeDbgRecords) {
   if (Tag_val(Pos) == 0) {
     LLVMBasicBlockRef BB = BasicBlock_val(Field(Pos, 0));
     LLVMPositionBuilderAtEnd(Builder_val(B), BB);
   } else {
     LLVMValueRef I = Value_val(Field(Pos, 0));
-    LLVMPositionBuilderBefore(Builder_val(B), I);
+    LLVMPositionBuilderBefore2(Builder_val(B), I, BeforeDbgRecords);
   }
   return Val_unit;
+}
+
+/* (llbasicblock, llvalue) llpos -> bool -> llbuilder -> unit */
+value llvm_position_builder2(value Pos, value BeforeDbgRecords, value B) {
+  return llvm_position_builder_impl(Pos, B, Bool_val(BeforeDbgRecords));
+}
+
+/* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
+value llvm_position_builder(value Pos, value B) {
+  return llvm_position_builder_impl(Pos, B, /*BeforeDbgRecords=*/0);
 }
 
 /* llbuilder -> llbasicblock */
