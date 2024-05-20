@@ -454,6 +454,10 @@ class TargetRegisterInfo;
     /// edge occurs first.
     void biasCriticalPath();
 
+    /// Orders this node's predecessor edges such that the edges are sorted by
+    /// decreasing depth.
+    void biasLongerPaths();
+
     void dumpAttributes() const;
 
   private:

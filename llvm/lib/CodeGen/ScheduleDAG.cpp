@@ -340,6 +340,18 @@ void SUnit::biasCriticalPath() {
     std::swap(*Preds.begin(), *BestI);
 }
 
+void SUnit::biasLongerPaths() {
+  llvm::stable_sort(Preds, [](SDep A, SDep B) {
+    // B should only be ordered before A if it is a data dependency and its
+    // depth is larger.
+    if (B.getKind() == SDep::Data &&
+        A.getSUnit()->getDepth() > B.getSUnit()->getDepth())
+      return true;
+    // Preserve order in all other instances
+    return false;
+  });
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
   dbgs() << "  # preds left       : " << NumPredsLeft << "\n";

@@ -193,6 +193,10 @@ static cl::opt<unsigned>
     MIResourceCutOff("misched-resource-cutoff", cl::Hidden,
                      cl::desc("Number of intervals to track"), cl::init(10));
 
+cl::opt<bool> BiasLongerPaths(
+    "misched-bias-longer-paths", cl::Hidden, cl::init(false),
+    cl::desc("Bias longer paths, instead of just the critical path"));
+
 // DAG subtrees must have at least this many nodes.
 static const unsigned MinSubtreeSize = 8;
 
@@ -918,7 +922,10 @@ findRootsAndBiasEdges(SmallVectorImpl<SUnit*> &TopRoots,
     assert(!SU.isBoundaryNode() && "Boundary node should not be in SUnits");
 
     // Order predecessors so DFSResult follows the critical path.
-    SU.biasCriticalPath();
+    if (BiasLongerPaths)
+      SU.biasLongerPaths();
+    else
+      SU.biasCriticalPath();
 
     // A SUnit is ready to top schedule if it has no predecessors.
     if (!SU.NumPredsLeft)
@@ -927,7 +934,10 @@ findRootsAndBiasEdges(SmallVectorImpl<SUnit*> &TopRoots,
     if (!SU.NumSuccsLeft)
       BotRoots.push_back(&SU);
   }
-  ExitSU.biasCriticalPath();
+  if (BiasLongerPaths)
+    ExitSU.biasLongerPaths();
+  else
+    ExitSU.biasCriticalPath();
 }
 
 /// Identify DAG roots and setup scheduler queues.

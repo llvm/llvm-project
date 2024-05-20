@@ -1,4 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin8 -misched-print-dags -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin8 -misched-print-dags -o - 2>&1 > \
+; RUN:   /dev/null | FileCheck %s --check-prefix=CRITICAL
+; RUN: llc < %s -mtriple=x86_64-apple-darwin8 -misched-bias-longer-paths \
+; RUN:   -misched-print-dags -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=LONGEST
 ; REQUIRES: asserts
 
 @sc = common global i8 0
@@ -7,12 +10,18 @@
 
 ; Regression Test for PR92368.
 ;
-; CHECK: SU(8):   CMP8rr %4:gr8, %3:gr8, implicit-def $eflags
-; CHECK:   Predecessors:
-; CHECK-NEXT:    SU(6): Data Latency=0 Reg=%4
-; CHECK-NEXT:    SU(7): Out  Latency=0
-; CHECK-NEXT:    SU(5): Out  Latency=0
-; CHECK-NEXT:    SU(3): Data Latency=4 Reg=%3
+; CRITICAL: SU(8):   CMP8rr %4:gr8, %3:gr8, implicit-def $eflags
+; CRITICAL:   Predecessors:
+; CRITICAL-NEXT:    SU(6): Data Latency=0 Reg=%4
+; CRITICAL-NEXT:    SU(7): Out  Latency=0
+; CRITICAL-NEXT:    SU(5): Out  Latency=0
+; CRITICAL-NEXT:    SU(3): Data Latency=4 Reg=%3
+; LONGEST: SU(8):   CMP8rr %4:gr8, %3:gr8, implicit-def $eflags
+; LONGEST:  Predecessors:
+; LONGEST-NEXT:    SU(7): Out  Latency=0
+; LONGEST-NEXT:    SU(6): Data Latency=0 Reg=%4
+; LONGEST-NEXT:    SU(5): Out  Latency=0
+; LONGEST-NEXT:    SU(3): Data Latency=4 Reg=%3
 define void @misched_bug() nounwind {
 entry:
   %v0 = load i8, ptr @sc, align 1
