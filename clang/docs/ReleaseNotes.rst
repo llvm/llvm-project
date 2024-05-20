@@ -586,6 +586,9 @@ Bug Fixes in This Version
 - Clang now correctly disallows VLA type compound literals, e.g. ``(int[size]){}``,
   as the C standard mandates. (#GH89835)
 
+- ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
+  zero-sized arrays. Fixes (#GH54705).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
