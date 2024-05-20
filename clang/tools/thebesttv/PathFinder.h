@@ -84,11 +84,11 @@ struct IntraProceduralBfs {
         return {std::min(entry, exit), std::max(entry, exit)};
     }
 
-    bool inFunction(int u) {
+    bool inFunction(int u) const {
         return nodeRange.first <= u && u <= nodeRange.second;
     }
 
-    int getIndex(int u) { return u - nodeRange.first; }
+    int getIndex(int u) const { return u - nodeRange.first; }
 
     // 在 fid 代表的函数中进行 BFS
     void bfs(int u, const std::set<int> &pointsToAvoid) {
@@ -129,13 +129,13 @@ struct IntraProceduralBfs {
         bfs(u, pointsToAvoid);
     }
 
-    bool reachable(int v) {
+    bool reachable(int v) const {
         if (!inFunction(v))
             return false;
         return visited[getIndex(v)];
     }
 
-    std::vector<int> getAllReachableNodes() {
+    std::vector<int> getAllReachableNodes() const {
         std::vector<int> res;
         for (int i = nodeRange.first; i <= nodeRange.second; i++) {
             if (visited[getIndex(i)]) {
@@ -145,7 +145,7 @@ struct IntraProceduralBfs {
         return res;
     }
 
-    std::vector<int> trace(int u) {
+    std::vector<int> trace(int u) const {
         std::vector<int> path;
         while (u != -1) {
             path.push_back(u);
@@ -206,7 +206,7 @@ struct InterProceduralDij {
         dij(s, pointsToAvoid);
     }
 
-    std::vector<int> trace(int u) {
+    std::vector<int> trace(int u) const {
         std::vector<int> path;
         while (u != -1) {
             path.push_back(u);
@@ -216,7 +216,7 @@ struct InterProceduralDij {
         return path;
     }
 
-    std::optional<int> distance(int v) {
+    std::optional<int> distance(int v) const {
         if (d[v] == INF)
             return std::nullopt;
         return d[v];
