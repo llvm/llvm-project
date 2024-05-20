@@ -1857,33 +1857,26 @@ val incoming : llvalue -> (llvalue * llbasicblock) list
     for [llvm::LLVMBuilder]. *)
 val builder : llcontext -> llbuilder
 
-(** [builder_at ip before_dbg_records] creates an instruction builder
-    positioned at [ip]. [before_dbg_records] determines whether the insertion
-    point is before debug records attached to [ip].
+(** [builder_at ip] creates an instruction builder positioned at [ip].
     See the constructor for [llvm::LLVMBuilder]. *)
-val builder_at : llcontext -> (llbasicblock, llvalue) llpos ->
-                 bool -> llbuilder
+val builder_at : llcontext -> (llbasicblock, llvalue) llpos -> llbuilder
 
-(** [builder_before ins before_dbg_records] creates an instruction builder
-    positioned before the instruction [isn]. [before_dbg_records] determines
-    whether the insertion point is before debug records attached to [isn].
-    See the constructor for [llvm::LLVMBuilder]. *)
-val builder_before : llcontext -> llvalue -> bool -> llbuilder
+(** [builder_before ins] creates an instruction builder positioned before the
+    instruction [isn]. See the constructor for [llvm::LLVMBuilder]. *)
+val builder_before : llcontext -> llvalue -> llbuilder
 
 (** [builder_at_end bb] creates an instruction builder positioned at the end of
     the basic block [bb]. See the constructor for [llvm::LLVMBuilder]. *)
 val builder_at_end : llcontext -> llbasicblock -> llbuilder
 
-(** [position_builder ip bb before_dbg_records] moves the instruction builder
-    [bb] to the position [ip]. [before_dbg_records] determines whether the
-    insertion point is before debug records attached to [ip].
+(** [position_builder ip bb] moves the instruction builder [bb] to the position
+    [ip].
     See the constructor for [llvm::LLVMBuilder]. *)
-val position_builder : (llbasicblock, llvalue) llpos -> bool -> llbuilder ->
-                        unit
+val position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
 
 (** [position_before ins b] moves the instruction builder [b] to before the
     instruction [isn]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
-val position_before : llvalue -> bool -> llbuilder -> unit
+val position_before : llvalue -> llbuilder -> unit
 
 (** [position_at_end bb b] moves the instruction builder [b] to the end of the
     basic block [bb]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
