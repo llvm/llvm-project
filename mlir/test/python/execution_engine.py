@@ -522,7 +522,7 @@ def testComplexUnrankedMemrefAdd():
 run(testComplexUnrankedMemrefAdd)
 
 
-# Test addition of two bf16 memrefs
+# Test bf16 memrefs
 # CHECK-LABEL: TEST: testBF16MemrefAdd
 def testBF16Memref():
     with Context():
