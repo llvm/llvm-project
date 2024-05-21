@@ -38,11 +38,11 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc parallel copyout(LocalComposite.ScalarMember, LocalComposite.ScalarMember)
   while(1);
 
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout(1 + IntParam)
   while(1);
 
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout(+IntParam)
   while(1);
 
@@ -55,14 +55,14 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   while(1);
 
   // expected-error@+2{{OpenACC sub-array specified range [2:5] would be out of the range of the subscripted array size of 5}}
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout((float*)ArrayParam[2:5])
   while(1);
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout((float)ArrayParam[2])
   while(1);
   // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
-  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout(invalid:(float)ArrayParam[2])
   while(1);
 }
