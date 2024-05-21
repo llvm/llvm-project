@@ -1236,6 +1236,12 @@ namespace cwg599 { // cwg599: 19
   struct T { operator Fn*(); };
   struct U { operator int*(); operator void*(); };
   struct V { operator int*(); operator Fn*(); };
+  struct SR { operator void*&(); };
+  struct TR { operator Fn*&(); };
+  struct UR { operator int*&(); operator void*&(); };
+  struct VR { operator int*&(); operator Fn*&(); };
+  struct UR2 { operator int*&(); operator void*(); };
+  struct VR2 { operator int*(); operator Fn*&(); };
   void f(void *p, void (*q)(), S s, T t, U u, V v) {
     delete p;
     // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
@@ -1247,5 +1253,13 @@ namespace cwg599 { // cwg599: 19
     // expected-error@-1 {{cannot delete expression of type 'T'}}
     delete u;
     delete v;
+    delete SR();
+    // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    delete TR();
+    // expected-error@-1 {{cannot delete expression of type 'TR'}}
+    delete UR();
+    delete VR();
+    delete UR2();
+    delete VR2();
   }
 }
