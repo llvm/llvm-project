@@ -615,10 +615,20 @@ CIRGenFunction::foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
   // Fold cascading cases whenever possible to simplify codegen a bit.
   while (caseStmt) {
     lastCase = caseStmt;
-    auto intVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
-    caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(condType, intVal));
+
+    auto startVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
+    auto endVal = startVal;
+    if (auto *rhs = caseStmt->getRHS()) {
+      endVal = rhs->EvaluateKnownConstInt(getContext());
+    }
+    for (auto intVal = startVal; intVal <= endVal; ++intVal) {
+      caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(condType, intVal));
+    }
+
     caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
   }
+
+  assert(!caseEltValueListAttr.empty() && "empty case value NYI");
 
   auto *ctxt = builder.getContext();
 
@@ -668,9 +678,6 @@ mlir::LogicalResult CIRGenFunction::buildCaseDefaultCascade(
 mlir::LogicalResult
 CIRGenFunction::buildCaseStmt(const CaseStmt &S, mlir::Type condType,
                               SmallVector<mlir::Attribute, 4> &caseAttrs) {
-  assert((!S.getRHS() || !S.caseStmtIsGNURange()) &&
-         "case ranges not implemented");
-
   auto *caseStmt = foldCaseStmt(S, condType, caseAttrs);
   return buildCaseDefaultCascade(caseStmt, condType, caseAttrs);
 }
