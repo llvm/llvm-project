@@ -1,5 +1,6 @@
 ; RUN: opt < %s -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 -S -o - | FileCheck %s --check-prefixes=CHECK
 ; RUN: opt < %s -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 -S -stack-tagging-record-stack-history=instr -o - | FileCheck %s --check-prefixes=INSTR
+; RUN llc -mattr=+mte -stack-tagging-use-stack-safety=0 -stack-tagging-record-stack-history=instr %s -o - | FileCheck %s --check-prefixes=ASMINSTR
 
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -28,6 +29,7 @@ entry:
 ; CHECK:  [[TX:%.*]] = call ptr @llvm.aarch64.tagp.{{.*}}(ptr [[X]], ptr [[BASE]], i64 0)
 ; CHECK:  ret void
 
+; INSTR-LABEL: define void @OneVar(
 ; INSTR:  [[BASE:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; INSTR:  [[TLS:%.*]] = call ptr @llvm.thread.pointer()
 ; INSTR:  [[TLS_SLOT:%.*]] = getelementptr i8, ptr [[TLS]], i32 -24
@@ -51,3 +53,17 @@ entry:
 ; INSTR:  [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; INSTR:  [[TX:%.*]] = call ptr @llvm.aarch64.tagp.{{.*}}(ptr [[X]], ptr [[BASE]], i64 0)
 ; INSTR:  [[PC:!.*]] = !{!"pc"}
+
+; ASMINSTR-LABEL: OneVar:
+; ASMINSTR:  mrs	[[TLS:x.*]], TPIDR_EL0
+; ASMINSTR:  irg	[[BASE:x.*]], sp
+; ASMINSTR:  adr	[[PC:x.*]], #0
+; ASMINSTR:  ldur	[[TLS_SLOT:x.*]], [[[TLS]], #-24]
+; ASMINSTR:  and	[[SP_TAG:x.*]], [[BASE]], #0xf00000000000000
+; ASMINSTR:  orr	[[TAGGED_FP]], x29, [[SP_TAG]]
+; ASMINSTR:  asr	[[TLS_SIZE:x.*]], [[TLS_SLOT]], #56
+; ASMINSTR:  add	[[NEXT_TLS_VALUE_BEFORE_WRAP:x.*]], [[TLS_SLOT]], #16
+; ASMINSTR:  stp	[[PC]], [[TAGGED_FP]], [[[TLS_SLOT]]]
+; ASMINSTR:  bic	[[NEXT_TLS_VALUE:x.*]], [[NEXT_TLS_VALUE_BEFORE_WRAP]], [[TLS_SIZE]], lsl #12
+; ASMINSTR:  stur	[[NEXT_TLS_VALUE]], [[[TLS]], #-24]
+; ASMINSTR:  stg	[[BASE]], [[[BASE]]]
