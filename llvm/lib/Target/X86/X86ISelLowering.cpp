@@ -54616,38 +54616,28 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
                                            const X86Subtarget &ST) {
   // cmp(and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y))), 0)
   // brcond ne
-  //
   //  ->
-  //
-  // ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond cc1
-  //
+  //    ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
+  //    brcond cc1
   //
   // sub(and/or(setcc(cc0, flag0), setcc(cc1, sub (X, Y))), 1)
   // brcond ne
+  //  ->
+  //    ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
+  //    brcond ~cc1
   //
-  // ->
-  //
-  // ccmp(X, Y, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond ~cc1
-
   // cmp(and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0))), 0)
   // brcond ne
-  //
   //  ->
-  //
-  // ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond cc1
-  //
+  //    ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
+  //    brcond cc1
   //
   // sub(and/or(setcc(cc0, flag0), setcc(cc1, cmp (X, 0))), 1)
   // brcond ne
-  //
   //  ->
+  //    ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
+  //    brcond ~cc1
   //
-  // ctest(X, X, cflags/~cflags, cc0/~cc0, flag0)
-  // brcond ~cc1
-
   // if only flag has users, where cflags is determined by cc1.
 
   SDValue LHS = N->getOperand(0);
@@ -54663,24 +54653,27 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
       SetCC1.getOpcode() != X86ISD::SETCC)
     return SDValue();
 
-  auto GetCombineToOpc = [&](SDValue V) {
+  auto GetCombineToOpc = [&](SDValue V) -> unsigned {
     SDValue Op = V.getOperand(1);
     unsigned Opc = Op.getOpcode();
-    return (Opc == X86ISD::SUB) ? X86ISD::CCMP
-           : (Opc == X86ISD::CMP && isNullConstant(Op.getOperand(1)))
-               ? X86ISD::CTEST
-               : 0U;
+    if (Opc == X86ISD::SUB)
+      return X86ISD::CCMP;
+    if (Opc == X86ISD::CMP && isNullConstant(Op.getOperand(1)))
+      return X86ISD::CTEST;
+    return 0U;
   };
 
   unsigned NewOpc = 0;
 
-  // and/or is commutable. Try to commute the operands and then test again.
+  // AND/OR is commutable. Canonicalize the operands to make SETCC with SUB/CMP
+  // appear on the right.
   if (!(NewOpc = GetCombineToOpc(SetCC1))) {
     std::swap(SetCC0, SetCC1);
     if (!(NewOpc = GetCombineToOpc(SetCC1)))
       return SDValue();
   }
 
+  // Check the only user of flag is `brcond ne`.
   SDValue Sub = SetCC1.getOperand(1);
   SDNode *BrCond = *Flag->uses().begin();
   if (BrCond->getOpcode() != X86ISD::BRCOND)
@@ -54698,11 +54691,13 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
 
   bool IsOR = LHS.getOpcode() == ISD::OR;
 
+  // CMP/TEST is executed and updates the EFLAGS normally only when SCC
+  // evaluates to true. So we need to inverse CC0 as SCC when the logic operator
+  // is OR. Similar for CC1.
   SDValue SCC =
       IsOR ? DAG.getTargetConstant(X86::GetOppositeBranchCondition(CC0),
                                    SDLoc(SetCC0.getOperand(0)), MVT::i8)
            : SetCC0.getOperand(0);
-
   SDValue CC1N = SetCC1.getOperand(0);
   X86::CondCode CC1 =
       static_cast<X86::CondCode>(CC1N->getAsAPIntVal().getSExtValue());
@@ -54710,6 +54705,9 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
   X86::CondCode CFlagsCC = IsOR ? CC1 : OppositeCC1;
   SDValue CFlags = DAG.getTargetConstant(
       X86::getCCMPCondFlagsFromCondCode(CFlagsCC), SDLoc(BrCond), MVT::i8);
+
+  // Replace any uses of the old flag produced by SUB/CMP with the new one
+  // produced by CCMP/CTEST.
   SDValue CCMP = (NewOpc == X86ISD::CCMP)
                      ? DAG.getNode(X86ISD::CCMP, SDLoc(N), Flag.getValueType(),
                                    {Sub.getOperand(0), Sub.getOperand(1),
@@ -54717,16 +54715,24 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
                      : DAG.getNode(X86ISD::CTEST, SDLoc(N), Flag.getValueType(),
                                    {Sub.getOperand(0), Sub.getOperand(0),
                                     CFlags, SCC, SetCC0.getOperand(1)});
+  // Replace API is called manually here b/c the number of results may change.
   DAG.ReplaceAllUsesOfValueWith(Flag, CCMP);
 
+  // Update CC for the consumer of the flag.
+  // The old CC is `ne`. Hence, when comparing the result with 0, we are
+  // checking if the second condition evaluates to true. When comparing the
+  // result with 1, we are checking uf the second condition evaluates to false.
   SmallVector<SDValue> Ops(BrCond->op_values());
-  if (isNullConstant(N->getOperand(1)) && Ops[CondNo] != CC1N)
+  if (isNullConstant(N->getOperand(1)))
     Ops[CondNo] = CC1N;
   else if (isOneConstant(N->getOperand(1)))
     Ops[CondNo] = DAG.getTargetConstant(OppositeCC1, SDLoc(BrCond), MVT::i8);
 
   SDValue NewBrCond =
       DAG.getNode(X86ISD::BRCOND, SDLoc(BrCond), BrCond->getValueType(0), Ops);
+  // Avoid self-assign error b/c CC1 can be `e/ne`.
+  // Replace API is called manually here b/c we're updating the user of the node
+  // being visited instead of the node itself.
   if (BrCond != NewBrCond.getNode()) {
     DAG.ReplaceAllUsesWith(BrCond, &NewBrCond);
     DCI.recursivelyDeleteUnusedNodes(BrCond);
