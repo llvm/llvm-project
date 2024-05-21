@@ -25,6 +25,8 @@ subroutine sub1()
 
   adev = ahost + bhost
 
+  adev = 10
+
 end
 
 ! CHECK-LABEL: func.func @_QPsub1()
@@ -41,10 +43,7 @@ end
 ! CHECK: cuf.data_transfer %[[ASSOC]]#0 to %[[M]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<i32>, !fir.ref<i32>
 ! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<i32>, i1
 
-! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[C1]] {uniq_name = ".cuf_host_tmp"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK: cuf.data_transfer %[[ASSOC]]#0 to %[[M]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<i32>, !fir.ref<i32>
-! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<i32>, i1
+! CHECK: cuf.data_transfer %c1{{.*}} to %[[M]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<i32>
 
 ! CHECK: cuf.data_transfer %[[AHOST]]#0 to %[[ADEV]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>
 
@@ -61,6 +60,8 @@ end
 ! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[ELEMENTAL]](%{{.*}}) {uniq_name = ".cuf_host_tmp"} : (!hlfir.expr<10xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, i1)
 ! CHECK: cuf.data_transfer %[[ASSOC]]#0 to %[[ADEV]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>
 ! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<!fir.array<10xi32>>, i1
+
+! CHECK: cuf.data_transfer %c10{{.*}} to %[[ADEV]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<!fir.array<10xi32>>
 
 subroutine sub2()
   integer, device :: m

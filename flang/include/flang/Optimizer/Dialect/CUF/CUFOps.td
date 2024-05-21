@@ -158,7 +158,7 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
     updated.
   }];
 
-  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$src,
+  let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
                        Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
