@@ -9,6 +9,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "lldb/Core/dwarf.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -169,21 +170,20 @@ DWARF:
   YAMLModuleTester t(yamldata);
   auto *symbol_file =
       llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
-  auto &debug_info = symbol_file->DebugInfo();
+  DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
 
-  DIERef first_die(std::nullopt, DIERef::Section::DebugInfo,
-                   11 /*FirstDIEOffset*/);
-  EXPECT_EQ(debug_info.PeekDIEName(first_die), "");
+  dw_offset_t first_die_offset = 11;
+  EXPECT_EQ(unit->PeekDIEName(first_die_offset), "");
 
-  DIERef second_die(std::nullopt, DIERef::Section::DebugInfo, 14);
-  EXPECT_EQ(debug_info.PeekDIEName(second_die), "NameType1");
+  dw_offset_t second_die_offset = 14;
+  EXPECT_EQ(unit->PeekDIEName(second_die_offset), "NameType1");
 
-  DIERef third_die(std::nullopt, DIERef::Section::DebugInfo, 19);
-  EXPECT_EQ(debug_info.PeekDIEName(third_die), "NameType2");
+  dw_offset_t third_die_offset = 19;
+  EXPECT_EQ(unit->PeekDIEName(third_die_offset), "NameType2");
 
-  DIERef fourth_die(std::nullopt, DIERef::Section::DebugInfo, 24);
-  EXPECT_EQ(debug_info.PeekDIEName(fourth_die), "NameType1");
+  dw_offset_t fourth_die_offset = 24;
+  EXPECT_EQ(unit->PeekDIEName(fourth_die_offset), "NameType1");
 
-  DIERef fifth_die(std::nullopt, DIERef::Section::DebugInfo, 26);
-  EXPECT_EQ(debug_info.PeekDIEName(fifth_die), "NameType2");
+  dw_offset_t fifth_die_offset = 26;
+  EXPECT_EQ(unit->PeekDIEName(fifth_die_offset), "NameType2");
 }
