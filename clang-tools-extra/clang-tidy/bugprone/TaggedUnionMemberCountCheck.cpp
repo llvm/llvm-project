@@ -10,44 +10,53 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-
 #include "clang/AST/PrettyPrinter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include <limits>
+#include <iostream>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+TaggedUnionMemberCountCheck::TaggedUnionMemberCountCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context),
+        EnumCounterHeuristicIsEnabled(Options.get("EnumCounterHeuristicIsEnabled", true)),
+        EnumCounterSuffix(Options.get("EnumCounterSuffix", "count")),
+        StrictMode(Options.get("StrictMode", true)) { }
+
+void TaggedUnionMemberCountCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "EnumCounterHeuristicIsEnabled", EnumCounterHeuristicIsEnabled);
+  Options.store(Opts, "EnumCounterSuffix", EnumCounterSuffix);
+}
+
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
+Finder->addMatcher(
       recordDecl(
           allOf(isStruct(),
-                has(fieldDecl(hasType(recordDecl(isUnion()).bind("union")))),
-                has(fieldDecl(hasType(enumDecl().bind("tags"))))))
+				has(fieldDecl(hasType(qualType(hasCanonicalType(recordType())))).bind("union")),
+				has(fieldDecl(hasType(qualType(hasCanonicalType(enumType())))).bind("tags"))))
           .bind("root"),
       this);
 }
 
-static bool hasMultipleUnionsOrEnums(const RecordDecl *rec) {
-  int tags = 0;
-  int unions = 0;
-  for (const FieldDecl *r : rec->fields()) {
-    TypeSourceInfo *info = r->getTypeSourceInfo();
-    QualType qualtype = info->getType();
-    const Type *type = qualtype.getTypePtr();
-    if (type->isUnionType())
-      unions += 1;
-    else if (type->isEnumeralType())
-      tags += 1;
-    if (tags > 1 || unions > 1)
-      return true;
-  }
-  return false;
+static bool isUnion(const FieldDecl *R) {
+	return R->getType().getCanonicalType().getTypePtr()->isUnionType();
 }
 
-static int64_t getNumberOfValidEnumValues(const EnumDecl *ed) {
+static bool isEnum(const FieldDecl *R) {
+	return R->getType().getCanonicalType().getTypePtr()->isEnumeralType();
+}
+
+static bool hasMultipleUnionsOrEnums(const RecordDecl *rec) {
+  return llvm::count_if(rec->fields(), isUnion) > 1 ||
+         llvm::count_if(rec->fields(), isEnum) > 1;
+}
+
+static size_t getNumberOfValidEnumValues(const EnumDecl *ed, bool EnumCounterHeuristicIsEnabled, StringRef EnumCounterSuffix) {
   int64_t maxTagValue = std::numeric_limits<int64_t>::min();
   int64_t minTagValue = std::numeric_limits<int64_t>::max();
 
@@ -80,7 +89,7 @@ static int64_t getNumberOfValidEnumValues(const EnumDecl *ed) {
     if (enumValue < minTagValue)
       minTagValue = enumValue;
 
-    if (enumName.ends_with_insensitive("count")) {
+    if (enumName.ends_with_insensitive(EnumCounterSuffix)) {
       if (ceCount == 0) {
         ceFirstIndex = En.index();
       }
@@ -90,7 +99,8 @@ static int64_t getNumberOfValidEnumValues(const EnumDecl *ed) {
   }
 
   int64_t validValuesCount = maxTagValue - minTagValue + 1;
-  if (ceCount == 1 &&
+  if (EnumCounterHeuristicIsEnabled &&
+      ceCount == 1 &&
       ceFirstIndex == enumConstantsCount - 1 &&
       ceValue == maxTagValue) {
     validValuesCount -= 1;
@@ -98,26 +108,36 @@ static int64_t getNumberOfValidEnumValues(const EnumDecl *ed) {
   return validValuesCount;
 }
 
+// Feladatok:
+// - typedef tesztelés
+// - template tesztelés
+// - névtelen union tesztelés
+// - "count" paraméterezése
 void TaggedUnionMemberCountCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *root = Result.Nodes.getNodeAs<RecordDecl>("root");
-  const auto *unionMatch = Result.Nodes.getNodeAs<RecordDecl>("union");
-  const auto *tagMatch = Result.Nodes.getNodeAs<EnumDecl>("tags");
+  const auto *unionField = Result.Nodes.getNodeAs<FieldDecl>("union");
+  const auto *tagField = Result.Nodes.getNodeAs<FieldDecl>("tags");
+
+  // The matcher can only narrow down the type to recordType()
+  if (!isUnion(unionField))
+    return;
 
   if (hasMultipleUnionsOrEnums(root))
     return;
 
-  int64_t unionMemberCount = llvm::range_size(unionMatch->fields());
-  int64_t tagCount = getNumberOfValidEnumValues(tagMatch);
+  const auto *unionDef = unionField->getType().getCanonicalType().getTypePtr()->getAsRecordDecl();
+  const auto *enumDef = static_cast<EnumDecl*>(tagField->getType().getCanonicalType().getTypePtr()->getAsTagDecl());
+
+  size_t unionMemberCount = llvm::range_size(unionDef->fields());
+  size_t tagCount = getNumberOfValidEnumValues(enumDef, EnumCounterHeuristicIsEnabled, EnumCounterSuffix);
 
   // FIXME: Maybe a emit a note when a counter enum constant was found.
   if (unionMemberCount > tagCount) {
-    diag(root->getLocation(), "Tagged union has more data members than tags! "
-                              "Data members: %0 Tags: %1")
+    diag(root->getLocation(), "Tagged union has more data members (%0) than tags (%1)!")
         << unionMemberCount << tagCount;
-  } else if (unionMemberCount < tagCount) {
-    diag(root->getLocation(), "Tagged union has fewer data members than tags! "
-                              "Data members: %0 Tags: %1")
+  } else if (StrictMode && unionMemberCount < tagCount) {
+    diag(root->getLocation(), "Tagged union has fewer data members (%0) than tags (%1)!")
         << unionMemberCount << tagCount;
   }
 }

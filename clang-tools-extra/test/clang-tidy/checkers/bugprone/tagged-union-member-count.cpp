@@ -1,38 +1,81 @@
-// RUN: %check_clang_tidy %s bugprone-tagged-union-member-count %t
+// RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t
+// Test cases for the default configuration
 
-enum tags3 {
+typedef enum tags3 {
 	tags3_1,
 	tags3_2,
 	tags3_3,
-};
+} tags3;
 
-enum tags4 {
+typedef enum tags4 {
 	tags4_1,
 	tags4_2,
 	tags4_3,
 	tags4_4,
-};
+} tags4;
 
-enum tags5 {
+typedef enum tags5 {
 	tags5_1,
 	tags5_2,
 	tags5_3,
 	tags5_4,
 	tags5_5,
+} tags5;
+
+enum class classtags3 {
+	classtags3_1,
+	classtags3_2,
+	classtags3_3,
 };
 
-union union3 {
+enum class classtags4 {
+	classtags4_1,
+	classtags4_2,
+	classtags4_3,
+	classtags4_4,
+};
+
+enum class classtags5 {
+	classtags5_1,
+	classtags5_2,
+	classtags5_3,
+	classtags5_4,
+	classtags5_5,
+};
+
+enum class typedtags3 : unsigned int {
+	typedtags3_1,
+	typedtags3_2,
+	typedtags3_3,
+};
+
+enum class typedtags4 : long {
+	typedtags4_1,
+	typedtags4_2,
+	typedtags4_3,
+	typedtags4_4,
+};
+
+enum class typedtags5 {
+	typedtags5_1,
+	typedtags5_2,
+	typedtags5_3,
+	typedtags5_4,
+	typedtags5_5,
+};
+
+typedef union union3 {
 	short *shorts;
 	int *ints;
 	float *floats;
-};
+} union3;
 
-union union4 {
+typedef union union4 {
 	short *shorts;
 	double *doubles;
 	int *ints;
 	float *floats;
-};
+} union4;
 
 // It is not obvious which enum is the tag for the union.
 struct taggedunion2 { // No warnings expected.
@@ -48,12 +91,29 @@ struct taggedunion4 { // No warnings expected.
 	union union3 dataA;
 };
 
-struct taggedunion1 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+// It is not obvious which union does the tag belong to.
+struct taggedunion6 { // No warnings expected.
+	enum tags3 tag;
+	union {
+		int i1;
+		int i2;
+		int i3;
+	};
+	union {
+		float f1;
+		float f2;
+		float f3;
+	};
+};
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct taggedunion1 {
 	enum tags3 tag;
     union union4 data;
 };
 
-struct taggedunion5 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct taggedunion5 {
 	enum tags3 tag;
     union {
 		int *ints;
@@ -66,7 +126,8 @@ struct taggedunion5 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has
     } data;
 };
 
-struct taggedunion7 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct taggedunion7 { 
 	enum {
 		tag1,
 		tag2,
@@ -75,7 +136,8 @@ struct taggedunion7 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has
 	union union4 data;
 };
 
-struct taggedunion8 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct taggedunion8 { 
 	enum {
 		tag1,
 		tag2,
@@ -92,40 +154,18 @@ struct taggedunion8 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has
 	} data;
 };
 
-struct nested1 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
-	enum tags3 tag;
-	union {
-		char c;
-		short s;
-		int i;
-		struct { // CHECK-MESSAGES: :[[@LINE]]:3: warning: Tagged union has fewer data members than tags! Data members: 4 Tags: 5 [bugprone-tagged-union-member-count]
-			enum tags5 tag;
-			union union4 data;
-		} inner;
-	} data;
-};
-
-struct nested2 {
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct nested4 { 
 	enum tags3 tag;
 	union {
 		float f;
 		int i;
-		struct { // CHECK-MESSAGES: :[[@LINE]]:3: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+		long l;
+		// CHECK-MESSAGES: :[[@LINE+1]]:10: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+		struct innerdecl { 
 			enum tags3 tag;
 			union union4 data;
-		} inner;
-	} data;
-};
-
-struct nested3 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has fewer data members than tags! Data members: 2 Tags: 3 [bugprone-tagged-union-member-count]
-	enum tags3 tag;
-	union {
-		float f;
-		int i;
-		struct innerdecl { // CHECK-MESSAGES: :[[@LINE]]:10: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
-			enum tags3 tag;
-			union union4 data;
-		}; 
+		} inner; 
 	} data;
 };
 
@@ -143,12 +183,14 @@ enum tag_with_counter_uppercase {
 	NODE_TYPE_COUNT,
 };
 
-struct taggedunion10 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct taggedunion10 { 
 	enum tag_with_counter_lowercase tag;
 	union union4 data;
 };
 
-struct taggedunion11 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has more data members than tags! Data members: 4 Tags: 3 [bugprone-tagged-union-member-count]
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct taggedunion11 { 
 	enum tag_with_counter_uppercase tag;
 	union union4 data;
 };
@@ -160,22 +202,42 @@ struct taggedunion12 { // No warnings expected.
 	union union3 data;
 };
 
-// Technically this means that every enum value is defined from 0-256 and therefore a warning is given.
-enum mycolor {
-	mycolor_black = 0x00,
-	mycolor_gray  = 0xcc,
-	mycolor_white = 0xff,
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct withTypedef2 { 
+	tags3 tag;
+	union4 data;
+}; 
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct withEnumClass2 { 
+	enum classtags3 tag;
+	union4 data;
+}; 
+
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct withTypedEnum1 {
+	typedtags3 tag;
+	union4 data;
 };
 
-struct taggedunion9 { // CHECK-MESSAGES: :[[@LINE]]:8: warning: Tagged union has fewer data members than tags! Data members: 3 Tags: 256 [bugprone-tagged-union-member-count]
-	enum mycolor tag;
+// CHECK-MESSAGES: :[[@LINE+1]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+struct anonymous1 {
+	tags3 tag;
 	union {
 		int a;
-		float b;
-		struct {
-			double re;
-			double im;
-		} complex;
-	} data;
+		int b;
+		int c;
+		int d;
+	};
 };
+
+// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: Tagged union has more data members (4) than tags (3)! [bugprone-tagged-union-member-count]
+template <typename Union, typename Tag>
+struct templated {
+	Tag tag;
+	Union data;
+};
+
+templated<union3, tags3> t1; // No warning expected
+templated<union4, tags3> t3;
 

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_TAGGEDUNIONMEMBERCOUNTCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang::tidy::bugprone {
 
@@ -20,10 +21,15 @@ namespace clang::tidy::bugprone {
 // http://clang.llvm.org/extra/clang-tidy/checks/bugprone/tagged-union-member-count.html
 class TaggedUnionMemberCountCheck : public ClangTidyCheck {
 public:
-  TaggedUnionMemberCountCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  TaggedUnionMemberCountCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  bool EnumCounterHeuristicIsEnabled;
+  StringRef EnumCounterSuffix;
+  bool StrictMode;
 };
 
 } // namespace clang::tidy::bugprone

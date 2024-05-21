@@ -117,6 +117,12 @@ New checks
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
 
+- New :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
+
+  Gives warnings for tagged unions, where the number of tags is
+  different from the number of data members inside the union.
+
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 
@@ -128,12 +134,6 @@ New checks
 
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
-
-- New :doc:`bugprone-tagged-union-member-count
-  <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
-
-  Warns about suspicious looking tagged unions where the number of enum
-  constants and the number of union data members are not equal.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
