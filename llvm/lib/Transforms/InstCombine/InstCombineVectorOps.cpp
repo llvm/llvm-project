@@ -2549,7 +2549,7 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
 /// Try to fold an extract subvector operation.
 static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
-  if (!Shuf.isIdentityWithExtract() || !match(Op1, m_Undef()))
+  if (!Shuf.isIdentityWithExtract() || !match(Op1, m_Poison()))
     return nullptr;
 
   // Check if we are extracting all bits of an inserted scalar:
@@ -2578,10 +2578,10 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   // not allow arbitrary shuffle mask creation as a target-independent transform
   // (because we can't guarantee that will lower efficiently).
   //
-  // If the extracting shuffle has an undef mask element, it transfers to the
+  // If the extracting shuffle has an poison mask element, it transfers to the
   // new shuffle mask. Otherwise, copy the original mask element. Example:
-  //   shuf (shuf X, Y, <C0, C1, C2, undef, C4>), undef, <0, undef, 2, 3> -->
-  //   shuf X, Y, <C0, undef, C2, undef>
+  //   shuf (shuf X, Y, <C0, C1, C2, poison, C4>), poison, <0, poison, 2, 3> -->
+  //   shuf X, Y, <C0, poison, C2, poison>
   unsigned NumElts = cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumElts);
   assert(NumElts < Mask.size() &&
