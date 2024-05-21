@@ -31,6 +31,9 @@ Revert: 8009bbe
       [2024-05-01T03:18:40.779Z] /jenkins/workspace/compiler-psdb-amd-staging_2/Libs/rocThrust/thrust/../thrust/optional.h:2756:11: error: no member named 'construct' in 'optional<type-parameter-0-0 &>'
       [2024-05-01T03:18:40.779Z]  2756 |     this->construct(std::forward<Args>(args)...);
 
+    fd87d765c045 [Clang][Sema] Don't build CXXDependentScopeMemberExprs for potent
+    acf5ad2a4ed9 [Clang][Sema] Diagnose current instantiation used as an incomplete
+
   Contacts:
     Sam, Konstantin
 ---
@@ -44,9 +47,4 @@ Revert: 41f9c78
   Contacts:
     Konstantin
 ---
-
-Reverts: breaks oclConformance
-  41466a177a95 [SelectionDAG] Correct the implementation of m_AllOnes. (#90776)
-  SWDEV-460097
-  merges: revert : 41466a177a95 [SelectionDAG] Correct the implementation of m_AllOnes. (#90776)
 
