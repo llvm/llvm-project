@@ -5414,6 +5414,8 @@ X86:
   operand will get allocated only to RAX -- if two 32-bit operands are needed,
   you're better off splitting it yourself, before passing it to the asm
   statement.
+- ``jR``: An 8, 16, 32, or 64-bit integer EGPR when EGPR feature is on.
+  Otherwise, same as ``R``.
 
 XCore:
 
