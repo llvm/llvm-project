@@ -1595,6 +1595,30 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitSYCLUniqueStableNameExpr(
+    const SYCLUniqueStableNameExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  assert(!Initializing);
+
+  auto &A = Ctx.getASTContext();
+  std::string ResultStr = E->ComputeName(A);
+
+  QualType CharTy = A.CharTy.withConst();
+  APInt Size(A.getTypeSize(A.getSizeType()), ResultStr.size() + 1);
+  QualType ArrayTy = A.getConstantArrayType(CharTy, Size, nullptr,
+                                            ArraySizeModifier::Normal, 0);
+
+  StringLiteral *SL =
+      StringLiteral::Create(A, ResultStr, StringLiteralKind::Ordinary,
+                            /*Pascal=*/false, ArrayTy, E->getLocation());
+
+  unsigned StringIndex = P.createGlobalString(SL);
+  return this->emitGetPtrGlobal(StringIndex, E);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
     const CharacterLiteral *E) {
   if (DiscardResult)
@@ -2088,6 +2112,21 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
 
+    // If we're discarding a construct expression, we still need
+    // to allocate a variable and call the constructor and destructor.
+    if (DiscardResult) {
+      if (Ctor->isTrivial())
+        return true;
+      assert(!Initializing);
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
+
+      if (!LocalIndex)
+        return false;
+
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+    }
+
     // Zero initialization.
     if (E->requiresZeroInitialization()) {
       const Record *R = getRecord(E->getType());
@@ -2107,19 +2146,6 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
 
     assert(Func->hasThisPointer());
     assert(!Func->hasRVO());
-
-    // If we're discarding a construct expression, we still need
-    // to allocate a variable and call the constructor and destructor.
-    if (DiscardResult) {
-      assert(!Initializing);
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
-
-      if (!LocalIndex)
-        return false;
-
-      if (!this->emitGetPtrLocal(*LocalIndex, E))
-        return false;
-    }
 
     //  The This pointer is already on the stack because this is an initializer,
     //  but we need to dup() so the call() below has its own copy.
@@ -3369,6 +3395,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
   switch (E->getOpcode()) {
   case UO_PostInc: { // x++
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -3387,6 +3416,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
   }
   case UO_PostDec: { // x--
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -3405,6 +3437,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
   }
   case UO_PreInc: { // ++x
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -3449,6 +3484,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return E->isGLValue() || this->emitLoadPop(*T, E);
   }
   case UO_PreDec: { // --x
+    if (!Ctx.getLangOpts().CPlusPlus14)
+      return this->emitInvalid(E);
+
     if (!this->visit(SubExpr))
       return false;
 
