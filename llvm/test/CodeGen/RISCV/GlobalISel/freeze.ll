@@ -77,20 +77,21 @@ define void @freeze_half(ptr %p) {
   ret void
 }
 
-; FIXME: Legalize G_FREEZE with fixed-length vectors.
-; define void @freeze_ivec(ptr %p) {
-;   %x = load <2 x i32>, ptr %p
-;   %y = freeze <2 x i32> %x
-;   store <2 x i32> %y, ptr %p
-;   ret void
-; }
+define <vscale x 2 x i32> @freeze_ivec(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: freeze_ivec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %y = freeze <vscale x 2 x i32> %x
+  ret <vscale x 2 x i32> %y
+}
 
-; define void @freeze_fvec(ptr %p) {
-;   %x = load <2 x float>, ptr %p
-;   %y = freeze <2 x float> %x
-;   store <2 x float> %y, ptr %p
-;   ret void
-; }
+define <vscale x 2 x float> @freeze_fvec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: freeze_fvec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %y = freeze <vscale x 2 x float> %x
+  ret <vscale x 2 x float> %y
+}
 
 define ptr @freeze_ptr(ptr %x) {
 ; CHECK-LABEL: freeze_ptr:
