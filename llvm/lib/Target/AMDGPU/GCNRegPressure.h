@@ -160,6 +160,9 @@ protected:
              bool After);
 
 public:
+  // reset tracker and set live register set to the specified value.
+  void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
+
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
@@ -180,12 +183,9 @@ class GCNUpwardRPTracker : public GCNRPTracker {
 public:
   GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
-  // reset tracker and set live register set to the specified value.
-  void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
-
   // reset tracker at the specified slot index.
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
-    reset(MRI, llvm::getLiveRegs(SI, LIS, MRI));
+    GCNRPTracker::reset(MRI, llvm::getLiveRegs(SI, LIS, MRI));
   }
 
   // reset tracker to the end of the MBB.
@@ -200,7 +200,7 @@ public:
   }
 
   // move to the state just before the MI (in program order).
-  void recede(const MachineInstr &MI);
+  bool recede(const MachineInstr &MI, bool ShouldTrackIt = true);
 
   // checks whether the tracker's state after receding MI corresponds
   // to reported by LIS.
@@ -242,13 +242,15 @@ public:
 
   // Move to the state right before the next MI or after the end of MBB.
   // Returns false if reached end of the block.
-  bool advanceBeforeNext();
+  bool advanceBeforeNext(MachineInstr *MI = nullptr, bool ShouldTrackIt = true,
+                         LiveIntervals *TheLIS = nullptr);
 
   // Move to the state at the MI, advanceBeforeNext has to be called first.
-  void advanceToNext();
+  void advanceToNext(MachineInstr *MI = nullptr, bool ShouldTrackIt = true);
 
   // Move to the state at the next MI. Returns false if reached end of block.
-  bool advance();
+  bool advance(MachineInstr *MI = nullptr, bool ShouldTrackIt = true,
+               LiveIntervals *TheLIS = nullptr);
 
   // Advance instructions until before End.
   bool advance(MachineBasicBlock::const_iterator End);
