@@ -1639,9 +1639,7 @@ function(add_unittest test_suite test_name)
     set(EXCLUDE_FROM_ALL ON)
   endif()
 
-  if (SUPPORTS_VARIADIC_MACROS_FLAG)
-    list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")
-  endif ()
+  list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")
   # Some parts of gtest rely on this GNU extension, don't warn on it.
   if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-gnu-zero-variadic-macro-arguments")
