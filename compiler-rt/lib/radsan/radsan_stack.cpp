@@ -17,7 +17,6 @@ using namespace __sanitizer;
 
 // We must define our own implementation of this method for our runtime.
 // This one is just copied from UBSan.
-
 namespace __sanitizer {
 void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
                                     bool request_fast, u32 max_depth) {
@@ -29,8 +28,7 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 }
 } // namespace __sanitizer
 
-namespace __radsan {
-void SetGlobalStackTraceFormat() {
+static void SetGlobalStackTraceFormat() {
   SetCommonFlagsDefaults();
   CommonFlags cf;
   cf.CopyFrom(*common_flags());
@@ -38,7 +36,6 @@ void SetGlobalStackTraceFormat() {
   cf.external_symbolizer_path = GetEnv("RADSAN_SYMBOLIZER_PATH");
   OverrideCommonFlags(cf);
 }
-} // namespace __radsan
 
 using namespace __radsan;
 void __radsan::PrintStackTrace() {

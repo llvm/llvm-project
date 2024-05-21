@@ -20,29 +20,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace __sanitizer;
-
-namespace detail {
-
-static pthread_key_t key;
+static pthread_key_t context_key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
-void internalFree(void *ptr) { __sanitizer::InternalFree(ptr); }
 
-using __radsan::Context;
+static void internalFree(void *ptr) { __sanitizer::InternalFree(ptr); }
 
-Context &GetContextForThisThreadImpl() {
-  auto make_tls_key = []() {
-    CHECK_EQ(pthread_key_create(&detail::key, detail::internalFree), 0);
+static __radsan::Context &GetContextForThisThreadImpl() {
+  auto make_thread_local_context_key = []() {
+    CHECK_EQ(pthread_key_create(&context_key, internalFree), 0);
   };
 
-  pthread_once(&detail::key_once, make_tls_key);
-  Context *current_thread_context =
-      static_cast<Context *>(pthread_getspecific(detail::key));
+  pthread_once(&key_once, make_thread_local_context_key);
+  __radsan::Context *current_thread_context =
+      static_cast<__radsan::Context *>(pthread_getspecific(context_key));
   if (current_thread_context == nullptr) {
-    current_thread_context =
-        static_cast<Context *>(InternalAlloc(sizeof(Context)));
-    new (current_thread_context) Context();
-    pthread_setspecific(detail::key, current_thread_context);
+    current_thread_context = static_cast<__radsan::Context *>(
+        __sanitizer::InternalAlloc(sizeof(__radsan::Context)));
+    new (current_thread_context) __radsan::Context();
+    pthread_setspecific(context_key, current_thread_context);
   }
 
   return *current_thread_context;
@@ -62,9 +57,7 @@ Context &GetContextForThisThreadImpl() {
     Until then, and to keep the first PRs small, only the exit mode
     is available.
 */
-void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
-
-} // namespace detail
+static void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
 
 namespace __radsan {
 
@@ -82,7 +75,7 @@ void Context::ExpectNotRealtime(const char *intercepted_function_name) {
   if (InRealtimeContext() && !IsBypassed()) {
     BypassPush();
     PrintDiagnostics(intercepted_function_name);
-    detail::InvokeViolationDetectedAction();
+    InvokeViolationDetectedAction();
     BypassPop();
   }
 }
@@ -99,8 +92,6 @@ void Context::PrintDiagnostics(const char *intercepted_function_name) {
   __radsan::PrintStackTrace();
 }
 
-Context &GetContextForThisThread() {
-  return detail::GetContextForThisThreadImpl();
-}
+Context &GetContextForThisThread() { return GetContextForThisThreadImpl(); }
 
 } // namespace __radsan
