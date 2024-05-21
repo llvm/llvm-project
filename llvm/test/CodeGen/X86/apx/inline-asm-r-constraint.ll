@@ -14,3 +14,16 @@ entry:
   call void asm sideeffect "add $0, %rax", "r,~{rax},~{rbx},~{rcx},~{rdx},~{rdi},~{rsi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(i64 %0)
   ret void
 }
+
+define void @constraint_jR_test() nounwind "frame-pointer"="all" {
+; EGPR-LABEL: constraint_jR_test:
+; EGPR:    addq %r16, %rax
+;
+; EGPRUSEGPR32-LABEL: constraint_jR_test:
+; EGPRUSEGPR32:    addq %r16, %rax
+entry:
+  %reg = alloca i64, align 8
+  %0 = load i64, ptr %reg, align 8
+  call void asm sideeffect "add $0, %rax", "^jR,~{rax},~{rbx},~{rcx},~{rdx},~{rdi},~{rsi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(i64 %0)
+  ret void
+}
