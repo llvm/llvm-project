@@ -1,4 +1,4 @@
-// REQUIRES: linux, lld-available
+// REQUIRES: linux, lld-available, lto
 
 // FIXME: Investigate and fix.
 // XFAIL: powerpc64-target-arch
