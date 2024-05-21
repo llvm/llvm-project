@@ -670,7 +670,6 @@ endif()
 # Keep the version requirements in sync with bindings/ocaml/README.txt.
 set(LLVM_BINDINGS "")
 include(FindOCaml)
-include(AddOCaml)
 if(WIN32 OR NOT LLVM_ENABLE_BINDINGS)
   message(STATUS "OCaml bindings disabled.")
 else()

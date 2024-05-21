@@ -1,0 +1,14 @@
+(library
+ (name llvm_@TARGET@)
+ (public_name llvm.@TARGET@)
+ (libraries llvm)
+ (foreign_stubs
+  (language c)
+  (names @TARGET@_ocaml)
+  (extra_deps ../../llvm/llvm_ocaml.h)
+  (flags :standard @CFLAGS@))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_library_flags.sexp)
+ (action (run ../../discover.sh @TARGET@)))

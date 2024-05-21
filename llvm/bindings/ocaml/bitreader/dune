@@ -1,0 +1,13 @@
+(library
+ (name llvm_bitreader)
+ (public_name llvm.bitreader)
+ (libraries llvm)
+ (foreign_stubs
+  (language c)
+  (names bitreader_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_library_flags.sexp)
+ (action (run ../discover.sh  bitreader)))

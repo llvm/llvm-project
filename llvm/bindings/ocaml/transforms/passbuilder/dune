@@ -1,0 +1,14 @@
+(library
+ (name llvm_passbuilder)
+ (public_name llvm.passbuilder)
+ (libraries llvm llvm.target)
+ (foreign_stubs
+  (language c)
+  (names passbuilder_ocaml)
+  (flags :standard -I../../target)
+  (extra_deps ../../llvm/llvm_ocaml.h ../../target/target_ocaml.h))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_library_flags.sexp)
+ (action (run ../../discover.sh passes)))
