@@ -170,7 +170,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
      << "/// The set of all architectures\n"
      << "static constexpr std::array<const ArchInfo *, " << CppSpellings.size()
      << "> ArchInfos = {\n";
-  for (auto CppSpelling : CppSpellings)
+  for (StringRef CppSpelling : CppSpellings)
     OS << "  &" << CppSpelling << ",\n";
   OS << "};\n";
 

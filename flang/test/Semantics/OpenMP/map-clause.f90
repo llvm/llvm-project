@@ -1,3 +1,5 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! Check OpenMP MAP clause validity. Section 5.8.3 OpenMP 5.2.
 
