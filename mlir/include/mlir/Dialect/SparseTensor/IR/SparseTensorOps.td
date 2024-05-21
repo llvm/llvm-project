@@ -1478,7 +1478,7 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       the returned iteration space covers. `hiLvl - loLvl` defines the dimension of the
       iteration space.
 
-      The type of returned the value is automatically inferred to
+      The type of returned the value is must be
       `!sparse_tensor.iter_space<#INPUT_ENCODING, lvls = $loLvl to $hiLvl>`.
       The returned iteration space can then be iterated over by
       `sparse_tensor.iterate` operations to visit every stored element
@@ -1489,6 +1489,7 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       // Extracts a 1-D iteration space from a COO tensor at level 1.
       %space = sparse_tensor.iteration.extract_space %sp at %it1 lvls = 1
         : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+       ->!sparse_tensor.iter_space<#COO, lvls = 1>
       ```
   }];
 
@@ -1501,16 +1502,17 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       return getHiLvl() - getLoLvl();
     }
     ArrayRef<::mlir::sparse_tensor::LevelType> getSpaceLvlTypes() {
-      return getResultSpace().getType().getLvlTypes();
+      return getExtractedSpace().getType().getLvlTypes();
     }
   }];
 
   let arguments = (ins AnySparseTensor:$tensor,
                        Optional<AnySparseIterator>:$parentIter,
                        LevelAttr:$loLvl, LevelAttr:$hiLvl);
-  let results = (outs AnySparseIterSpace:$resultSpace);
+  let results = (outs AnySparseIterSpace:$extractedSpace);
   let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
-                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)? `->` type($resultSpace)";
+                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)? "
+                       "`->` qualified(type($extractedSpace))";
 
   let hasVerifier = 1;
 }
@@ -1567,12 +1569,14 @@ def IterateOp : SparseTensor_Op<"iterate",
       ```mlir
       func.func @nested_iterate(%sp : tensor<4x8xf32, #COO>) {
         // Iterates over the first level of %sp
-        %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO>
+        %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0
+            : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0 to 1>
         %r1 = sparse_tensor.iterate %it1 in %l1 at (%coord0)
             : !sparse_tensor.iter_space<#COO, lvls = 0 to 1>  {
           // Iterates over the second level of %sp
           %l2 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 1
               : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0 to 1>
+             -> !sparse_tensor.iter_space<#COO, lvls = 1 to 2>
           %r2 = sparse_tensor.iterate %it2 in %l2 at (coord1)
               : !sparse_tensor.iter_space<#COO, lvls = 1 to 2>  {
              vector.print %coord0 : index
