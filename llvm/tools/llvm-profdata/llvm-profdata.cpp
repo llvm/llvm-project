@@ -75,7 +75,6 @@ cl::SubCommand MergeSubcommand(
 namespace {
 enum ProfileKinds { instr, sample, memory };
 enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
-} // namespace
 
 enum ProfileFormat {
   PF_None = 0,
@@ -87,6 +86,7 @@ enum ProfileFormat {
 };
 
 enum class ShowFormat { Text, Json, Yaml };
+} // namespace
 
 // Common options.
 cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
@@ -443,8 +443,7 @@ cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
 // multiple static functions map to the same name.
 const std::string DuplicateNameStr = "----";
 
-static void warn(Twine Message, std::string Whence = "",
-                 std::string Hint = "") {
+static void warn(Twine Message, StringRef Whence = "", StringRef Hint = "") {
   WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -456,13 +455,13 @@ static void warn(Twine Message, std::string Whence = "",
 static void warn(Error E, StringRef Whence = "") {
   if (E.isA<InstrProfError>()) {
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
-      warn(IPE.message(), std::string(Whence), std::string(""));
+      warn(IPE.message(), Whence);
     });
   }
 }
 
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
   WithColor::error();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -481,16 +480,16 @@ static void exitWithError(Error E, StringRef Whence = "") {
         // Hint in case user missed specifying the profile type.
         Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
-      exitWithError(IPE.message(), std::string(Whence), std::string(Hint));
+      exitWithError(IPE.message(), Whence, Hint);
     });
     return;
   }
 
-  exitWithError(toString(std::move(E)), std::string(Whence));
+  exitWithError(toString(std::move(E)), Whence);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), std::string(Whence));
+  exitWithError(EC.message(), Whence);
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
@@ -498,7 +497,7 @@ static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
   if (FailMode == failIfAnyAreInvalid)
     exitWithErrorCode(EC, Whence);
   else
-    warn(EC.message(), std::string(Whence));
+    warn(EC.message(), Whence);
 }
 
 static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
@@ -1585,7 +1584,7 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
   // If OutputSizeLimit is 0 (default), it is the same as write().
   if (std::error_code EC =
           Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
-    exitWithErrorCode(std::move(EC));
+    exitWithErrorCode(EC);
 }
 
 static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
