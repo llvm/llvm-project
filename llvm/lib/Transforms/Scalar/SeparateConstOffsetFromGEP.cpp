@@ -992,7 +992,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   bool PtrGEPInBounds = PtrGEP->isInBounds();
   bool IsChainInBounds = GEPInBounds && PtrGEPInBounds;
   if (IsChainInBounds) {
-    auto IsKnownNonNegative = [&](Value *V) {
+    auto IsKnownNonNegative = [this](Value *V) {
       return isKnownNonNegative(V, *DL);
     };
     IsChainInBounds &= all_of(GEP->indices(), IsKnownNonNegative);
