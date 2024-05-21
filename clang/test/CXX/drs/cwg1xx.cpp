@@ -618,7 +618,6 @@ namespace cwg141 { // cwg141: 3.1
     // FIXME: we issue a useful diagnostic first, then some bogus ones.
     b.f<int>();
     // expected-error@-1 {{no member named 'f' in 'cwg141::B'}}
-    // expected-error@-2 +{{}}
     (void)b.S<int>::n;
   }
   template<typename T> struct C {
@@ -628,10 +627,12 @@ namespace cwg141 { // cwg141: 3.1
       // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
     }
     void h() {
-      (void)t.S<int>::n; // ok
+      (void)t.S<int>::n;
+      // expected-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
     }
     void i() {
-      (void)t.S<int>(); // ok!
+      (void)t.S<int>();
+      // expected-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
     }
   };
   void h() { C<B>().h(); } // ok

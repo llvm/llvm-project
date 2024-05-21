@@ -363,11 +363,19 @@ NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
   while (NNS->getPrefix())
     NNS = NNS->getPrefix();
 
-  if (NNS->getKind() != NestedNameSpecifier::Identifier)
-    return nullptr;
-
-  LookupResult Found(*this, NNS->getAsIdentifier(), SourceLocation(),
-                     LookupNestedNameSpecifierName);
+  const IdentifierInfo *II = NNS->getAsIdentifier();
+  if (!II) {
+    if (const auto *DTST =
+            dyn_cast_if_present<DependentTemplateSpecializationType>(
+                NNS->getAsType()))
+      II = DTST->getIdentifier();
+    else
+      return nullptr;
+  }
+  assert(II && "Missing first qualifier in scope");
+  LookupResult Found(*this, II, SourceLocation(),
+                     NNS->getAsIdentifier() ? LookupNestedNameSpecifierName
+                                            : LookupOrdinaryName);
   LookupName(Found, S);
   assert(!Found.isAmbiguous() && "Cannot handle ambiguities here yet");
 
@@ -375,10 +383,10 @@ NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
     return nullptr;
 
   NamedDecl *Result = Found.getFoundDecl();
-  if (isAcceptableNestedNameSpecifier(Result))
-    return Result;
+  // if (isAcceptableNestedNameSpecifier(Result))
+  return Result;
 
-  return nullptr;
+  // return nullptr;
 }
 
 namespace {
@@ -428,12 +436,15 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // x->B::f, and we are looking into the type of the object.
     assert(!SS.isSet() && "ObjectType and scope specifier cannot coexist");
     LookupCtx = computeDeclContext(ObjectType);
-    isDependent = ObjectType->isDependentType();
-  } else if (SS.isSet()) {
+    isDependent = !LookupCtx && ObjectType->isDependentType();
+  } else if (SS.isNotEmpty()) {
     // This nested-name-specifier occurs after another nested-name-specifier,
     // so look into the context associated with the prior nested-name-specifier.
     LookupCtx = computeDeclContext(SS, EnteringContext);
-    isDependent = isDependentScopeSpecifier(SS);
+    isDependent = !LookupCtx && isDependentScopeSpecifier(SS);
+    // The declaration context must be complete.
+    if (LookupCtx && RequireCompleteDeclContext(SS, LookupCtx))
+      return true;
     Found.setContextRange(SS.getRange());
   }
 
@@ -444,14 +455,28 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // expression or the declaration context associated with a prior
     // nested-name-specifier.
 
-    // The declaration context must be complete.
-    if (!LookupCtx->isDependentContext() &&
-        RequireCompleteDeclContext(SS, LookupCtx))
-      return true;
-
     LookupQualifiedName(Found, LookupCtx);
 
-    if (!ObjectType.isNull() && Found.empty()) {
+    isDependent |= Found.wasNotFoundInCurrentInstantiation();
+  }
+
+  bool LookupFirstQualifierInScope =
+      Found.empty() && !ObjectType.isNull() && !isDependent;
+
+  // FIXME: We should still do the lookup if the object expression is dependent,
+  // but instead of using them we should store them via
+  // setFirstQualifierFoundInScope and pretend we found nothing.
+  if (SS.isEmpty() && (ObjectType.isNull() || LookupFirstQualifierInScope)) {
+    if (S)
+      LookupName(Found, S);
+    else if (LookupFirstQualifierInScope && SS.getFirstQualifierFoundInScope())
+      Found.addDecl(SS.getFirstQualifierFoundInScope());
+
+    if (!ObjectType.isNull())
+      ObjectTypeSearchedInScope = true;
+  }
+#if 0
+    if (!ObjectType.isNull() && Found.empty() && !isDependent) {
       // C++ [basic.lookup.classref]p4:
       //   If the id-expression in a class member access is a qualified-id of
       //   the form
@@ -483,6 +508,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // Perform unqualified name lookup in the current scope.
     LookupName(Found, S);
   }
+#endif
 
   if (Found.isAmbiguous())
     return true;

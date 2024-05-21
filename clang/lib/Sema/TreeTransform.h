@@ -2894,6 +2894,8 @@ public:
 
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
+    if (FirstQualifierInScope)
+      SS.setFoundFirstQualifierInScope(FirstQualifierInScope);
 
     Base = BaseResult.get();
     if (Base->containsErrors())
@@ -3585,6 +3587,9 @@ public:
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
 
+    if (FirstQualifierInScope)
+      SS.setFoundFirstQualifierInScope(FirstQualifierInScope);
+
     return SemaRef.BuildMemberReferenceExpr(BaseE, BaseType,
                                             OperatorLoc, IsArrow,
                                             SS, TemplateKWLoc,
@@ -3607,6 +3612,9 @@ public:
                                 const TemplateArgumentListInfo *TemplateArgs) {
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
+
+    if (FirstQualifierInScope)
+      SS.setFoundFirstQualifierInScope(FirstQualifierInScope);
 
     return SemaRef.BuildMemberReferenceExpr(BaseE, BaseType,
                                             OperatorLoc, IsArrow,
@@ -4395,6 +4403,8 @@ NestedNameSpecifierLoc TreeTransform<Derived>::TransformNestedNameSpecifierLoc(
   insertNNS(NNS);
 
   CXXScopeSpec SS;
+  if (FirstQualifierInScope)
+    SS.setFoundFirstQualifierInScope(FirstQualifierInScope);
   while (!Qualifiers.empty()) {
     NestedNameSpecifierLoc Q = Qualifiers.pop_back_val();
     NestedNameSpecifier *QNNS = Q.getNestedNameSpecifier();
@@ -5191,6 +5201,9 @@ TypeSourceInfo *TreeTransform<Derived>::TransformTSIInObjectScope(
 
   TypeLocBuilder TLB;
   QualType Result;
+
+  if (UnqualLookup)
+    SS.setFoundFirstQualifierInScope(UnqualLookup);
 
   if (isa<TemplateSpecializationType>(T)) {
     TemplateSpecializationTypeLoc SpecTL =
@@ -16288,6 +16301,8 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
   UnqualifiedId TemplateName;
   TemplateName.setIdentifier(&Name, NameLoc);
   Sema::TemplateTy Template;
+  if (FirstQualifierInScope)
+    SS.setFoundFirstQualifierInScope(FirstQualifierInScope);
   getSema().ActOnTemplateName(/*Scope=*/nullptr, SS, TemplateKWLoc,
                               TemplateName, ParsedType::make(ObjectType),
                               /*EnteringContext=*/false, Template,

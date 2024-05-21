@@ -1395,10 +1395,10 @@ ExprResult MSPropertyOpBuilder::buildGet() {
   GetterName.setIdentifier(II, RefExpr->getMemberLoc());
   CXXScopeSpec SS;
   SS.Adopt(RefExpr->getQualifierLoc());
-  ExprResult GetterExpr =
-      S.ActOnMemberAccessExpr(S.getCurScope(), InstanceBase, SourceLocation(),
-                              RefExpr->isArrow() ? tok::arrow : tok::period, SS,
-                              SourceLocation(), GetterName, nullptr);
+  ExprResult GetterExpr = S.ActOnMemberAccessExpr(
+      S.getCurScope(), InstanceBase, /*OpLoc=*/SourceLocation(),
+      RefExpr->isArrow(), SS, /*TemplateKWLoc=*/SourceLocation(), GetterName,
+      /*ObjCImpDecl=*/nullptr);
   if (GetterExpr.isInvalid()) {
     S.Diag(RefExpr->getMemberLoc(),
            diag::err_cannot_find_suitable_accessor) << 0 /* getter */
@@ -1424,10 +1424,10 @@ ExprResult MSPropertyOpBuilder::buildSet(Expr *op, SourceLocation sl,
   SetterName.setIdentifier(II, RefExpr->getMemberLoc());
   CXXScopeSpec SS;
   SS.Adopt(RefExpr->getQualifierLoc());
-  ExprResult SetterExpr =
-      S.ActOnMemberAccessExpr(S.getCurScope(), InstanceBase, SourceLocation(),
-                              RefExpr->isArrow() ? tok::arrow : tok::period, SS,
-                              SourceLocation(), SetterName, nullptr);
+  ExprResult SetterExpr = S.ActOnMemberAccessExpr(
+      S.getCurScope(), InstanceBase, /*OpLoc=*/SourceLocation(),
+      RefExpr->isArrow(), SS, /*TemplateKWLoc=*/SourceLocation(), SetterName,
+      /*ObjCImpDecl=*/nullptr);
   if (SetterExpr.isInvalid()) {
     S.Diag(RefExpr->getMemberLoc(),
            diag::err_cannot_find_suitable_accessor) << 1 /* setter */

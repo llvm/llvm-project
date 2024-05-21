@@ -728,7 +728,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
       return nullptr;
     }
     CXXScopeSpec SS;
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ParsedType=*/nullptr,
+    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                        /*ObectHasErrors=*/false,
                                        /*EnteringConttext=*/false,
                                        /*MayBePseudoDestructor=*/nullptr,
