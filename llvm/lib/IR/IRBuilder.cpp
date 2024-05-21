@@ -1053,9 +1053,8 @@ Value *IRBuilderBase::CreateFCmpHelper(
     return CreateConstrainedFPCmp(ID, P, LHS, RHS, Name);
   }
 
-  if (auto *LC = dyn_cast<Constant>(LHS))
-    if (auto *RC = dyn_cast<Constant>(RHS))
-      return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+  if (auto *V = Folder.FoldCmp(P, LHS, RHS))
+    return V;
   return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
 }
 
