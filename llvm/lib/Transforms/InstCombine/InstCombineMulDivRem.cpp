@@ -1176,6 +1176,45 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
       }
+
+      // We can reduce expressions of things like * 150 / 100 to * 3 / 2
+      if (Op0->hasOneUse() && !C2->isZero() &&
+          !(IsSigned && C1->isMinSignedValue() && C2->isAllOnes())) {
+        assert(!C2->isMinSignedValue() &&
+               "This should have been folded away by InstSimplify");
+        APInt GCD = APIntOps::GreatestCommonDivisor(C1->abs(), C2->abs());
+        if (!GCD.isOne() && !GCD.isZero()) {
+          APInt NewC1;
+          APInt NewC2;
+          if (IsSigned && C1->isNegative() && C2->isNegative()) {
+            NewC1 = C1->abs().udiv(GCD);
+            NewC2 = C2->abs().udiv(GCD);
+          } else if (IsSigned) {
+            NewC1 = C1->sdiv(GCD);
+            NewC2 = C2->sdiv(GCD);
+          } else {
+            NewC1 = C1->udiv(GCD);
+            NewC2 = C2->udiv(GCD);
+          }
+
+          auto *NewMul = Builder.CreateMul(
+              X, ConstantInt::get(Ty, NewC1), "",
+              /*NUW*/ cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap(),
+              /*NSW*/ true);
+
+          if (IsSigned) {
+            auto *NewDiv =
+                BinaryOperator::CreateSDiv(NewMul, ConstantInt::get(Ty, NewC2));
+            NewDiv->setIsExact(I.isExact());
+            return NewDiv;
+          }
+
+          auto *NewDiv =
+              BinaryOperator::CreateUDiv(NewMul, ConstantInt::get(Ty, NewC2));
+          NewDiv->setIsExact(I.isExact());
+          return NewDiv;
+        }
+      }
     }
 
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
