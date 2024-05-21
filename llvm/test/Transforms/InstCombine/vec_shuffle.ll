@@ -88,10 +88,11 @@ define <4 x float> @test7(<4 x float> %x) {
   ret <4 x float> %r
 }
 
-; This should turn into a single shuffle.
+; This should not turn into a single shuffle.
 define <4 x float> @test8(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[T134:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x i32> <i32 1, i32 poison, i32 3, i32 4>
+; CHECK-NEXT:    [[T132:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float undef, float poison, float poison>, <4 x i32> <i32 1, i32 5, i32 3, i32 poison>
+; CHECK-NEXT:    [[T134:%.*]] = shufflevector <4 x float> [[T132]], <4 x float> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
 ; CHECK-NEXT:    ret <4 x float> [[T134]]
 ;
   %t4 = extractelement <4 x float> %x, i32 1
