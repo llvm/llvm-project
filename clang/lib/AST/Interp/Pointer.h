@@ -537,9 +537,6 @@ public:
     if (isZero())
       return 0;
 
-    if (isElementPastEnd())
-      return 1;
-
     // narrow()ed element in a composite array.
     if (asBlockPointer().Base > sizeof(InlineDescriptor) &&
         asBlockPointer().Base == Offset)
