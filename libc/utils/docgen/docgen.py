@@ -23,12 +23,24 @@ def load_api(hname: str) -> Dict:
 # TODO: we may need to get more sophisticated for less generic implementations.
 # Does libc/src/{hname minus .h suffix}/{fname}.cpp exist?
 def is_implemented(hname: str, fname: str) -> bool:
-    return Path(
+    path = Path(
         Path(__file__).parent.parent.parent,
         "src",
-        hname.rstrip(".h"),
-        fname + ".cpp",
-    ).exists()
+        hname.rstrip(".h")
+    )
+
+    if not path.exists():
+        raise FileNotFoundError(f"implementation dir does not exist: {path}")
+
+    if not path.is_dir():
+        raise NotADirectoryError(f"implementation dir is not a dir: {path}")
+
+    # Recursively search for the target source file in the subdirectories under
+    # libc/src/{hname}.
+    for _ in path.glob("**/" + fname + ".cpp"):
+        return True
+
+    return False
 
 
 def print_functions(header: str, functions: Dict):
@@ -48,6 +60,7 @@ def print_functions(header: str, functions: Dict):
 
 
 def print_header(header: str, api: Dict):
+    print(".. include:: check.rst\n")
     fns = f"{header} Functions"
     print(fns)
     print("=" * (len(fns)))

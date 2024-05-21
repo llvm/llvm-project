@@ -66,7 +66,7 @@ config("cxxabi_config") {
     "//libcxx/src",
   ]
   cflags_cc = [
-    "-std=c++20",
+    "-std=c++23",
     "-nostdinc++",
   ]
   defines = [

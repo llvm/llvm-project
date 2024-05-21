@@ -251,6 +251,6 @@ M68kSubtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
     return M68kII::MO_GOTPCREL;
   }
 
-  // otherwise linker will figure this out
-  return M68kII::MO_PLT;
+  // Ensure that we don't emit PLT relocations when in non-pic modes.
+  return isPositionIndependent() ? M68kII::MO_PLT : M68kII::MO_ABSOLUTE_ADDRESS;
 }

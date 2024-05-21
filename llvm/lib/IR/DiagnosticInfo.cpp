@@ -179,8 +179,12 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   else if (isa<Constant>(V)) {
     raw_string_ostream OS(Val);
     V->printAsOperand(OS, /*PrintType=*/false);
-  } else if (auto *I = dyn_cast<Instruction>(V))
+  } else if (auto *I = dyn_cast<Instruction>(V)) {
     Val = I->getOpcodeName();
+  } else if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
+    if (auto *S = dyn_cast<MDString>(MD->getMetadata()))
+      Val = S->getString();
+  }
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)

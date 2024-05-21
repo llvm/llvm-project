@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -526,12 +526,9 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
-inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
-                                       bool IsEABI) {
+inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (IsEABI)
-    return 16;
   if (!IsRV64) {
     switch (RlistVal) {
     case RLISTENCODE::RA:
@@ -578,10 +575,10 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
 }
 
 inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
+                            int64_t StackAdjustment, bool IsRV64) {
   if (RlistVal == RLISTENCODE::INVALID_RLIST)
     return false;
-  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64, IsEABI);
+  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
   StackAdjustment -= StackAdjBase;
   if (StackAdjustment % 16 != 0)
     return false;

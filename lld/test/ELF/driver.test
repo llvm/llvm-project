@@ -30,9 +30,10 @@
 # ERR2: error: -r and -pie may not be used together
 # ERR2: error: -r and --export-dynamic may not be used together
 
-# RUN: not ld.lld -r --icf=all --gdb-index %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR4 %s
+# RUN: not ld.lld -r --icf=all --gdb-index --debug-names %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR4 %s
 # ERR4: error: -r and --gdb-index may not be used together
 # ERR4: error: -r and --icf may not be used together
+# ERR4: error: -r and --debug-names may not be used together
 
 # RUN: not ld.lld -shared -pie %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR7 %s
 # ERR7: error: -shared and -pie may not be used together

@@ -408,8 +408,8 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
   return process_sp;
 }
 
-ConstString &Process::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.process");
+llvm::StringRef Process::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.process");
   return class_name;
 }
 
@@ -423,7 +423,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
                  const UnixSignalsSP &unix_signals_sp)
     : ProcessProperties(this),
       Broadcaster((target_sp->GetDebugger().GetBroadcasterManager()),
-                  Process::GetStaticBroadcasterClass().AsCString()),
+                  Process::GetStaticBroadcasterClass().str()),
       m_target_wp(target_sp), m_public_state(eStateUnloaded),
       m_private_state(eStateUnloaded),
       m_private_state_broadcaster(nullptr,
@@ -3857,8 +3857,8 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
         // case we should tell it to stop doing that.  Normally, we don't NEED
         // to do that because we will next close the communication to the stub
         // and that will get it to shut down.  But there are remote debugging
-        // cases where relying on that side-effect causes the shutdown to be 
-        // flakey, so we should send a positive signal to interrupt the wait. 
+        // cases where relying on that side-effect causes the shutdown to be
+        // flakey, so we should send a positive signal to interrupt the wait.
         Status error = HaltPrivate();
         BroadcastEvent(eBroadcastBitInterrupt, nullptr);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
@@ -4738,27 +4738,26 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   if (!thread_plan_sp) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "RunThreadPlan called with empty thread plan.");
+        lldb::eSeverityError, "RunThreadPlan called with empty thread plan.");
     return eExpressionSetupError;
   }
 
   if (!thread_plan_sp->ValidatePlan(nullptr)) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan called with an invalid thread plan.");
     return eExpressionSetupError;
   }
 
   if (exe_ctx.GetProcessPtr() != this) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called on wrong process.");
     return eExpressionSetupError;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   if (thread == nullptr) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called with invalid thread.");
     return eExpressionSetupError;
   }
@@ -4793,7 +4792,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   if (m_private_state.GetValue() != eStateStopped) {
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan called while the private state was not stopped.");
     return eExpressionSetupError;
   }
@@ -4807,7 +4806,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     selected_frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (!selected_frame_sp) {
       diagnostic_manager.Printf(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "RunThreadPlan called without a selected frame on thread %d",
           thread_idx_id);
       return eExpressionSetupError;
@@ -4818,7 +4817,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // be smaller than the overall timeout.
   if (options.GetOneThreadTimeout() && options.GetTimeout() &&
       *options.GetTimeout() < *options.GetOneThreadTimeout()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "RunThreadPlan called with one thread "
                                  "timeout greater than total timeout");
     return eExpressionSetupError;
@@ -4946,7 +4945,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     Event *other_events = listener_sp->PeekAtNextEvent();
     if (other_events != nullptr) {
       diagnostic_manager.PutString(
-          eDiagnosticSeverityError,
+          lldb::eSeverityError,
           "RunThreadPlan called with pending events on the queue.");
       return eExpressionSetupError;
     }
@@ -4989,7 +4988,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           Status resume_error = PrivateResume();
           if (!resume_error.Success()) {
             diagnostic_manager.Printf(
-                eDiagnosticSeverityError,
+                lldb::eSeverityError,
                 "couldn't resume inferior the %d time: \"%s\".", num_resumes,
                 resume_error.AsCString());
             return_value = eExpressionSetupError;
@@ -5005,7 +5004,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                     "resume %" PRIu32 ", exiting.",
                     num_resumes);
 
-          diagnostic_manager.Printf(eDiagnosticSeverityError,
+          diagnostic_manager.Printf(lldb::eSeverityError,
                                     "didn't get any event after resume %" PRIu32
                                     ", exiting.",
                                     num_resumes);
@@ -5041,7 +5040,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           }
 
           diagnostic_manager.Printf(
-              eDiagnosticSeverityError,
+              lldb::eSeverityError,
               "didn't get running event after initial resume, got %s instead.",
               StateAsCString(stop_state));
           return_value = eExpressionSetupError;
@@ -5099,7 +5098,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             const bool use_run_lock = false;
             Halt(clear_thread_plans, use_run_lock);
             return_value = eExpressionInterrupted;
-            diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+            diagnostic_manager.PutString(lldb::eSeverityInfo,
                                          "execution halted by user interrupt.");
             LLDB_LOGF(log, "Process::RunThreadPlan(): Got  interrupted by "
                            "eBroadcastBitInterrupted, exiting.");
@@ -5152,7 +5151,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 event_to_broadcast_sp = event_sp;
 
               diagnostic_manager.PutString(
-                  eDiagnosticSeverityError,
+                  lldb::eSeverityError,
                   "execution stopped with unexpected state.");
               return_value = eExpressionInterrupted;
               break;
@@ -6325,38 +6324,76 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // ranges.
 static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                       Process::CoreFileMemoryRanges &ranges) {
-  // Don't add empty ranges or ranges with no permissions.
-  if (region.GetRange().GetByteSize() == 0 || region.GetLLDBPermissions() == 0)
+  // Don't add empty ranges.
+  if (region.GetRange().GetByteSize() == 0)
+    return;
+  // Don't add ranges with no read permissions.
+  if ((region.GetLLDBPermissions() & lldb::ePermissionsReadable) == 0)
     return;
   if (try_dirty_pages && AddDirtyPages(region, ranges))
     return;
   ranges.push_back(CreateCoreFileMemoryRange(region));
 }
 
+static void SaveOffRegionsWithStackPointers(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+  const bool try_dirty_pages = true;
+
+  // Before we take any dump, we want to save off the used portions of the
+  // stacks and mark those memory regions as saved. This prevents us from saving
+  // the unused portion of the stack below the stack pointer. Saving space on
+  // the dump.
+  for (lldb::ThreadSP thread_sp : process.GetThreadList().Threads()) {
+    if (!thread_sp)
+      continue;
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
+    if (!frame_sp)
+      continue;
+    RegisterContextSP reg_ctx_sp = frame_sp->GetRegisterContext();
+    if (!reg_ctx_sp)
+      continue;
+    const addr_t sp = reg_ctx_sp->GetSP();
+    const size_t red_zone = process.GetABI()->GetRedZoneSize();
+    lldb_private::MemoryRegionInfo sp_region;
+    if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
+      const size_t stack_head = (sp - red_zone);
+      const size_t stack_size = sp_region.GetRange().GetRangeEnd() - stack_head;
+      sp_region.GetRange().SetRangeBase(stack_head);
+      sp_region.GetRange().SetByteSize(stack_size);
+      stack_ends.insert(sp_region.GetRange().GetRangeEnd());
+      AddRegion(sp_region, try_dirty_pages, ranges);
+    }
+  }
+}
+
 // Save all memory regions that are not empty or have at least some permissions
 // for a full core file style.
 static void GetCoreFileSaveRangesFull(Process &process,
                                       const MemoryRegionInfos &regions,
-                                      Process::CoreFileMemoryRanges &ranges) {
+                                      Process::CoreFileMemoryRanges &ranges,
+                                      std::set<addr_t> &stack_ends) {
 
   // Don't add only dirty pages, add full regions.
 const bool try_dirty_pages = false;
   for (const auto &region : regions)
-    AddRegion(region, try_dirty_pages, ranges);
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
+      AddRegion(region, try_dirty_pages, ranges);
 }
 
 // Save only the dirty pages to the core file. Make sure the process has at
 // least some dirty pages, as some OS versions don't support reporting what
 // pages are dirty within an memory region. If no memory regions have dirty
 // page information fall back to saving out all ranges with write permissions.
-static void
-GetCoreFileSaveRangesDirtyOnly(Process &process,
-                               const MemoryRegionInfos &regions,
-                               Process::CoreFileMemoryRanges &ranges) {
+static void GetCoreFileSaveRangesDirtyOnly(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+
   // Iterate over the regions and find all dirty pages.
   bool have_dirty_page_info = false;
   for (const auto &region : regions) {
-    if (AddDirtyPages(region, ranges))
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+        AddDirtyPages(region, ranges))
       have_dirty_page_info = true;
   }
 
@@ -6365,7 +6402,8 @@ GetCoreFileSaveRangesDirtyOnly(Process &process,
     // plug-in so fall back to any region with write access permissions.
     const bool try_dirty_pages = false;
     for (const auto &region : regions)
-      if (region.GetWritable() == MemoryRegionInfo::eYes)
+      if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+          region.GetWritable() == MemoryRegionInfo::eYes)
         AddRegion(region, try_dirty_pages, ranges);
   }
 }
@@ -6378,43 +6416,18 @@ GetCoreFileSaveRangesDirtyOnly(Process &process,
 // dirty regions as this will make the core file smaller. If the process
 // doesn't support dirty regions, then it will fall back to adding the full
 // stack region.
-static void
-GetCoreFileSaveRangesStackOnly(Process &process,
-                               const MemoryRegionInfos &regions,
-                               Process::CoreFileMemoryRanges &ranges) {
+static void GetCoreFileSaveRangesStackOnly(
+    Process &process, const MemoryRegionInfos &regions,
+    Process::CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+  const bool try_dirty_pages = true;
   // Some platforms support annotating the region information that tell us that
   // it comes from a thread stack. So look for those regions first.
 
-  // Keep track of which stack regions we have added
-  std::set<addr_t> stack_bases;
-
-  const bool try_dirty_pages = true;
   for (const auto &region : regions) {
-    if (region.IsStackMemory() == MemoryRegionInfo::eYes) {
-      stack_bases.insert(region.GetRange().GetRangeBase());
+    // Save all the stack memory ranges not associated with a stack pointer.
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0 &&
+        region.IsStackMemory() == MemoryRegionInfo::eYes)
       AddRegion(region, try_dirty_pages, ranges);
-    }
-  }
-
-  // Also check with our threads and get the regions for their stack pointers
-  // and add those regions if not already added above.
-  for (lldb::ThreadSP thread_sp : process.GetThreadList().Threads()) {
-    if (!thread_sp)
-      continue;
-    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
-    if (!frame_sp)
-      continue;
-    RegisterContextSP reg_ctx_sp = frame_sp->GetRegisterContext();
-    if (!reg_ctx_sp)
-      continue;
-    const addr_t sp = reg_ctx_sp->GetSP();
-    lldb_private::MemoryRegionInfo sp_region;
-    if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
-      // Only add this region if not already added above. If our stack pointer
-      // is pointing off in the weeds, we will want this range.
-      if (stack_bases.count(sp_region.GetRange().GetRangeBase()) == 0)
-        AddRegion(sp_region, try_dirty_pages, ranges);
-    }
   }
 }
 
@@ -6426,23 +6439,27 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     return err;
   if (regions.empty())
     return Status("failed to get any valid memory regions from the process");
+  if (core_style == eSaveCoreUnspecified)
+    return Status("callers must set the core_style to something other than "
+                  "eSaveCoreUnspecified");
+
+  std::set<addr_t> stack_ends;
+  SaveOffRegionsWithStackPointers(*this, regions, ranges, stack_ends);
 
   switch (core_style) {
   case eSaveCoreUnspecified:
-    err = Status("callers must set the core_style to something other than "
-                 "eSaveCoreUnspecified");
     break;
 
   case eSaveCoreFull:
-    GetCoreFileSaveRangesFull(*this, regions, ranges);
+    GetCoreFileSaveRangesFull(*this, regions, ranges, stack_ends);
     break;
 
   case eSaveCoreDirtyOnly:
-    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges);
+    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges, stack_ends);
     break;
 
   case eSaveCoreStackOnly:
-    GetCoreFileSaveRangesStackOnly(*this, regions, ranges);
+    GetCoreFileSaveRangesStackOnly(*this, regions, ranges, stack_ends);
     break;
   }
 
