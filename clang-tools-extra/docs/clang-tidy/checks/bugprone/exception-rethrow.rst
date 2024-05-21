@@ -21,7 +21,20 @@ to the invocation of the copy constructor.
   try {
     // Code that may throw an exception
   } catch (const std::exception& e) {
-    throw e; // Bad
+    throw e; // Bad, 'e' is copied
+  }
+
+.. code-block:: c++
+
+  class derived_exception : public std::exception { ... };
+
+  void throwDerived() { throw derived_exception{}; }
+
+  try {
+    throwDerived();
+  } catch (const std::exception& e) {
+    throw e; // Bad, exception slicing occurs when 'derived_exception' is
+             // being rethrown as 'std::exception'
   }
 
 To prevent these issues, it is advisable to utilize ``throw;`` statements to
@@ -31,16 +44,16 @@ rethrow the original exception object for currently handled exceptions.
 
   try {
     // Code that may throw an exception
-  } catch (const std::exception& e) {
+  } catch (const std::exception&) {
     throw; // Good
   }
 
-However, when empty throw statement is used outside of a catch block, it
-will result in a call to ``std::terminate()``, which abruptly terminates the
-application. This behavior can lead to abnormal termination of the program and
-is often unintended. Such occurrences may indicate errors or oversights in the
-exception handling logic, and it is essential to avoid empty throw statements
-outside catch blocks to prevent unintended program termination.
+However, when an empty throw statement is used outside a catch block, it
+results in a call to ``std::terminate()``, which abruptly terminates the
+application. This behavior can lead to the abnormal termination of the
+program and is often unintended. Such occurrences may indicate errors or
+oversights in the exception handling logic, and it is essential to avoid empty
+throw statements outside catch blocks to prevent unintended program termination.
 
 .. code-block:: c++
 
@@ -58,7 +71,7 @@ outside catch blocks to prevent unintended program termination.
     return 0;
   }
 
-Above program will be terminated with:
+The above program will be terminated with:
 
 .. code-block:: text
 

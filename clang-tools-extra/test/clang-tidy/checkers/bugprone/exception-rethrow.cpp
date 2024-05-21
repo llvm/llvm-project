@@ -4,7 +4,7 @@ struct exception {};
 
 namespace std {
   template <class T>
-  T&& move(T &x) {
+  T&& move(T &&x) {
     return static_cast<T&&>(x);
   }
 }
