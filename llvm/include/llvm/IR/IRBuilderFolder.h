@@ -48,8 +48,8 @@ public:
   virtual Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
                              FastMathFlags FMF) const = 0;
 
-  virtual Value *FoldICmp(CmpInst::Predicate P, Value *LHS,
-                          Value *RHS) const = 0;
+  virtual Value *FoldCmp(CmpInst::Predicate P, Value *LHS,
+                         Value *RHS) const = 0;
 
   virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                          bool IsInBounds = false) const = 0;
@@ -84,13 +84,6 @@ public:
   virtual Value *CreatePointerCast(Constant *C, Type *DestTy) const = 0;
   virtual Value *CreatePointerBitCastOrAddrSpaceCast(Constant *C,
                                                      Type *DestTy) const = 0;
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  virtual Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
-                            Constant *RHS) const = 0;
 };
 
 } // end namespace llvm

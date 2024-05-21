@@ -72,8 +72,8 @@ public:
     return simplifyUnOp(Opc, V, FMF, SQ);
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
-    return simplifyICmpInst(P, LHS, RHS, SQ);
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    return simplifyCmpInst(P, LHS, RHS, SQ);
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
@@ -138,15 +138,6 @@ public:
     if (C->getType() == DestTy)
       return C; // avoid calling Fold
     return ConstFolder.CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
-                    Constant *RHS) const override {
-    return ConstFolder.CreateFCmp(P, LHS, RHS);
   }
 };
 
