@@ -32,6 +32,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -1465,7 +1466,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     SourceLocation CoawaitLoc = ConsumeToken();
     Res = ParseCastExpression(AnyCastExpr);
     if (!Res.isInvalid())
-      Res = Actions.ActOnCoawaitExpr(getCurScope(), CoawaitLoc, Res.get());
+      Res = Actions.Coroutine().ActOnCoawaitExpr(getCurScope(), CoawaitLoc,
+                                                 Res.get());
     return Res;
   }
 

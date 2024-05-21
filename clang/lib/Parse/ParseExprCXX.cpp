@@ -24,6 +24,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -1977,7 +1978,7 @@ ExprResult Parser::ParseCoyieldExpression() {
   ExprResult Expr = Tok.is(tok::l_brace) ? ParseBraceInitializer()
                                          : ParseAssignmentExpression();
   if (!Expr.isInvalid())
-    Expr = Actions.ActOnCoyieldExpr(getCurScope(), Loc, Expr.get());
+    Expr = Actions.Coroutine().ActOnCoyieldExpr(getCurScope(), Loc, Expr.get());
   return Expr;
 }
 

@@ -169,6 +169,7 @@ class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
 class SemaCodeCompletion;
+class SemaCoroutine;
 class SemaCUDA;
 class SemaHLSL;
 class SemaObjC;
@@ -457,34 +458,33 @@ class Sema final : public SemaBase {
   // 4. Availability Attribute Handling (SemaAvailability.cpp)
   // 5. Casts (SemaCast.cpp)
   // 6. Extra Semantic Checking (SemaChecking.cpp)
-  // 7. C++ Coroutines (SemaCoroutine.cpp)
-  // 8. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
-  // 9. Declarations (SemaDecl.cpp)
-  // 10. Declaration Attribute Handling (SemaDeclAttr.cpp)
-  // 11. C++ Declarations (SemaDeclCXX.cpp)
-  // 12. C++ Exception Specifications (SemaExceptionSpec.cpp)
-  // 13. Expressions (SemaExpr.cpp)
-  // 14. C++ Expressions (SemaExprCXX.cpp)
-  // 15. Member Access Expressions (SemaExprMember.cpp)
-  // 16. Initializers (SemaInit.cpp)
-  // 17. C++ Lambda Expressions (SemaLambda.cpp)
-  // 18. Name Lookup (SemaLookup.cpp)
-  // 19. Modules (SemaModule.cpp)
-  // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Pseudo-Object (SemaPseudoObject.cpp)
-  // 22. Statements (SemaStmt.cpp)
-  // 23. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 24. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 25. C++ Templates (SemaTemplate.cpp)
-  // 26. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 28. C++ Template Declaration Instantiation
+  // 7. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
+  // 8. Declarations (SemaDecl.cpp)
+  // 9. Declaration Attribute Handling (SemaDeclAttr.cpp)
+  // 10. C++ Declarations (SemaDeclCXX.cpp)
+  // 11. C++ Exception Specifications (SemaExceptionSpec.cpp)
+  // 12. Expressions (SemaExpr.cpp)
+  // 13. C++ Expressions (SemaExprCXX.cpp)
+  // 14. Member Access Expressions (SemaExprMember.cpp)
+  // 15. Initializers (SemaInit.cpp)
+  // 16. C++ Lambda Expressions (SemaLambda.cpp)
+  // 17. Name Lookup (SemaLookup.cpp)
+  // 18. Modules (SemaModule.cpp)
+  // 19. C++ Overloading (SemaOverload.cpp)
+  // 20. Pseudo-Object (SemaPseudoObject.cpp)
+  // 21. Statements (SemaStmt.cpp)
+  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 24. C++ Templates (SemaTemplate.cpp)
+  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 27. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 30. Constraints and Concepts (SemaConcept.cpp)
-  // 31. Types (SemaType.cpp)
-  // 32. FixIt Helpers (SemaFixItUtils.cpp)
-  // 33. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
+  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 29. Constraints and Concepts (SemaConcept.cpp)
+  // 30. Types (SemaType.cpp)
+  // 31. FixIt Helpers (SemaFixItUtils.cpp)
+  // 32. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -990,6 +990,11 @@ public:
     return *CodeCompletionPtr;
   }
 
+  SemaCoroutine &Coroutine() {
+    assert(CoroutinePtr);
+    return *CoroutinePtr;
+  }
+
   SemaCUDA &CUDA() {
     assert(CUDAPtr);
     return *CUDAPtr;
@@ -1051,6 +1056,7 @@ private:
   mutable IdentifierInfo *Ident_super;
 
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
+  std::unique_ptr<SemaCoroutine> CoroutinePtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaObjC> ObjCPtr;
@@ -2260,57 +2266,6 @@ private:
   /// Adds an expression to the set of gathered misaligned members.
   void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
                                      CharUnits Alignment);
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name C++ Coroutines
-  /// Implementations are in SemaCoroutine.cpp
-  ///@{
-
-public:
-  /// The C++ "std::coroutine_traits" template, which is defined in
-  /// \<coroutine_traits>
-  ClassTemplateDecl *StdCoroutineTraitsCache;
-
-  bool ActOnCoroutineBodyStart(Scope *S, SourceLocation KwLoc,
-                               StringRef Keyword);
-  ExprResult ActOnCoawaitExpr(Scope *S, SourceLocation KwLoc, Expr *E);
-  ExprResult ActOnCoyieldExpr(Scope *S, SourceLocation KwLoc, Expr *E);
-  StmtResult ActOnCoreturnStmt(Scope *S, SourceLocation KwLoc, Expr *E);
-
-  ExprResult BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc);
-  ExprResult BuildOperatorCoawaitCall(SourceLocation Loc, Expr *E,
-                                      UnresolvedLookupExpr *Lookup);
-  ExprResult BuildResolvedCoawaitExpr(SourceLocation KwLoc, Expr *Operand,
-                                      Expr *Awaiter, bool IsImplicit = false);
-  ExprResult BuildUnresolvedCoawaitExpr(SourceLocation KwLoc, Expr *Operand,
-                                        UnresolvedLookupExpr *Lookup);
-  ExprResult BuildCoyieldExpr(SourceLocation KwLoc, Expr *E);
-  StmtResult BuildCoreturnStmt(SourceLocation KwLoc, Expr *E,
-                               bool IsImplicit = false);
-  StmtResult BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs);
-  bool buildCoroutineParameterMoves(SourceLocation Loc);
-  VarDecl *buildCoroutinePromise(SourceLocation Loc);
-  void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
-
-  // As a clang extension, enforces that a non-coroutine function must be marked
-  // with [[clang::coro_wrapper]] if it returns a type marked with
-  // [[clang::coro_return_type]].
-  // Expects that FD is not a coroutine.
-  void CheckCoroutineWrapper(FunctionDecl *FD);
-  /// Lookup 'coroutine_traits' in std namespace and std::experimental
-  /// namespace. The namespace found is recorded in Namespace.
-  ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
-                                           SourceLocation FuncLoc);
-  /// Check that the expression co_await promise.final_suspend() shall not be
-  /// potentially-throwing.
-  bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
-
   ///@}
 
   //

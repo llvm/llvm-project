@@ -23,6 +23,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -2456,7 +2457,8 @@ StmtResult Parser::ParseReturnStatement() {
     }
   }
   if (IsCoreturn)
-    return Actions.ActOnCoreturnStmt(getCurScope(), ReturnLoc, R.get());
+    return Actions.Coroutine().ActOnCoreturnStmt(getCurScope(), ReturnLoc,
+                                                 R.get());
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 

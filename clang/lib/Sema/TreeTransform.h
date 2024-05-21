@@ -37,6 +37,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCoroutine.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -1549,7 +1550,8 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildCoreturnStmt(SourceLocation CoreturnLoc, Expr *Result,
                                  bool IsImplicit) {
-    return getSema().BuildCoreturnStmt(CoreturnLoc, Result, IsImplicit);
+    return getSema().Coroutine().BuildCoreturnStmt(CoreturnLoc, Result,
+                                                   IsImplicit);
   }
 
   /// Build a new co_await expression.
@@ -1566,18 +1568,18 @@ public:
     // For an implicit coawait-expr, we need to rebuild the "operator
     // coawait" but not await_transform(), so use BuildResolvedCoawaitExpr().
     // This mirrors how the implicit CoawaitExpr is originally created
-    // in Sema::ActOnCoroutineBodyStart().
+    // in SemaCoroutine::ActOnCoroutineBodyStart().
     if (IsImplicit) {
-      ExprResult Suspend = getSema().BuildOperatorCoawaitCall(
+      ExprResult Suspend = getSema().Coroutine().BuildOperatorCoawaitCall(
           CoawaitLoc, Operand, OpCoawaitLookup);
       if (Suspend.isInvalid())
         return ExprError();
-      return getSema().BuildResolvedCoawaitExpr(CoawaitLoc, Operand,
-                                                Suspend.get(), true);
+      return getSema().Coroutine().BuildResolvedCoawaitExpr(
+          CoawaitLoc, Operand, Suspend.get(), true);
     }
 
-    return getSema().BuildUnresolvedCoawaitExpr(CoawaitLoc, Operand,
-                                                OpCoawaitLookup);
+    return getSema().Coroutine().BuildUnresolvedCoawaitExpr(CoawaitLoc, Operand,
+                                                            OpCoawaitLookup);
   }
 
   /// Build a new co_await expression.
@@ -1587,7 +1589,8 @@ public:
   ExprResult RebuildDependentCoawaitExpr(SourceLocation CoawaitLoc,
                                          Expr *Result,
                                          UnresolvedLookupExpr *Lookup) {
-    return getSema().BuildUnresolvedCoawaitExpr(CoawaitLoc, Result, Lookup);
+    return getSema().Coroutine().BuildUnresolvedCoawaitExpr(CoawaitLoc, Result,
+                                                            Lookup);
   }
 
   /// Build a new co_yield expression.
@@ -1595,11 +1598,11 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildCoyieldExpr(SourceLocation CoyieldLoc, Expr *Result) {
-    return getSema().BuildCoyieldExpr(CoyieldLoc, Result);
+    return getSema().Coroutine().BuildCoyieldExpr(CoyieldLoc, Result);
   }
 
   StmtResult RebuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs Args) {
-    return getSema().BuildCoroutineBodyStmt(Args);
+    return getSema().Coroutine().BuildCoroutineBodyStmt(Args);
   }
 
   /// Build a new Objective-C \@try statement.
@@ -8341,9 +8344,9 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
   // before attempting to transform the other parts of the coroutine body
   // statement, such as the implicit suspend statements (because those
   // statements reference the FunctionScopeInfo::CoroutinePromise).
-  if (!SemaRef.buildCoroutineParameterMoves(FD->getLocation()))
+  if (!SemaRef.Coroutine().buildCoroutineParameterMoves(FD->getLocation()))
     return StmtError();
-  auto *Promise = SemaRef.buildCoroutinePromise(FD->getLocation());
+  auto *Promise = SemaRef.Coroutine().buildCoroutinePromise(FD->getLocation());
   if (!Promise)
     return StmtError();
   getDerived().transformedLocalDecl(S->getPromiseDecl(), {Promise});
@@ -8358,7 +8361,7 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
   StmtResult FinalSuspend =
       getDerived().TransformStmt(S->getFinalSuspendStmt());
   if (FinalSuspend.isInvalid() ||
-      !SemaRef.checkFinalSuspendNoThrow(FinalSuspend.get()))
+      !SemaRef.Coroutine().checkFinalSuspendNoThrow(FinalSuspend.get()))
     return StmtError();
   ScopeInfo->setCoroutineSuspends(InitSuspend.get(), FinalSuspend.get());
   assert(isa<Expr>(InitSuspend.get()) && isa<Expr>(FinalSuspend.get()));
@@ -8472,7 +8475,7 @@ ExprResult TreeTransform<Derived>::TransformCoawaitExpr(CoawaitExpr *E) {
   // FIXME: getCurScope() should not be used during template instantiation.
   // We should pick up the set of unqualified lookup results for operator
   // co_await during the initial parse.
-  ExprResult Lookup = getSema().BuildOperatorCoawaitLookupExpr(
+  ExprResult Lookup = getSema().Coroutine().BuildOperatorCoawaitLookupExpr(
       getSema().getCurScope(), E->getKeywordLoc());
 
   // Always rebuild; we don't know if this needs to be injected into a new
