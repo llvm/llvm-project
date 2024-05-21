@@ -42,6 +42,7 @@ using namespace llvm;
 
 namespace opts {
 
+extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
 
 cl::opt<bool>
