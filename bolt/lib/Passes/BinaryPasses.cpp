@@ -1553,36 +1553,28 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     const bool Ascending =
         opts::DynoStatsSortOrderOpt == opts::DynoStatsSortOrder::Ascending;
 
-    if (SortAll) {
-      llvm::stable_sort(Functions,
-                        [Ascending, &Stats](const BinaryFunction *A,
-                                            const BinaryFunction *B) {
-                          auto StatsItr = Stats.find(A);
-                          assert(StatsItr != Stats.end());
-                          const DynoStats &StatsA = StatsItr->second;
+    std::function<bool(const DynoStats &, const DynoStats &)>
+        DynoStatsComparator =
+            SortAll ? [](const DynoStats &StatsA,
+                         const DynoStats &StatsB) { return StatsA < StatsB; }
+                    : [](const DynoStats &StatsA, const DynoStats &StatsB) {
+                        return StatsA.lessThan(StatsB, opts::PrintSortedBy);
+                      };
 
-                          StatsItr = Stats.find(B);
-                          assert(StatsItr != Stats.end());
-                          const DynoStats &StatsB = StatsItr->second;
+    llvm::stable_sort(Functions,
+                      [Ascending, &Stats, DynoStatsComparator](
+                          const BinaryFunction *A, const BinaryFunction *B) {
+                        auto StatsItr = Stats.find(A);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsA = StatsItr->second;
 
-                          return Ascending ? StatsA < StatsB : StatsB < StatsA;
-                        });
-    } else {
-      llvm::stable_sort(
-          Functions, [Ascending, &Stats](const BinaryFunction *A,
-                                         const BinaryFunction *B) {
-            auto StatsItr = Stats.find(A);
-            assert(StatsItr != Stats.end());
-            const DynoStats &StatsA = StatsItr->second;
+                        StatsItr = Stats.find(B);
+                        assert(StatsItr != Stats.end());
+                        const DynoStats &StatsB = StatsItr->second;
 
-            StatsItr = Stats.find(B);
-            assert(StatsItr != Stats.end());
-            const DynoStats &StatsB = StatsItr->second;
-
-            return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
-                             : StatsB.lessThan(StatsA, opts::PrintSortedBy);
-          });
-    }
+                        return Ascending ? DynoStatsComparator(StatsA, StatsB)
+                                         : DynoStatsComparator(StatsB, StatsA);
+                      });
 
     BC.outs() << "BOLT-INFO: top functions sorted by ";
     if (SortAll) {
