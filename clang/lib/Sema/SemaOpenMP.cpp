@@ -6548,8 +6548,9 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
                                      EndLoc);
     break;
   case OMPD_reverse:
-    Res = ActOnOpenMPReverseDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                      EndLoc);
+    assert(ClausesWithImplicit.empty() &&
+           "reverse directive does not support any clauses");
+    Res = ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
     break;
   case OMPD_for:
     Res = ActOnOpenMPForDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
@@ -15753,14 +15754,11 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
                                     buildPreInits(Context, PreInits));
 }
 
-StmtResult
-SemaOpenMP::ActOnOpenMPReverseDirective(ArrayRef<OMPClause *> Clauses,
-                                        Stmt *AStmt, SourceLocation StartLoc,
-                                        SourceLocation EndLoc) {
+StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation EndLoc) {
   ASTContext &Context = getASTContext();
   Scope *CurScope = SemaRef.getCurScope();
-  assert(Clauses.empty() && "reverse directive does not accept any clauses; "
-                            "must have beed checked before");
 
   // Empty statement should only be possible if there already was an error.
   if (!AStmt)
@@ -15778,8 +15776,8 @@ SemaOpenMP::ActOnOpenMPReverseDirective(ArrayRef<OMPClause *> Clauses,
   // Delay applying the transformation to when template is completely
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
-    return OMPReverseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       AStmt, nullptr, nullptr);
+    return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
+                                       nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -15931,7 +15929,7 @@ SemaOpenMP::ActOnOpenMPReverseDirective(ArrayRef<OMPClause *> Clauses,
       ForStmt(Context, Init.get(), Cond.get(), nullptr, Incr.get(),
               ReversedBody, LoopHelper.Init->getBeginLoc(),
               LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
-  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
+  return OMPReverseDirective::Create(Context, StartLoc, EndLoc, AStmt,
                                      ReversedFor,
                                      buildPreInits(Context, PreInits));
 }

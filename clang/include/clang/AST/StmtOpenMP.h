@@ -5748,15 +5748,13 @@ public:
   /// \param C         Context of the AST.
   /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
   /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
-  /// \param Clauses   The directive's clauses.
   /// \param AssociatedStmt  The outermost associated loop.
   /// \param TransformedStmt The loop nest after tiling, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
   static OMPReverseDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-         Stmt *TransformedStmt, Stmt *PreInits);
+         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits);
 
   /// Build an empty '#pragma omp reverse' AST node for deserialization.
   ///

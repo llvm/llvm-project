@@ -422,10 +422,8 @@ public:
   StmtResult ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
                                         Stmt *AStmt, SourceLocation StartLoc,
                                         SourceLocation EndLoc);
-  /// Called on well-formed '#pragma omp reverse' after parsing of its clauses
-  /// and the associated statement.
-  StmtResult ActOnOpenMPReverseDirective(ArrayRef<OMPClause *> Clauses,
-                                         Stmt *AStmt, SourceLocation StartLoc,
+  /// Called on well-formed '#pragma omp reverse'.
+  StmtResult ActOnOpenMPReverseDirective(Stmt *AStmt, SourceLocation StartLoc,
                                          SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
