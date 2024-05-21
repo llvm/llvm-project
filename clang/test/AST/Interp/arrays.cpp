@@ -26,6 +26,7 @@ static_assert(foo[2][2] == nullptr, "");
 static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
+constexpr int ZeroSizeArray[] = {};
 
 constexpr int SomeInt[] = {1};
 constexpr int getSomeInt() { return *SomeInt; }
@@ -595,3 +596,12 @@ int test_multiarray22() {
 }
 
 #endif
+
+namespace ArrayMemberAccess {
+  struct A {
+    int x;
+  };
+  void f(const A (&a)[]) {
+    bool cond = a->x;
+  }
+}
