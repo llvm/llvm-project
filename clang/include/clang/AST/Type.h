@@ -132,7 +132,7 @@ class TemplateArgument;
 class TemplateArgumentListInfo;
 class TemplateArgumentLoc;
 class TemplateTypeParmDecl;
-template <typename> struct TreeTransform;
+template <typename> class TreeTransform;
 class TypedefNameDecl;
 class UnresolvedUsingTypenameDecl;
 class UsingShadowDecl;
@@ -4893,7 +4893,7 @@ public:
 /// Has the same invariants as FunctionEffectsRef.
 class FunctionEffectSet {
   // TreeTransform is the only user of replaceItem.
-  template <typename> friend struct TreeTransform;
+  template <typename> friend class TreeTransform;
 
   SmallVector<FunctionEffect> Effects;
   SmallVector<FunctionEffectCondition> Conditions;
