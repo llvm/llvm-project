@@ -75,6 +75,15 @@ def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_p
 def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
     "TypedIntPolynomial", "typed_int_polynomial", [TypedAttrInterface]> {
   let summary = "a typed int_polynomial";
+  let description = [{
+    Example:
+
+    ```mlir
+    !poly_ty = !polynomial.polynomial<ring=<coefficientType=i32>>
+    #poly = int<1 x**7 + 4> : !poly_ty
+    #poly_verbose = #polynomial.typed_int_polynomial<1 x**7 + 4> : !poly_ty
+    ```
+  }];
   let parameters = (ins "::mlir::Type":$type, "::mlir::polynomial::IntPolynomialAttr":$value);
   let assemblyFormat = "$value `:` $type";
   let builders = [
@@ -98,6 +107,15 @@ def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
 def Polynomial_TypedFloatPolynomialAttr : Polynomial_Attr<
     "TypedFloatPolynomial", "typed_float_polynomial", [TypedAttrInterface]> {
   let summary = "a typed float_polynomial";
+  let description = [{
+    Example:
+
+    ```mlir
+    !poly_ty = !polynomial.polynomial<ring=<coefficientType=f32>>
+    #poly = float<1.4 x**7 + 4.5> : !poly_ty
+    #poly_verbose = #polynomial.typed_float_polynomial<1.4 x**7 + 4.5> : !poly_ty
+    ```
+  }];
   let parameters = (ins "::mlir::Type":$type, "::mlir::polynomial::FloatPolynomialAttr":$value);
   let assemblyFormat = "$value `:` $type";
   let builders = [
