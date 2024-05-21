@@ -154,8 +154,8 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
     ```
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
-                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$src,
+                       Arg<AnyReferenceLike, "", [MemWrite]>:$dst,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
   let assemblyFormat = [{
