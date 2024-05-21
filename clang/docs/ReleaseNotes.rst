@@ -232,8 +232,8 @@ Resolutions to C++ Defect Reports
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
 
-- Implemented `CWG2351 <https://wg21.link/CWG2351>`_ which allows ``void{}``
-  as a prvalue of type ``void``.
+- Allow ``void{}`` as a prvalue of type ``void``.
+  (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
 C Language Changes
 ------------------

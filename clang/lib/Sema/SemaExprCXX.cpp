@@ -1671,7 +1671,7 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     if (ListInitialization &&
         cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
       return CXXFunctionalCastExpr::Create(
-          Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_NoOp,
+          Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
           Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
           Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
     }

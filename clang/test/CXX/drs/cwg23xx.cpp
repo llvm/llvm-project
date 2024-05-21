@@ -118,7 +118,6 @@ namespace cwg2346 { // cwg2346: 11
 namespace cwg2351 { // cwg2351: 19
 #if __cplusplus >= 201103L
   static_assert((void{}, true), "");
-  // since-cxx11-warning@-1 {{left operand of comma operator has no effect}}
 
   void f() {
     return void{};
