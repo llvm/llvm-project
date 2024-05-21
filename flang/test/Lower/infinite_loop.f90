@@ -1,5 +1,6 @@
 ! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -flang-experimental-integer-overflow -o - %s | FileCheck %s --check-prefix=NSW
 
 ! Tests for infinite loop.
 
@@ -105,6 +106,39 @@ end subroutine
 ! CHECK:  cf.br ^[[BODY1]]
 ! CHECK: ^[[RETURN]]:
 ! CHECK:   return
+
+! NSW-LABEL: structured_loop_in_infinite
+! NSW-SAME: %[[I_REF:.*]]: !fir.ref<i32>
+! NSW:  %[[J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFstructured_loop_in_infiniteEj"}
+! NSW:  cf.br ^[[BODY1:.*]]
+! NSW: ^[[BODY1]]:
+! NSW:  %[[I:.*]] = fir.load %[[I_REF]] : !fir.ref<i32>
+! NSW:  %[[C100:.*]] = arith.constant 100 : i32
+! NSW:  %[[COND:.*]] = arith.cmpi sgt, %[[I]], %[[C100]] : i32
+! NSW:  cf.cond_br %[[COND]], ^[[EXIT:.*]], ^[[BODY2:.*]]
+! NSW: ^[[EXIT]]:
+! NSW:  cf.br ^[[RETURN:.*]]
+! NSW: ^[[BODY2:.*]]:
+! NSW:  %[[C1:.*]] = arith.constant 1 : i32
+! NSW:  %[[C1_INDEX:.*]] = fir.convert %[[C1]] : (i32) -> index
+! NSW:  %[[C10:.*]] = arith.constant 10 : i32
+! NSW:  %[[C10_INDEX:.*]] = fir.convert %[[C10]] : (i32) -> index
+! NSW:  %[[C1_1:.*]] = arith.constant 1 : index
+! NSW:  %[[J_LB:.*]] = fir.convert %[[C1_INDEX]] : (index) -> i32
+! NSW:  %[[J_FINAL:.*]]:2 = fir.do_loop %[[J:[^ ]*]] =
+! NSW-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]]
+! NSW-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {
+! NSW:    fir.store %[[J_IV]] to %[[J_REF]] : !fir.ref<i32>
+! NSW:    %[[J_NEXT:.*]] = arith.addi %[[J]], %[[C1_1]] overflow<nsw> : index
+! NSW:    %[[J_STEPCAST:.*]] = fir.convert %[[C1_1]] : (index) -> i32
+! NSW:    %[[J_IVLOAD:.*]] = fir.load %[[J_REF]] : !fir.ref<i32>
+! NSW:    %[[J_IVINC:.*]] = arith.addi %[[J_IVLOAD]], %[[J_STEPCAST]] overflow<nsw> : i32
+! NSW:    fir.result %[[J_NEXT]], %[[J_IVINC]] : index, i32
+! NSW:  }
+! NSW:  fir.store %[[J_FINAL]]#1 to %[[J_REF]] : !fir.ref<i32>
+! NSW:  cf.br ^[[BODY1]]
+! NSW: ^[[RETURN]]:
+! NSW:   return
 
 subroutine empty_infinite_in_while(i)
   integer :: i

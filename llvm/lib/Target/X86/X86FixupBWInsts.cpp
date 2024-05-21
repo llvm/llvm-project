@@ -248,7 +248,7 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   //   Predecessors according to CFG: %bb.2 %bb.1
   //   %ax = KILL %ax, implicit killed %eax
   //   RET 0, %ax
-  unsigned Opc = OrigMI->getOpcode(); (void)Opc;
+  unsigned Opc = OrigMI->getOpcode();
   // These are the opcodes currently known to work with the code below, if
   // something // else will be added we need to ensure that new opcode has the
   // same properties.
@@ -260,8 +260,6 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   for (auto &MO: OrigMI->implicit_operands()) {
     if (!MO.isReg())
       continue;
-
-    assert((MO.isDef() || MO.isUse()) && "Expected Def or Use only!");
 
     if (MO.isDef() && TRI->isSuperRegisterEq(OrigDestReg, MO.getReg()))
       IsDefined = true;

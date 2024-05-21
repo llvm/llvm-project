@@ -539,10 +539,10 @@ std::string DynamicType::AsFortran() const {
       result += length->AsFortran();
     }
     return result + ')';
-  } else if (IsUnlimitedPolymorphic()) {
-    return "CLASS(*)";
   } else if (IsAssumedType()) {
     return "TYPE(*)";
+  } else if (IsUnlimitedPolymorphic()) {
+    return "CLASS(*)";
   } else if (IsTypelessIntrinsicArgument()) {
     return "(typeless intrinsic function argument)";
   } else {

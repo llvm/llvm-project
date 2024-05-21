@@ -576,9 +576,20 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
   let genStorageClass = 0;
 }
 
+def fir_DummyScopeType : FIR_Type<"DummyScope", "dscope"> {
+  let summary = "Dummy scope type";
+
+  let description = [{
+    `fir.dscope` is a type returned by fir.dummy_scope operation.
+    It defines a unique identifier for a runtime instance of a subroutine
+    that is used by the [hl]fir.declare operations representing
+    the dummy arguments' declarations.
+  }];
+}
+
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
-        : CPred<"$_self.isa<::fir::BaseBoxType>()">;
+        : CPred<"mlir::isa<::fir::BaseBoxType>($_self)">;
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types

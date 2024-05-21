@@ -53,7 +53,7 @@ bool CodeGenCoverage::parse(MemoryBuffer &Buffer, StringRef BackendName) {
     if (CurPtr == Buffer.getBufferEnd())
       return false; // Data is invalid, expected rule id's to follow.
 
-    bool IsForThisBackend = BackendName.equals(LexedBackendName);
+    bool IsForThisBackend = BackendName == LexedBackendName;
     while (CurPtr != Buffer.getBufferEnd()) {
       if (std::distance(CurPtr, Buffer.getBufferEnd()) < 8)
         return false; // Data is invalid. Not enough bytes for another rule id.

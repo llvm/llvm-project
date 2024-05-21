@@ -757,7 +757,10 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
 
-  ArrayRef<int64_t> dstShape = expandOp.getType().getShape();
+  auto expandTy = dyn_cast<RankedTensorType>(expandOp.getType());
+  if (!expandTy)
+    return failure();
+  ArrayRef<int64_t> dstShape = expandTy.getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       expandOp.getReassociationIndices();
   // Project inner tile pos to the dim pos after expanding. For example, if dims
@@ -796,9 +799,8 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
     nextPos += 1;
   }
 
-  RankedTensorType newExpandType =
-      tensor::PackOp::inferPackedType(expandOp.getType(), innerTileSizes,
-                                      projectedInnerDimsPos, newOuterDimsPerm);
+  RankedTensorType newExpandType = tensor::PackOp::inferPackedType(
+      expandTy, innerTileSizes, projectedInnerDimsPos, newOuterDimsPerm);
   auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
       expandOp.getLoc(), newExpandType, unPackOp.getSource(),
       newReassocIndices);

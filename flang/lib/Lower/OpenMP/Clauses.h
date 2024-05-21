@@ -23,11 +23,15 @@
 
 namespace Fortran::lower::omp {
 using namespace Fortran;
-using SomeType = evaluate::SomeType;
 using SomeExpr = semantics::SomeExpr;
 using MaybeExpr = semantics::MaybeExpr;
 
-using TypeTy = SomeType;
+// evaluate::SomeType doesn't provide == operation. It's not really used in
+// flang's clauses so far, so a trivial implementation is sufficient.
+struct TypeTy : public evaluate::SomeType {
+  bool operator==(const TypeTy &t) const { return true; }
+};
+
 using IdTy = semantics::Symbol *;
 using ExprTy = SomeExpr;
 
@@ -103,9 +107,8 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
   return std::move(func(*arg));
 }
 
-std::optional<Object>
-getBaseObject(const Object &object,
-              Fortran::semantics::SemanticsContext &semaCtx);
+std::optional<Object> getBaseObject(const Object &object,
+                                    semantics::SemanticsContext &semaCtx);
 
 namespace clause {
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
@@ -222,6 +225,8 @@ using When = tomp::clause::WhenT<TypeTy, IdTy, ExprTy>;
 using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
 } // namespace clause
 
+using tomp::type::operator==;
+
 struct CancellationConstructType {
   using EmptyTrait = std::true_type;
 };
@@ -244,20 +249,25 @@ using ClauseBase = tomp::ClauseT<TypeTy, IdTy, ExprTy,
                                  MemoryOrder, Threadprivate>;
 
 struct Clause : public ClauseBase {
+  Clause(ClauseBase &&base, const parser::CharBlock source = {})
+      : ClauseBase(std::move(base)), source(source) {}
+  // "source" will be ignored by tomp::type::operator==.
   parser::CharBlock source;
 };
 
 template <typename Specific>
 Clause makeClause(llvm::omp::Clause id, Specific &&specific,
                   parser::CharBlock source = {}) {
-  return Clause{{id, specific}, source};
+  return Clause(typename Clause::BaseT{id, specific}, source);
 }
 
-Clause makeClause(const Fortran::parser::OmpClause &cls,
+Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx);
 
 List<Clause> makeClauses(const parser::OmpClauseList &clauses,
                          semantics::SemanticsContext &semaCtx);
+
+bool transferLocations(const List<Clause> &from, List<Clause> &to);
 } // namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_OPENMP_CLAUSES_H
