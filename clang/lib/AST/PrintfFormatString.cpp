@@ -146,13 +146,13 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
           if (Warn && (Size == 0 || Size > 8))
             H.handleInvalidMaskType(MaskType);
           FS.setMaskType(MaskType);
-        } else if (MatchedStr.equals("sensitive"))
+        } else if (MatchedStr == "sensitive")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
         else if (PrivacyFlags !=
-                 clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
-                 MatchedStr.equals("private"))
+                     clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
+                 MatchedStr == "private")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        else if (PrivacyFlags == 0 && MatchedStr.equals("public"))
+        else if (PrivacyFlags == 0 && MatchedStr == "public")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
       } else {
         size_t CommaOrBracePos =

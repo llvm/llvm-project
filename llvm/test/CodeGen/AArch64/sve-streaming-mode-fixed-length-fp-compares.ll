@@ -127,11 +127,9 @@ define void @fcmp_oeq_v8f32(ptr %a, ptr %b, ptr %c) {
 define <1 x i64> @fcmp_oeq_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ; CHECK-LABEL: fcmp_oeq_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    fcmp d0, d1
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq <1 x double> %op1, %op2
