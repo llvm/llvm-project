@@ -586,6 +586,9 @@ Bug Fixes in This Version
 - Clang now correctly disallows VLA type compound literals, e.g. ``(int[size]){}``,
   as the C standard mandates. (#GH89835)
 
+- ``__is_array`` and ``__is_bounded_array`` no longer return ``true`` for
+  zero-sized arrays. Fixes (#GH54705).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -739,6 +742,13 @@ Bug Fixes to C++ Support
 - Fix a bug with checking constrained non-type template parameters for equivalence. Fixes (#GH77377).
 - Fix a bug where the last argument was not considered when considering the most viable function for
   explicit object argument member functions. Fixes (#GH92188).
+- Fix a C++11 crash when a non-const non-static member function is defined out-of-line with
+  the ``constexpr`` specifier. Fixes (#GH61004).
+- Clang no longer transforms dependent qualified names into implicit class member access expressions
+  until it can be determined whether the name is that of a non-static member.
+- Clang now correctly diagnoses when the current instantiation is used as an incomplete base class.
+- Clang no longer treats ``constexpr`` class scope function template specializations of non-static members
+  as implicitly ``const`` in language modes after C++11.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
