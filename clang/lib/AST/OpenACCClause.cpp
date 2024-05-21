@@ -35,7 +35,7 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
          OpenACCAttachClause::classof(C) || OpenACCNoCreateClause::classof(C) ||
          OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
          OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
-         OpenACCCreateClause::classof(C);
+         OpenACCReductionClause::classof(C) || OpenACCCreateClause::classof(C);
 }
 bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
   return OpenACCIfClause::classof(C) || OpenACCSelfClause::classof(C);
@@ -310,6 +310,16 @@ OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
       OpenACCDeviceTypeClause(K, BeginLoc, LParenLoc, Archs, EndLoc);
 }
 
+OpenACCReductionClause *OpenACCReductionClause::Create(
+    const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+    OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+    SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCReductionClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem)
+      OpenACCReductionClause(BeginLoc, LParenLoc, Operator, VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -440,6 +450,14 @@ void OpenACCClausePrinter::VisitCreateClause(const OpenACCCreateClause &C) {
   OS << C.getClauseKind() << '(';
   if (C.isZero())
     OS << "zero: ";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  OS << "reduction(" << C.getReductionOp() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
