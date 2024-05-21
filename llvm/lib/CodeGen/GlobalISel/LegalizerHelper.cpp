@@ -69,8 +69,9 @@ getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
     unsigned EltSize = OrigTy.getScalarSizeInBits();
     if (LeftoverSize % EltSize != 0)
       return {-1, -1};
-    LeftoverTy = LLT::scalarOrVector(
-        ElementCount::getFixed(LeftoverSize / EltSize), EltSize);
+    LeftoverTy =
+        LLT::scalarOrVector(ElementCount::getFixed(LeftoverSize / EltSize),
+                            OrigTy.getElementType());
   } else {
     LeftoverTy = LLT::scalar(LeftoverSize);
   }
@@ -212,7 +213,7 @@ void LegalizerHelper::mergeMixedSubvectors(Register DstReg,
     appendVectorElts(AllElts, PartRegs[i]);
 
   Register Leftover = PartRegs[PartRegs.size() - 1];
-  if (MRI.getType(Leftover).isScalar())
+  if (!MRI.getType(Leftover).isVector())
     AllElts.push_back(Leftover);
   else
     appendVectorElts(AllElts, Leftover);
@@ -4764,6 +4765,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
   case G_BITCAST:
     return fewerElementsBitcast(MI, TypeIdx, NarrowTy);
+  case G_INTRINSIC_FPTRUNC_ROUND:
+    return fewerElementsVectorMultiEltType(GMI, NumElts, {2});
   default:
     return UnableToLegalize;
   }
