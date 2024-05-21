@@ -5346,9 +5346,6 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
         SourceShuf->getMaskValue(RootElt), RootVec, MaxRecurse);
   }
 
-  // TODO: Look through bitcasts? What if the bitcast changes the vector element
-  // size?
-
   // The source operand is not a shuffle. Initialize the root vector value for
   // this shuffle if that has not been done yet.
   if (!RootVec)
