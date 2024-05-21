@@ -62,7 +62,6 @@ typedef void *thread_arg_t;             // Host thread argument type
 typedef void *thread_result_t;          // Host thread result type
 typedef void *(*thread_func_t)(void *); // Host thread function type
 typedef int pipe_t;                     // Host pipe type
-typedef int callback_token_t;
 
 #endif // _WIN32
 
@@ -79,6 +78,7 @@ typedef bool (*ExpressionCancelCallback)(ExpressionEvaluationPhase phase,
 typedef void *ScriptObjectPtr;
 
 typedef uint64_t addr_t;
+typedef int32_t callback_token_t;
 typedef uint64_t user_id_t;
 typedef uint64_t pid_t;
 typedef uint64_t tid_t;
