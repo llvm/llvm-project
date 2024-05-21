@@ -53,7 +53,7 @@ bool legalToCollapse(SmallVectorImpl<CollapseSpaceInfo> &toCollapse,
                      ExtractIterSpaceOp curSpace) {
 
   auto getIterateOpOverSpace = [](ExtractIterSpaceOp space) -> IterateOp {
-    Value spaceVal = space.getResultSpace();
+    Value spaceVal = space.getExtractedSpace();
     if (spaceVal.hasOneUse())
       return llvm::dyn_cast<IterateOp>(*spaceVal.getUsers().begin());
     return nullptr;
@@ -116,7 +116,7 @@ void collapseSparseSpace(MutableArrayRef<CollapseSpaceInfo> toCollapse) {
   auto innermost = toCollapse.back().loop;
 
   IRMapping mapper;
-  mapper.map(leaf, collapsedSpace.getResultSpace());
+  mapper.map(leaf, collapsedSpace.getExtractedSpace());
   for (auto z : llvm::zip_equal(innermost.getInitArgs(), rItOp.getInitArgs()))
     mapper.map(std::get<0>(z), std::get<1>(z));
 
