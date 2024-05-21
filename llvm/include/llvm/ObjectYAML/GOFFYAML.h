@@ -26,6 +26,7 @@ namespace llvm {
 namespace GOFFYAML {
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_AMODE)
+LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_TXTRECORDSTYLE)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_ENDFLAGS)
 
 // The GOFF format uses different kinds of logical records. The format imposes
@@ -65,6 +66,22 @@ struct ModuleHeader : public RecordBase {
   }
 };
 
+struct Text : public RecordBase {
+  Text() : RecordBase(Kind::Text) {}
+
+  GOFF_TXTRECORDSTYLE Style;
+  uint32_t ESDID;
+  uint32_t Offset;
+  uint32_t TrueLength;
+  uint16_t Encoding;
+  uint16_t DataLength;
+  std::optional<yaml::BinaryRef> Data;
+
+  static bool classof(const RecordBase *S) {
+    return S->getKind() == Kind::Text;
+  }
+};
+
 struct EndOfModule : public RecordBase {
   EndOfModule() : RecordBase(Kind::EndOfModule) {}
 
@@ -89,12 +106,14 @@ struct Object {
 } // end namespace llvm
 
 LLVM_YAML_DECLARE_ENUM_TRAITS(GOFFYAML::GOFF_AMODE)
+LLVM_YAML_DECLARE_ENUM_TRAITS(GOFFYAML::GOFF_TXTRECORDSTYLE)
 LLVM_YAML_DECLARE_ENUM_TRAITS(GOFFYAML::GOFF_ENDFLAGS)
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(GOFFYAML::RecordPtr)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::RecordPtr)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::ModuleHeader)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Text)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::EndOfModule)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Object)
 

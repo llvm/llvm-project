@@ -157,6 +157,12 @@ enum ESDAlignment : uint8_t {
   ESD_ALIGN_4Kpage = 12,
 };
 
+enum TXTRecordStyle : uint8_t {
+  TXT_TS_Byte = 0,
+  TXT_TS_Structured = 1,
+  TXT_TS_Unstructured = 2,
+};
+
 enum ENDEntryPointRequest : uint8_t {
   END_EPR_None = 0,
   END_EPR_EsdidOffset = 1,

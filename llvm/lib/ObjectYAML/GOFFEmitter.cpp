@@ -147,6 +147,7 @@ public:
 
 class GOFFState {
   void writeHeader(const GOFFYAML::ModuleHeader &ModHdr);
+  void writeText(const GOFFYAML::Text &Txt);
   void writeEnd(const GOFFYAML::EndOfModule &EndMod);
 
   void reportError(const Twine &Msg) {
@@ -184,6 +185,24 @@ void GOFFState::writeHeader(const GOFFYAML::ModuleHeader &ModHdr) {
     LR << *ModHdr.Properties; // Module properties.
 }
 
+void GOFFState::writeText(const GOFFYAML::Text &Txt) {
+  // See https://www.ibm.com/docs/en/zos/3.1.0?topic=grf-text-record.
+  GW.newRecord(GOFF::RT_TXT);
+  LogicalRecord LR(GW);
+  LR << binaryBe(uint8_t(Txt.Style)) // Text record style.
+     << binaryBe(
+            Txt.ESDID) // ESDID of the element/part to which this data belongs.
+     << zeros(4)       // Reserved.
+     << binaryBe(Txt.Offset)      // Starting offset from element/part.
+     << binaryBe(Txt.TrueLength)  // True length if encoded.
+     << binaryBe(Txt.Encoding)    // Encoding.
+     << binaryBe(Txt.DataLength); // Total length of data.
+  if (Txt.Data)
+    LR << *Txt.Data; // Data.
+  else
+    LR << zeros(Txt.DataLength);
+}
+
 void GOFFState::writeEnd(const GOFFYAML::EndOfModule &EndMod) {
   // See https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-end-module-record.
   SmallString<16> EntryName;
@@ -211,12 +230,14 @@ bool GOFFState::writeObject() {
     case GOFFYAML::RecordBase::Kind::ModuleHeader:
       writeHeader(*static_cast<const GOFFYAML::ModuleHeader *>(Rec));
       break;
+    case GOFFYAML::RecordBase::Kind::Text:
+      writeText(*static_cast<const GOFFYAML::Text *>(Rec));
+      break;
     case GOFFYAML::RecordBase::Kind::EndOfModule:
       writeEnd(*static_cast<const GOFFYAML::EndOfModule *>(Rec));
       break;
     case GOFFYAML::RecordBase::Kind::RelocationDirectory:
     case GOFFYAML::RecordBase::Kind::Symbol:
-    case GOFFYAML::RecordBase::Kind::Text:
     case GOFFYAML::RecordBase::Kind::DeferredLength:
       llvm_unreachable("not yet implemented");
     }
