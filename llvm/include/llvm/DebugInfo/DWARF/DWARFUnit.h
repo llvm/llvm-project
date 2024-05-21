@@ -585,6 +585,10 @@ private:
   /// hasn't already been done
   void extractDIEsIfNeeded(bool CUDieOnly);
 
+  /// extractAllDIEsHelper - helper to be invoked *only* from inside
+  /// tryExtractDIEsIfNeeded, which holds correct locks.
+  Error extractAllDIEsHelper();
+
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,
                            std::vector<DWARFDebugInfoEntry> &DIEs) const;
