@@ -113,7 +113,7 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
-                                 TypeRange valueTypes, ArrayRef<bool> scalables,
+                                 ArrayRef<bool> scalables, TypeRange valueTypes,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);

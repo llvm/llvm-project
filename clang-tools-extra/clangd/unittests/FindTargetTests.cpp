@@ -642,10 +642,7 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"std::strong_ordering operator<=>(const Foo &) const = default",
-                Rel::TemplatePattern},
-               {"bool operator==(const Foo &) const noexcept = default",
-                Rel::TemplateInstantiation});
+               {"bool operator==(const Foo &) const noexcept = default"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {

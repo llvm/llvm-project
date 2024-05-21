@@ -355,24 +355,24 @@ defset list<VTypeInfo> AllVectors = {
                                  V_M8, f64, FPR64>;
     }
   }
-}
 
-defset list<VTypeInfo> AllBFloatVectors = {
-  defset list<VTypeInfo> NoGroupBFloatVectors = {
-    defset list<VTypeInfo> FractionalGroupBFloatVectors = {
-      def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
-      def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
+  defset list<VTypeInfo> AllBFloatVectors = {
+    defset list<VTypeInfo> NoGroupBFloatVectors = {
+      defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+        def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
+        def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
+      }
+      def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
     }
-    def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
-  }
-
-  defset list<GroupVTypeInfo> GroupBFloatVectors = {
-    def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
-                                V_M2, bf16, FPR16>;
-    def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
-                                V_M4, bf16, FPR16>;
-    def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
-                                V_M8, bf16, FPR16>;
+  
+    defset list<GroupVTypeInfo> GroupBFloatVectors = {
+      def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
+                                  V_M2, bf16, FPR16>;
+      def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
+                                  V_M4, bf16, FPR16>;
+      def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
+                                  V_M8, bf16, FPR16>;
+    }
   }
 }
 
@@ -3380,14 +3380,16 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, bit slidesUp = false,
+                             string Constraint = ""> {
+  defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoVSLDV_VX<m, Constraint>,
-              SchedTernary<"WriteVISlideX", "ReadVISlideV", "ReadVISlideV",
+              SchedTernary<WriteSlideX, "ReadVISlideV", "ReadVISlideV",
                            "ReadVISlideX", mx>;
     defm "" : VPseudoVSLDV_VI<ImmType, m, Constraint>,
-              SchedBinary<"WriteVISlideI", "ReadVISlideV", "ReadVISlideV", mx>;
+              SchedBinary<"WriteVSlideI", "ReadVISlideV", "ReadVISlideV", mx>;
   }
 }
 
@@ -6181,7 +6183,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 0,
 //===----------------------------------------------------------------------===//
 
 // Pseudos.
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 // Due to rs1=X0 having special meaning, we need a GPRNoX0 register class for
 // the when we aren't using one of the special X0 encodings. Otherwise it could
 // be accidentally be made X0 by MachineIR optimizations. To satisfy the
@@ -6861,8 +6863,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, "@earlyclobber $rd">;
-  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5>;
+  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/false>;
   defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]

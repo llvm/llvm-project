@@ -161,6 +161,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
 
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f32, MVT::i32);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f64, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f64, MVT::i64);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f16, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f16, MVT::i16);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
+
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes())
@@ -934,14 +946,14 @@ bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
 
   // Packed operations do not have a fabs modifier.
   return VT == MVT::f32 || VT == MVT::f64 ||
-         (Subtarget->has16BitInsts() && VT == MVT::f16);
+         (Subtarget->has16BitInsts() && (VT == MVT::f16 || VT == MVT::bf16));
 }
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
   assert(VT.isFloatingPoint());
   // Report this based on the end legalized type.
   VT = VT.getScalarType();
-  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16;
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16 || VT == MVT::bf16;
 }
 
 bool AMDGPUTargetLowering:: storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,
@@ -1460,7 +1472,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        !GV->getName().equals("llvm.amdgcn.module.lds")) {
+        GV->getName() != "llvm.amdgcn.module.lds") {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
@@ -3105,20 +3117,30 @@ static bool isCttzOpc(unsigned Opc) {
 SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
                                                SelectionDAG &DAG) const {
   auto SL = SDLoc(Op);
+  auto Opc = Op.getOpcode();
   auto Arg = Op.getOperand(0u);
   auto ResultVT = Op.getValueType();
 
   if (ResultVT != MVT::i8 && ResultVT != MVT::i16)
     return {};
 
-  assert(isCtlzOpc(Op.getOpcode()));
+  assert(isCtlzOpc(Opc));
   assert(ResultVT == Arg.getValueType());
 
-  auto const LeadingZeroes = 32u - ResultVT.getFixedSizeInBits();
-  auto SubVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
-  auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
-  NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
-  NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, SubVal);
+  const uint64_t NumBits = ResultVT.getFixedSizeInBits();
+  SDValue NumExtBits = DAG.getConstant(32u - NumBits, SL, MVT::i32);
+  SDValue NewOp;
+
+  if (Opc == ISD::CTLZ_ZERO_UNDEF) {
+    NewOp = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Arg);
+    NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, NumExtBits);
+    NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
+  } else {
+    NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+    NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
+    NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, NumExtBits);
+  }
+
   return DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp);
 }
 
@@ -5988,6 +6010,13 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::Xchg: {
+    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
+    if (ValSize == 32 || ValSize == 64)
+      return AtomicExpansionKind::None;
+    return AtomicExpansionKind::CmpXChg;
+  }
   default: {
     if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
       unsigned Size = IntTy->getBitWidth();

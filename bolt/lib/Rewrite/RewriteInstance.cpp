@@ -1347,6 +1347,35 @@ void RewriteInstance::discoverFileObjects() {
 
   registerFragments();
   FileSymbols.clear();
+
+  discoverBOLTReserved();
+}
+
+void RewriteInstance::discoverBOLTReserved() {
+  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
+  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
+  if (!StartBD != !EndBD) {
+    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
+               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
+               << '\n';
+    exit(1);
+  }
+
+  if (!StartBD)
+    return;
+
+  if (StartBD->getAddress() >= EndBD->getAddress()) {
+    BC->errs() << "BOLT-ERROR: invalid reserved space boundaries\n";
+    exit(1);
+  }
+  BC->BOLTReserved = AddressRange(StartBD->getAddress(), EndBD->getAddress());
+  BC->outs() << "BOLT-INFO: using reserved space for allocating new sections\n";
+
+  PHDRTableOffset = 0;
+  PHDRTableAddress = 0;
+  NewTextSegmentAddress = 0;
+  NewTextSegmentOffset = 0;
+  NextAvailableAddress = BC->BOLTReserved.start();
 }
 
 Error RewriteInstance::discoverRtFiniAddress() {
@@ -3617,32 +3646,6 @@ void RewriteInstance::updateMetadata() {
 void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   BC->deregisterUnusedSections();
 
-  // Check if the input has a space reserved for BOLT.
-  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
-  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
-  if (!StartBD != !EndBD) {
-    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
-               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
-               << '\n';
-    exit(1);
-  }
-
-  if (StartBD) {
-    if (StartBD->getAddress() >= EndBD->getAddress()) {
-      BC->errs() << "BOLT-ERROR: invalid reserved space boundaries\n";
-      exit(1);
-    }
-    BC->BOLTReserved = AddressRange(StartBD->getAddress(), EndBD->getAddress());
-    BC->outs()
-        << "BOLT-INFO: using reserved space for allocating new sections\n";
-
-    PHDRTableOffset = 0;
-    PHDRTableAddress = 0;
-    NewTextSegmentAddress = 0;
-    NewTextSegmentOffset = 0;
-    NextAvailableAddress = BC->BOLTReserved.start();
-  }
-
   // If no new .eh_frame was written, remove relocated original .eh_frame.
   BinarySection *RelocatedEHFrameSection =
       getSection(".relocated" + getEHFrameSectionName());
@@ -4805,6 +4808,40 @@ void RewriteInstance::updateELFSymbolTable(
     // Create a new symbol based on the existing symbol.
     ELFSymTy NewSymbol = Symbol;
 
+    // Handle special symbols based on their name.
+    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
+    assert(SymbolName && "cannot get symbol name");
+
+    auto updateSymbolValue = [&](const StringRef Name,
+                                 std::optional<uint64_t> Value = std::nullopt) {
+      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
+      NewSymbol.st_shndx = ELF::SHN_ABS;
+      BC->outs() << "BOLT-INFO: setting " << Name << " to 0x"
+                 << Twine::utohexstr(NewSymbol.st_value) << '\n';
+    };
+
+    if (*SymbolName == "__hot_start" || *SymbolName == "__hot_end") {
+      if (opts::HotText) {
+        updateSymbolValue(*SymbolName);
+        ++NumHotTextSymsUpdated;
+      }
+      goto registerSymbol;
+    }
+
+    if (*SymbolName == "__hot_data_start" || *SymbolName == "__hot_data_end") {
+      if (opts::HotData) {
+        updateSymbolValue(*SymbolName);
+        ++NumHotDataSymsUpdated;
+      }
+      goto registerSymbol;
+    }
+
+    if (*SymbolName == "_end") {
+      if (NextAvailableAddress > Symbol.st_value)
+        updateSymbolValue(*SymbolName, NextAvailableAddress);
+      goto registerSymbol;
+    }
+
     if (Function) {
       // If the symbol matched a function that was not emitted, update the
       // corresponding section index but otherwise leave it unchanged.
@@ -4901,33 +4938,7 @@ void RewriteInstance::updateELFSymbolTable(
       }
     }
 
-    // Handle special symbols based on their name.
-    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
-    assert(SymbolName && "cannot get symbol name");
-
-    auto updateSymbolValue = [&](const StringRef Name,
-                                 std::optional<uint64_t> Value = std::nullopt) {
-      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
-      NewSymbol.st_shndx = ELF::SHN_ABS;
-      BC->outs() << "BOLT-INFO: setting " << Name << " to 0x"
-                 << Twine::utohexstr(NewSymbol.st_value) << '\n';
-    };
-
-    if (opts::HotText &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end")) {
-      updateSymbolValue(*SymbolName);
-      ++NumHotTextSymsUpdated;
-    }
-
-    if (opts::HotData && (*SymbolName == "__hot_data_start" ||
-                          *SymbolName == "__hot_data_end")) {
-      updateSymbolValue(*SymbolName);
-      ++NumHotDataSymsUpdated;
-    }
-
-    if (*SymbolName == "_end" && NextAvailableAddress > Symbol.st_value)
-      updateSymbolValue(*SymbolName, NextAvailableAddress);
-
+  registerSymbol:
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *
                 sizeof(ELFSymTy),
