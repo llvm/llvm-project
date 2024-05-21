@@ -9815,6 +9815,25 @@ static Stmt *buildPreInits(ASTContext &Context,
   return nullptr;
 }
 
+/// Append the \p Item or the content of a CompoundStmt to the list \p
+/// TargetList.
+///
+/// A CompoundStmt is used as container in case multiple statements need to be
+/// stored in lieu of using an explicit list. Flattening is necessary because
+/// contained DeclStmts need to be visible after the execution of the list. Used
+/// for OpenMP pre-init declarations/statements.
+static void appendFlattendedStmtList(SmallVectorImpl<Stmt *> &TargetList,
+                                     Stmt *Item) {
+  // nullptr represents an empty list.
+  if (!Item)
+    return;
+
+  if (auto *CS = dyn_cast<CompoundStmt>(Item))
+    llvm::append_range(TargetList, CS->body());
+  else
+    TargetList.push_back(Item);
+}
+
 /// Build preinits statement for the given declarations.
 static Stmt *
 buildPreInits(ASTContext &Context,
@@ -9830,19 +9849,13 @@ buildPreInits(ASTContext &Context,
 
 /// Build pre-init statement for the given statements.
 static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
-  if (!PreInits.empty()) {
-    SmallVector<Stmt *> Stmts;
-    for (Stmt *S : PreInits) {
-      // Do not nest CompoundStmts.
-      if (auto *CS = dyn_cast<CompoundStmt>(S)) {
-        llvm::append_range(Stmts, CS->body());
-        continue;
-      }
-      Stmts.push_back(S);
-    }
-    return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
-  }
-  return nullptr;
+  if (PreInits.empty())
+    return nullptr;
+
+  SmallVector<Stmt *> Stmts;
+  for (Stmt *S : PreInits)
+    appendFlattendedStmtList(Stmts, S);
+  return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
 }
 
 /// Build postupdate expression for the given list of postupdates expressions.
@@ -9950,7 +9963,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             else
               Constituents.push_back(DependentPreInits);
             for (Stmt *S : Constituents) {
-              if (DeclStmt *DC = dyn_cast<DeclStmt>(S)) {
+              if (auto *DC = dyn_cast<DeclStmt>(S)) {
                 for (Decl *C : DC->decls()) {
                   auto *D = cast<VarDecl>(C);
                   DeclRefExpr *Ref = buildDeclRefExpr(
@@ -15123,15 +15136,8 @@ bool SemaOpenMP::checkTransformableLoopNest(
           DependentPreInits = Dir->getPreInits();
         else
           llvm_unreachable("Unhandled loop transformation");
-        if (!DependentPreInits)
-          return;
-        // CompoundStmts are used as lists of other statements, add their
-        // contents, not the lists themselves to avoid nesting. This is
-        // necessary because DeclStmts need to be visible after the pre-init.
-        else if (auto *CS = dyn_cast<CompoundStmt>(DependentPreInits))
-          llvm::append_range(OriginalInits.back(), CS->body());
-        else
-          OriginalInits.back().push_back(DependentPreInits);
+
+        appendFlattendedStmtList(OriginalInits.back(), DependentPreInits);
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
