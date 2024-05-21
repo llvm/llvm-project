@@ -116,6 +116,12 @@ enum BinOp {
   BinOpURem,
 };
 
+// A constant kind
+enum ConstKind {
+  ConstKindVal,
+  ConstKindUnimplemented,
+};
+
 template <class T> string toString(T *X) {
   string S;
   raw_string_ostream SS(S);
@@ -1212,10 +1218,13 @@ private:
   }
 
   void serialiseConstantInt(ConstantInt *CI) {
+    // `Const` discriminator:
+    OutStreamer.emitInt8(ConstKindVal);
+    // ty_idx:
     OutStreamer.emitSizeT(typeIndex(CI->getType()));
-    unsigned BitWidth = CI->getBitWidth();
 
     // Figure out how many bytes it'd take to store that many bits.
+    unsigned BitWidth = CI->getBitWidth();
     unsigned ByteWidth = BitWidth / 8;
     if (BitWidth % 8 != 0) {
       ByteWidth++;
@@ -1237,11 +1246,10 @@ private:
   }
 
   void serialiseUnimplementedConstant(Constant *C) {
-    // type_index:
-    OutStreamer.emitSizeT(typeIndex(C->getType()));
-    // num_bytes:
-    // Just report zero for now.
-    OutStreamer.emitSizeT(0);
+    // `Const` discriminator:
+    OutStreamer.emitInt8(ConstKindUnimplemented);
+    // problem constant, stringified:
+    serialiseString(toString(C));
   }
 
   void serialiseConstant(Constant *C) {
