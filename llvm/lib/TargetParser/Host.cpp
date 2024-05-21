@@ -214,6 +214,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xc18", "cortex-r8")
         .Case("0xd13", "cortex-r52")
         .Case("0xd15", "cortex-r82")
+        .Case("0xd14", "cortex-r82ae")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
         .Case("0xd03", "cortex-a53")
@@ -1801,7 +1802,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  Features["evex512"]    = Features["avx512f"];
+  if (Features["avx512f"])
+    Features["evex512"]  = true;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);

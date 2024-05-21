@@ -249,13 +249,13 @@ define <8 x i64> @PR30630(<8 x i64> %x) {
 ;         ret <2 x float> zeroinitializer
 define <2 x float> @PR32872(<2 x float> %x) {
 ; CHECK-LABEL: @PR32872(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> zeroinitializer, <4 x float> [[TMP1]], <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    ret <2 x float> [[TMP4]]
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUF2:%.*]] = shufflevector <4 x float> zeroinitializer, <4 x float> [[SHUF]], <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    ret <2 x float> [[SHUF2]]
 ;
-  %tmp1 = shufflevector <2 x float> %x, <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
-  %tmp4 = shufflevector <4 x float> zeroinitializer, <4 x float> %tmp1, <2 x i32> <i32 4, i32 5>
-  ret <2 x float> %tmp4
+  %shuf = shufflevector <2 x float> %x, <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+  %shuf2 = shufflevector <4 x float> zeroinitializer, <4 x float> %shuf, <2 x i32> <i32 4, i32 5>
+  ret <2 x float> %shuf2
 }
 
 define <5 x i8> @splat_inserted_constant(<4 x i8> %x) {
@@ -283,4 +283,228 @@ define <2 x i8> @splat_inserted_constant_not_canonical(<3 x i8> %x, <3 x i8> %y)
   %ins2 = insertelement <3 x i8> %x, i8 23, i7 2
   %splat2 = shufflevector <3 x i8> %y, <3 x i8> %ins2, <2 x i32> <i32 undef, i32 5>
   ret <2 x i8> %splat2
+}
+
+define <4 x i32> @fold_identity(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity(
+; CHECK-NEXT:    ret <4 x i32> [[X:%.*]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_identity2(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[SHL]]
+;
+  %shl = shl <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %shuf = shufflevector <4 x i32> %shl, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_identity3(<4 x i32> %x) {
+; CHECK-LABEL: @fold_identity3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret <4 x i32> [[SHL]]
+;
+  %shl = shl <4 x i32> %x, %x
+  %shuf = shufflevector <4 x i32> %shl, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @not_fold_identity(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_identity(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[SHUF]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @not_fold_identity2(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_identity2(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[SHUF]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+  %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i64> @fold_lookthrough_cast(<4 x i32> %x) {
+; CHECK-LABEL: @fold_lookthrough_cast(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ZEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %zext = zext <4 x i32> %shuf to <4 x i64>
+  %revshuf = shufflevector <4 x i64> %zext, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i64> %revshuf
+}
+
+define <4 x i64> @not_fold_lookthrough_cast(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_lookthrough_cast(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ZEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
+;
+  %zext = zext <4 x i32> %x to <4 x i64>
+  %revshuf = shufflevector <4 x i64> %zext, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i64> %revshuf
+}
+
+define <4 x i64> @not_fold_lookthrough_cast2(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_lookthrough_cast2(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %zext = zext <4 x i32> %shuf to <4 x i64>
+  ret <4 x i64> %zext
+}
+
+define i32 @not_fold_lookthrough_bitcast(<4 x i8> %x) {
+; CHECK-LABEL: @not_fold_lookthrough_bitcast(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <4 x i8> [[SHUF]] to i32
+; CHECK-NEXT:    ret i32 [[BITCAST]]
+;
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bitcast = bitcast <4 x i8> %shuf to i32
+  ret i32 %bitcast
+}
+
+define <8 x i16> @not_fold_lookthrough_bitcast2(<4 x i32> %x, <8 x i16> %y) {
+; CHECK-LABEL: @not_fold_lookthrough_bitcast2(
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i32> [[X:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[OUT:%.*]] = shufflevector <8 x i16> [[Y:%.*]], <8 x i16> [[CAST]], <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+; CHECK-NEXT:    ret <8 x i16> [[OUT]]
+;
+  %cast = bitcast <4 x i32> %x to <8 x i16>
+  %out = shufflevector <8 x i16> %y, <8 x i16> %cast, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  ret <8 x i16> %out
+}
+
+define <4 x i32> @fold_lookthrough_binop_same_operands(<4 x i32> %x) {
+; CHECK-LABEL: @fold_lookthrough_binop_same_operands(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add = add <4 x i32> %shuf, %shuf
+  %revshuf = shufflevector <4 x i32> %add, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_lookthrough_binop_different_operands(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @fold_lookthrough_binop_different_operands(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add = add <4 x i32> %shuf, %y
+  %revshuf = shufflevector <4 x i32> %add, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i32> @fold_lookthrough_binop_multiuse(<4 x i32> %x) {
+; CHECK-LABEL: @fold_lookthrough_binop_multiuse(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD2:%.*]] = add <4 x i32> [[SHUF]], [[REVSHUF]]
+; CHECK-NEXT:    ret <4 x i32> [[ADD2]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add = add <4 x i32> %shuf, %shuf
+  %revshuf = shufflevector <4 x i32> %add, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add2 = add <4 x i32> %shuf, %revshuf
+  ret <4 x i32> %add2
+}
+
+define <4 x i64> @fold_lookthrough_cast_chain(<4 x i16> %x) {
+; CHECK-LABEL: @fold_lookthrough_cast_chain(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[X:%.*]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[SHUF]] to <4 x i32>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i32> [[ZEXT]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[SEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i16> %x, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %zext = zext <4 x i16> %shuf to <4 x i32>
+  %sext = sext <4 x i32> %zext to <4 x i64>
+  %revshuf = shufflevector <4 x i64> %sext, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i64> %revshuf
+}
+
+define <4 x i32> @fold_lookthrough_binop_chain(<4 x i32> %x) {
+; CHECK-LABEL: @fold_lookthrough_binop_chain(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add <4 x i32> [[ADD]], [[ADD]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD2]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add = add <4 x i32> %shuf, %shuf
+  %add2 = add <4 x i32> %add, %add
+  %revshuf = shufflevector <4 x i32> %add2, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i32> %revshuf
+}
+
+define <4 x i64> @fold_lookthrough_cast_binop_chain(<4 x i32> %x) {
+; CHECK-LABEL: @fold_lookthrough_cast_binop_chain(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i64> [[ZEXT]], [[ZEXT]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ADD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %zext = zext <4 x i32> %shuf to <4 x i64>
+  %add = add <4 x i64> %zext, %zext
+  %revshuf = shufflevector <4 x i64> %add, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i64> %revshuf
+}
+
+define <4 x i64> @not_fold_cast_mismatched_types(<4 x i32> %x) {
+; CHECK-LABEL: @not_fold_cast_mismatched_types(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[SHUF]] to <2 x i64>
+; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x i64> [[ZEXT]], <2 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    ret <4 x i64> [[EXTSHUF]]
+;
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %zext = zext <2 x i32> %shuf to <2 x i64>
+  %extshuf = shufflevector <2 x i64> %zext, <2 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x i64> %extshuf
+}
+
+define <4 x float> @not_fold_binop_mismatched_types(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @not_fold_binop_mismatched_types(
+; CHECK-NEXT:    [[SHUF_X:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUF_Y:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[FADD:%.*]] = fadd fast <2 x float> [[SHUF_X]], [[SHUF_Y]]
+; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x float> [[FADD]], <2 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[EXTSHUF]]
+;
+  %shuf.x = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %shuf.y = shufflevector <4 x float> %y, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %fadd = fadd fast <2 x float> %shuf.x, %shuf.y
+  %extshuf = shufflevector <2 x float> %fadd, <2 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %extshuf
 }

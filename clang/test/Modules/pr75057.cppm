@@ -8,6 +8,10 @@
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -isystem %t -emit-module-interface -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 %t/use-module.cc -isystem %t -fmodule-file=a=%t/a.pcm -fsyntax-only -verify
 
+// Test again with reduced BMI.
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -isystem %t -emit-reduced-module-interface -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 %t/use-module.cc -isystem %t -fmodule-file=a=%t/a.pcm -fsyntax-only -verify
+
 //--- sys.h
 #ifndef SYS_H
 #define SYS_H

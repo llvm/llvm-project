@@ -167,9 +167,13 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
                                   LastParamListWasEmpty);
 
   // Parse the actual template declaration.
-  if (Tok.is(tok::kw_concept))
-    return Actions.ConvertDeclToDeclGroup(
-        ParseConceptDefinition(TemplateInfo, DeclEnd));
+  if (Tok.is(tok::kw_concept)) {
+    Decl *ConceptDecl = ParseConceptDefinition(TemplateInfo, DeclEnd);
+    // We need to explicitly pass ConceptDecl to ParsingDeclRAIIObject, so that
+    // delayed diagnostics (e.g. warn_deprecated) have a Decl to work with.
+    ParsingTemplateParams.complete(ConceptDecl);
+    return Actions.ConvertDeclToDeclGroup(ConceptDecl);
+  }
 
   return ParseDeclarationAfterTemplate(
       Context, TemplateInfo, ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
@@ -316,7 +320,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   const IdentifierInfo *Id = Result.Identifier;
   SourceLocation IdLoc = Result.getBeginLoc();
 
-  DiagnoseAndSkipCXX11Attributes();
+  ParsedAttributes Attrs(AttrFactory);
+  MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
   if (!TryConsumeToken(tok::equal)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
@@ -335,8 +340,8 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
   Expr *ConstraintExpr = ConstraintExprResult.get();
   return Actions.ActOnConceptDefinition(getCurScope(),
-                                        *TemplateInfo.TemplateParams,
-                                        Id, IdLoc, ConstraintExpr);
+                                        *TemplateInfo.TemplateParams, Id, IdLoc,
+                                        ConstraintExpr, Attrs);
 }
 
 /// ParseTemplateParameters - Parses a template-parameter-list enclosed in
@@ -902,7 +907,8 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   // FIXME: The type should probably be restricted in some way... Not all
   // declarators (parts of declarators?) are accepted for parameters.
   DeclSpec DS(AttrFactory);
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
+  ParsedTemplateInfo TemplateInfo;
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
                              DeclSpecContext::DSC_template_param);
 
   // Parse this as a typename.
@@ -1535,8 +1541,8 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
     if (!Template)
       return QualType();
     CalledSignatureHelp = true;
-    return Actions.ProduceTemplateArgumentSignatureHelp(Template, TemplateArgs,
-                                                        OpenLoc);
+    return Actions.CodeCompletion().ProduceTemplateArgumentSignatureHelp(
+        Template, TemplateArgs, OpenLoc);
   };
 
   do {

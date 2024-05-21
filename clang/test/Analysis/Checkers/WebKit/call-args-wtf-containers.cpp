@@ -4,6 +4,92 @@
 
 namespace WTF {
 
+  constexpr unsigned long notFound = static_cast<unsigned long>(-1);
+
+  class String;
+  class StringImpl;
+
+  class StringView {
+  public:
+    StringView(const String&);
+  private:
+    RefPtr<StringImpl> m_impl;
+  };
+
+  class StringImpl {
+  public:
+    void ref() const { ++m_refCount; }
+    void deref() const {
+      if (!--m_refCount)
+        delete this;
+    }
+
+    static constexpr unsigned s_flagIs8Bit = 1u << 0;
+    bool is8Bit() const { return m_hashAndFlags & s_flagIs8Bit; }
+    const char* characters8() const { return m_char8; }
+    const short* characters16() const { return m_char16; }
+    unsigned length() const { return m_length; }
+    Ref<StringImpl> substring(unsigned position, unsigned length) const;
+
+    unsigned long find(char) const;
+    unsigned long find(StringView) const;
+    unsigned long contains(StringView) const;
+    unsigned long findIgnoringASCIICase(StringView) const;
+
+    bool startsWith(StringView) const;
+    bool startsWithIgnoringASCIICase(StringView) const;
+    bool endsWith(StringView) const;
+    bool endsWithIgnoringASCIICase(StringView) const;
+
+  private:
+    mutable unsigned m_refCount { 0 };
+    unsigned m_length { 0 };
+    union {
+      const char* m_char8;
+      const short* m_char16;
+    };
+    unsigned m_hashAndFlags { 0 };
+  };
+
+  class String {
+  public:
+    String() = default;
+    String(StringImpl& impl) : m_impl(&impl) { }
+    String(StringImpl* impl) : m_impl(impl) { }
+    String(Ref<StringImpl>&& impl) : m_impl(impl.get()) { }
+    StringImpl* impl() { return m_impl.get(); }
+    unsigned length() const { return m_impl ? m_impl->length() : 0; }
+    const char* characters8() const { return m_impl ? m_impl->characters8() : nullptr; }
+    const short* characters16() const { return m_impl ? m_impl->characters16() : nullptr; }
+
+    bool is8Bit() const { return !m_impl || m_impl->is8Bit(); }
+
+    unsigned long find(char character) const { return m_impl ? m_impl->find(character) : notFound; }
+    unsigned long find(StringView str) const { return m_impl ? m_impl->find(str) : notFound; }
+    unsigned long findIgnoringASCIICase(StringView) const;
+
+    bool contains(char character) const { return find(character) != notFound; }
+    bool contains(StringView) const;
+    bool containsIgnoringASCIICase(StringView) const;
+
+    bool startsWith(StringView) const;
+    bool startsWithIgnoringASCIICase(StringView) const;
+    bool endsWith(StringView) const;
+    bool endsWithIgnoringASCIICase(StringView) const;
+
+    String substring(unsigned position, unsigned length) const
+    {
+      if (!m_impl)
+        return { };
+      if (!position && length >= m_impl->length())
+        return *this;
+      return m_impl->substring(position, length);
+    }
+
+  private:
+    RefPtr<StringImpl> m_impl;
+  };
+
   template <typename T>
   class HashSet {
   public:
@@ -89,6 +175,9 @@ namespace WTF {
 
 }
 
+using WTF::StringView;
+using WTF::StringImpl;
+using WTF::String;
 using WTF::HashSet;
 using WTF::HashMap;
 using WTF::WeakHashSet;
@@ -101,8 +190,37 @@ public:
 };
 
 RefCounted* object();
+StringImpl* strImpl();
+String* str();
+StringView strView();
 
 void test() {
+  strImpl()->is8Bit();
+  strImpl()->characters8();
+  strImpl()->characters16();
+  strImpl()->length();
+  strImpl()->substring(2, 4);
+  strImpl()->find(strView());
+  strImpl()->contains(strView());
+  strImpl()->findIgnoringASCIICase(strView());
+  strImpl()->startsWith(strView());
+  strImpl()->startsWithIgnoringASCIICase(strView());
+  strImpl()->endsWith(strView());
+  strImpl()->endsWithIgnoringASCIICase(strView());
+
+  str()->is8Bit();
+  str()->characters8();
+  str()->characters16();
+  str()->length();
+  str()->substring(2, 4);
+  str()->find(strView());
+  str()->contains(strView());
+  str()->findIgnoringASCIICase(strView());
+  str()->startsWith(strView());
+  str()->startsWithIgnoringASCIICase(strView());
+  str()->endsWith(strView());
+  str()->endsWithIgnoringASCIICase(strView());
+
   HashSet<RefPtr<RefCounted>> set;
   set.find(*object());
   set.contains(*object());

@@ -16,6 +16,9 @@ class GCNPredicateControl : PredicateControl {
   Predicate VIAssemblerPredicate = isGFX8GFX9;
 }
 
+class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
+    : MnemonicAlias<From, To, VariantName>, GCNPredicateControl;
+
 // Except for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the
 // getMCOpcodeGen table.
@@ -1002,6 +1005,9 @@ def SDWAVopcDst : BoolRC {
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
                       string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
   string Validator = "[](int64_t V) { return true; }";
   string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
@@ -2303,8 +2309,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
 
-  field bit IsFP8 = 0;
+  field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
+  field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
@@ -2424,7 +2431,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
-   HasModifiers, DstVT, IsFP8DstByteSel>.ret;
+   HasModifiers, DstVT, IsFP8ByteSel>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,

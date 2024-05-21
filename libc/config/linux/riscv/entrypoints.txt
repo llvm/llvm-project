@@ -22,6 +22,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # fcntl.h entrypoints
     libc.src.fcntl.creat
+    libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
 

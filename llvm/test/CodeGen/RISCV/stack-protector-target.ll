@@ -50,21 +50,18 @@ define void @func() sspreq nounwind {
 ; ANDROID-RISCV64:       # %bb.0:
 ; ANDROID-RISCV64-NEXT:    addi sp, sp, -32
 ; ANDROID-RISCV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; ANDROID-RISCV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; ANDROID-RISCV64-NEXT:    lui s0, %hi(__stack_chk_guard)
-; ANDROID-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
-; ANDROID-RISCV64-NEXT:    sd a0, 8(sp)
-; ANDROID-RISCV64-NEXT:    addi a0, sp, 4
+; ANDROID-RISCV64-NEXT:    ld a0, -24(tp)
+; ANDROID-RISCV64-NEXT:    sd a0, 16(sp)
+; ANDROID-RISCV64-NEXT:    addi a0, sp, 12
 ; ANDROID-RISCV64-NEXT:    call capture
-; ANDROID-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
-; ANDROID-RISCV64-NEXT:    ld a1, 8(sp)
+; ANDROID-RISCV64-NEXT:    ld a0, -24(tp)
+; ANDROID-RISCV64-NEXT:    ld a1, 16(sp)
 ; ANDROID-RISCV64-NEXT:    bne a0, a1, .LBB0_2
-; ANDROID-RISCV64-NEXT:  # %bb.1:
+; ANDROID-RISCV64-NEXT:  # %bb.1: # %SP_return
 ; ANDROID-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; ANDROID-RISCV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; ANDROID-RISCV64-NEXT:    addi sp, sp, 32
 ; ANDROID-RISCV64-NEXT:    ret
-; ANDROID-RISCV64-NEXT:  .LBB0_2:
+; ANDROID-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
 ; ANDROID-RISCV64-NEXT:    call __stack_chk_fail
   %1 = alloca i32, align 4
   call void @capture(ptr %1)

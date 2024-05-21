@@ -25,6 +25,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   TransposeMatmul.cpp
   MeshShardingInterfaceImpl.cpp
   NamedOpConversions.cpp
+  BlockPackMatmul.cpp
   Padding.cpp
   Promotion.cpp
   RuntimeOpVerification.cpp

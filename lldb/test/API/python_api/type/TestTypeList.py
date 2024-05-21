@@ -52,6 +52,19 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBValue(value)
         self.assertEqual(value.GetValueAsSigned(), 47)
 
+        static_constexpr_bool_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_bool_field"
+        )
+        self.assertTrue(static_constexpr_bool_field)
+        self.assertEqual(
+            static_constexpr_bool_field.GetName(), "static_constexpr_bool_field"
+        )
+        self.assertEqual(static_constexpr_bool_field.GetType().GetName(), "const bool")
+
+        value = static_constexpr_bool_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsUnsigned(), 1)
+
         static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
         self.assertTrue(static_mutable_field)
         self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
@@ -259,3 +272,40 @@ class TypeAndTypeListTestCase(TestBase):
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
+
+    def test_nested_typedef(self):
+        """Exercise FindDirectNestedType for typedefs."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
+        self.assertTrue(target)
+
+        with_nested_typedef = target.FindFirstType("WithNestedTypedef")
+        self.assertTrue(with_nested_typedef)
+
+        # This is necessary to work around #91186
+        self.assertTrue(target.FindFirstGlobalVariable("typedefed_value").GetType())
+
+        the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
+        self.assertTrue(the_typedef)
+        self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
+
+    def test_GetByteAlign(self):
+        """Exercise SBType::GetByteAlign"""
+        self.build()
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact()))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module)
+
+        # Invalid types should not crash.
+        self.assertEqual(lldb.SBType().GetByteAlign(), 0)
+
+        # Try a type with natural alignment.
+        void_ptr = module.GetBasicType(lldb.eBasicTypeVoid).GetPointerType()
+        self.assertTrue(void_ptr)
+        # Not exactly guaranteed by the spec, but should be true everywhere we
+        # care about.
+        self.assertEqual(void_ptr.GetByteSize(), void_ptr.GetByteAlign())
+
+        # And an over-aligned type.
+        self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)
