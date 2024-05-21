@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OpenMP_OPS_INTERFACES
-#define OpenMP_OPS_INTERFACES
+#ifndef OPENMP_OPS_INTERFACES
+#define OPENMP_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -349,4 +349,4 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   ];
 }
 
-#endif // OpenMP_OPS_INTERFACES
+#endif // OPENMP_OPS_INTERFACES
