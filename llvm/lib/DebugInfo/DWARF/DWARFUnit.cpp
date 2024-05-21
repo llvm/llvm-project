@@ -496,6 +496,7 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
+  llvm::sys::ScopedReader FreeLock(CUDieFreeMutex);
   {
     llvm::sys::ScopedReader Lock(CUDieArrayMutex);
     if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
@@ -673,6 +674,7 @@ void DWARFUnit::clearDIEs(bool KeepCUDie) {
   // It depends on the implementation whether the request is fulfilled.
   // Create a new vector with a small capacity and assign it to the DieArray to
   // have previous contents freed.
+  llvm::sys::ScopedWriter FreeLock(CUDieFreeMutex);
   llvm::sys::ScopedWriter CULock(CUDieArrayMutex);
   llvm::sys::ScopedWriter AllLock(AllDieArrayMutex);
   DieArray = (KeepCUDie && !DieArray.empty())
