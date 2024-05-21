@@ -140,9 +140,8 @@ define <4 x i1> @buildvec_mask_v4i1() {
 define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 3
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 3
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
@@ -151,9 +150,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1:
 ; ZVE32F:       # %bb.0:
-; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.v.i v0, 3
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vmv.v.i v0, 3
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1

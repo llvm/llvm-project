@@ -12623,16 +12623,15 @@ define <4 x i32> @mgather_unit_stride_load_wide_idx(ptr %base) {
 
 ; This looks like a strided load (at i8), but isn't at index type.
 define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
-; RV32V-LABEL: mgather_narrow_edge_case:
-; RV32V:       # %bb.0:
-; RV32V-NEXT:    li a1, -512
-; RV32V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32V-NEXT:    vmv.v.i v0, 5
-; RV32V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32V-NEXT:    vmv.v.x v8, a1
-; RV32V-NEXT:    vmerge.vim v8, v8, 0, v0
-; RV32V-NEXT:    vluxei32.v v8, (a0), v8
-; RV32V-NEXT:    ret
+; RV32-LABEL: mgather_narrow_edge_case:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, -512
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.i v0, 5
+; RV32-NEXT:    vmv.v.x v8, a1
+; RV32-NEXT:    vmerge.vim v8, v8, 0, v0
+; RV32-NEXT:    vluxei32.v v8, (a0), v8
+; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_narrow_edge_case:
 ; RV64V:       # %bb.0:
@@ -12645,17 +12644,6 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64V-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64V-NEXT:    ret
-;
-; RV32ZVE32F-LABEL: mgather_narrow_edge_case:
-; RV32ZVE32F:       # %bb.0:
-; RV32ZVE32F-NEXT:    li a1, -512
-; RV32ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; RV32ZVE32F-NEXT:    vmv.v.i v0, 5
-; RV32ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32ZVE32F-NEXT:    vmv.v.x v8, a1
-; RV32ZVE32F-NEXT:    vmerge.vim v8, v8, 0, v0
-; RV32ZVE32F-NEXT:    vluxei32.v v8, (a0), v8
-; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_narrow_edge_case:
 ; RV64ZVE32F:       # %bb.0:
