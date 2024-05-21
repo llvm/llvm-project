@@ -78,3 +78,6 @@ The above program will be terminated with:
   terminate called without an active exception
   Aborted (core dumped)
 
+Check does not perform a call-flow analysis and may produce false positives in
+lambdas or functions that are actually called from a catch block. In such cases,
+it is recommended to suppress the warning using the ``NOLINT`` comment.
