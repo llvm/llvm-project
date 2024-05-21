@@ -601,8 +601,7 @@ public:
     return typeConstructionStack;
   }
 
-  bool
-  isPresentShallowLookup(const Fortran::semantics::Symbol &sym) override final {
+  bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) override final {
     return bool(shallowLookupSymbol(sym));
   }
 
