@@ -1767,10 +1767,11 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   unsigned NumVisited = 0;
 
   while (!Worklist.empty()) {
-    SmallVector<InstLane> Item = Worklist.pop_back_val();
-    auto [FrontV, FrontLane] = Item.front();
     if (++NumVisited > MaxInstrsToScan)
       return false;
+
+    SmallVector<InstLane> Item = Worklist.pop_back_val();
+    auto [FrontV, FrontLane] = Item.front();
 
     // If we found an undef first lane then bail out to keep things simple.
     if (!FrontV)
