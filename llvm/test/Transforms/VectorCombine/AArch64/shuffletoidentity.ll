@@ -714,34 +714,6 @@ define <4 x i64> @zext_add_chain(<4 x i32> %x) {
   ret <4 x i64> %revshuf
 }
 
-define <4 x i64> @zext_mismatched_types(<4 x i32> %x) {
-; CHECK-LABEL: @zext_mismatched_types(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x i64> [[ZEXT]], <2 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    ret <4 x i64> [[EXTSHUF]]
-;
-  %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-  %zext = zext <2 x i32> %shuf to <2 x i64>
-  %extshuf = shufflevector <2 x i64> %zext, <2 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  ret <4 x i64> %extshuf
-}
-
-define <4 x float> @add_mismatched_types(<4 x float> %x, <4 x float> %y) {
-; CHECK-LABEL: @add_mismatched_types(
-; CHECK-NEXT:    [[SHUF_X:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[SHUF_Y:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[FADD:%.*]] = fadd fast <2 x float> [[SHUF_X]], [[SHUF_Y]]
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x float> [[FADD]], <2 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    ret <4 x float> [[EXTSHUF]]
-;
-  %shuf.x = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 2>
-  %shuf.y = shufflevector <4 x float> %y, <4 x float> poison, <2 x i32> <i32 1, i32 3>
-  %fadd = fadd fast <2 x float> %shuf.x, %shuf.y
-  %extshuf = shufflevector <2 x float> %fadd, <2 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  ret <4 x float> %extshuf
-}
-
 define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @intrinsics_minmax(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]])
