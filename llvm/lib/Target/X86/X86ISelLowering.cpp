@@ -3292,7 +3292,7 @@ bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
 
-  return !isa<ConstantSDNode>(Y);
+  return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
