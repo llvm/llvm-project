@@ -272,13 +272,14 @@ def Polynomial_ToTensorOp : Polynomial_Op<"to_tensor", [Pure]> {
   let hasVerifier = 1;
 }
 
-def Polynomial_AnyPolynomialAttr : AnyAttrOf<[
-  Polynomial_FloatPolynomialAttr,
-  Polynomial_IntPolynomialAttr
+def Polynomial_AnyTypedPolynomialAttr : AnyAttrOf<[
+  Polynomial_TypedFloatPolynomialAttr,
+  Polynomial_TypedIntPolynomialAttr
 ]>;
 
 // Not deriving from Polynomial_Op due to need for custom assembly format
-def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure]> {
+def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant",
+    [Pure, InferTypeOpAdaptor]> {
   let summary = "Define a constant polynomial via an attribute.";
   let description = [{
     Example:
@@ -292,9 +293,9 @@ def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure]> {
     %0 = polynomial.constant #polynomial.float_polynomial<0.5 + 1.3e06 x**2> : !polynomial.polynomial<#float_ring>
     ```
   }];
-  let arguments = (ins Polynomial_AnyPolynomialAttr:$value);
+  let arguments = (ins Polynomial_AnyTypedPolynomialAttr:$value);
   let results = (outs Polynomial_PolynomialType:$output);
-  let assemblyFormat = "attr-dict `:` type($output)";
+  let assemblyFormat = "attr-dict $value";
 }
 
 def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {

@@ -186,6 +186,21 @@ LogicalResult INTTOp::verify() {
   return verifyNTTOp(this->getOperation(), ring, tensorType);
 }
 
+LogicalResult ConstantOp::inferReturnTypes(
+    MLIRContext *context, std::optional<mlir::Location> location,
+    ConstantOp::Adaptor adaptor,
+    llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
+  Attribute operand = adaptor.getValue();
+  if (auto intPoly = dyn_cast<TypedIntPolynomialAttr>(operand)) {
+    inferredReturnTypes.push_back(intPoly.getType());
+  } else if (auto floatPoly = dyn_cast<TypedFloatPolynomialAttr>(operand)) {
+    inferredReturnTypes.push_back(floatPoly.getType());
+  } else {
+    return failure();
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
