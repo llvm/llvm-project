@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <cmath>
@@ -1175,17 +1176,30 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
-  Module *M = Parent->getParent();
-  if (ci_opr1 == 2) { // rootn(x, 2) = sqrt(x)
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0
-                        << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2sqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
-  } else if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
+  Module *M = B.GetInsertBlock()->getModule();
+
+  CallInst *CI = cast<CallInst>(FPOp);
+  if (ci_opr1 == 2 &&
+      shouldReplaceLibcallWithIntrinsic(CI,
+                                        /*AllowMinSizeF32=*/true,
+                                        /*AllowF64=*/true)) {
+    // rootn(x, 2) = sqrt(x)
+    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> sqrt(" << *opr0 << ")\n");
+
+    CallInst *NewCall = B.CreateUnaryIntrinsic(Intrinsic::sqrt, opr0, CI);
+    NewCall->takeName(CI);
+
+    // OpenCL rootn has a looser ulp of 2 requirement than sqrt, so add some
+    // metadata.
+    MDBuilder MDHelper(M->getContext());
+    MDNode *FPMD = MDHelper.createFPMath(std::max(FPOp->getFPAccuracy(), 2.0f));
+    NewCall->setMetadata(LLVMContext::MD_fpmath, FPMD);
+
+    replaceCall(CI, NewCall);
+    return true;
+  }
+
+  if (ci_opr1 == 3) { // rootn(x, 3) = cbrt(x)
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> cbrt(" << *opr0
