@@ -332,40 +332,130 @@ if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-define void @ccmp16ri8_zf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
-; CHECK-LABEL: ccmp16ri8_zf:
+define i8 @ccmp8ri_zf_double(i8 %a, double %b, i8* nocapture %c)  {
+; CHECK-LABEL: ccmp8ri_zf_double:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpw %dx, %di
-; CHECK-NEXT:    ccmplew {dfv=sf} $123, %si
-; CHECK-NEXT:    jge .LBB9_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    xorpd %xmm1, %xmm1
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0
+; CHECK-NEXT:    ccmpeb {dfv=zf} $123, %dil
+; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:  .LBB9_2: # %if.end
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB9_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
-; NDD-LABEL: ccmp16ri8_zf:
+; NDD-LABEL: ccmp8ri_zf_double:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpw %dx, %di
-; NDD-NEXT:    ccmplew {dfv=sf} $123, %si
-; NDD-NEXT:    jge .LBB9_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    xorpd %xmm1, %xmm1
+; NDD-NEXT:    ucomisd %xmm1, %xmm0
+; NDD-NEXT:    ccmpeb {dfv=zf} $123, %dil
+; NDD-NEXT:    je .LBB9_2
+; NDD-NEXT:  # %bb.1: # %if.then
+; NDD-NEXT:    movb %dil, (%rsi)
+; NDD-NEXT:  .LBB9_2: # %if.end
 ; NDD-NEXT:    xorl %eax, %eax
-; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB9_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
-  %cmp = icmp sgt i16 %a, %c
-  %cmp1 = icmp slt i16 %b, 123
-  %or.cond = or i1 %cmp, %cmp1
+  %tobool = icmp ne i8 %a, 123
+  %cmp = fcmp ueq double %b, 0.0
+  %or.cond = select i1 %tobool, i1 %cmp, i1 false
   br i1 %or.cond, label %if.then, label %if.end
 
-if.then:                                          ; preds = %entry
-  tail call void (...) @foo()
+if.then:
+  store i8 %a, i8* %c, align 4
   br label %if.end
 
-if.end:                                           ; preds = %entry, %if.then
-  ret void
+if.end:
+  ret i8 0
+}
+
+define i8 @ccmp8ri_zf_double_p(i8 %a, double %b, i8* nocapture %c)  {
+; CHECK-LABEL: ccmp8ri_zf_double_p:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpb $123, %dil
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    ucomisd %xmm0, %xmm0
+; CHECK-NEXT:    setp %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    cmpb $1, %cl
+; CHECK-NEXT:    jne .LBB10_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:  .LBB10_2: # %if.end
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ccmp8ri_zf_double_p:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpb $123, %dil
+; NDD-NEXT:    setne %al
+; NDD-NEXT:    ucomisd %xmm0, %xmm0
+; NDD-NEXT:    setp %cl
+; NDD-NEXT:    andb %cl, %al
+; NDD-NEXT:    cmpb $1, %al
+; NDD-NEXT:    jne .LBB10_2
+; NDD-NEXT:  # %bb.1: # %if.then
+; NDD-NEXT:    movb %dil, (%rsi)
+; NDD-NEXT:  .LBB10_2: # %if.end
+; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    retq
+entry:
+  %tobool = icmp ne i8 %a, 123
+  %cmp = fcmp uno double %b, 0.0
+  %or.cond = select i1 %tobool, i1 %cmp, i1 false
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  store i8 %a, i8* %c, align 4
+  br label %if.end
+
+if.end:
+  ret i8 0
+}
+
+define i8 @ccmp8ri_zf_double_np(i8 %a, double %b, i8* nocapture %c)  {
+; CHECK-LABEL: ccmp8ri_zf_double_np:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpb $123, %dil
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    ucomisd %xmm0, %xmm0
+; CHECK-NEXT:    setnp %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    cmpb $1, %cl
+; CHECK-NEXT:    jne .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:  .LBB11_2: # %if.end
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+;
+; NDD-LABEL: ccmp8ri_zf_double_np:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpb $123, %dil
+; NDD-NEXT:    setne %al
+; NDD-NEXT:    ucomisd %xmm0, %xmm0
+; NDD-NEXT:    setnp %cl
+; NDD-NEXT:    andb %cl, %al
+; NDD-NEXT:    cmpb $1, %al
+; NDD-NEXT:    jne .LBB11_2
+; NDD-NEXT:  # %bb.1: # %if.then
+; NDD-NEXT:    movb %dil, (%rsi)
+; NDD-NEXT:  .LBB11_2: # %if.end
+; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    retq
+entry:
+  %tobool = icmp ne i8 %a, 123
+  %cmp = fcmp ord double %b, 0.0
+  %or.cond = select i1 %tobool, i1 %cmp, i1 false
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  store i8 %a, i8* %c, align 4
+  br label %if.end
+
+if.end:
+  ret i8 0
 }
 
 define void @ccmp16ri_zf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
@@ -374,11 +464,11 @@ define void @ccmp16ri_zf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
 ; CHECK-NEXT:    cmpw %dx, %di
 ; CHECK-NEXT:    movswl %si, %eax
 ; CHECK-NEXT:    ccmpael {dfv=sf} $1234, %eax # imm = 0x4D2
-; CHECK-NEXT:    jge .LBB10_1
+; CHECK-NEXT:    jge .LBB12_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB10_1: # %if.end
+; CHECK-NEXT:  .LBB12_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp16ri_zf:
@@ -386,11 +476,11 @@ define void @ccmp16ri_zf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
 ; NDD-NEXT:    cmpw %dx, %di
 ; NDD-NEXT:    movswl %si, %eax
 ; NDD-NEXT:    ccmpael {dfv=sf} $1234, %eax # imm = 0x4D2
-; NDD-NEXT:    jge .LBB10_1
+; NDD-NEXT:    jge .LBB12_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB10_1: # %if.end
+; NDD-NEXT:  .LBB12_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %cmp = icmp ult i16 %a, %c
@@ -411,22 +501,22 @@ define void @ccmp32ri_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %edx, %edi
 ; CHECK-NEXT:    ccmpbl {dfv=cf} $123457, %esi # imm = 0x1E241
-; CHECK-NEXT:    jae .LBB11_1
+; CHECK-NEXT:    jae .LBB13_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB11_1: # %if.end
+; CHECK-NEXT:  .LBB13_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp32ri_cf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpl %edx, %edi
 ; NDD-NEXT:    ccmpbl {dfv=cf} $123457, %esi # imm = 0x1E241
-; NDD-NEXT:    jae .LBB11_1
+; NDD-NEXT:    jae .LBB13_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB11_1: # %if.end
+; NDD-NEXT:  .LBB13_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %cmp = icmp uge i32 %a, %c
@@ -447,22 +537,22 @@ define void @ccmp64ri32_zf(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rdx, %rdi
 ; CHECK-NEXT:    ccmpbeq {dfv=sf} $123456, %rsi # imm = 0x1E240
-; CHECK-NEXT:    jge .LBB12_1
+; CHECK-NEXT:    jge .LBB14_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB12_1: # %if.end
+; CHECK-NEXT:  .LBB14_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp64ri32_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpq %rdx, %rdi
 ; NDD-NEXT:    ccmpbeq {dfv=sf} $123456, %rsi # imm = 0x1E240
-; NDD-NEXT:    jge .LBB12_1
+; NDD-NEXT:    jge .LBB14_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB12_1: # %if.end
+; NDD-NEXT:  .LBB14_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %cmp = icmp ugt i64 %a, %c
@@ -483,22 +573,22 @@ define void @ccmp8rm_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb %dl, %dil
 ; CHECK-NEXT:    ccmpneb {dfv=zf} (%rcx), %sil
-; CHECK-NEXT:    jne .LBB13_1
+; CHECK-NEXT:    jne .LBB15_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB13_1: # %if.end
+; CHECK-NEXT:  .LBB15_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp8rm_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpb %dl, %dil
 ; NDD-NEXT:    ccmpneb {dfv=zf} (%rcx), %sil
-; NDD-NEXT:    jne .LBB13_1
+; NDD-NEXT:    jne .LBB15_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB13_1: # %if.end
+; NDD-NEXT:  .LBB15_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %d = load i8, ptr %ptr
@@ -520,22 +610,22 @@ define void @ccmp16rm_sf(i16 noundef %a, i16 noundef %b, i16 noundef %c, ptr %pt
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpw %dx, %di
 ; CHECK-NEXT:    ccmplew {dfv=sf} (%rcx), %si
-; CHECK-NEXT:    jge .LBB14_1
+; CHECK-NEXT:    jge .LBB16_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB14_1: # %if.end
+; CHECK-NEXT:  .LBB16_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp16rm_sf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpw %dx, %di
 ; NDD-NEXT:    ccmplew {dfv=sf} (%rcx), %si
-; NDD-NEXT:    jge .LBB14_1
+; NDD-NEXT:    jge .LBB16_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB14_1: # %if.end
+; NDD-NEXT:  .LBB16_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %d = load i16, ptr %ptr
@@ -557,22 +647,22 @@ define void @ccmp32rm_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c, ptr %pt
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %edx, %edi
 ; CHECK-NEXT:    ccmpgl {dfv=cf} (%rcx), %esi
-; CHECK-NEXT:    ja .LBB15_1
+; CHECK-NEXT:    ja .LBB17_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB15_1: # %if.end
+; CHECK-NEXT:  .LBB17_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp32rm_cf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpl %edx, %edi
 ; NDD-NEXT:    ccmpgl {dfv=cf} (%rcx), %esi
-; NDD-NEXT:    ja .LBB15_1
+; NDD-NEXT:    ja .LBB17_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB15_1: # %if.end
+; NDD-NEXT:  .LBB17_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %d = load i32, ptr %ptr
@@ -594,22 +684,22 @@ define void @ccmp64rm_sf(i64 noundef %a, i64 noundef %b, i64 noundef %c, ptr %pt
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rdx, %rdi
 ; CHECK-NEXT:    ccmpleq {dfv=sf} (%rcx), %rsi
-; CHECK-NEXT:    jge .LBB16_1
+; CHECK-NEXT:    jge .LBB18_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB16_1: # %if.end
+; CHECK-NEXT:  .LBB18_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp64rm_sf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpq %rdx, %rdi
 ; NDD-NEXT:    ccmpleq {dfv=sf} (%rcx), %rsi
-; NDD-NEXT:    jge .LBB16_1
+; NDD-NEXT:    jge .LBB18_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB16_1: # %if.end
+; NDD-NEXT:  .LBB18_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %d = load i64, ptr %ptr
@@ -631,22 +721,22 @@ define void @ccmp8mr_zf(i8 noundef %a, i8 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    ccmpgeb {dfv=zf} %sil, (%rdx)
-; CHECK-NEXT:    jne .LBB17_1
+; CHECK-NEXT:    jne .LBB19_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB17_1: # %if.end
+; CHECK-NEXT:  .LBB19_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp8mr_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpb %sil, %dil
 ; NDD-NEXT:    ccmpgeb {dfv=zf} %sil, (%rdx)
-; NDD-NEXT:    jne .LBB17_1
+; NDD-NEXT:    jne .LBB19_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB17_1: # %if.end
+; NDD-NEXT:  .LBB19_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i8, ptr %ptr
@@ -668,22 +758,22 @@ define void @ccmp16mr_sf(i16 noundef %a, i16 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpw %si, %di
 ; CHECK-NEXT:    ccmplew {dfv=sf} %si, (%rdx)
-; CHECK-NEXT:    jge .LBB18_1
+; CHECK-NEXT:    jge .LBB20_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB18_1: # %if.end
+; CHECK-NEXT:  .LBB20_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp16mr_sf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpw %si, %di
 ; NDD-NEXT:    ccmplew {dfv=sf} %si, (%rdx)
-; NDD-NEXT:    jge .LBB18_1
+; NDD-NEXT:    jge .LBB20_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB18_1: # %if.end
+; NDD-NEXT:  .LBB20_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i16, ptr %ptr
@@ -705,22 +795,22 @@ define void @ccmp32mr_cf(i32 noundef %a, i32 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    ccmpll {dfv=cf} %esi, (%rdx)
-; CHECK-NEXT:    ja .LBB19_1
+; CHECK-NEXT:    ja .LBB21_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB19_1: # %if.end
+; CHECK-NEXT:  .LBB21_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp32mr_cf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpl %esi, %edi
 ; NDD-NEXT:    ccmpll {dfv=cf} %esi, (%rdx)
-; NDD-NEXT:    ja .LBB19_1
+; NDD-NEXT:    ja .LBB21_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB19_1: # %if.end
+; NDD-NEXT:  .LBB21_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i32, ptr %ptr
@@ -742,22 +832,22 @@ define void @ccmp64mr_sf(i64 noundef %a, i64 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    ccmpleq {dfv=sf} %rsi, (%rdx)
-; CHECK-NEXT:    jge .LBB20_1
+; CHECK-NEXT:    jge .LBB22_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB20_1: # %if.end
+; CHECK-NEXT:  .LBB22_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp64mr_sf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpq %rsi, %rdi
 ; NDD-NEXT:    ccmpleq {dfv=sf} %rsi, (%rdx)
-; NDD-NEXT:    jge .LBB20_1
+; NDD-NEXT:    jge .LBB22_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB20_1: # %if.end
+; NDD-NEXT:  .LBB22_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i64, ptr %ptr
@@ -779,22 +869,22 @@ define void @ccmp8mi_zf(i8 noundef %a, i8 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    ccmpneb {dfv=zf} $123, (%rdx)
-; CHECK-NEXT:    jne .LBB21_1
+; CHECK-NEXT:    jne .LBB23_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB21_1: # %if.end
+; CHECK-NEXT:  .LBB23_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp8mi_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpb %sil, %dil
 ; NDD-NEXT:    ccmpneb {dfv=zf} $123, (%rdx)
-; NDD-NEXT:    jne .LBB21_1
+; NDD-NEXT:    jne .LBB23_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB21_1: # %if.end
+; NDD-NEXT:  .LBB23_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i8, ptr %ptr
@@ -816,22 +906,22 @@ define void @ccmp16mi_zf(i16 noundef %a, i16 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpw %si, %di
 ; CHECK-NEXT:    ccmplew {dfv=sf} $1234, (%rdx) # imm = 0x4D2
-; CHECK-NEXT:    jge .LBB22_1
+; CHECK-NEXT:    jge .LBB24_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB22_1: # %if.end
+; CHECK-NEXT:  .LBB24_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp16mi_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpw %si, %di
 ; NDD-NEXT:    ccmplew {dfv=sf} $1234, (%rdx) # imm = 0x4D2
-; NDD-NEXT:    jge .LBB22_1
+; NDD-NEXT:    jge .LBB24_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB22_1: # %if.end
+; NDD-NEXT:  .LBB24_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i16, ptr %ptr
@@ -853,22 +943,22 @@ define void @ccmp32mi_cf(i32 noundef %a, i32 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    ccmpnel {dfv=cf} $123457, (%rdx) # imm = 0x1E241
-; CHECK-NEXT:    jae .LBB23_1
+; CHECK-NEXT:    jae .LBB25_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB23_1: # %if.end
+; CHECK-NEXT:  .LBB25_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp32mi_cf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpl %esi, %edi
 ; NDD-NEXT:    ccmpnel {dfv=cf} $123457, (%rdx) # imm = 0x1E241
-; NDD-NEXT:    jae .LBB23_1
+; NDD-NEXT:    jae .LBB25_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB23_1: # %if.end
+; NDD-NEXT:  .LBB25_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i32, ptr %ptr
@@ -890,22 +980,22 @@ define void @ccmp64mi32_zf(i64 noundef %a, i64 noundef %c, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    ccmpleq {dfv=sf} $123456, (%rdx) # imm = 0x1E240
-; CHECK-NEXT:    jge .LBB24_1
+; CHECK-NEXT:    jge .LBB26_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB24_1: # %if.end
+; CHECK-NEXT:  .LBB26_1: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ccmp64mi32_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpq %rsi, %rdi
 ; NDD-NEXT:    ccmpleq {dfv=sf} $123456, (%rdx) # imm = 0x1E240
-; NDD-NEXT:    jge .LBB24_1
+; NDD-NEXT:    jge .LBB26_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB24_1: # %if.end
+; NDD-NEXT:  .LBB26_1: # %if.end
 ; NDD-NEXT:    retq
 entry:
   %b = load i64, ptr %ptr

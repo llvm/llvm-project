@@ -54673,6 +54673,12 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
       return SDValue();
   }
 
+  X86::CondCode CC0 =
+      static_cast<X86::CondCode>(SetCC0.getConstantOperandVal(0));
+  // CCMP/CTEST is not conditional when the source condition is COND_P/COND_NP.
+  if (CC0 == X86::COND_P || CC0 == X86::COND_NP)
+    return SDValue();
+
   // Check the only user of flag is `brcond ne`.
   SDValue Sub = SetCC1.getOperand(1);
   SDNode *BrCond = *Flag->uses().begin();
@@ -54681,12 +54687,6 @@ static SDValue combineX86SubCmpToCcmpCtest(SDNode *N, SDValue Flag,
   unsigned CondNo = 2;
   if (static_cast<X86::CondCode>(BrCond->getConstantOperandVal(CondNo)) !=
       X86::COND_NE)
-    return SDValue();
-
-  X86::CondCode CC0 =
-      static_cast<X86::CondCode>(SetCC0.getConstantOperandVal(0));
-  // CCMP/CTEST is not conditional when the source condition is COND_P/COND_NP.
-  if (CC0 == X86::COND_P || CC0 == X86::COND_NP)
     return SDValue();
 
   bool IsOR = LHS.getOpcode() == ISD::OR;
