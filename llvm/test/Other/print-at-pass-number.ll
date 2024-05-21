@@ -4,7 +4,7 @@
 ; RUN: opt -passes="loop(indvars,loop-deletion,loop-unroll-full)" -print-module-scope -print-after-pass-number=2 -S -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=AFTER
 
 define i32 @bar(i32 %arg) {
-; BEFORE: *** IR Dump Before 3-IndVarSimplifyPass on bb1 ***
+; BEFORE: *** IR Dump Before 3-IndVarSimplifyPass on loop %bb1 in function bar ***
 ; BEFORE: define i32 @bar(i32 %arg) {
 ; AFTER:  *** IR Dump After 2-LCSSAPass on bar ***
 ; AFTER:  define i32 @bar(i32 %arg) {
@@ -30,8 +30,8 @@ define i32 @baz(i32 %arg) {
 
 ; NUMBER:  Running pass 1 LoopSimplifyPass on bar
 ; NUMBER-NEXT: Running pass 2 LCSSAPass on bar
-; NUMBER-NEXT: Running pass 3 IndVarSimplifyPass on bb1
-; NUMBER-NEXT: Running pass 4 LoopDeletionPass on bb1
+; NUMBER-NEXT: Running pass 3 IndVarSimplifyPass on loop %bb1 in function bar
+; NUMBER-NEXT: Running pass 4 LoopDeletionPass on loop %bb1 in function bar
 ; NUMBER-NEXT: Running pass 5 LoopSimplifyPass on baz
 ; NUMBER-NEXT: Running pass 6 LCSSAPass on baz
 ; NUMBER-NOT: Running pass

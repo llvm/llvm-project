@@ -231,6 +231,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
       >,
       FunctionSpec<
+          "fcntl",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >,
+      FunctionSpec<
           "open",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<VarArgType>]

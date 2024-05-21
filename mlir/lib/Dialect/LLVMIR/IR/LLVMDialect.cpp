@@ -839,25 +839,19 @@ void LoadOp::getEffects(
 }
 
 /// Returns true if the given type is supported by atomic operations. All
-/// integer and float types with limited bit width are supported. Additionally,
-/// depending on the operation pointers may be supported as well.
-static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
-  if (llvm::isa<LLVMPointerType>(type))
-    return isPointerTypeAllowed;
-
-  std::optional<unsigned> bitWidth;
-  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+/// integer, float, and pointer types with a power-of-two bitsize and a minimal
+/// size of 8 bits are supported.
+static bool isTypeCompatibleWithAtomicOp(Type type,
+                                         const DataLayout &dataLayout) {
+  if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
-    bitWidth = floatType.getWidth();
-  }
-  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
-    bitWidth = integerType.getWidth();
-  // The type is neither an integer, float, or pointer type.
-  if (!bitWidth)
+
+  llvm::TypeSize bitWidth = dataLayout.getTypeSizeInBits(type);
+  if (bitWidth.isScalable())
     return false;
-  return *bitWidth == 8 || *bitWidth == 16 || *bitWidth == 32 ||
-         *bitWidth == 64;
+  // Needs to be at least 8 bits and a power of two.
+  return bitWidth >= 8 && (bitWidth & (bitWidth - 1)) == 0;
 }
 
 /// Verifies the attributes and the type of atomic memory access operations.
@@ -865,8 +859,8 @@ template <typename OpTy>
 LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
                                 ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
-    if (!isTypeCompatibleWithAtomicOp(valueType,
-                                      /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(memOp);
+    if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
       return memOp.emitOpError("unsupported type ")
              << valueType << " for atomic access";
     if (llvm::is_contained(unsupportedOrderings, memOp.getOrdering()))
@@ -1785,7 +1779,7 @@ LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for LLVM::AddressOfOp.
+// LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
 static Operation *parentLLVMModule(Operation *op) {
@@ -1824,6 +1818,11 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                        "referenced global");
 
   return success();
+}
+
+// AddressOfOp constant-folds to the global symbol name.
+OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
+  return getGlobalNameAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2689,7 +2688,8 @@ LogicalResult AtomicRMWOp::verify() {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
   } else if (getBinOp() == AtomicBinOp::xchg) {
-    if (!isTypeCompatibleWithAtomicOp(valType, /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(*this);
+    if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
       return emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     auto intType = llvm::dyn_cast<IntegerType>(valType);
@@ -2736,8 +2736,8 @@ LogicalResult AtomicCmpXchgOp::verify() {
   if (!ptrType)
     return emitOpError("expected LLVM IR pointer type for operand #0");
   auto valType = getVal().getType();
-  if (!isTypeCompatibleWithAtomicOp(valType,
-                                    /*isPointerTypeAllowed=*/true))
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
     return emitOpError("unexpected LLVM IR type");
   if (getSuccessOrdering() < AtomicOrdering::monotonic ||
       getFailureOrdering() < AtomicOrdering::monotonic)
@@ -3030,6 +3030,19 @@ LogicalResult LinkerOptionsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+void InlineAsmOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (getHasSideEffects()) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
@@ -3258,6 +3271,12 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
+  // If this was folded from an llvm.mlir.addressof operation, it should be
+  // materialized as such.
+  if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
+    if (isa<LLVM::LLVMPointerType>(type))
+      return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 

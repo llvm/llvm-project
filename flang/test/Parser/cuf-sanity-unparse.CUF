@@ -34,6 +34,12 @@ include "cuf-sanity-common"
 !CHECK:   !$CUF KERNEL DO <<<1_4,(2_4,3_4),STREAM=1_4>>>
 !CHECK:   DO j=1_4,10_4
 !CHECK:   END DO
+!CHECK:   !$CUF KERNEL DO <<<*,*>>> REDUCE(+:x,y) REDUCE(*:z)
+!CHECK:   DO j=1_4,10_4
+!CHECK:    x=x+a(int(j,kind=8))
+!CHECK:    y=y+a(int(j,kind=8))
+!CHECK:    z=z*a(int(j,kind=8))
+!CHECK:   END DO
 !CHECK:    CALL globalsub<<<1_4,2_4>>>()
 !CHECK:    CALL globalsub<<<1_4,2_4,3_4>>>()
 !CHECK:    CALL globalsub<<<1_4,2_4,3_4,4_4>>>()
