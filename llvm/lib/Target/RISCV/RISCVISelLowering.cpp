@@ -910,10 +910,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                            VT, Custom);
       } else {
         setOperationAction({ISD::BITREVERSE, ISD::VP_BITREVERSE}, VT, Expand);
-        setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
+        setOperationAction({ISD::CTLZ, ISD::CTTZ}, VT, Expand);
         setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
-                            ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
+                            ISD::VP_CTTZ_ZERO_UNDEF},
                            VT, Expand);
+
+        setOperationAction({ISD::CTPOP, ISD::VP_CTPOP}, VT, Custom);
 
         // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
         // range of f32.
@@ -1266,6 +1268,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
                              VT, Custom);
         } else {
+          setOperationAction({ISD::CTPOP, ISD::VP_CTPOP}, VT, Custom);
           // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
           // range of f32.
           EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
@@ -6860,8 +6863,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::BSWAP:
-  case ISD::CTPOP:
     return lowerToScalableOp(Op, DAG);
+  case ISD::CTPOP: {
+    if (Subtarget.hasStdExtZvbb())
+      return lowerToScalableOp(Op, DAG);
+    return lowerVectorCTPOP(Op, DAG);
+  }
+  case ISD::VP_CTPOP:
+    if (Subtarget.hasStdExtZvbb())
+      return lowerVPOp(Op, DAG);
+    return lowerVectorCTPOP(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -7088,8 +7099,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Subtarget.hasStdExtZvbb())
       return lowerVPOp(Op, DAG);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
-  case ISD::VP_CTPOP:
-    return lowerVPOp(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
@@ -10969,6 +10978,123 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   if (VT.isFixedLengthVector())
     Max = convertFromScalableVector(VT, Max, DAG, Subtarget);
   return Max;
+}
+
+SDValue RISCVTargetLowering::lowerVectorCTPOP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  unsigned Len = VT.getScalarSizeInBits();
+  assert(VT.isInteger() && "lowerVectorCTPOP not implemented for this type.");
+
+  SDValue V = Op.getOperand(0);
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    V = convertToScalableVector(ContainerVT, V, DAG, Subtarget);
+  }
+
+  SDValue Mask, VL;
+  if (Op->getOpcode() == ISD::VP_CTPOP) {
+    Mask = Op->getOperand(1);
+    if (VT.isFixedLengthVector())
+      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                     Subtarget);
+    VL = Op->getOperand(2);
+  } else
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  // We don't optimize constants materialization if LMUL is equal to M8 as it
+  // increases register preasure.
+  bool WontIncreaseRegisterPressure =
+      getLMUL(ContainerVT) != RISCVII::VLMUL::LMUL_8;
+  uint64_t EltSize = ContainerVT.getScalarSizeInBits();
+
+  // This is same algorithm of TargetLowering::expandVPCTPOP from
+  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
+  // 0x0F0F0F0F...
+  const APInt &Constant0F = APInt::getSplat(Len, APInt(8, 0x0F));
+  SDValue Mask0F = DAG.getConstant(Constant0F, DL, ContainerVT);
+
+  // 0x33333333... = (0x0F0F0F0F... ^ (0x0F0F0F0F... << 2))
+  const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
+  SDValue Mask33 =
+      WontIncreaseRegisterPressure &&
+              RISCVMatInt::getIntMatCost(Constant33, EltSize, Subtarget) > 2
+          ? DAG.getNode(RISCVISD::XOR_VL, DL, ContainerVT, Mask0F,
+                        DAG.getNode(RISCVISD::SHL_VL, DL, ContainerVT, Mask0F,
+                                    DAG.getConstant(2, DL, ContainerVT),
+                                    DAG.getUNDEF(ContainerVT), Mask, VL),
+                        DAG.getUNDEF(ContainerVT), Mask, VL)
+          : DAG.getConstant(Constant33, DL, ContainerVT);
+
+  // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
+  const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
+  SDValue Mask55 =
+      WontIncreaseRegisterPressure &&
+              RISCVMatInt::getIntMatCost(Constant55, EltSize, Subtarget) > 2
+          ? DAG.getNode(RISCVISD::XOR_VL, DL, ContainerVT, Mask33,
+                        DAG.getNode(RISCVISD::SHL_VL, DL, ContainerVT, Mask33,
+                                    DAG.getConstant(1, DL, ContainerVT),
+                                    DAG.getUNDEF(ContainerVT), Mask, VL),
+                        DAG.getUNDEF(ContainerVT), Mask, VL)
+          : DAG.getConstant(Constant55, DL, ContainerVT);
+
+  SDValue Tmp1, Tmp2, Tmp3, Tmp4, Tmp5;
+
+  // v = v - ((v >> 1) & 0x55555555...)
+  Tmp1 = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT,
+                     DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, V,
+                                 DAG.getConstant(1, DL, ContainerVT),
+                                 DAG.getUNDEF(ContainerVT), Mask, VL),
+                     Mask55, DAG.getUNDEF(ContainerVT), Mask, VL);
+  V = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, V, Tmp1,
+                  DAG.getUNDEF(ContainerVT), Mask, VL);
+
+  // v = (v & 0x33333333...) + ((v >> 2) & 0x33333333...)
+  Tmp2 = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, V, Mask33,
+                     DAG.getUNDEF(ContainerVT), Mask, VL);
+  Tmp3 = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT,
+                     DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, V,
+                                 DAG.getConstant(2, DL, ContainerVT),
+                                 DAG.getUNDEF(ContainerVT), Mask, VL),
+                     Mask33, DAG.getUNDEF(ContainerVT), Mask, VL);
+  V = DAG.getNode(RISCVISD::ADD_VL, DL, ContainerVT, Tmp2, Tmp3,
+                  DAG.getUNDEF(ContainerVT), Mask, VL);
+
+  // v = (v + (v >> 4)) & 0x0F0F0F0F...
+  Tmp4 = DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, V,
+                     DAG.getConstant(4, DL, ContainerVT),
+                     DAG.getUNDEF(ContainerVT), Mask, VL),
+  Tmp5 = DAG.getNode(RISCVISD::ADD_VL, DL, ContainerVT, V, Tmp4,
+                     DAG.getUNDEF(ContainerVT), Mask, VL);
+  V = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Tmp5, Mask0F,
+                  DAG.getUNDEF(ContainerVT), Mask, VL);
+
+  if (Len > 8) {
+    // v = (v * 0x01010101...) >> (Len - 8)
+    // 0x01010101... == (0x0F0F0F0F... & (0x0F0F0F0F... >> 3))
+    const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
+    SDValue Mask01 =
+        WontIncreaseRegisterPressure &&
+                RISCVMatInt::getIntMatCost(Constant01, EltSize, Subtarget) > 2
+            ? DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Mask0F,
+                          DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, Mask0F,
+                                      DAG.getConstant(3, DL, ContainerVT),
+                                      DAG.getUNDEF(ContainerVT), Mask, VL),
+                          DAG.getUNDEF(ContainerVT), Mask, VL)
+            : DAG.getConstant(Constant01, DL, ContainerVT);
+    V = DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT,
+                    DAG.getNode(RISCVISD::MUL_VL, DL, ContainerVT, V, Mask01,
+                                DAG.getUNDEF(ContainerVT), Mask, VL),
+                    DAG.getConstant(Len - 8, DL, ContainerVT),
+                    DAG.getUNDEF(ContainerVT), Mask, VL);
+  }
+
+  if (VT.isFixedLengthVector())
+    V = convertFromScalableVector(VT, V, DAG, Subtarget);
+  return V;
 }
 
 SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
