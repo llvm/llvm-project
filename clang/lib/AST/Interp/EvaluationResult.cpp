@@ -115,6 +115,10 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
       DiagnoseUninitializedSubobject(S, Loc, F.Decl);
       Result = false;
     }
+
+    // Only the first member of a union needs to be initialized.
+    if (R->isUnion())
+      break;
   }
 
   // Check Fields in all bases
