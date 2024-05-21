@@ -163,7 +163,6 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
   }
 
   SmallPtrSet<const Loop *, 2> StopLoops;
-
   if (LI) {
     for (auto *StopSetBB : StopSet) {
       if (const Loop *L = getOutermostLoop(LI, StopSetBB))
