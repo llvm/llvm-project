@@ -218,8 +218,9 @@ ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // In the worst case, still accept the verbose versions.
   TypedIntPolynomialAttr typedIntPolyAttr;
-  OptionalParseResult res = parser.parseOptionalAttribute<TypedIntPolynomialAttr>(
-      typedIntPolyAttr, "value", result.attributes);
+  OptionalParseResult res =
+      parser.parseOptionalAttribute<TypedIntPolynomialAttr>(
+          typedIntPolyAttr, "value", result.attributes);
   if (res.has_value() && succeeded(res.value())) {
     result.addTypes(typedIntPolyAttr.getType());
     return success();
