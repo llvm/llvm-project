@@ -3380,14 +3380,16 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSLD_VX_VI<Operand ImmType = simm5, bit slidesUp = false,
+                             string Constraint = ""> {
+  defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoVSLDV_VX<m, Constraint>,
-              SchedTernary<"WriteVISlideX", "ReadVISlideV", "ReadVISlideV",
+              SchedTernary<WriteSlideX, "ReadVISlideV", "ReadVISlideV",
                            "ReadVISlideX", mx>;
     defm "" : VPseudoVSLDV_VI<ImmType, m, Constraint>,
-              SchedBinary<"WriteVISlideI", "ReadVISlideV", "ReadVISlideV", mx>;
+              SchedBinary<"WriteVSlideI", "ReadVISlideV", "ReadVISlideV", mx>;
   }
 }
 
@@ -6861,8 +6863,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, "@earlyclobber $rd">;
-  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5>;
+  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI<uimm5, /*slidesUp=*/false>;
   defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]

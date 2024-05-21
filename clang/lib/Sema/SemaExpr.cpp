@@ -2782,8 +2782,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                            &AssumedTemplate))
       return ExprError();
 
-    if (MemberOfUnknownSpecialization ||
-        (R.getResultKind() == LookupResult::NotFoundInCurrentInstantiation))
+    if (R.wasNotFoundInCurrentInstantiation())
       return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
                                         IsAddressOfOperand, TemplateArgs);
   } else {
