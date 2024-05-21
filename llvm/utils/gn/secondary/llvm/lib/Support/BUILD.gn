@@ -6,7 +6,6 @@ static_library("Support") {
     "//llvm/include/llvm/Support:write_vcsrevision",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
-    "//llvm/utils/gn/build/libs/terminfo",
     "//llvm/utils/gn/build/libs/zlib",
   ]
 
