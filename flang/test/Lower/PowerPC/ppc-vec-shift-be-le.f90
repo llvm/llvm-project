@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="CHECK" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
 !
 ! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -triple ppc64-unknown-aix -o - | FileCheck --check-prefixes="BE-LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
