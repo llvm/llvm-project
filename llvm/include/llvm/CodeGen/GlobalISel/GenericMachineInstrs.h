@@ -41,13 +41,8 @@ public:
   }
 
   void dropPoisonGeneratingFlags() {
-    clearFlag(NoUWrap);
-    clearFlag(NoSWrap);
-    clearFlag(IsExact);
-    clearFlag(Disjoint);
-    clearFlag(NonNeg);
-    clearFlag(FmNoNans);
-    clearFlag(FmNoInfs);
+    clearFlags(NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
+               FmNoInfs);
     assert(!hasPoisonGeneratingFlags());
   }
 };
