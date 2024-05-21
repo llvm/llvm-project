@@ -5450,13 +5450,22 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
 static void decomposeAddSub(Value *V, DenseMap<Value *, int32_t> &Row,
                             Constant *&C, uint32_t Depth, bool Add) {
   if (auto *I = dyn_cast<Instruction>(V)) {
-    if (Depth && !Row.contains(V) &&
-        (I->getOpcode() == Instruction::Add ||
-         I->getOpcode() == Instruction::Sub)) {
-      decomposeAddSub(I->getOperand(0), Row, C, Depth - 1, Add);
-      decomposeAddSub(I->getOperand(1), Row, C, Depth - 1,
-                      (I->getOpcode() == Instruction::Sub) ^ Add);
-      return;
+    if (Depth && !Row.contains(V)) {
+      if (I->getOpcode() == Instruction::Add ||
+          I->getOpcode() == Instruction::Sub) {
+        decomposeAddSub(I->getOperand(0), Row, C, Depth - 1, Add);
+        decomposeAddSub(I->getOperand(1), Row, C, Depth - 1,
+                        (I->getOpcode() == Instruction::Sub) ^ Add);
+        return;
+      }
+      Value *Op0;
+      // ~X -> -X - 1
+      if (match(V, m_Not(m_Value(Op0)))) {
+        decomposeAddSub(Op0, Row, C, Depth - 1, !Add);
+        decomposeAddSub(Constant::getAllOnesValue(Op0->getType()), Row, C,
+                        Depth - 1, Add);
+        return;
+      }
     }
   }
 
