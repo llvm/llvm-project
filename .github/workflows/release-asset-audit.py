@@ -1,7 +1,6 @@
 import github
 import sys
 
-
 def main():
     token = sys.argv[1]
 
@@ -43,7 +42,8 @@ def main():
                 f"{asset.name} : {asset.uploader.login} [{created_at} {updated_at}] ( {asset.download_count} )"
             )
             if asset.uploader.login not in uploaders:
-                print("Invalid uploader")
+                with open('comment', 'w') as file:
+                    file.write(f'@{asset.uploader.login} is not a valid uploader.')
                 sys.exit(1)
 
 
