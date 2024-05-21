@@ -205,6 +205,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;
 
+  // Region live-out cache.
+  SmallVector<GCNRPTracker::LiveRegSet, 32> LiveOuts;
+
   // Region pressure cache.
   SmallVector<GCNRegPressure, 32> Pressure;
 
@@ -214,6 +217,10 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
 
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
+
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveOutMap;
+
+  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveOutMap() const;
 
   // Return current region pressure.
   GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;
