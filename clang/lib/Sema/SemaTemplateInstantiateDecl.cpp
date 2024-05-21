@@ -2956,11 +2956,10 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
     }
   }
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
-    TypeSourceInfo *InstantiatedDefaultArg =
-        SemaRef.SubstType(D->getDefaultArgumentInfo(), TemplateArgs,
-                          D->getDefaultArgumentLoc(), D->getDeclName());
-    if (InstantiatedDefaultArg)
-      Inst->setDefaultArgument(InstantiatedDefaultArg);
+    TemplateArgumentLoc Output;
+    if (!SemaRef.SubstTemplateArgument(D->getDefaultArgument(), TemplateArgs,
+                                       Output))
+      Inst->setDefaultArgument(SemaRef.getASTContext(), Output);
   }
 
   // Introduce this template parameter's instantiation into the instantiation
