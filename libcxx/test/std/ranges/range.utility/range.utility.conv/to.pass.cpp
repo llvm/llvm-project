@@ -560,6 +560,11 @@ constexpr void test_recursive() {
   }
 
   assert((in | std::ranges::to<C4>()) == result);
+
+  // LWG3984: ranges::to's recursion branch may be ill-formed
+  auto in_owning_view = std::views::all(std::move(in));
+  static_assert(!std::ranges::viewable_range<decltype((in_owning_view))>);
+  assert(std::ranges::to<C4>(in_owning_view) == result);
 }
 
 constexpr bool test() {

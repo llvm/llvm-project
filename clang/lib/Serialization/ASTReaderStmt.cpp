@@ -956,14 +956,22 @@ void ASTStmtReader::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   E->setRBracketLoc(readSourceLocation());
 }
 
-void ASTStmtReader::VisitOMPArraySectionExpr(OMPArraySectionExpr *E) {
+void ASTStmtReader::VisitArraySectionExpr(ArraySectionExpr *E) {
   VisitExpr(E);
+  E->ASType = Record.readEnum<ArraySectionExpr::ArraySectionType>();
+
   E->setBase(Record.readSubExpr());
   E->setLowerBound(Record.readSubExpr());
   E->setLength(Record.readSubExpr());
-  E->setStride(Record.readSubExpr());
+
+  if (E->isOMPArraySection())
+    E->setStride(Record.readSubExpr());
+
   E->setColonLocFirst(readSourceLocation());
-  E->setColonLocSecond(readSourceLocation());
+
+  if (E->isOMPArraySection())
+    E->setColonLocSecond(readSourceLocation());
+
   E->setRBracketLoc(readSourceLocation());
 }
 
@@ -2169,6 +2177,7 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   E->TransformedExpressions = Record.readInt();
+  E->ExpandedToEmptyPack = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
@@ -3090,8 +3099,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) MatrixSubscriptExpr(Empty);
       break;
 
-    case EXPR_OMP_ARRAY_SECTION:
-      S = new (Context) OMPArraySectionExpr(Empty);
+    case EXPR_ARRAY_SECTION:
+      S = new (Context) ArraySectionExpr(Empty);
       break;
 
     case EXPR_OMP_ARRAY_SHAPING:

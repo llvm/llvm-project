@@ -23,6 +23,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -270,9 +271,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         cutOffParsing();
         // Code completion for a nested-name-specifier, where the code
         // completion token follows the '::'.
-        Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
-                                        InUsingDeclaration, ObjectType.get(),
-                                        SavedType.get(SS.getBeginLoc()));
+        Actions.CodeCompletion().CodeCompleteQualifiedId(
+            getCurScope(), SS, EnteringContext, InUsingDeclaration,
+            ObjectType.get(), SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion
         // token will cause assertion in
@@ -405,6 +406,20 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       }
 
       continue;
+    }
+
+    switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+      if (!NextToken().is(tok::l_paren)) {
+        Tok.setKind(tok::identifier);
+        Diag(Tok, diag::ext_keyword_as_ident)
+            << Tok.getIdentifierInfo()->getName() << 0;
+        continue;
+      }
+      [[fallthrough]];
+    default:
+      break;
     }
 
     // The rest of the nested-name-specifier possibilities start with
@@ -940,8 +955,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         if (Tok.is(tok::code_completion) &&
             !(getLangOpts().ObjC && Tentative)) {
           cutOffParsing();
-          Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                               /*AfterAmpersand=*/false);
+          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+              getCurScope(), Intro,
+              /*AfterAmpersand=*/false);
           break;
         }
 
@@ -957,10 +973,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // If we're in Objective-C++ and we have a bare '[', then this is more
       // likely to be a message receiver.
       if (getLangOpts().ObjC && Tentative && First)
-        Actions.CodeCompleteObjCMessageReceiver(getCurScope());
+        Actions.CodeCompletion().CodeCompleteObjCMessageReceiver(getCurScope());
       else
-        Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                             /*AfterAmpersand=*/false);
+        Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+            getCurScope(), Intro,
+            /*AfterAmpersand=*/false);
       break;
     }
 
@@ -1006,8 +1023,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
         if (Tok.is(tok::code_completion)) {
           cutOffParsing();
-          Actions.CodeCompleteLambdaIntroducer(getCurScope(), Intro,
-                                               /*AfterAmpersand=*/true);
+          Actions.CodeCompletion().CodeCompleteLambdaIntroducer(
+              getCurScope(), Intro,
+              /*AfterAmpersand=*/true);
           break;
         }
       }
@@ -2017,9 +2035,10 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     auto RunSignatureHelp = [&]() {
       QualType PreferredType;
       if (TypeRep)
-        PreferredType = Actions.ProduceConstructorSignatureHelp(
-            TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(), Exprs,
-            T.getOpenLocation(), /*Braced=*/false);
+        PreferredType =
+            Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+                TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(),
+                Exprs, T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -2126,7 +2145,8 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Condition);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), SemaCodeCompletion::PCC_Condition);
     return Sema::ConditionError();
   }
 
@@ -2778,7 +2798,7 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       // Don't try to parse any further.
       cutOffParsing();
       // Code completion for the operator name.
-      Actions.CodeCompleteOperatorName(getCurScope());
+      Actions.CodeCompletion().CodeCompleteOperatorName(getCurScope());
       return true;
     }
 
@@ -3336,10 +3356,12 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         // the passing DeclaratorInfo is valid, e.g. running SignatureHelp on
         // `new decltype(invalid) (^)`.
         if (TypeRep)
-          PreferredType = Actions.ProduceConstructorSignatureHelp(
-              TypeRep.get()->getCanonicalTypeInternal(),
-              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen,
-              /*Braced=*/false);
+          PreferredType =
+              Actions.CodeCompletion().ProduceConstructorSignatureHelp(
+                  TypeRep.get()->getCanonicalTypeInternal(),
+                  DeclaratorInfo.getEndLoc(), ConstructorArgs,
+                  ConstructorLParen,
+                  /*Braced=*/false);
         CalledSignatureHelp = true;
         return PreferredType;
       };

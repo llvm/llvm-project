@@ -737,7 +737,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     // cannot cope with that.
     if (isCopyInstr(MI, *TII, UseCopyInstr) &&
         MI.modifiesRegister(CopySrcReg, TRI) &&
-        !MI.definesRegister(CopySrcReg)) {
+        !MI.definesRegister(CopySrcReg, /*TRI=*/nullptr)) {
       LLVM_DEBUG(dbgs() << "MCP: Copy source overlap with dest in " << MI);
       continue;
     }

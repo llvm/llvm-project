@@ -248,3 +248,14 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: func @inline_asm_side_effects
+llvm.func @inline_asm_side_effects(%x : i32) {
+  // CHECK-NOT: llvm.inline_asm "pure inline asm"
+  llvm.inline_asm "pure inline asm", "r" %x : (i32) -> ()
+  // CHECK: llvm.inline_asm has_side_effects "inline asm with side effects"
+  llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
+  llvm.return
+}
