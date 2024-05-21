@@ -5192,18 +5192,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::Indirect:
     case ABIArgInfo::IndirectAliased: {
       assert(NumIRArgs == 1);
-      if (!I->isAggregate()) {
-        // Make a temporary alloca to pass the argument.
-        RawAddress Addr = CreateMemTempWithoutCast(
-            I->Ty, ArgInfo.getIndirectAlign(), "indirect-arg-temp");
-
-        llvm::Value *Val = getAsNaturalPointerTo(Addr, I->Ty);
-        if (ArgHasMaybeUndefAttr)
-          Val = Builder.CreateFreeze(Val);
-        IRCallArgs[FirstIRArg] = Val;
-
-        I->copyInto(*this, Addr);
-      } else {
+      if (I->isAggregate()) {
         // We want to avoid creating an unnecessary temporary+copy here;
         // however, we need one in three cases:
         // 1. If the argument is not byval, and we are required to copy the
@@ -5256,28 +5245,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           }
         }
 
-        if (NeedCopy) {
-          // Create an aligned temporary, and copy to it.
-          RawAddress AI = CreateMemTempWithoutCast(
-              I->Ty, ArgInfo.getIndirectAlign(), "byval-temp");
-          llvm::Value *Val = getAsNaturalPointerTo(AI, I->Ty);
-          if (ArgHasMaybeUndefAttr)
-            Val = Builder.CreateFreeze(Val);
-          IRCallArgs[FirstIRArg] = Val;
-
-          // Emit lifetime markers for the temporary alloca.
-          llvm::TypeSize ByvalTempElementSize =
-              CGM.getDataLayout().getTypeAllocSize(AI.getElementType());
-          llvm::Value *LifetimeSize =
-              EmitLifetimeStart(ByvalTempElementSize, AI.getPointer());
-
-          // Add cleanup code to emit the end lifetime marker after the call.
-          if (LifetimeSize) // In case we disabled lifetime markers.
-            CallLifetimeEndAfterCall.emplace_back(AI, LifetimeSize);
-
-          // Generate the copy.
-          I->copyInto(*this, AI);
-        } else {
+        if (!NeedCopy) {
           // Skip the extra memcpy call.
           llvm::Value *V = getAsNaturalPointerTo(Addr, I->Ty);
           auto *T = llvm::PointerType::get(
@@ -5289,8 +5257,31 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           if (ArgHasMaybeUndefAttr)
             Val = Builder.CreateFreeze(Val);
           IRCallArgs[FirstIRArg] = Val;
+          break;
         }
       }
+
+      // For non-aggregate args and aggregate args meeting conditions above
+      // we need to create an aligned temporary, and copy to it.
+      RawAddress AI = CreateMemTempWithoutCast(
+          I->Ty, ArgInfo.getIndirectAlign(), "byval-temp");
+      llvm::Value *Val = getAsNaturalPointerTo(AI, I->Ty);
+      if (ArgHasMaybeUndefAttr)
+        Val = Builder.CreateFreeze(Val);
+      IRCallArgs[FirstIRArg] = Val;
+
+      // Emit lifetime markers for the temporary alloca.
+      llvm::TypeSize ByvalTempElementSize =
+          CGM.getDataLayout().getTypeAllocSize(AI.getElementType());
+      llvm::Value *LifetimeSize =
+          EmitLifetimeStart(ByvalTempElementSize, AI.getPointer());
+
+      // Add cleanup code to emit the end lifetime marker after the call.
+      if (LifetimeSize) // In case we disabled lifetime markers.
+        CallLifetimeEndAfterCall.emplace_back(AI, LifetimeSize);
+
+      // Generate the copy.
+      I->copyInto(*this, AI);
       break;
     }
 
