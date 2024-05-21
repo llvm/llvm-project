@@ -52,3 +52,25 @@ module @globals {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: memref_index_values
+// CHECK-SAME:  %[[argi:.*]]: index, %[[argj:.*]]: index
+// CHECK-SAME: -> index
+func.func @memref_index_values(%i: index, %j: index) -> index {
+  // CHECK: %[[i:.*]] = builtin.unrealized_conversion_cast %[[argi]] : index to !emitc.size_t
+  // CHECK: %[[j:.*]] = builtin.unrealized_conversion_cast %[[argj]] : index to !emitc.size_t
+
+  // CHECK: %[[ALLOCA:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4x8x!emitc.size_t>
+  %0 = memref.alloca() : memref<4x8xindex>
+
+  // CHECK: %[[LOAD:.*]] = emitc.subscript %[[ALLOCA]][%[[i]], %[[j]]] : (!emitc.array<4x8x!emitc.size_t>, !emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  // CHECK: %[[VAR:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.size_t
+  // CHECK: emitc.assign %[[LOAD]] : !emitc.size_t to %[[VAR]] : !emitc.size_t
+  %1 = memref.load %0[%i, %j] : memref<4x8xindex>
+
+  // CHECK: %[[CAST_RET:.*]] = builtin.unrealized_conversion_cast %[[VAR]] : !emitc.size_t to index
+  // CHECK: return %[[CAST_RET]] : index
+  return %1 : index
+}
