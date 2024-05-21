@@ -90,6 +90,19 @@ mlir::LogicalResult cuf::AllocateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DataTransferOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult cuf::DataTransferOp::verify() {
+  mlir::Type srcTy = getSrc().getType();
+  mlir::Type dstTy = getDst().getType();
+  if (fir::isa_ref_type(srcTy) && fir::isa_ref_type(dstTy) ||
+      fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy))
+    return mlir::success();
+  return emitOpError("expect src and dst to be both references or descriptors");
+}
+
+//===----------------------------------------------------------------------===//
 // DeallocateOp
 //===----------------------------------------------------------------------===//
 
