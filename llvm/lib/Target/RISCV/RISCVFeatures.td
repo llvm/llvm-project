@@ -211,8 +211,8 @@ def FeatureStdExtZa128rs : RISCVExtension<"za128rs", 1, 0,
                                           "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
 
 def FeatureStdExtZaamo
-    : RISCVExperimentalExtension<"zaamo", 0, 2,
-                                 "'Zaamo' (Atomic Memory Operations)">;
+    : RISCVExtension<"zaamo", 1, 0,
+                     "'Zaamo' (Atomic Memory Operations)">;
 def HasStdExtAOrZaamo
     : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
       AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
@@ -242,8 +242,8 @@ def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
 
 def FeatureStdExtZalrsc
-    : RISCVExperimentalExtension<"zalrsc", 0, 2,
-                                 "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+    : RISCVExtension<"zalrsc", 1, 0,
+                     "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 def HasStdExtAOrZalrsc
     : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc()">,
       AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),

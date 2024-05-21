@@ -14,9 +14,6 @@
 namespace mlir {
 namespace polynomial {
 
-template <typename T>
-MonomialBase<T>::~MonomialBase() {}
-
 template <typename PolyT, typename MonomialT>
 FailureOr<PolyT> fromMonomialsImpl(ArrayRef<MonomialT> monomials) {
   // A polynomial's terms are canonically stored in order of increasing degree.

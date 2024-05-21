@@ -181,17 +181,17 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   if (isBlockPointer()) {
     OS << "Block) {";
 
-    if (PointeeStorage.BS.Base == RootPtrMark)
-      OS << "rootptr, ";
+    if (isRoot())
+      OS << "rootptr(" << PointeeStorage.BS.Base << "), ";
     else
       OS << PointeeStorage.BS.Base << ", ";
 
-    if (Offset == PastEndMark)
+    if (isElementPastEnd())
       OS << "pastend, ";
     else
       OS << Offset << ", ";
 
-    if (isBlockPointer() && PointeeStorage.BS.Pointee)
+    if (PointeeStorage.BS.Pointee)
       OS << PointeeStorage.BS.Pointee->getSize();
     else
       OS << "nullptr";

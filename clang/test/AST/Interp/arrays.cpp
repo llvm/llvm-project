@@ -26,6 +26,7 @@ static_assert(foo[2][2] == nullptr, "");
 static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
+constexpr int ZeroSizeArray[] = {};
 
 constexpr int SomeInt[] = {1};
 constexpr int getSomeInt() { return *SomeInt; }
@@ -580,3 +581,27 @@ constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[1]; // ok
 /// GH#88018
 const int SZA[] = {};
 void testZeroSizedArrayAccess() { unsigned c = SZA[4]; }
+
+#if __cplusplus >= 202002L
+constexpr int test_multiarray2() { // both-error {{never produces a constant expression}}
+  int multi2[2][1]; // both-note {{declared here}}
+  return multi2[2][0]; // both-note {{cannot access array element of pointer past the end of object}} \
+                       // both-warning {{array index 2 is past the end of the array (that has type 'int[2][1]')}}
+}
+
+/// Same but with a dummy pointer.
+int multi22[2][2]; // both-note {{declared here}}
+int test_multiarray22() {
+  return multi22[2][0]; // both-warning {{array index 2 is past the end of the array (that has type 'int[2][2]')}}
+}
+
+#endif
+
+namespace ArrayMemberAccess {
+  struct A {
+    int x;
+  };
+  void f(const A (&a)[]) {
+    bool cond = a->x;
+  }
+}

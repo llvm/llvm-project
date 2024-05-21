@@ -1338,9 +1338,11 @@ static bool compareByFilePosition(InputSection *a, InputSection *b) {
   OutputSection *aOut = la->getParent();
   OutputSection *bOut = lb->getParent();
 
-  if (aOut != bOut)
-    return aOut->addr < bOut->addr;
-  return la->outSecOff < lb->outSecOff;
+  if (aOut == bOut)
+    return la->outSecOff < lb->outSecOff;
+  if (aOut->addr == bOut->addr)
+    return aOut->sectionIndex < bOut->sectionIndex;
+  return aOut->addr < bOut->addr;
 }
 
 template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
@@ -1403,13 +1405,18 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
   script->assignAddresses();
+
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
   // do require the relative addresses of OutputSections because linker scripts
   // can assign Virtual Addresses to OutputSections that are not monotonically
-  // increasing.
-  for (Partition &part : partitions)
-    finalizeSynthetic(part.armExidx.get());
-  resolveShfLinkOrder();
+  // increasing. Anything here must be repeatable, since spilling may change
+  // section order.
+  const auto finalizeOrderDependentContent = [this] {
+    for (Partition &part : partitions)
+      finalizeSynthetic(part.armExidx.get());
+    resolveShfLinkOrder();
+  };
+  finalizeOrderDependentContent();
 
   // Converts call x@GDPLT to call __tls_get_addr
   if (config->emachine == EM_HEXAGON)
@@ -1419,6 +1426,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   for (;;) {
     bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
                                        : target->relaxOnce(pass);
+    bool spilled = script->spillSections();
+    changed |= spilled;
     ++pass;
 
     // With Thunk Size much smaller than branch range we expect to
@@ -1445,9 +1454,32 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       in.mipsGot->updateAllocSize();
 
     for (Partition &part : partitions) {
+      // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
+      // encode the signing schema. We've put relocations in .relr.auth.dyn
+      // during RelocationScanner::processAux, but the target VA for some of
+      // them might be wider than 32 bits. We can only know the final VA at this
+      // point, so move relocations with large values from .relr.auth.dyn to
+      // .rela.dyn. See also AArch64::relocate.
+      if (part.relrAuthDyn) {
+        auto it = llvm::remove_if(
+            part.relrAuthDyn->relocs, [&part](const RelativeReloc &elem) {
+              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              if (isInt<32>(reloc.sym->getVA(reloc.addend)))
+                return false;
+              part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
+                                      reloc.offset,
+                                      DynamicReloc::AddendOnlyWithTargetVA,
+                                      *reloc.sym, reloc.addend, R_ABS});
+              return true;
+            });
+        changed |= (it != part.relrAuthDyn->relocs.end());
+        part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
+      }
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.relrAuthDyn)
+        changed |= part.relrAuthDyn->updateAllocSize();
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
@@ -1464,6 +1496,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
                     " does not converge");
         break;
       }
+    } else if (spilled) {
+      // Spilling can change relative section order.
+      finalizeOrderDependentContent();
     }
   }
   if (!config->relocatable)
@@ -1483,6 +1518,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
              osec->name + " is not a multiple of alignment (" +
              Twine(osec->addralign) + ")");
     }
+
+  // Sizes are no longer allowed to grow, so all allowable spills have been
+  // taken. Remove any leftover potential spills.
+  script->erasePotentialSpillSections();
 }
 
 // If Input Sections have been shrunk (basic block sections) then
@@ -1598,6 +1637,14 @@ static void removeUnusedSyntheticSections() {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
+        // .relr.auth.dyn relocations may be moved to .rela.dyn in
+        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
+        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
+        // we would fail to remove it here.
+        if (config->emachine == EM_AARCH64 && config->relrPackDynRelocs)
+          if (auto *relSec = dyn_cast<RelocationBaseSection>(sec))
+            if (relSec == mainPart->relaDyn.get())
+              return false;
         unused.insert(sec);
         return true;
       });
@@ -1909,6 +1956,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
         finalizeSynthetic(part.relrDyn.get());
+      }
+      if (part.relrAuthDyn) {
+        part.relrAuthDyn->mergeRels();
+        finalizeSynthetic(part.relrAuthDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());

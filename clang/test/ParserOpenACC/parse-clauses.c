@@ -831,52 +831,38 @@ void ReductionClauseParsing() {
   // expected-error@+1{{expected '('}}
 #pragma acc serial reduction
   for(;;){}
-  // expected-error@+3{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial reduction()
   for(;;){}
-  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+1{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
 #pragma acc serial reduction(Begin)
   for(;;){}
-  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+1{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
 #pragma acc serial reduction(Begin, End)
   for(;;){}
-  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+1{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
 #pragma acc serial reduction(Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(+:Begin)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(+:Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(*: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(max : Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(min: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(&: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(|: Begin, End)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
 #pragma acc serial reduction(^: Begin, End)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial seq, reduction(&&: Begin, End)
   for(;;){}
-  // expected-warning@+2{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial reduction(||: Begin, End), seq
   for(;;){}
@@ -1126,12 +1112,10 @@ void device_type() {
 #pragma acc parallel dtype(
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type()
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype()
   {}
 
@@ -1173,12 +1157,10 @@ void device_type() {
 #pragma acc parallel dtype(ident, ident2
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type(ident, ident2,)
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype(ident, ident2,)
   {}
 
@@ -1200,33 +1182,25 @@ void device_type() {
 #pragma acc parallel dtype(*,ident)
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type(ident, *)
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype(ident, *)
   {}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel device_type("foo", 54)
   {}
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc parallel dtype(31, "bar")
   {}
 
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, auto, int, float)
   {}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident, auto, int, float)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, auto, int, float) dtype(ident, auto, int, float)
   {}
 }
