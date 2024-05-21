@@ -28,6 +28,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -4138,8 +4139,8 @@ ExceptionSpecificationType Parser::tryParseExceptionSpecification(
 
     T.consumeClose();
     if (!NoexceptExpr.isInvalid()) {
-      NoexceptExpr =
-          Actions.ActOnNoexceptSpec(NoexceptExpr.get(), NoexceptType);
+      NoexceptExpr = Actions.ExceptionSpec().ActOnNoexceptSpec(
+          NoexceptExpr.get(), NoexceptType);
       NoexceptRange = SourceRange(KeywordLoc, T.getCloseLocation());
     } else {
       NoexceptType = EST_BasicNoexcept;

@@ -46,6 +46,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -4036,7 +4037,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // types again after this. Because this updates the type, we do this before
     // any of the other checks below, which may update the "de facto" NewQType
     // but do not necessarily update the type of New.
-    if (CheckEquivalentExceptionSpec(Old, New))
+    if (ExceptionSpec().CheckEquivalentExceptionSpec(Old, New))
       return true;
 
     // C++11 [dcl.attr.noreturn]p1:
@@ -4415,7 +4416,7 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
       return;
     } else if (Context.hasSameType(New->getType(), Old->getType())) {
       // These could still be something that needs exception specs checked.
-      return MergeVarDeclExceptionSpecs(New, Old);
+      return ExceptionSpec().MergeVarDeclExceptionSpecs(New, Old);
     }
     // C++ [basic.link]p10:
     //   [...] the types specified by all declarations referring to a given
@@ -8995,7 +8996,7 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
         MD->addOverriddenMethod(BaseMD);
         CheckOverridingFunctionReturnType(MD, BaseMD);
         CheckOverridingFunctionAttributes(MD, BaseMD);
-        CheckOverridingFunctionExceptionSpec(MD, BaseMD);
+        ExceptionSpec().CheckOverridingFunctionExceptionSpec(MD, BaseMD);
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
       }
 
@@ -9366,7 +9367,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
       // now. FIXME: It'd be nice to be able to create the right type to start
       // with, but the type needs to reference the destructor declaration.
       if (SemaRef.getLangOpts().CPlusPlus11)
-        SemaRef.AdjustDestructorExceptionSpec(NewDD);
+        SemaRef.ExceptionSpec().AdjustDestructorExceptionSpec(NewDD);
 
       IsVirtualOkay = true;
       return NewDD;
@@ -11332,7 +11333,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     if (!CLinkageMayDiffer && OldFD->isExternC() != NewFD->isExternC())
       return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << LanguageLinkage;
 
-    if (CheckEquivalentExceptionSpec(
+    if (ExceptionSpec().CheckEquivalentExceptionSpec(
             OldFD->getType()->getAs<FunctionProtoType>(), OldFD->getLocation(),
             NewFD->getType()->getAs<FunctionProtoType>(), NewFD->getLocation()))
       return true;
@@ -15813,7 +15814,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   // Ensure that the function's exception specification is instantiated.
   if (const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>())
-    ResolveExceptionSpec(D->getLocation(), FPT);
+    ExceptionSpec().ResolveExceptionSpec(D->getLocation(), FPT);
 
   // dllimport cannot be applied to non-inline function definitions.
   if (FD->hasAttr<DLLImportAttr>() && !FD->isInlined() &&

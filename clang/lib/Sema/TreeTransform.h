@@ -38,6 +38,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -6301,7 +6302,7 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
 
     ExceptionSpecificationType EST = ESI.Type;
     NoexceptExpr =
-        getSema().ActOnNoexceptSpec(NoexceptExpr.get(), EST);
+        getSema().ExceptionSpec().ActOnNoexceptSpec(NoexceptExpr.get(), EST);
     if (NoexceptExpr.isInvalid())
       return true;
 
@@ -6359,14 +6360,16 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
         Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), ArgIdx);
 
         QualType U = getDerived().TransformType(PackExpansion->getPattern());
-        if (U.isNull() || SemaRef.CheckSpecifiedExceptionType(U, Loc))
+        if (U.isNull() ||
+            SemaRef.ExceptionSpec().CheckSpecifiedExceptionType(U, Loc))
           return true;
 
         Exceptions.push_back(U);
       }
     } else {
       QualType U = getDerived().TransformType(T);
-      if (U.isNull() || SemaRef.CheckSpecifiedExceptionType(U, Loc))
+      if (U.isNull() ||
+          SemaRef.ExceptionSpec().CheckSpecifiedExceptionType(U, Loc))
         return true;
       if (T != U)
         Changed = true;

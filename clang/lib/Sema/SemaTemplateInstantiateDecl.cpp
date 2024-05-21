@@ -27,6 +27,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -4685,14 +4686,14 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   if (Inst.isInvalid()) {
     // We hit the instantiation depth limit. Clear the exception specification
     // so that our callers don't have to cope with EST_Uninstantiated.
-    UpdateExceptionSpec(Decl, EST_None);
+    ExceptionSpec().UpdateExceptionSpec(Decl, EST_None);
     return;
   }
   if (Inst.isAlreadyInstantiating()) {
     // This exception specification indirectly depends on itself. Reject.
     // FIXME: Corresponding rule in the standard?
     Diag(PointOfInstantiation, diag::err_exception_spec_cycle) << Decl;
-    UpdateExceptionSpec(Decl, EST_None);
+    ExceptionSpec().UpdateExceptionSpec(Decl, EST_None);
     return;
   }
 
@@ -4712,7 +4713,7 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   // the template.
   FunctionDecl *Template = Proto->getExceptionSpecTemplate();
   if (addInstantiatedParametersToScope(Decl, Template, Scope, TemplateArgs)) {
-    UpdateExceptionSpec(Decl, EST_None);
+    ExceptionSpec().UpdateExceptionSpec(Decl, EST_None);
     return;
   }
 
@@ -4817,7 +4818,8 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
     return true;
 
   if (isa<CXXDestructorDecl>(New) && SemaRef.getLangOpts().CPlusPlus11)
-    SemaRef.AdjustDestructorExceptionSpec(cast<CXXDestructorDecl>(New));
+    SemaRef.ExceptionSpec().AdjustDestructorExceptionSpec(
+        cast<CXXDestructorDecl>(New));
 
   New->setAccess(Tmpl->getAccess());
   if (Tmpl->isVirtualAsWritten())

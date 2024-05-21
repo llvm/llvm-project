@@ -43,6 +43,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -191,7 +192,7 @@ Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
 
   const FunctionProtoType *Proto
     = Method->getType()->getAs<FunctionProtoType>();
-  Proto = Self->ResolveExceptionSpec(CallLoc, Proto);
+  Proto = Self->ExceptionSpec().ResolveExceptionSpec(CallLoc, Proto);
   if (!Proto)
     return;
 
@@ -276,7 +277,7 @@ void Sema::ImplicitExceptionSpecification::CalledStmt(Stmt *S) {
   // implicit definition. For now, we assume that any non-nothrow expression can
   // throw any exception.
 
-  if (Self->canThrow(S))
+  if (Self->ExceptionSpec().canThrow(S))
     ComputedEST = EST_None;
 }
 
@@ -1605,48 +1606,6 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   //   E or of the same unambiguous public base class of E, ...
   if (checkMemberDecomposition(*this, Bindings, DD, DecompType, RD))
     DD->setInvalidDecl();
-}
-
-/// Merge the exception specifications of two variable declarations.
-///
-/// This is called when there's a redeclaration of a VarDecl. The function
-/// checks if the redeclaration might have an exception specification and
-/// validates compatibility and merges the specs if necessary.
-void Sema::MergeVarDeclExceptionSpecs(VarDecl *New, VarDecl *Old) {
-  // Shortcut if exceptions are disabled.
-  if (!getLangOpts().CXXExceptions)
-    return;
-
-  assert(Context.hasSameType(New->getType(), Old->getType()) &&
-         "Should only be called if types are otherwise the same.");
-
-  QualType NewType = New->getType();
-  QualType OldType = Old->getType();
-
-  // We're only interested in pointers and references to functions, as well
-  // as pointers to member functions.
-  if (const ReferenceType *R = NewType->getAs<ReferenceType>()) {
-    NewType = R->getPointeeType();
-    OldType = OldType->castAs<ReferenceType>()->getPointeeType();
-  } else if (const PointerType *P = NewType->getAs<PointerType>()) {
-    NewType = P->getPointeeType();
-    OldType = OldType->castAs<PointerType>()->getPointeeType();
-  } else if (const MemberPointerType *M = NewType->getAs<MemberPointerType>()) {
-    NewType = M->getPointeeType();
-    OldType = OldType->castAs<MemberPointerType>()->getPointeeType();
-  }
-
-  if (!NewType->isFunctionProtoType())
-    return;
-
-  // There's lots of special cases for functions. For function pointers, system
-  // libraries are hopefully not as broken so that we don't need these
-  // workarounds.
-  if (CheckEquivalentExceptionSpec(
-        OldType->getAs<FunctionProtoType>(), Old->getLocation(),
-        NewType->getAs<FunctionProtoType>(), New->getLocation())) {
-    New->setInvalidDecl();
-  }
 }
 
 /// CheckCXXDefaultArguments - Verify that the default arguments for a
@@ -7622,7 +7581,7 @@ void Sema::EvaluateImplicitExceptionSpec(SourceLocation Loc, FunctionDecl *FD) {
   auto ESI = IES.getExceptionSpec();
 
   // Update the type of the special member to use it.
-  UpdateExceptionSpec(FD, ESI);
+  ExceptionSpec().UpdateExceptionSpec(FD, ESI);
 }
 
 void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
@@ -9162,7 +9121,8 @@ void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
 
   // The exception specification is needed because we are defining the
   // function. Note that this will reuse the body we just built.
-  ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      UseLoc, FD->getType()->castAs<FunctionProtoType>());
 
   if (ASTMutationListener *L = getASTMutationListener())
     L->CompletedImplicitDefinition(FD);
@@ -9210,24 +9170,6 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
   }
 
   return ExceptSpec;
-}
-
-void Sema::CheckDelayedMemberExceptionSpecs() {
-  decltype(DelayedOverridingExceptionSpecChecks) Overriding;
-  decltype(DelayedEquivalentExceptionSpecChecks) Equivalent;
-
-  std::swap(Overriding, DelayedOverridingExceptionSpecChecks);
-  std::swap(Equivalent, DelayedEquivalentExceptionSpecChecks);
-
-  // Perform any deferred checking of exception specifications for virtual
-  // destructors.
-  for (auto &Check : Overriding)
-    CheckOverridingFunctionExceptionSpec(Check.first, Check.second);
-
-  // Perform any deferred checking of exception specifications for befriended
-  // special members.
-  for (auto &Check : Equivalent)
-    CheckEquivalentExceptionSpec(Check.second, Check.first);
 }
 
 namespace {
@@ -14053,8 +13995,8 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       Constructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, Constructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -14080,7 +14022,7 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
 
 void Sema::ActOnFinishDelayedMemberInitializers(Decl *D) {
   // Perform any delayed checks on exception specifications.
-  CheckDelayedMemberExceptionSpecs();
+  ExceptionSpec().CheckDelayedMemberExceptionSpecs();
 }
 
 /// Find or create the fake constructor we synthesize to model constructing an
@@ -14193,8 +14135,8 @@ void Sema::DefineInheritingConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       Constructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, Constructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -14342,8 +14284,8 @@ void Sema::DefineImplicitDestructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       Destructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, Destructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -14393,8 +14335,8 @@ void Sema::ActOnFinishCXXMemberDecls() {
   // If the context is an invalid C++ class, just suppress these checks.
   if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(CurContext)) {
     if (Record->isInvalidDecl()) {
-      DelayedOverridingExceptionSpecChecks.clear();
-      DelayedEquivalentExceptionSpecChecks.clear();
+      ExceptionSpec().DelayedOverridingExceptionSpecChecks.clear();
+      ExceptionSpec().DelayedEquivalentExceptionSpecChecks.clear();
       return;
     }
     checkForMultipleExportedDefaultConstructors(*this, Record);
@@ -14429,37 +14371,6 @@ void Sema::referenceDLLExportedClassMethods() {
     for (CXXRecordDecl *Class : WorkList)
       ReferenceDllExportedMembers(*this, Class);
   }
-}
-
-void Sema::AdjustDestructorExceptionSpec(CXXDestructorDecl *Destructor) {
-  assert(getLangOpts().CPlusPlus11 &&
-         "adjusting dtor exception specs was introduced in c++11");
-
-  if (Destructor->isDependentContext())
-    return;
-
-  // C++11 [class.dtor]p3:
-  //   A declaration of a destructor that does not have an exception-
-  //   specification is implicitly considered to have the same exception-
-  //   specification as an implicit declaration.
-  const auto *DtorType = Destructor->getType()->castAs<FunctionProtoType>();
-  if (DtorType->hasExceptionSpec())
-    return;
-
-  // Replace the destructor's type, building off the existing one. Fortunately,
-  // the only thing of interest in the destructor type is its extended info.
-  // The return and arguments are fixed.
-  FunctionProtoType::ExtProtoInfo EPI = DtorType->getExtProtoInfo();
-  EPI.ExceptionSpec.Type = EST_Unevaluated;
-  EPI.ExceptionSpec.SourceDecl = Destructor;
-  Destructor->setType(
-      Context.getFunctionType(Context.VoidTy, std::nullopt, EPI));
-
-  // FIXME: If the destructor has a body that could throw, and the newly created
-  // spec doesn't allow exceptions, we should emit a warning, because this
-  // change in behavior can break conforming C++03 programs at runtime.
-  // However, we don't have a body or an exception specification yet, so it
-  // needs to be done somewhere else.
 }
 
 namespace {
@@ -15045,8 +14956,9 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       CopyAssignOperator->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation,
+      CopyAssignOperator->getType()->castAs<FunctionProtoType>());
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(CurrentLocation);
@@ -15442,8 +15354,9 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       MoveAssignOperator->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation,
+      MoveAssignOperator->getType()->castAs<FunctionProtoType>());
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(CurrentLocation);
@@ -15755,8 +15668,8 @@ void Sema::DefineImplicitCopyConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       CopyConstructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, CopyConstructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -15894,8 +15807,8 @@ void Sema::DefineImplicitMoveConstructor(SourceLocation CurrentLocation,
 
   // The exception specification is needed because we are defining the
   // function.
-  ResolveExceptionSpec(CurrentLocation,
-                       MoveConstructor->getType()->castAs<FunctionProtoType>());
+  ExceptionSpec().ResolveExceptionSpec(
+      CurrentLocation, MoveConstructor->getType()->castAs<FunctionProtoType>());
   MarkVTableUsed(CurrentLocation, ClassDecl);
 
   // Add a context note for diagnostics produced after this point.
@@ -18722,7 +18635,7 @@ bool Sema::DefineUsedVTables() {
     // if we are not providing an authoritative form of the vtable in this TU.
     // We may choose to emit it available_externally anyway.
     if (!DefineVTable) {
-      MarkVirtualMemberExceptionSpecsNeeded(Loc, Class);
+      ExceptionSpec().MarkVirtualMemberExceptionSpecsNeeded(Loc, Class);
       continue;
     }
 
@@ -18750,13 +18663,6 @@ bool Sema::DefineUsedVTables() {
   VTableUses.clear();
 
   return DefinedAnything;
-}
-
-void Sema::MarkVirtualMemberExceptionSpecsNeeded(SourceLocation Loc,
-                                                 const CXXRecordDecl *RD) {
-  for (const auto *I : RD->methods())
-    if (I->isVirtual() && !I->isPureVirtual())
-      ResolveExceptionSpec(Loc, I->getType()->castAs<FunctionProtoType>());
 }
 
 void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
@@ -19013,92 +18919,6 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
   }
 
   return false;
-}
-
-void Sema::checkExceptionSpecification(
-    bool IsTopLevel, ExceptionSpecificationType EST,
-    ArrayRef<ParsedType> DynamicExceptions,
-    ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr,
-    SmallVectorImpl<QualType> &Exceptions,
-    FunctionProtoType::ExceptionSpecInfo &ESI) {
-  Exceptions.clear();
-  ESI.Type = EST;
-  if (EST == EST_Dynamic) {
-    Exceptions.reserve(DynamicExceptions.size());
-    for (unsigned ei = 0, ee = DynamicExceptions.size(); ei != ee; ++ei) {
-      // FIXME: Preserve type source info.
-      QualType ET = GetTypeFromParser(DynamicExceptions[ei]);
-
-      if (IsTopLevel) {
-        SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-        collectUnexpandedParameterPacks(ET, Unexpanded);
-        if (!Unexpanded.empty()) {
-          DiagnoseUnexpandedParameterPacks(
-              DynamicExceptionRanges[ei].getBegin(), UPPC_ExceptionType,
-              Unexpanded);
-          continue;
-        }
-      }
-
-      // Check that the type is valid for an exception spec, and
-      // drop it if not.
-      if (!CheckSpecifiedExceptionType(ET, DynamicExceptionRanges[ei]))
-        Exceptions.push_back(ET);
-    }
-    ESI.Exceptions = Exceptions;
-    return;
-  }
-
-  if (isComputedNoexcept(EST)) {
-    assert((NoexceptExpr->isTypeDependent() ||
-            NoexceptExpr->getType()->getCanonicalTypeUnqualified() ==
-            Context.BoolTy) &&
-           "Parser should have made sure that the expression is boolean");
-    if (IsTopLevel && DiagnoseUnexpandedParameterPack(NoexceptExpr)) {
-      ESI.Type = EST_BasicNoexcept;
-      return;
-    }
-
-    ESI.NoexceptExpr = NoexceptExpr;
-    return;
-  }
-}
-
-void Sema::actOnDelayedExceptionSpecification(
-    Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
-    ArrayRef<ParsedType> DynamicExceptions,
-    ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr) {
-  if (!D)
-    return;
-
-  // Dig out the function we're referring to.
-  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(D))
-    D = FTD->getTemplatedDecl();
-
-  FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
-  if (!FD)
-    return;
-
-  // Check the exception specification.
-  llvm::SmallVector<QualType, 4> Exceptions;
-  FunctionProtoType::ExceptionSpecInfo ESI;
-  checkExceptionSpecification(/*IsTopLevel=*/true, EST, DynamicExceptions,
-                              DynamicExceptionRanges, NoexceptExpr, Exceptions,
-                              ESI);
-
-  // Update the exception specification on the function type.
-  Context.adjustExceptionSpec(FD, ESI, /*AsWritten=*/true);
-
-  if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
-    if (MD->isStatic())
-      checkThisInStaticMemberFunctionExceptionSpec(MD);
-
-    if (MD->isVirtual()) {
-      // Check overrides, which we previously had to delay.
-      for (const CXXMethodDecl *O : MD->overridden_methods())
-        CheckOverridingFunctionExceptionSpec(MD, O);
-    }
-  }
 }
 
 /// HandleMSProperty - Analyze a __delcspec(property) field of a C++ class.

@@ -43,6 +43,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -329,9 +330,10 @@ static bool throwEscapes(Sema &S, const CXXThrowExpr *E, CFGBlock &ThrowBlock,
       if (auto *Catch =
               dyn_cast_or_null<CXXCatchStmt>(Succ->getLabel())) {
         QualType Caught = Catch->getCaughtType();
-        if (Caught.isNull() || // catch (...) catches everything
+        if (Caught.isNull() ||  // catch (...) catches everything
             !E->getSubExpr() || // throw; is considered cuaght by any handler
-            S.handlerCanCatch(Caught, E->getSubExpr()->getType()))
+            S.ExceptionSpec().handlerCanCatch(Caught,
+                                              E->getSubExpr()->getType()))
           // Exception doesn't escape via this path.
           break;
       } else {

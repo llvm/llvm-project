@@ -17,6 +17,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 
 using namespace clang;
 
@@ -539,12 +540,10 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       Diag(Tok.getLocation(), diag::err_except_spec_unparsed);
 
     // Attach the exception-specification to the method.
-    Actions.actOnDelayedExceptionSpecification(LM.Method, EST,
-                                               SpecificationRange,
-                                               DynamicExceptions,
-                                               DynamicExceptionRanges,
-                                               NoexceptExpr.isUsable()?
-                                                 NoexceptExpr.get() : nullptr);
+    Actions.ExceptionSpec().actOnDelayedExceptionSpecification(
+        LM.Method, EST, SpecificationRange, DynamicExceptions,
+        DynamicExceptionRanges,
+        NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr);
 
     // There could be leftover tokens (e.g. because of an error).
     // Skip through until we reach the original token position.

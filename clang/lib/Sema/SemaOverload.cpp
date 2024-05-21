@@ -32,6 +32,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
@@ -82,7 +83,7 @@ static ExprResult CreateFunctionRefExpr(
   S.MarkDeclRefReferenced(DRE, Base);
   if (auto *FPT = DRE->getType()->getAs<FunctionProtoType>()) {
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
-      S.ResolveExceptionSpec(Loc, FPT);
+      S.ExceptionSpec().ResolveExceptionSpec(Loc, FPT);
       DRE->setType(Fn->getType());
     }
   }
@@ -12813,7 +12814,7 @@ static bool completeFunctionType(Sema &S, FunctionDecl *FD, SourceLocation Loc,
   auto *FPT = FD->getType()->castAs<FunctionProtoType>();
   if (S.getLangOpts().CPlusPlus17 &&
       isUnresolvedExceptionSpec(FPT->getExceptionSpecType()) &&
-      !S.ResolveExceptionSpec(Loc, FPT))
+      !S.ExceptionSpec().ResolveExceptionSpec(Loc, FPT))
     return true;
 
   return false;
@@ -13267,7 +13268,7 @@ Sema::ResolveAddressOfOverloadedFunction(Expr *AddressOfExpr,
     Fn = Resolver.getMatchingFunctionDecl();
     assert(Fn);
     if (auto *FPT = Fn->getType()->getAs<FunctionProtoType>())
-      ResolveExceptionSpec(AddressOfExpr->getExprLoc(), FPT);
+      ExceptionSpec().ResolveExceptionSpec(AddressOfExpr->getExprLoc(), FPT);
     FoundResult = *Resolver.getMatchingFunctionAccessPair();
     if (Complain) {
       if (Resolver.IsStaticMemberFunctionFromBoundPointer())

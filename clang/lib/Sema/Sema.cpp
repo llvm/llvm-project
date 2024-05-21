@@ -44,6 +44,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -206,6 +207,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
+      ExceptionSpecPtr(std::make_unique<SemaExceptionSpec>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       ObjCPtr(std::make_unique<SemaObjC>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
@@ -1140,7 +1142,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (LateTemplateParserCleanup)
       LateTemplateParserCleanup(OpaqueParser);
 
-    CheckDelayedMemberExceptionSpecs();
+    ExceptionSpec().CheckDelayedMemberExceptionSpecs();
   } else {
     // If we are building a TU prefix for serialization, it is safe to transfer
     // these over, even though they are not parsed. The end of the TU should be
@@ -1164,8 +1166,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
-  assert(DelayedOverridingExceptionSpecChecks.empty());
-  assert(DelayedEquivalentExceptionSpecChecks.empty());
+  assert(ExceptionSpec().DelayedOverridingExceptionSpecChecks.empty());
+  assert(ExceptionSpec().DelayedEquivalentExceptionSpecChecks.empty());
 
   // All dllexport classes should have been processed already.
   assert(DelayedDllExportClasses.empty());
@@ -2190,7 +2192,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   if (!Result.isInvalid()) {
     Result = S.MaybeCreateExprWithCleanups(Result);
     Expr *Init = Result.getAs<Expr>();
-    S.Context.setBlockVarCopyInit(VD, Init, S.canThrow(Init));
+    S.Context.setBlockVarCopyInit(VD, Init, S.ExceptionSpec().canThrow(Init));
   }
 
   // The destructor's exception specification is needed when IRGen generates
@@ -2198,7 +2200,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DD = RD->getDestructor()) {
       auto *FPT = DD->getType()->castAs<FunctionProtoType>();
-      S.ResolveExceptionSpec(Loc, FPT);
+      S.ExceptionSpec().ResolveExceptionSpec(Loc, FPT);
     }
 }
 

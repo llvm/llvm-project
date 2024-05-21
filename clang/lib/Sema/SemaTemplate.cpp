@@ -34,6 +34,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -10388,7 +10389,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // we have selected the primary template so we can check whether it matches.
   if (getLangOpts().CPlusPlus17 &&
       isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
-      !ResolveExceptionSpec(FD->getLocation(), SpecializationFPT))
+      !ExceptionSpec().ResolveExceptionSpec(FD->getLocation(),
+                                            SpecializationFPT))
     return true;
 
   FunctionTemplateSpecializationInfo *SpecInfo
@@ -11583,7 +11585,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
           diag::err_mismatched_exception_spec_explicit_instantiation;
       if (getLangOpts().MicrosoftExt)
         DiagID = diag::ext_mismatched_exception_spec_explicit_instantiation;
-      bool Result = CheckEquivalentExceptionSpec(
+      bool Result = ExceptionSpec().CheckEquivalentExceptionSpec(
           PDiag(DiagID) << Specialization->getType(),
           PDiag(diag::note_explicit_instantiation_here),
           Specialization->getType()->getAs<FunctionProtoType>(),

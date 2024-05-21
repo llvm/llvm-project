@@ -39,6 +39,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaExceptionSpec.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/SemaObjC.h"
@@ -4500,7 +4501,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     case AA_Returning:
     case AA_Sending:
     case AA_Passing_CFAudited:
-      if (CheckExceptionSpecCompatibility(From, ToType))
+      if (ExceptionSpec().CheckExceptionSpecCompatibility(From, ToType))
         return ExprError();
       break;
 
@@ -4673,7 +4674,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     CXXCastPath BasePath;
     if (CheckMemberPointerConversion(From, ToType, Kind, BasePath, CStyle))
       return ExprError();
-    if (CheckExceptionSpecCompatibility(From, ToType))
+    if (ExceptionSpec().CheckExceptionSpecCompatibility(From, ToType))
       return ExprError();
 
     // We may not have been able to figure out what this member pointer resolved
@@ -4932,7 +4933,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Function_Conversion:
     // If both sides are functions (or pointers/references to them), there could
     // be incompatible exception declarations.
-    if (CheckExceptionSpecCompatibility(From, ToType))
+    if (ExceptionSpec().CheckExceptionSpecCompatibility(From, ToType))
       return ExprError();
 
     From = ImpCastExprToType(From, ToType, CK_NoOp, VK_PRValue,
@@ -5189,7 +5190,7 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
       if((Operator->*IsDesiredOp)()) {
         FoundOperator = true;
         auto *CPT = Operator->getType()->castAs<FunctionProtoType>();
-        CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
+        CPT = Self.ExceptionSpec().ResolveExceptionSpec(KeyLoc, CPT);
         if (!CPT || !CPT->isNothrow())
           return false;
       }
@@ -5462,7 +5463,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         return false;
       if (UTT == UTT_IsNothrowDestructible) {
         auto *CPT = Destructor->getType()->castAs<FunctionProtoType>();
-        CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
+        CPT = Self.ExceptionSpec().ResolveExceptionSpec(KeyLoc, CPT);
         if (!CPT || !CPT->isNothrow())
           return false;
       }
@@ -5550,7 +5551,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         if (Constructor->isCopyConstructor(FoundTQs)) {
           FoundConstructor = true;
           auto *CPT = Constructor->getType()->castAs<FunctionProtoType>();
-          CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
+          CPT = Self.ExceptionSpec().ResolveExceptionSpec(KeyLoc, CPT);
           if (!CPT)
             return false;
           // TODO: check whether evaluating default arguments can throw.
@@ -5588,7 +5589,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         if (Constructor->isDefaultConstructor()) {
           FoundConstructor = true;
           auto *CPT = Constructor->getType()->castAs<FunctionProtoType>();
-          CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
+          CPT = Self.ExceptionSpec().ResolveExceptionSpec(KeyLoc, CPT);
           if (!CPT)
             return false;
           // FIXME: check whether evaluating default arguments can throw.
@@ -5833,7 +5834,7 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     }
 
     if (Kind == clang::TT_IsNothrowConstructible)
-      return S.canThrow(Result.get()) == CT_Cannot;
+      return S.ExceptionSpec().canThrow(Result.get()) == CT_Cannot;
 
     if (Kind == clang::TT_IsTriviallyConstructible) {
       // Under Objective-C ARC and Weak, if the destination has non-trivial
@@ -6046,7 +6047,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     if (BTT != BTT_IsNothrowConvertible)
       return true;
 
-    return Self.canThrow(Result.get()) == CT_Cannot;
+    return Self.ExceptionSpec().canThrow(Result.get()) == CT_Cannot;
   }
 
   case BTT_IsAssignable:
@@ -6110,7 +6111,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       return true;
 
     if (BTT == BTT_IsNothrowAssignable)
-      return Self.canThrow(Result.get()) == CT_Cannot;
+      return Self.ExceptionSpec().canThrow(Result.get()) == CT_Cannot;
 
     if (BTT == BTT_IsTriviallyAssignable) {
       // Under Objective-C ARC and Weak, if the destination has non-trivial
@@ -8402,7 +8403,7 @@ ExprResult Sema::BuildCXXNoexceptExpr(SourceLocation KeyLoc, Expr *Operand,
     Diag(Operand->getExprLoc(), diag::warn_side_effects_unevaluated_context);
   }
 
-  CanThrowResult CanThrow = canThrow(Operand);
+  CanThrowResult CanThrow = ExceptionSpec().canThrow(Operand);
   return new (Context)
       CXXNoexceptExpr(Context.BoolTy, Operand, CanThrow, KeyLoc, RParen);
 }
@@ -9325,7 +9326,8 @@ Sema::BuildExprRequirement(
   if (E->isInstantiationDependent() || E->getType()->isPlaceholderType() ||
       ReturnTypeRequirement.isDependent())
     Status = concepts::ExprRequirement::SS_Dependent;
-  else if (NoexceptLoc.isValid() && canThrow(E) == CanThrowResult::CT_Can)
+  else if (NoexceptLoc.isValid() &&
+           ExceptionSpec().canThrow(E) == CanThrowResult::CT_Can)
     Status = concepts::ExprRequirement::SS_NoexceptNotMet;
   else if (ReturnTypeRequirement.isSubstitutionFailure())
     Status = concepts::ExprRequirement::SS_TypeRequirementSubstitutionFailure;
