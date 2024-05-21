@@ -15,6 +15,7 @@
 
 #include "SPIRVCallLowering.h"
 #include "SPIRVFrameLowering.h"
+#include "SPIRVInlineAsmLowering.h"
 #include "SPIRVISelLowering.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/ADT/SmallSet.h"
@@ -54,6 +55,7 @@ private:
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<InlineAsmLowering> InlineAsmInfo;
 
   // TODO: Initialise the available extensions, extended instruction sets
   // based on the environment settings.
@@ -107,6 +109,9 @@ public:
   }
   InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
+  }
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return InlineAsmInfo.get();
   }
   const SPIRVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const SPIRVFrameLowering *getFrameLowering() const override {
