@@ -382,9 +382,18 @@ class ObjcCategoryMerger {
   // Information about a pointer list in the original categories or class(method
   // lists, protocol lists, etc)
   struct PointerListInfo {
+    PointerListInfo() = default;
+    PointerListInfo(const PointerListInfo &) = default;
     PointerListInfo(const char *_categoryPrefix, uint32_t _pointersPerStruct)
         : categoryPrefix(_categoryPrefix),
           pointersPerStruct(_pointersPerStruct) {}
+
+    inline bool operator==(const PointerListInfo &cmp) {
+      return pointersPerStruct == cmp.pointersPerStruct &&
+             structSize == cmp.structSize && structCount == cmp.structCount &&
+             allPtrs == cmp.allPtrs;
+    }
+
     const char *categoryPrefix;
 
     uint32_t pointersPerStruct = 0;
@@ -448,6 +457,9 @@ private:
 
   void parseProtocolListInfo(const ConcatInputSection *isec, uint32_t secOffset,
                              PointerListInfo &ptrList);
+
+  PointerListInfo parseProtocolListInfo(const ConcatInputSection *isec,
+                                        uint32_t secOffset);
 
   void parsePointerListInfo(const ConcatInputSection *isec, uint32_t secOffset,
                             PointerListInfo &ptrList);
@@ -688,6 +700,15 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
          "expected null terminating protocol");
   assert(off + /*extra null value*/ target->wordSize == expectedListSize &&
          "Protocol list end offset does not match expected size");
+}
+
+// Parse a protocol list and return the PointerListInfo for it
+ObjcCategoryMerger::PointerListInfo
+ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
+                                          uint32_t secOffset) {
+  PointerListInfo ptrList;
+  parseProtocolListInfo(isec, secOffset, ptrList);
+  return ptrList;
 }
 
 // Parse a pointer list that might be linked to ConcatInputSection at a given
@@ -1355,18 +1376,26 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
 
   // Now collect the info from the base class from the various lists in the
   // class metadata
+
+  // Protocol lists are a special case - the same protocol list is in classRo
+  // and metaRo, so we only need to parse it once
   parseProtocolListInfo(classIsec, roClassLayout.baseProtocolsOffset,
                         extInfo.protocols);
 
+  // Check that the classRo and metaRo protocol lists are identical
+  assert(
+      parseProtocolListInfo(classIsec, roClassLayout.baseProtocolsOffset) ==
+          parseProtocolListInfo(metaIsec, roClassLayout.baseProtocolsOffset) &&
+      "Category merger expects classRo and metaRo to have the same protocol "
+      "list");
+
   parsePointerListInfo(metaIsec, roClassLayout.baseMethodsOffset,
                        extInfo.classMethods);
-
-  parsePointerListInfo(metaIsec, roClassLayout.basePropertiesOffset,
-                       extInfo.classProps);
-
   parsePointerListInfo(classIsec, roClassLayout.baseMethodsOffset,
                        extInfo.instanceMethods);
 
+  parsePointerListInfo(metaIsec, roClassLayout.basePropertiesOffset,
+                       extInfo.classProps);
   parsePointerListInfo(classIsec, roClassLayout.basePropertiesOffset,
                        extInfo.instanceProps);
 
@@ -1379,26 +1408,23 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
   eraseSymbolAtIsecOffset(classIsec, roClassLayout.basePropertiesOffset);
 
   // Emit the newly merged lists - first into the meta RO then into the class RO
-  emitAndLinkPointerList(metaRo, roClassLayout.baseMethodsOffset, extInfo,
-                         extInfo.classMethods);
-
-  // Protocols are a special case - the single list is referenced by both the
-  // class RO and meta RO. Here we emit it and link it into the meta RO
-  Defined *protoListSym = emitAndLinkProtocolList(
-      metaRo, roClassLayout.baseProtocolsOffset, extInfo, extInfo.protocols);
-
-  emitAndLinkPointerList(metaRo, roClassLayout.basePropertiesOffset, extInfo,
-                         extInfo.classProps);
-
-  emitAndLinkPointerList(classRo, roClassLayout.baseMethodsOffset, extInfo,
-                         extInfo.instanceMethods);
-
-  // If we emitted a new protocol list, link it to the class RO also
-  if (protoListSym) {
+  // First we emit and link the protocol list into the meta RO. Then we link it
+  // in the classRo as well (they're supposed to be identical)
+  if (Defined *protoListSym =
+          emitAndLinkProtocolList(metaRo, roClassLayout.baseProtocolsOffset,
+                                  extInfo, extInfo.protocols)) {
     createSymbolReference(classRo, protoListSym,
                           roClassLayout.baseProtocolsOffset,
                           infoCategoryWriter.catBodyInfo.relocTemplate);
   }
+
+  emitAndLinkPointerList(metaRo, roClassLayout.baseMethodsOffset, extInfo,
+                         extInfo.classMethods);
+  emitAndLinkPointerList(classRo, roClassLayout.baseMethodsOffset, extInfo,
+                         extInfo.instanceMethods);
+
+  emitAndLinkPointerList(metaRo, roClassLayout.basePropertiesOffset, extInfo,
+                         extInfo.classProps);
 
   emitAndLinkPointerList(classRo, roClassLayout.basePropertiesOffset, extInfo,
                          extInfo.instanceProps);
