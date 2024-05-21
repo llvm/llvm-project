@@ -43,13 +43,17 @@ using namespace llvm;
 
 namespace opts {
 
-extern cl::opt<bool> TimeRewrite;
+extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
 
 cl::opt<bool>
     InferStaleProfile("infer-stale-profile",
                       cl::desc("Infer counts from stale profile data."),
                       cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<bool> TimeRewrite("time-rewrite",
+                          cl::desc("print time spent in rewriting passes"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
