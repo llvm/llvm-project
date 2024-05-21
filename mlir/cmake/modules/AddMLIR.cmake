@@ -210,8 +210,8 @@ function(add_mlir_doc doc_filename output_file output_directory command)
                   ${GEN_DOC_FILE}
           DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.md)
   add_custom_target(${output_file}DocGen DEPENDS ${GEN_DOC_FILE})
+  set_target_properties(${output_file}DocGen PROPERTIES FOLDER "MLIR/Tablegenning/Docs")
   add_dependencies(mlir-doc ${output_file}DocGen)
-  set_target_properties(${output_file}DocGen PROPERTIES FOLDER "MLIR/Docs")
 endfunction()
 
 # Sets ${srcs} to contain the list of additional headers for the target. Extra

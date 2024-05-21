@@ -264,7 +264,7 @@ endif()
 
 # Custom target to install all mlir libraries
 add_custom_target(mlir-libraries)
-set_target_properties(mlir-libraries PROPERTIES FOLDER "MLIR/Install")
+set_target_properties(mlir-libraries PROPERTIES FOLDER "MLIR/Meta")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-mlir-libraries
