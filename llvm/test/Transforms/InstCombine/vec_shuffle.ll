@@ -2345,3 +2345,27 @@ define i16 @pr92887(<2 x i16> %v) {
   %extract = extractelement <4 x i16> %shuf, i32 2
   ret i16 %extract
 }
+
+; FIXME: This is a miscompile.
+define <2 x i32> @not_splat_shuffle1(i32 %x) {
+; CHECK-LABEL: @not_splat_shuffle1(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+  %vec = insertelement <2 x i32> undef, i32 %x, i32 1
+  %shuf = shufflevector <2 x i32> %vec, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  ret <2 x i32> %shuf
+}
+
+; FIXME: This is a miscompile.
+define <2 x i32> @not_splat_shuffle2(i32 %x) {
+; CHECK-LABEL: @not_splat_shuffle2(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+  %vec = insertelement <2 x i32> poison, i32 %x, i32 1
+  %shuf = shufflevector <2 x i32> %vec, <2 x i32> undef, <2 x i32> <i32 1, i32 3>
+  ret <2 x i32> %shuf
+}
