@@ -384,11 +384,6 @@ public:
   bool isUnknownSizeArray() const {
     if (!isBlockPointer())
       return false;
-    // If this points inside a dummy block, return true.
-    // FIXME: This might change in the future. If it does, we need
-    // to set the proper Ctor/Dtor functions for dummy Descriptors.
-    if (!isRoot() && isDummy())
-      return true;
     return getFieldDesc()->isUnknownSizeArray();
   }
   /// Checks if the pointer points to an array.
@@ -560,14 +555,16 @@ public:
 
     if (!asBlockPointer().Pointee)
       return false;
-    if (isDummy())
-      return false;
 
-    return isElementPastEnd() || getSize() == getOffset();
+    return isElementPastEnd() ||
+           (getSize() == getOffset() && !isZeroSizeArray());
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
   bool isElementPastEnd() const { return Offset == PastEndMark; }
+
+  /// Checks if the pointer is pointing to a zero-size array.
+  bool isZeroSizeArray() const { return getFieldDesc()->isZeroSizeArray(); }
 
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {

@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -159,8 +160,8 @@ namespace {
       assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
-      if (Self.CheckObjCConversion(OpRange, DestType, src, CCK) ==
-          Sema::ACR_unbridged)
+      if (Self.ObjC().CheckObjCConversion(OpRange, DestType, src, CCK) ==
+          SemaObjC::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
     }
@@ -1499,7 +1500,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // Allow ns-pointer to cf-pointer conversion in either direction
   // with static casts.
   if (!CStyle &&
-      Self.CheckTollFreeBridgeStaticCast(DestType, SrcExpr.get(), Kind))
+      Self.ObjC().CheckTollFreeBridgeStaticCast(DestType, SrcExpr.get(), Kind))
     return TC_Success;
 
   // See if it looks like the user is trying to convert between
@@ -2524,7 +2525,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
   } else if (IsLValueCast) {
     Kind = CK_LValueBitCast;
   } else if (DestType->isObjCObjectPointerType()) {
-    Kind = Self.PrepareCastToObjCObjectPointer(SrcExpr);
+    Kind = Self.ObjC().PrepareCastToObjCObjectPointer(SrcExpr);
   } else if (DestType->isBlockPointerType()) {
     if (!SrcType->isBlockPointerType()) {
       Kind = CK_AnyPointerToBlockPointerCast;
@@ -3217,8 +3218,8 @@ void CastOperation::CheckCStyleCast() {
           return;
         }
       }
-    }
-    else if (!Self.CheckObjCARCUnavailableWeakConversion(DestType, SrcType)) {
+    } else if (!Self.ObjC().CheckObjCARCUnavailableWeakConversion(DestType,
+                                                                  SrcType)) {
       Self.Diag(SrcExpr.get()->getBeginLoc(),
                 diag::err_arc_convesion_of_weak_unavailable)
           << 1 << SrcType << DestType << SrcExpr.get()->getSourceRange();

@@ -803,6 +803,20 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
   MPM.addPass(GlobalDCEPass());
 }
 
+void PassBuilder::addPostPGOLoopRotation(ModulePassManager &MPM,
+                                         OptimizationLevel Level) {
+  if (EnablePostPGOLoopRotation) {
+    // Disable header duplication in loop rotation at -Oz.
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        createFunctionToLoopPassAdaptor(
+            LoopRotatePass(EnableLoopHeaderDuplication ||
+                           Level != OptimizationLevel::Oz),
+            /*UseMemorySSA=*/false,
+            /*UseBlockFrequencyInfo=*/false),
+        PTO.EagerlyInvalidateAnalyses));
+  }
+}
+
 void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
                                     OptimizationLevel Level, bool RunProfileGen,
                                     bool IsCS, bool AtomicCounterUpdate,
@@ -824,21 +838,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   // Perform PGO instrumentation.
   MPM.addPass(PGOInstrumentationGen(IsCS));
 
-  if (EnablePostPGOLoopRotation) {
-    // Disable header duplication in loop rotation at -Oz.
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        createFunctionToLoopPassAdaptor(
-            LoopRotatePass(EnableLoopHeaderDuplication ||
-                           Level != OptimizationLevel::Oz),
-            /*UseMemorySSA=*/false,
-            /*UseBlockFrequencyInfo=*/false),
-        PTO.EagerlyInvalidateAnalyses));
-  }
-
-  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
-    MPM.addPass(PGOCtxProfLoweringPass());
-    return;
-  }
+  addPostPGOLoopRotation(MPM, Level);
   // Add the profile lowering pass.
   InstrProfOptions Options;
   if (!ProfileFile.empty())
@@ -1145,29 +1145,47 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  // Invoke the pre-inliner passes for instrumentation PGO or MemProf.
-  if (PGOOpt && Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
-      (PGOOpt->Action == PGOOptions::IRInstr ||
-       PGOOpt->Action == PGOOptions::IRUse || !PGOOpt->MemoryProfile.empty()))
+  // We already asserted this happens in non-FullLTOPostLink earlier.
+  const bool IsPreLink = Phase != ThinOrFullLTOPhase::ThinLTOPostLink;
+  const bool IsPGOPreLink = PGOOpt && IsPreLink;
+  const bool IsPGOInstrGen =
+      IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
+  const bool IsPGOInstrUse =
+      IsPGOPreLink && PGOOpt->Action == PGOOptions::IRUse;
+  const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
+  // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
+  // enable ctx profiling from the frontend.
+  assert(
+      !(IsPGOInstrGen && PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) &&
+      "Enabling both instrumented FDO and contextual instrumentation is not "
+      "supported.");
+  // Enable contextual profiling instrumentation.
+  const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
+                            PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+
+  if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
-  if (PGOOpt && Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
-      (PGOOpt->Action == PGOOptions::IRInstr ||
-       PGOOpt->Action == PGOOptions::IRUse)) {
+  if (IsPGOInstrGen || IsPGOInstrUse) {
     addPGOInstrPasses(MPM, Level,
-                      /*RunProfileGen=*/PGOOpt->Action == PGOOptions::IRInstr,
+                      /*RunProfileGen=*/IsPGOInstrGen,
                       /*IsCS=*/false, PGOOpt->AtomicCounterUpdate,
                       PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
                       PGOOpt->FS);
-    MPM.addPass(PGOIndirectCallPromotion(false, false));
+  } else if (IsCtxProfGen) {
+    MPM.addPass(PGOInstrumentationGen(false));
+    addPostPGOLoopRotation(MPM, Level);
+    MPM.addPass(PGOCtxProfLoweringPass());
   }
-  if (PGOOpt && Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
-      PGOOpt->CSAction == PGOOptions::CSIRInstr)
+
+  if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
+    MPM.addPass(PGOIndirectCallPromotion(false, false));
+
+  if (IsPGOPreLink && PGOOpt->CSAction == PGOOptions::CSIRInstr)
     MPM.addPass(PGOInstrumentationGenCreateVar(PGOOpt->CSProfileGenFile));
 
-  if (PGOOpt && Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
-      !PGOOpt->MemoryProfile.empty())
+  if (IsMemprofUse)
     MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
 
   // Synthesize function entry counts for non-PGO compilation.

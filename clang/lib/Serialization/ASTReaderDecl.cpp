@@ -2548,15 +2548,16 @@ ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
     }
   }
 
-  // Explicit info.
-  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
-    auto *ExplicitInfo =
-        new (C) ClassTemplateSpecializationDecl::ExplicitSpecializationInfo;
-    ExplicitInfo->TypeAsWritten = TyInfo;
-    ExplicitInfo->ExternLoc = readSourceLocation();
+  // extern/template keyword locations for explicit instantiations
+  if (Record.readBool()) {
+    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
+    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
     ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
     D->ExplicitInfo = ExplicitInfo;
   }
+
+  if (Record.readBool())
+    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
 
   return Redecl;
 }
@@ -2567,7 +2568,6 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   // need them for profiling
   TemplateParameterList *Params = Record.readTemplateParameterList();
   D->TemplateParams = Params;
-  D->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
 
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
 
@@ -2617,15 +2617,16 @@ ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     }
   }
 
-  // Explicit info.
-  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
-    auto *ExplicitInfo =
-        new (C) VarTemplateSpecializationDecl::ExplicitSpecializationInfo;
-    ExplicitInfo->TypeAsWritten = TyInfo;
-    ExplicitInfo->ExternLoc = readSourceLocation();
+  // extern/template keyword locations for explicit instantiations
+  if (Record.readBool()) {
+    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
+    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
     ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
     D->ExplicitInfo = ExplicitInfo;
   }
+
+  if (Record.readBool())
+    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
 
   SmallVector<TemplateArgument, 8> TemplArgs;
   Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
@@ -2666,7 +2667,6 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
   TemplateParameterList *Params = Record.readTemplateParameterList();
   D->TemplateParams = Params;
-  D->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
 
@@ -4186,12 +4186,35 @@ void ASTReader::PassInterestingDeclsToConsumer() {
     GetDecl(ID);
   EagerlyDeserializedDecls.clear();
 
-  while (!PotentiallyInterestingDecls.empty()) {
-    Decl *D = PotentiallyInterestingDecls.front();
-    PotentiallyInterestingDecls.pop_front();
+  auto ConsumingPotentialInterestingDecls = [this]() {
+    while (!PotentiallyInterestingDecls.empty()) {
+      Decl *D = PotentiallyInterestingDecls.front();
+      PotentiallyInterestingDecls.pop_front();
+      if (isConsumerInterestedIn(D))
+        PassInterestingDeclToConsumer(D);
+    }
+  };
+  std::deque<Decl *> MaybeInterestingDecls =
+      std::move(PotentiallyInterestingDecls);
+  assert(PotentiallyInterestingDecls.empty());
+  while (!MaybeInterestingDecls.empty()) {
+    Decl *D = MaybeInterestingDecls.front();
+    MaybeInterestingDecls.pop_front();
+    // Since we load the variable's initializers lazily, it'd be problematic
+    // if the initializers dependent on each other. So here we try to load the
+    // initializers of static variables to make sure they are passed to code
+    // generator by order. If we read anything interesting, we would consume
+    // that before emitting the current declaration.
+    if (auto *VD = dyn_cast<VarDecl>(D);
+        VD && VD->isFileVarDecl() && !VD->isExternallyVisible())
+      VD->getInit();
+    ConsumingPotentialInterestingDecls();
     if (isConsumerInterestedIn(D))
       PassInterestingDeclToConsumer(D);
   }
+
+  // If we add any new potential interesting decl in the last call, consume it.
+  ConsumingPotentialInterestingDecls();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {

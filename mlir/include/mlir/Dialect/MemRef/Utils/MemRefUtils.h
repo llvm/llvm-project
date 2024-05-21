@@ -22,6 +22,9 @@ namespace mlir {
 
 class MemRefType;
 
+/// A value with a memref type.
+using MemrefValue = TypedValue<BaseMemRefType>;
+
 namespace memref {
 
 /// Returns true, if the memref type has static shapes and represents a
@@ -92,6 +95,20 @@ computeStridesIRBlock(Location loc, OpBuilder &builder,
                       ArrayRef<OpFoldResult> sizes) {
   return computeSuffixProductIRBlock(loc, builder, sizes);
 }
+
+/// Walk up the source chain until an operation that changes/defines the view of
+/// memory is found (i.e. skip operations that alias the entire view).
+MemrefValue skipFullyAliasingOperations(MemrefValue source);
+
+/// Checks if two (memref) values are the same or are statically known to alias
+/// the same region of memory.
+inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
+  return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
+}
+
+/// Walk up the source chain until something an op other than a `memref.subview`
+/// or `memref.cast` is found.
+MemrefValue skipSubViewsAndCasts(MemrefValue source);
 
 } // namespace memref
 } // namespace mlir
