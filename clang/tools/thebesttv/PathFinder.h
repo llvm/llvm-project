@@ -407,7 +407,7 @@ struct DfsPathFinder : public ICFGPathFinder {
                     }
                 }
 
-                if (callDepth <= maxCallDepth) {
+                if (callDepth < maxCallDepth) {
                     if (node.v == u) {
                         // node.v 和 u 相同时，意味着可以直接从 u 出发，
                         // 走一步 node.e 到达新的函数
