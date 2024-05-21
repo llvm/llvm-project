@@ -506,7 +506,7 @@ struct TransferReadToVectorLoadLowering
     if (!broadcastedDims.empty())
       res = rewriter.create<vector::BroadcastOp>(
           read.getLoc(), read.getVectorType(), res->getResult(0));
-    return res->getResults()[0];
+    return res->getResult(0);
   }
 
   std::optional<unsigned> maxTransferRank;
@@ -643,17 +643,13 @@ struct TransferWriteToVectorStoreLowering
                    << write;
             });
 
-      rewriter
-          .create<vector::MaskedStoreOp>(write.getLoc(), write.getSource(),
-                                         write.getIndices(), write.getMask(),
-                                         write.getVector())
-          .getBase();
+      rewriter.create<vector::MaskedStoreOp>(
+          write.getLoc(), write.getSource(), write.getIndices(),
+          write.getMask(), write.getVector());
       return Value();
     } else {
-      rewriter
-          .create<vector::StoreOp>(write.getLoc(), write.getVector(),
-                                   write.getSource(), write.getIndices())
-          .getBase();
+      rewriter.create<vector::StoreOp>(write.getLoc(), write.getVector(),
+                                       write.getSource(), write.getIndices());
       return Value();
     }
   }
