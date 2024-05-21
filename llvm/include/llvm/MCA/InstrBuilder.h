@@ -72,8 +72,7 @@ class InstrBuilder {
       Descriptors;
 
   // Key is the MCIInst and SchedClassID the describe the value InstrDesc
-  DenseMap<std::pair<uint64_t, unsigned>,
-           std::unique_ptr<const InstrDesc>>
+  DenseMap<std::pair<uint64_t, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
   bool FirstCallInst;
