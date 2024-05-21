@@ -1623,7 +1623,6 @@ FailureOr<VectorType> dropNonScalableUnitDimType(VectorType VT) {
   return newVT;
 }
 
-
 /// For vectors with at least an unit dim, replaces:
 ///   elementwise(a, b)
 /// with:
@@ -1658,9 +1657,7 @@ struct DropUnitDimFromElementwiseOps final
   using OpTraitRewritePattern::OpTraitRewritePattern;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (op->getNumResults() != 1)
-      return failure();
-    if (op->getNumRegions() != 0)
+    if (op->getNumResults() != 1 || op->getNumRegions() != 0)
       return failure();
 
     auto resultVectorType = dyn_cast<VectorType>(op->getResult(0).getType());
