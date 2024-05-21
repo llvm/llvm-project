@@ -11296,22 +11296,35 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
         return false;
       Success = false;
     }
-    // Type mismatch may happen in case of #embed handling.
-    if (isa<IntegerLiteral>(Init) &&
-        !Info.Ctx.hasSameType(Init->getType(), CAT->getElementType()))
-      Result.getArrayInitializedElt(ArrayIndex).getInt() = HandleIntToIntCast(
-          Info, Init, CAT->getElementType(), Init->getType(),
-          Result.getArrayInitializedElt(ArrayIndex).getInt());
     return true;
   };
   unsigned ArrayIndex = 0;
+  QualType DestTy = CAT->getElementType();
+  APSInt Value(Info.Ctx.getTypeSize(DestTy), DestTy->isUnsignedIntegerType());
   for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
     const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
     if (ArrayIndex >= NumEltsToInit)
       break;
     if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
-      if (!EmbedS->doForEachDataElement(Eval, ArrayIndex))
-        return false;
+      StringLiteral *SL = EmbedS->getDataStringLiteral();
+      for (unsigned I = EmbedS->getStartingElementPos(),
+                    N = EmbedS->getDataElementCount();
+           I != EmbedS->getStartingElementPos() + N; ++I) {
+        Value = SL->getCodeUnit(I);
+        if (DestTy->isIntegerType()) {
+          Result.getArrayInitializedElt(ArrayIndex) = APValue(Value);
+        } else {
+          assert(DestTy->isFloatingType() && "unexpected type");
+          const FPOptions FPO =
+              Init->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+          APFloat FValue(0.0);
+          if (!HandleIntToFloatCast(Info, Init, FPO, EmbedS->getType(), Value,
+                                    DestTy, FValue))
+            return false;
+          Result.getArrayInitializedElt(ArrayIndex) = APValue(FValue);
+        }
+        ArrayIndex++;
+      }
     } else {
       if (!Eval(Init, ArrayIndex))
         return false;

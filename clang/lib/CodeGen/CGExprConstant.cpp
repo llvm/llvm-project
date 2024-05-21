@@ -1252,6 +1252,23 @@ public:
     return llvm::ConstantInt::get(CGM.getLLVMContext(), I->getValue());
   }
 
+  static APValue withDestType(ASTContext &Ctx, const Expr *E, QualType SrcType,
+                              QualType DestType, const llvm::APSInt &Value) {
+    if (!Ctx.hasSameType(SrcType, DestType)) {
+      if (DestType->isFloatingType()) {
+        llvm::APFloat Result =
+            llvm::APFloat(Ctx.getFloatTypeSemantics(DestType), 1);
+        llvm::RoundingMode RM =
+            E->getFPFeaturesInEffect(Ctx.getLangOpts()).getRoundingMode();
+        if (RM == llvm::RoundingMode::Dynamic)
+          RM = llvm::RoundingMode::NearestTiesToEven;
+        Result.convertFromAPInt(Value, Value.isSigned(), RM);
+        return APValue(Result);
+      }
+    }
+    return APValue(Value);
+  }
+
   llvm::Constant *EmitArrayInitialization(const InitListExpr *ILE, QualType T) {
     auto *CAT = CGM.getContext().getAsConstantArrayType(ILE->getType());
     assert(CAT && "can't emit array init for non-constant-bound array");
@@ -1291,13 +1308,9 @@ public:
       Elts.reserve(NumElements);
 
     llvm::Type *CommonElementType = nullptr;
-    auto Emit = [&](const Expr *Init, unsigned ArrayIndex, bool EmbedInit) {
+    auto Emit = [&](const Expr *Init, unsigned ArrayIndex) {
       llvm::Constant *C = nullptr;
-      if (EmbedInit &&
-          !CGM.getContext().hasSameType(Init->getType(), CAT->getElementType()))
-        C = ProduceIntToIntCast(Init, CAT->getElementType());
-      else
-        C = Emitter.tryEmitPrivateForMemory(Init, EltType);
+      C = Emitter.tryEmitPrivateForMemory(Init, EltType);
       if (!C)
         return false;
       if (ArrayIndex == 0)
@@ -1309,14 +1322,37 @@ public:
     };
 
     unsigned ArrayIndex = 0;
+    QualType DestTy = CAT->getElementType();
     for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
       const Expr *Init = ILE->getInit(i);
       if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
-        if (!EmbedS->doForEachDataElement(Emit, ArrayIndex,
-                                          /*EmbedInit=*/true))
-          return nullptr;
+        StringLiteral *SL = EmbedS->getDataStringLiteral();
+        llvm::APSInt Value(CGM.getContext().getTypeSize(DestTy),
+                           DestTy->isUnsignedIntegerType());
+        llvm::Constant *C;
+        for (unsigned I = EmbedS->getStartingElementPos(),
+                      N = EmbedS->getDataElementCount();
+             I != EmbedS->getStartingElementPos() + N; ++I) {
+          Value = SL->getCodeUnit(I);
+          if (DestTy->isIntegerType()) {
+            C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value);
+          } else {
+            C = Emitter.tryEmitPrivateForMemory(
+                withDestType(CGM.getContext(), Init, EmbedS->getType(), DestTy,
+                             Value),
+                EltType);
+          }
+          if (!C)
+            return nullptr;
+          Elts.push_back(C);
+          ArrayIndex++;
+        }
+        if ((ArrayIndex - EmbedS->getDataElementCount()) == 0)
+          CommonElementType = C->getType();
+        else if (C->getType() != CommonElementType)
+          CommonElementType = nullptr;
       } else {
-        if (!Emit(Init, ArrayIndex, /*EmbedInit=*/false))
+        if (!Emit(Init, ArrayIndex))
           return nullptr;
         ArrayIndex++;
       }
