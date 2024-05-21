@@ -1280,6 +1280,18 @@ define <2 x float> @fneg(<2 x float> %x) {
   ret <2 x float> %r
 }
 
+; FIXME: This is a miscompile.
+define <2 x float> @fneg_not_single_source(<2 x float> %x) {
+; CHECK-LABEL: @fneg_not_single_source(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[SPLAT:%.*]] = fneg <2 x float> [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[SPLAT]]
+;
+  %neg = fneg <2 x float> %x
+  %splat = shufflevector <2 x float> %neg, <2 x float> undef, <2 x i32> <i32 0, i32 2>
+  ret <2 x float> %splat
+}
+
 define <2 x float> @fmul_splat_constant(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_splat_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X:%.*]], <float 4.200000e+01, float poison>
