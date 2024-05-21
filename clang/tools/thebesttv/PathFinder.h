@@ -190,7 +190,7 @@ struct InterProceduralDij {
                 if (pointsToAvoid.count(v))
                     continue;
                 // 只考虑调用边和返回边
-                int w = e.type == ICFG::Edge::Type::INTRA_PROC ? 0 : 1;
+                int w = (e.type == ICFG::Edge::Type::INTRA_PROC) ? 0 : 1;
                 if (d[v] > d[u] + w) {
                     d[v] = d[u] + w;
                     q.push({v, d[v], u});
