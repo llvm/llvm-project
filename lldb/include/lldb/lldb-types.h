@@ -47,6 +47,7 @@ typedef void *thread_arg_t;                       // Host thread argument type
 typedef unsigned thread_result_t;                 // Host thread result type
 typedef thread_result_t (*thread_func_t)(void *); // Host thread function type
 typedef void *pipe_t;                             // Host pipe type is HANDLE
+typedef int callback_token_t;
 
 #else
 
