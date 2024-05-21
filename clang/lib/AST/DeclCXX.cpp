@@ -562,15 +562,15 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
 }
 
 const CXXRecordDecl *CXXRecordDecl::getStandardLayoutBaseWithFields() const {
-#ifndef NDEBUG
+  assert(
+      isStandardLayout() &&
+      "getStandardLayoutBaseWithFields called on a non-standard-layout type");
+#ifdef EXPENSIVE_CHECKS
   {
-    assert(
-        isStandardLayout() &&
-        "getStandardLayoutBaseWithFields called on a non-standard-layout type");
     unsigned NumberOfBasesWithFields = 0;
     if (!field_empty())
       ++NumberOfBasesWithFields;
-    std::set<const CXXRecordDecl *> UniqueBases;
+    llvm::SmallPtrSet<const CXXRecordDecl *, 8> UniqueBases;
     forallBases([&](const CXXRecordDecl *Base) -> bool {
       if (!Base->field_empty())
         ++NumberOfBasesWithFields;
