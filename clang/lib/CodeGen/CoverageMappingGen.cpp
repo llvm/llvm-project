@@ -374,9 +374,10 @@ public:
       auto NonScratchExpansionLoc = getNonScratchExpansionLoc(Loc);
       Loc = NonScratchExpansionLoc.first;
       auto EndLoc = NonScratchExpansionLoc.second;
-      Region.setStartLoc(Loc);
-      Region.setEndLoc(EndLoc.has_value() ? EndLoc.value()
-                                          : Region.getEndLoc());
+      if (EndLoc.has_value()) {
+        Region.setStartLoc(Loc);
+        Region.setEndLoc(EndLoc.value());
+      }
 
       // Replace Loc with FileLoc if it is expanded with system headers.
       if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
