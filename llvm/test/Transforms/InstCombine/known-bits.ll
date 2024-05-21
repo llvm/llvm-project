@@ -1698,6 +1698,44 @@ define i32 @test_none(float nofpclass(all) %x) {
   ret i32 %and
 }
 
+; We cannot make assumptions about the sign of result of sqrt
+; when the input is a negative value (except for -0).
+define i1 @pr92217() {
+; CHECK-LABEL: @pr92217(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_negative_input(float nofpclass(nan zero pnorm psub pinf) %a) {
+; CHECK-LABEL: @sqrt_negative_input(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x = call float @llvm.sqrt.f32(float %a)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_negative_input_nnan(float nofpclass(nan zero pnorm psub pinf) %a) {
+; CHECK-LABEL: @sqrt_negative_input_nnan(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = call nnan float @llvm.sqrt.f32(float %a)
+  %y = bitcast float %x to i32
+  %cmp = icmp slt i32 %y, 0
+  ret i1 %cmp
+}
+
 define i8 @test_icmp_add(i8 %n, i8 %n2, i8 %other) {
 ; CHECK-LABEL: @test_icmp_add(
 ; CHECK-NEXT:  entry:

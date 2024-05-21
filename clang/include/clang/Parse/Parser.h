@@ -153,6 +153,9 @@ class Parser : public CodeCompletionHandler {
   /// Identifier for "replacement".
   IdentifierInfo *Ident_replacement;
 
+  /// Identifier for "environment".
+  IdentifierInfo *Ident_environment;
+
   /// Identifiers used by the 'external_source_symbol' attribute.
   IdentifierInfo *Ident_language, *Ident_defined_in,
       *Ident_generated_declaration, *Ident_USR;
@@ -1645,8 +1648,6 @@ private:
                                bool EnterScope, bool OnDefinition);
   void ParseLexedAttribute(LateParsedAttribute &LA,
                            bool EnterScope, bool OnDefinition);
-  void ParseLexedCAttribute(LateParsedAttribute &LA,
-                            ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedMethodDeclarations(ParsingClass &Class);
   void ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM);
   void ParseLexedMethodDefs(ParsingClass &Class);
@@ -2533,8 +2534,7 @@ private:
 
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
-      llvm::function_ref<Decl *(ParsingFieldDeclarator &)> FieldsCallback,
-      LateParsedAttrList *LateFieldAttrs = nullptr);
+      llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
 
   DeclGroupPtrTy ParseTopLevelStmtDecl();
 
@@ -3112,8 +3112,6 @@ private:
                                  SourceLocation ScopeLoc,
                                  ParsedAttr::Form Form);
 
-  void DistributeCLateParsedAttrs(Decl *Dcl, LateParsedAttrList *LateAttrs);
-
   void ParseBoundsAttribute(IdentifierInfo &AttrName,
                             SourceLocation AttrNameLoc, ParsedAttributes &Attrs,
                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
@@ -3688,9 +3686,9 @@ private:
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar();
+  OpenACCVarParseResult ParseOpenACCVar(OpenACCClauseKind CK);
   /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList();
+  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCClauseKind CK);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult

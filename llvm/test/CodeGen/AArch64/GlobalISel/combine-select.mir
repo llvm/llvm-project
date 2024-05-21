@@ -911,8 +911,7 @@ body:             |
     ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
     ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
-    ; CHECK-NEXT: %c:_(<4 x s32>) = G_ICMP intpred(sle), %f(<4 x s32>), %t
-    ; CHECK-NEXT: %sel:_(<4 x s32>) = exact G_SELECT %c(<4 x s32>), %t, %f
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_SMAX %t, %f
     ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
