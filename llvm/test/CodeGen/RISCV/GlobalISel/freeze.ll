@@ -101,3 +101,100 @@ define ptr @freeze_ptr(ptr %x) {
   %t1 = getelementptr i8, ptr %y1, i64 4
   ret ptr %t1
 }
+
+%struct.T = type { i32, i32 }
+
+define i32 @freeze_struct(ptr %p) {
+; RV32-LABEL: freeze_struct:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a0, 4(a0)
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: freeze_struct:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lw a1, 0(a0)
+; RV64-NEXT:    lw a0, 4(a0)
+; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    ret
+  %s = load %struct.T, ptr %p
+  %y1 = freeze %struct.T %s
+  %v1 = extractvalue %struct.T %y1, 0
+  %v2 = extractvalue %struct.T %y1, 1
+  %t1 = add i32 %v1, %v2
+  ret i32 %t1
+}
+
+define i32 @freeze_anonstruct(ptr %p) {
+; RV32-LABEL: freeze_anonstruct:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a0, 4(a0)
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: freeze_anonstruct:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lw a1, 0(a0)
+; RV64-NEXT:    lw a0, 4(a0)
+; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    ret
+  %s = load {i32, i32}, ptr %p
+  %y1 = freeze {i32, i32} %s
+  %v1 = extractvalue {i32, i32} %y1, 0
+  %v2 = extractvalue {i32, i32} %y1, 1
+  %t1 = add i32 %v1, %v2
+  ret i32 %t1
+}
+
+define i32 @freeze_anonstruct2(ptr %p) {
+; RV32-LABEL: freeze_anonstruct2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lh a1, 4(a0)
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    lui a2, 16
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: freeze_anonstruct2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lh a1, 4(a0)
+; RV64-NEXT:    lw a0, 0(a0)
+; RV64-NEXT:    lui a2, 16
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    and a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %s = load {i32, i16}, ptr %p
+  %y1 = freeze {i32, i16} %s
+  %v1 = extractvalue {i32, i16} %y1, 0
+  %v2 = extractvalue {i32, i16} %y1, 1
+  %z2 = zext i16 %v2 to i32
+  %t1 = add i32 %v1, %z2
+  ret i32 %t1
+}
+
+define i32 @freeze_array(ptr %p) nounwind {
+; RV32-LABEL: freeze_array:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a0, 4(a0)
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: freeze_array:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lw a1, 0(a0)
+; RV64-NEXT:    lw a0, 4(a0)
+; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    ret
+  %s = load [2 x i32], ptr %p
+  %y1 = freeze [2 x i32] %s
+  %v1 = extractvalue [2 x i32] %y1, 0
+  %v2 = extractvalue [2 x i32] %y1, 1
+  %t1 = add i32 %v1, %v2
+  ret i32 %t1
+}
