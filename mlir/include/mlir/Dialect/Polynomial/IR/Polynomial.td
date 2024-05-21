@@ -1,4 +1,4 @@
-//===- PolynomialOps.td - Polynomial dialect ---------------*- tablegen -*-===//
+//===- Polynomial.td - Polynomial dialect ------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,22 +15,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/Polynomial/IR/PolynomialDialect.td"
 include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
-
-class Polynomial_Type<string name, string typeMnemonic>
-    : TypeDef<Polynomial_Dialect, name> {
-  let mnemonic = typeMnemonic;
-}
-
-def Polynomial_PolynomialType : Polynomial_Type<"Polynomial", "polynomial"> {
-  let summary = "An element of a polynomial ring.";
-  let description = [{
-    A type for polynomials in a polynomial quotient ring.
-  }];
-  let parameters = (ins Polynomial_RingAttr:$ring);
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-def PolynomialLike: TypeOrContainer<Polynomial_PolynomialType, "polynomial-like">;
+include "mlir/Dialect/Polynomial/IR/PolynomialTypes.td"
 
 class Polynomial_Op<string mnemonic, list<Trait> traits = []> :
     Op<Polynomial_Dialect, mnemonic, traits # [Pure]> {
