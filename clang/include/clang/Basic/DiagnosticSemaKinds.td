@@ -310,7 +310,7 @@ def err_invalid_vector_long_double_decl_spec : Error<
 def err_invalid_vector_complex_decl_spec : Error<
   "cannot use '_Complex' with '__vector'">;
 def warn_vector_long_decl_spec_combination : Warning<
-  "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
+  "use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 
 def err_redeclaration_different_type : Error<
   "redeclaration of %0 with a different type%diff{: $ vs $|}1,2">;
@@ -3975,7 +3975,7 @@ def warn_acquired_before : Warning<
   "%0 '%1' must be acquired before '%2'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_acquired_before_after_cycle : Warning<
-  "Cycle in acquired_before/after dependencies, starting with '%0'">,
+  "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
 
@@ -8853,7 +8853,7 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to"
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
-  "Atomic memory operand must have a power-of-two size">;
+  "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<
   "argument to atomic builtin of type '_BitInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
