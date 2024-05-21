@@ -45,6 +45,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -18160,7 +18161,7 @@ CreateNewDecl:
 
   // Set the access specifier.
   if (!Invalid && SearchDC->isRecord())
-    SetMemberAccessSpecifier(New, PrevDecl, AS);
+    Access().SetMemberAccessSpecifier(New, PrevDecl, AS);
 
   if (PrevDecl)
     CheckRedeclarationInModule(New, PrevDecl);

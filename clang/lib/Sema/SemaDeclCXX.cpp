@@ -42,6 +42,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -1417,8 +1418,9 @@ static DeclAccessPair findDecomposableBaseClass(Sema &S, SourceLocation Loc,
     }
 
     //   ... [accessible, implied by other rules] base class of E.
-    S.CheckBaseClassAccess(Loc, BaseType, S.Context.getRecordType(RD),
-                           *BestPath, diag::err_decomp_decl_inaccessible_base);
+    S.Access().CheckBaseClassAccess(Loc, BaseType, S.Context.getRecordType(RD),
+                                    *BestPath,
+                                    diag::err_decomp_decl_inaccessible_base);
     AS = BestPath->Access;
 
     ClassWithFields = BaseType->getAsCXXRecordDecl();
@@ -1501,7 +1503,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     // We already checked that the base class is accessible.
     // FIXME: Add 'const' to AccessedEntity's classes so we can remove the
     // const_cast here.
-    S.CheckStructuredBindingMemberAccess(
+    S.Access().CheckStructuredBindingMemberAccess(
         Loc, const_cast<CXXRecordDecl *>(OrigRD),
         DeclAccessPair::make(FD, CXXRecordDecl::MergeAccess(
                                      BasePair.getAccess(), FD->getAccess())));
@@ -3107,13 +3109,13 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
   if (Path) {
     if (!IgnoreAccess) {
       // Check that the base class can be accessed.
-      switch (
-          CheckBaseClassAccess(Loc, Base, Derived, *Path, InaccessibleBaseID)) {
-      case AR_inaccessible:
+      switch (Access().CheckBaseClassAccess(Loc, Base, Derived, *Path,
+                                            InaccessibleBaseID)) {
+      case SemaAccess::AR_inaccessible:
         return true;
-      case AR_accessible:
-      case AR_dependent:
-      case AR_delayed:
+      case SemaAccess::AR_accessible:
+      case SemaAccess::AR_dependent:
+      case SemaAccess::AR_delayed:
         break;
       }
     }
@@ -5845,10 +5847,9 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
     // Dtor might still be missing, e.g because it's invalid.
     if (!Dtor)
       continue;
-    CheckDestructorAccess(Field->getLocation(), Dtor,
-                          PDiag(diag::err_access_dtor_field)
-                            << Field->getDeclName()
-                            << FieldType);
+    Access().CheckDestructorAccess(Field->getLocation(), Dtor,
+                                   PDiag(diag::err_access_dtor_field)
+                                       << Field->getDeclName() << FieldType);
 
     MarkFunctionReferenced(Location, Dtor);
     DiagnoseUseOfDecl(Dtor, Location);
@@ -5895,10 +5896,11 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
       continue;
 
     // FIXME: caret should be on the start of the class name
-    CheckDestructorAccess(Base.getBeginLoc(), Dtor,
-                          PDiag(diag::err_access_dtor_base)
-                              << Base.getType() << Base.getSourceRange(),
-                          Context.getTypeDeclType(ClassDecl));
+    Access().CheckDestructorAccess(Base.getBeginLoc(), Dtor,
+                                   PDiag(diag::err_access_dtor_base)
+                                       << Base.getType()
+                                       << Base.getSourceRange(),
+                                   Context.getTypeDeclType(ClassDecl));
 
     MarkFunctionReferenced(Location, Dtor);
     DiagnoseUseOfDecl(Dtor, Location);
@@ -5932,12 +5934,11 @@ void Sema::MarkVirtualBaseDestructorsReferenced(
     // Dtor might still be missing, e.g because it's invalid.
     if (!Dtor)
       continue;
-    if (CheckDestructorAccess(
+    if (Access().CheckDestructorAccess(
             ClassDecl->getLocation(), Dtor,
             PDiag(diag::err_access_dtor_vbase)
                 << Context.getTypeDeclType(ClassDecl) << VBase.getType(),
-            Context.getTypeDeclType(ClassDecl)) ==
-        AR_accessible) {
+            Context.getTypeDeclType(ClassDecl)) == SemaAccess::AR_accessible) {
       CheckDerivedToBaseConversion(
           Context.getTypeDeclType(ClassDecl), VBase.getType(),
           diag::err_access_dtor_vbase, 0, ClassDecl->getLocation(),
@@ -8207,7 +8208,7 @@ private:
         QualType ObjectType = Subobj.Kind == Subobject::Member
                                   ? Args[0]->getType()
                                   : S.Context.getRecordType(RD);
-        if (!S.isMemberAccessibleForDeletion(
+        if (!S.Access().isMemberAccessibleForDeletion(
                 ArgClass, Best->FoundDecl, ObjectType, Subobj.Loc,
                 Diagnose == ExplainDeleted
                     ? S.PDiag(diag::note_defaulted_comparison_inaccessible)
@@ -9406,7 +9407,7 @@ bool SpecialMemberDeletionInfo::isAccessible(Subobject Subobj,
     objectTy = S.Context.getTypeDeclType(target->getParent());
   }
 
-  return S.isMemberAccessibleForDeletion(
+  return S.Access().isMemberAccessibleForDeletion(
       target->getParent(), DeclAccessPair::make(target, access), objectTy);
 }
 
@@ -16175,9 +16176,9 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   // though.
   if (!VD->getType()->isArrayType()) {
     MarkFunctionReferenced(VD->getLocation(), Destructor);
-    CheckDestructorAccess(VD->getLocation(), Destructor,
-                          PDiag(diag::err_access_dtor_var)
-                              << VD->getDeclName() << VD->getType());
+    Access().CheckDestructorAccess(VD->getLocation(), Destructor,
+                                   PDiag(diag::err_access_dtor_var)
+                                       << VD->getDeclName() << VD->getType());
     DiagnoseUseOfDecl(Destructor, VD->getLocation());
   }
 
@@ -18041,7 +18042,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   if (ND->isInvalidDecl()) {
     FrD->setInvalidDecl();
   } else {
-    if (DC->isRecord()) CheckFriendAccess(ND);
+    if (DC->isRecord())
+      Access().CheckFriendAccess(ND);
 
     FunctionDecl *FD;
     if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))

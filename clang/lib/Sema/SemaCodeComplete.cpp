@@ -41,6 +41,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -1715,7 +1716,7 @@ class CodeCompletionDeclConsumer : public VisibleDeclConsumer {
   ResultBuilder &Results;
   DeclContext *InitialLookupCtx;
   // NamingClass and BaseType are used for access-checking. See
-  // Sema::IsSimplyAccessible for details.
+  // SemaAccess::IsSimplyAccessible for details.
   CXXRecordDecl *NamingClass;
   QualType BaseType;
   std::vector<FixItHint> FixIts;
@@ -1778,7 +1779,8 @@ private:
       NamingClass = nullptr;
       BaseType = QualType();
     }
-    return Results.getSema().IsSimplyAccessible(ND, NamingClass, BaseType);
+    return Results.getSema().Access().IsSimplyAccessible(ND, NamingClass,
+                                                         BaseType);
   }
 };
 } // namespace

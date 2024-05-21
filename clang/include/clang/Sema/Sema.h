@@ -168,6 +168,7 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaAccess;
 class SemaCodeCompletion;
 class SemaCUDA;
 class SemaHLSL;
@@ -452,39 +453,38 @@ class Sema final : public SemaBase {
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
-  // 2. C++ Access Control (SemaAccess.cpp)
-  // 3. Attributes (SemaAttr.cpp)
-  // 4. Availability Attribute Handling (SemaAvailability.cpp)
-  // 5. Casts (SemaCast.cpp)
-  // 6. Extra Semantic Checking (SemaChecking.cpp)
-  // 7. C++ Coroutines (SemaCoroutine.cpp)
-  // 8. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
-  // 9. Declarations (SemaDecl.cpp)
-  // 10. Declaration Attribute Handling (SemaDeclAttr.cpp)
-  // 11. C++ Declarations (SemaDeclCXX.cpp)
-  // 12. C++ Exception Specifications (SemaExceptionSpec.cpp)
-  // 13. Expressions (SemaExpr.cpp)
-  // 14. C++ Expressions (SemaExprCXX.cpp)
-  // 15. Member Access Expressions (SemaExprMember.cpp)
-  // 16. Initializers (SemaInit.cpp)
-  // 17. C++ Lambda Expressions (SemaLambda.cpp)
-  // 18. Name Lookup (SemaLookup.cpp)
-  // 19. Modules (SemaModule.cpp)
-  // 20. C++ Overloading (SemaOverload.cpp)
-  // 21. Pseudo-Object (SemaPseudoObject.cpp)
-  // 22. Statements (SemaStmt.cpp)
-  // 23. `inline asm` Statement (SemaStmtAsm.cpp)
-  // 24. Statement Attribute Handling (SemaStmtAttr.cpp)
-  // 25. C++ Templates (SemaTemplate.cpp)
-  // 26. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
-  // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
-  // 28. C++ Template Declaration Instantiation
+  // 2. Attributes (SemaAttr.cpp)
+  // 3. Availability Attribute Handling (SemaAvailability.cpp)
+  // 4. Casts (SemaCast.cpp)
+  // 5. Extra Semantic Checking (SemaChecking.cpp)
+  // 6. C++ Coroutines (SemaCoroutine.cpp)
+  // 7. C++ Scope Specifiers (SemaCXXScopeSpec.cpp)
+  // 8. Declarations (SemaDecl.cpp)
+  // 9. Declaration Attribute Handling (SemaDeclAttr.cpp)
+  // 10. C++ Declarations (SemaDeclCXX.cpp)
+  // 11. C++ Exception Specifications (SemaExceptionSpec.cpp)
+  // 12. Expressions (SemaExpr.cpp)
+  // 13. C++ Expressions (SemaExprCXX.cpp)
+  // 14. Member Access Expressions (SemaExprMember.cpp)
+  // 15. Initializers (SemaInit.cpp)
+  // 16. C++ Lambda Expressions (SemaLambda.cpp)
+  // 17. Name Lookup (SemaLookup.cpp)
+  // 18. Modules (SemaModule.cpp)
+  // 19. C++ Overloading (SemaOverload.cpp)
+  // 20. Pseudo-Object (SemaPseudoObject.cpp)
+  // 21. Statements (SemaStmt.cpp)
+  // 22. `inline asm` Statement (SemaStmtAsm.cpp)
+  // 23. Statement Attribute Handling (SemaStmtAttr.cpp)
+  // 24. C++ Templates (SemaTemplate.cpp)
+  // 25. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
+  // 26. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
+  // 27. C++ Template Declaration Instantiation
   //     (SemaTemplateInstantiateDecl.cpp)
-  // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
-  // 30. Constraints and Concepts (SemaConcept.cpp)
-  // 31. Types (SemaType.cpp)
-  // 32. FixIt Helpers (SemaFixItUtils.cpp)
-  // 33. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
+  // 28. C++ Variadic Templates (SemaTemplateVariadic.cpp)
+  // 29. Constraints and Concepts (SemaConcept.cpp)
+  // 30. Types (SemaType.cpp)
+  // 31. FixIt Helpers (SemaFixItUtils.cpp)
+  // 32. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -985,6 +985,11 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaAccess &Access() {
+    assert(AccessPtr);
+    return *AccessPtr;
+  }
+
   SemaCodeCompletion &CodeCompletion() {
     assert(CodeCompletionPtr);
     return *CodeCompletionPtr;
@@ -1050,6 +1055,7 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
+  std::unique_ptr<SemaAccess> AccessPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
@@ -1057,93 +1063,6 @@ private:
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
   std::unique_ptr<SemaSYCL> SYCLPtr;
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name C++ Access Control
-  /// Implementations are in SemaAccess.cpp
-  ///@{
-
-public:
-  enum AccessResult {
-    AR_accessible,
-    AR_inaccessible,
-    AR_dependent,
-    AR_delayed
-  };
-
-  bool SetMemberAccessSpecifier(NamedDecl *MemberDecl,
-                                NamedDecl *PrevMemberDecl,
-                                AccessSpecifier LexicalAS);
-
-  AccessResult CheckUnresolvedMemberAccess(UnresolvedMemberExpr *E,
-                                           DeclAccessPair FoundDecl);
-  AccessResult CheckUnresolvedLookupAccess(UnresolvedLookupExpr *E,
-                                           DeclAccessPair FoundDecl);
-  AccessResult CheckAllocationAccess(SourceLocation OperatorLoc,
-                                     SourceRange PlacementRange,
-                                     CXXRecordDecl *NamingClass,
-                                     DeclAccessPair FoundDecl,
-                                     bool Diagnose = true);
-  AccessResult CheckConstructorAccess(SourceLocation Loc, CXXConstructorDecl *D,
-                                      DeclAccessPair FoundDecl,
-                                      const InitializedEntity &Entity,
-                                      bool IsCopyBindingRefToTemp = false);
-  AccessResult CheckConstructorAccess(SourceLocation Loc, CXXConstructorDecl *D,
-                                      DeclAccessPair FoundDecl,
-                                      const InitializedEntity &Entity,
-                                      const PartialDiagnostic &PDiag);
-  AccessResult CheckDestructorAccess(SourceLocation Loc,
-                                     CXXDestructorDecl *Dtor,
-                                     const PartialDiagnostic &PDiag,
-                                     QualType objectType = QualType());
-  AccessResult CheckFriendAccess(NamedDecl *D);
-  AccessResult CheckMemberAccess(SourceLocation UseLoc,
-                                 CXXRecordDecl *NamingClass,
-                                 DeclAccessPair Found);
-  AccessResult
-  CheckStructuredBindingMemberAccess(SourceLocation UseLoc,
-                                     CXXRecordDecl *DecomposedClass,
-                                     DeclAccessPair Field);
-  AccessResult CheckMemberOperatorAccess(SourceLocation Loc, Expr *ObjectExpr,
-                                         const SourceRange &,
-                                         DeclAccessPair FoundDecl);
-  AccessResult CheckMemberOperatorAccess(SourceLocation Loc, Expr *ObjectExpr,
-                                         Expr *ArgExpr,
-                                         DeclAccessPair FoundDecl);
-  AccessResult CheckMemberOperatorAccess(SourceLocation Loc, Expr *ObjectExpr,
-                                         ArrayRef<Expr *> ArgExprs,
-                                         DeclAccessPair FoundDecl);
-  AccessResult CheckAddressOfMemberAccess(Expr *OvlExpr,
-                                          DeclAccessPair FoundDecl);
-  AccessResult CheckBaseClassAccess(SourceLocation AccessLoc, QualType Base,
-                                    QualType Derived, const CXXBasePath &Path,
-                                    unsigned DiagID, bool ForceCheck = false,
-                                    bool ForceUnprivileged = false);
-  void CheckLookupAccess(const LookupResult &R);
-  bool IsSimplyAccessible(NamedDecl *Decl, CXXRecordDecl *NamingClass,
-                          QualType BaseType);
-  bool isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                     DeclAccessPair Found, QualType ObjectType,
-                                     SourceLocation Loc,
-                                     const PartialDiagnostic &Diag);
-  bool isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
-                                     DeclAccessPair Found,
-                                     QualType ObjectType) {
-    return isMemberAccessibleForDeletion(NamingClass, Found, ObjectType,
-                                         SourceLocation(), PDiag());
-  }
-
-  void HandleDependentAccessCheck(
-      const DependentDiagnostic &DD,
-      const MultiLevelTemplateArgumentList &TemplateArgs);
-  void HandleDelayedAccessCheck(sema::DelayedDiagnostic &DD, Decl *Ctx);
 
   ///@}
 

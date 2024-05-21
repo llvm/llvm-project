@@ -26,6 +26,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -1961,7 +1962,7 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
     Owner->addDecl(InstTemplate);
   } else if (InstTemplate->getDeclContext()->isRecord() &&
              !getPreviousDeclForInstantiation(D)) {
-    SemaRef.CheckFriendAccess(InstTemplate);
+    SemaRef.Access().CheckFriendAccess(InstTemplate);
   }
 
   return InstTemplate;
@@ -2857,7 +2858,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     // We only need to re-check access for methods which we didn't
     // manage to match during parsing.
     if (!D->getPreviousDecl())
-      SemaRef.CheckFriendAccess(Method);
+      SemaRef.Access().CheckFriendAccess(Method);
 
     Record->makeDeclVisibleInContext(Method);
 
@@ -6529,7 +6530,7 @@ void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,
   for (auto *DD : Pattern->ddiags()) {
     switch (DD->getKind()) {
     case DependentDiagnostic::Access:
-      HandleDependentAccessCheck(*DD, TemplateArgs);
+      Access().HandleDependentAccessCheck(*DD, TemplateArgs);
       break;
     }
   }

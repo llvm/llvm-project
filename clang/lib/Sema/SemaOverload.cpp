@@ -31,6 +31,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -3521,9 +3522,9 @@ bool Sema::CheckMemberPointerConversion(Expr *From, QualType ToType,
   }
 
   if (!IgnoreBaseAccess)
-    CheckBaseClassAccess(From->getExprLoc(), FromClass, ToClass,
-                         Paths.front(),
-                         diag::err_downcast_from_inaccessible_base);
+    Access().CheckBaseClassAccess(From->getExprLoc(), FromClass, ToClass,
+                                  Paths.front(),
+                                  diag::err_downcast_from_inaccessible_base);
 
   // Must be a base to derived member conversion.
   BuildBasePathArray(Paths, BasePath);
@@ -6538,7 +6539,8 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
     if (SemaRef.isSFINAEContext())
       return true;
 
-    SemaRef.CheckMemberOperatorAccess(From->getExprLoc(), From, nullptr, Found);
+    SemaRef.Access().CheckMemberOperatorAccess(From->getExprLoc(), From,
+                                               nullptr, Found);
     ExprResult Result = SemaRef.BuildCXXMemberCallExpr(From, Found, Conversion,
                                                        HadMultipleCandidates);
     if (Result.isInvalid())
@@ -6561,7 +6563,8 @@ static bool recordConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
                              DeclAccessPair &Found) {
   CXXConversionDecl *Conversion =
       cast<CXXConversionDecl>(Found->getUnderlyingDecl());
-  SemaRef.CheckMemberOperatorAccess(From->getExprLoc(), From, nullptr, Found);
+  SemaRef.Access().CheckMemberOperatorAccess(From->getExprLoc(), From, nullptr,
+                                             Found);
 
   QualType ToType = Conversion->getConversionType().getNonReferenceType();
   if (!Converter.SuppressConversion) {
@@ -13273,7 +13276,7 @@ Sema::ResolveAddressOfOverloadedFunction(Expr *AddressOfExpr,
       if (Resolver.IsStaticMemberFunctionFromBoundPointer())
         Resolver.ComplainIsStaticMemberFunctionFromBoundPointer();
       else
-        CheckAddressOfMemberAccess(AddressOfExpr, FoundResult);
+        Access().CheckAddressOfMemberAccess(AddressOfExpr, FoundResult);
     }
   }
 
@@ -13397,7 +13400,7 @@ bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
   // unavailable is consistent with our behavior elsewhere. So, always check
   // for both.
   DiagnoseUseOfDecl(Found, E->getExprLoc());
-  CheckAddressOfMemberAccess(E, DAP);
+  Access().CheckAddressOfMemberAccess(E, DAP);
   ExprResult Res = FixOverloadedFunctionReference(E, DAP, Found);
   if (Res.isInvalid())
     return false;
@@ -14060,7 +14063,7 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   switch (OverloadResult) {
   case OR_Success: {
     FunctionDecl *FDecl = (*Best)->Function;
-    SemaRef.CheckUnresolvedLookupAccess(ULE, (*Best)->FoundDecl);
+    SemaRef.Access().CheckUnresolvedLookupAccess(ULE, (*Best)->FoundDecl);
     if (SemaRef.DiagnoseUseOfDecl(FDecl, ULE->getNameLoc()))
       return ExprError();
     ExprResult Res =
@@ -14390,7 +14393,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
       // Convert the arguments.
       if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {
-        CheckMemberOperatorAccess(OpLoc, Input, nullptr, Best->FoundDecl);
+        Access().CheckMemberOperatorAccess(OpLoc, Input, nullptr,
+                                           Best->FoundDecl);
 
         ExprResult InputInit;
         if (Method->isExplicitObjectMemberFunction())
@@ -14787,7 +14791,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // Convert the arguments.
         if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {
           // Best->Access is only meaningful for class members.
-          CheckMemberOperatorAccess(OpLoc, Args[0], Args[1], Best->FoundDecl);
+          Access().CheckMemberOperatorAccess(OpLoc, Args[0], Args[1],
+                                             Best->FoundDecl);
 
           ExprResult Arg0, Arg1;
           unsigned ParamIdx = 0;
@@ -15244,7 +15249,8 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // We matched an overloaded operator. Build a call to that
         // operator.
 
-        CheckMemberOperatorAccess(LLoc, Args[0], ArgExpr, Best->FoundDecl);
+        Access().CheckMemberOperatorAccess(LLoc, Args[0], ArgExpr,
+                                           Best->FoundDecl);
 
         // Convert the arguments.
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
@@ -15546,7 +15552,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     case OR_Success:
       Method = cast<CXXMethodDecl>(Best->Function);
       FoundDecl = Best->FoundDecl;
-      CheckUnresolvedMemberAccess(UnresExpr, Best->FoundDecl);
+      Access().CheckUnresolvedMemberAccess(UnresExpr, Best->FoundDecl);
       if (DiagnoseUseOfOverloadedDecl(Best->FoundDecl, UnresExpr->getNameLoc()))
         break;
       // If FoundDecl is different from Method (such as if one is a template
@@ -15871,8 +15877,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
       = cast<CXXConversionDecl>(
                          Best->Conversions[0].UserDefined.ConversionFunction);
 
-    CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
-                              Best->FoundDecl);
+    Access().CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
+                                       Best->FoundDecl);
     if (DiagnoseUseOfDecl(Best->FoundDecl, LParenLoc))
       return ExprError();
     assert(Conv == Best->FoundDecl.getDecl() &&
@@ -15895,7 +15901,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     return BuildCallExpr(S, Call.get(), LParenLoc, Args, RParenLoc);
   }
 
-  CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr, Best->FoundDecl);
+  Access().CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
+                                     Best->FoundDecl);
 
   // We found an overloaded operator(). Build a CXXOperatorCallExpr
   // that calls this method, using Object for the implicit object
@@ -16068,7 +16075,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
   }
   }
 
-  CheckMemberOperatorAccess(OpLoc, Base, nullptr, Best->FoundDecl);
+  Access().CheckMemberOperatorAccess(OpLoc, Base, nullptr, Best->FoundDecl);
 
   // Convert the object parameter.
   CXXMethodDecl *Method = cast<CXXMethodDecl>(Best->Function);

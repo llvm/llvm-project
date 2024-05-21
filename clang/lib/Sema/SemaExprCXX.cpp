@@ -38,6 +38,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
@@ -1044,8 +1045,9 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
   if (!RD->hasIrrelevantDestructor()) {
     if (CXXDestructorDecl *Destructor = LookupDestructor(RD)) {
       MarkFunctionReferenced(E->getExprLoc(), Destructor);
-      CheckDestructorAccess(E->getExprLoc(), Destructor,
-                            PDiag(diag::err_access_dtor_exception) << Ty);
+      Access().CheckDestructorAccess(E->getExprLoc(), Destructor,
+                                     PDiag(diag::err_access_dtor_exception)
+                                         << Ty);
       if (DiagnoseUseOfDecl(Destructor, E->getExprLoc()))
         return true;
     }
@@ -2615,8 +2617,9 @@ static bool resolveAllocationOverload(
   case OR_Success: {
     // Got one!
     FunctionDecl *FnDecl = Best->Function;
-    if (S.CheckAllocationAccess(R.getNameLoc(), Range, R.getNamingClass(),
-                                Best->FoundDecl) == Sema::AR_inaccessible)
+    if (S.Access().CheckAllocationAccess(R.getNameLoc(), Range,
+                                         R.getNamingClass(), Best->FoundDecl) ==
+        SemaAccess::AR_inaccessible)
       return true;
 
     Operator = FnDecl;
@@ -3022,8 +3025,8 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
       }
     }
 
-    CheckAllocationAccess(StartLoc, Range, FoundDelete.getNamingClass(),
-                          Matches[0].first);
+    Access().CheckAllocationAccess(
+        StartLoc, Range, FoundDelete.getNamingClass(), Matches[0].first);
   } else if (!Matches.empty()) {
     // We found multiple suitable operators. Per [expr.new]p20, that means we
     // call no 'operator delete' function, but we should at least warn the user.
@@ -3381,8 +3384,9 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
       return true;
     }
 
-    if (CheckAllocationAccess(StartLoc, SourceRange(), Found.getNamingClass(),
-                              Matches[0].Found, Diagnose) == AR_inaccessible)
+    if (Access().CheckAllocationAccess(StartLoc, SourceRange(),
+                                       Found.getNamingClass(), Matches[0].Found,
+                                       Diagnose) == SemaAccess::AR_inaccessible)
       return true;
 
     return false;
@@ -3867,8 +3871,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     bool IsVirtualDelete = false;
     if (PointeeRD) {
       if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-        CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
-                              PDiag(diag::err_access_dtor) << PointeeElem);
+        Access().CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
+                                       PDiag(diag::err_access_dtor)
+                                           << PointeeElem);
         IsVirtualDelete = Dtor->isVirtual();
       }
     }
@@ -4216,8 +4221,9 @@ static ExprResult BuildCXXCastArgument(Sema &S,
                                   ConstructorArgs))
       return ExprError();
 
-    S.CheckConstructorAccess(CastLoc, Constructor, FoundDecl,
-                             InitializedEntity::InitializeTemporary(Ty));
+    S.Access().CheckConstructorAccess(
+        CastLoc, Constructor, FoundDecl,
+        InitializedEntity::InitializeTemporary(Ty));
     if (S.DiagnoseUseOfDecl(Method, CastLoc))
       return ExprError();
 
@@ -4235,7 +4241,8 @@ static ExprResult BuildCXXCastArgument(Sema &S,
   case CK_UserDefinedConversion: {
     assert(!From->getType()->isPointerType() && "Arg can't have pointer type!");
 
-    S.CheckMemberOperatorAccess(CastLoc, From, /*arg*/ nullptr, FoundDecl);
+    S.Access().CheckMemberOperatorAccess(CastLoc, From, /*arg*/ nullptr,
+                                         FoundDecl);
     if (S.DiagnoseUseOfDecl(Method, CastLoc))
       return ExprError();
 
@@ -7654,9 +7661,9 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
 
   if (Destructor) {
     MarkFunctionReferenced(E->getExprLoc(), Destructor);
-    CheckDestructorAccess(E->getExprLoc(), Destructor,
-                          PDiag(diag::err_access_dtor_temp)
-                            << E->getType());
+    Access().CheckDestructorAccess(E->getExprLoc(), Destructor,
+                                   PDiag(diag::err_access_dtor_temp)
+                                       << E->getType());
     if (DiagnoseUseOfDecl(Destructor, E->getExprLoc()))
       return ExprError();
 
@@ -7825,9 +7832,9 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
     Temp->setDestructor(Destructor);
 
     MarkFunctionReferenced(Bind->getExprLoc(), Destructor);
-    CheckDestructorAccess(Bind->getExprLoc(), Destructor,
-                          PDiag(diag::err_access_dtor_temp)
-                            << Bind->getType());
+    Access().CheckDestructorAccess(Bind->getExprLoc(), Destructor,
+                                   PDiag(diag::err_access_dtor_temp)
+                                       << Bind->getType());
     if (DiagnoseUseOfDecl(Destructor, Bind->getExprLoc()))
       return ExprError();
 

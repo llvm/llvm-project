@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaAccess.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -761,7 +762,7 @@ private:
   void diagnoseAccess() {
     if (!isAmbiguous() && isClassLookup() &&
         getSema().getLangOpts().AccessControl)
-      getSema().CheckLookupAccess(*this);
+      getSema().Access().CheckLookupAccess(*this);
   }
 
   void diagnoseAmbiguous() {

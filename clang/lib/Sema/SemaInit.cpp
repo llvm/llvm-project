@@ -27,6 +27,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
@@ -1931,9 +1932,9 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
     return false;
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
-  SemaRef.CheckDestructorAccess(Loc, Destructor,
-                                SemaRef.PDiag(diag::err_access_dtor_temp)
-                                << ElementType);
+  SemaRef.Access().CheckDestructorAccess(
+      Loc, Destructor,
+      SemaRef.PDiag(diag::err_access_dtor_temp) << ElementType);
   SemaRef.MarkFunctionReferenced(Loc, Destructor);
   return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
 }
@@ -6858,8 +6859,8 @@ static ExprResult CopyObject(Sema &S,
   SmallVector<Expr*, 8> ConstructorArgs;
   CurInit.get(); // Ownership transferred into MultiExprArg, below.
 
-  S.CheckConstructorAccess(Loc, Constructor, Best->FoundDecl, Entity,
-                           IsExtraneousCopy);
+  S.Access().CheckConstructorAccess(Loc, Constructor, Best->FoundDecl, Entity,
+                                    IsExtraneousCopy);
 
   if (IsExtraneousCopy) {
     // If this is a totally extraneous copy for C++03 reference
@@ -6969,8 +6970,9 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
 
   switch (OR) {
   case OR_Success:
-    S.CheckConstructorAccess(Loc, cast<CXXConstructorDecl>(Best->Function),
-                             Best->FoundDecl, Entity, Diag);
+    S.Access().CheckConstructorAccess(Loc,
+                                      cast<CXXConstructorDecl>(Best->Function),
+                                      Best->FoundDecl, Entity, Diag);
     // FIXME: Check default arguments as far as that's possible.
     break;
 
@@ -7172,7 +7174,8 @@ PerformConstructorInitialization(Sema &S,
     return ExprError();
 
   // Only check access if all of that succeeded.
-  S.CheckConstructorAccess(Loc, Constructor, Step.Function.FoundDecl, Entity);
+  S.Access().CheckConstructorAccess(Loc, Constructor, Step.Function.FoundDecl,
+                                    Entity);
   if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
     return ExprError();
 
@@ -8823,7 +8826,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_ResolveAddressOfOverloadedFunction:
       // Overload resolution determined which function invoke; update the
       // initializer to reflect that choice.
-      S.CheckAddressOfMemberAccess(CurInit.get(), Step->Function.FoundDecl);
+      S.Access().CheckAddressOfMemberAccess(CurInit.get(),
+                                            Step->Function.FoundDecl);
       if (S.DiagnoseUseOfDecl(Step->Function.FoundDecl, Kind.getLocation()))
         return ExprError();
       CurInit = S.FixOverloadedFunctionReference(CurInit,
@@ -8968,8 +8972,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         if (CurInit.isInvalid())
           return ExprError();
 
-        S.CheckConstructorAccess(Kind.getLocation(), Constructor, FoundFn,
-                                 Entity);
+        S.Access().CheckConstructorAccess(Kind.getLocation(), Constructor,
+                                          FoundFn, Entity);
         if (S.DiagnoseUseOfDecl(FoundFn, Kind.getLocation()))
           return ExprError();
 
@@ -8978,8 +8982,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
       } else {
         // Build a call to the conversion function.
         CXXConversionDecl *Conversion = cast<CXXConversionDecl>(Fn);
-        S.CheckMemberOperatorAccess(Kind.getLocation(), CurInit.get(), nullptr,
-                                    FoundFn);
+        S.Access().CheckMemberOperatorAccess(Kind.getLocation(), CurInit.get(),
+                                             nullptr, FoundFn);
         if (S.DiagnoseUseOfDecl(FoundFn, Kind.getLocation()))
           return ExprError();
 
@@ -9012,8 +9016,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         if (const RecordType *Record = T->getAs<RecordType>()) {
           CXXDestructorDecl *Destructor
             = S.LookupDestructor(cast<CXXRecordDecl>(Record->getDecl()));
-          S.CheckDestructorAccess(CurInit.get()->getBeginLoc(), Destructor,
-                                  S.PDiag(diag::err_access_dtor_temp) << T);
+          S.Access().CheckDestructorAccess(
+              CurInit.get()->getBeginLoc(), Destructor,
+              S.PDiag(diag::err_access_dtor_temp) << T);
           S.MarkFunctionReferenced(CurInit.get()->getBeginLoc(), Destructor);
           if (S.DiagnoseUseOfDecl(Destructor, CurInit.get()->getBeginLoc()))
             return ExprError();

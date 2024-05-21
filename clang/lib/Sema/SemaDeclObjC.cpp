@@ -26,6 +26,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/DenseMap.h"
@@ -5542,7 +5543,7 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
         CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
         if (CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(RD)) {
           SemaRef.MarkFunctionReferenced(Field->getLocation(), Destructor);
-          SemaRef.CheckDestructorAccess(
+          SemaRef.Access().CheckDestructorAccess(
               Field->getLocation(), Destructor,
               SemaRef.PDiag(diag::err_access_dtor_ivar)
                   << Context.getBaseElementType(Field->getType()));

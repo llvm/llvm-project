@@ -35,6 +35,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaAccess.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
@@ -19510,9 +19511,9 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
       if (SemaRef.IsDerivedFrom(Loc, Ty, VD->getType(), Paths)) {
         if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
                 VD->getType().getUnqualifiedType()))) {
-          if (SemaRef.CheckBaseClassAccess(
+          if (SemaRef.Access().CheckBaseClassAccess(
                   Loc, VD->getType(), Ty, Paths.front(),
-                  /*DiagID=*/0) != Sema::AR_inaccessible) {
+                  /*DiagID=*/0) != SemaAccess::AR_inaccessible) {
             SemaRef.BuildBasePathArray(Paths, BasePath);
             return SemaRef.BuildDeclRefExpr(
                 VD, VD->getType().getNonReferenceType(), VK_LValue, Loc);
@@ -22357,9 +22358,9 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
     if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
       if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
               VD->getType().getUnqualifiedType()))) {
-        if (SemaRef.CheckBaseClassAccess(
+        if (SemaRef.Access().CheckBaseClassAccess(
                 Loc, VD->getType(), Type, Paths.front(),
-                /*DiagID=*/0) != Sema::AR_inaccessible) {
+                /*DiagID=*/0) != SemaAccess::AR_inaccessible) {
           return SemaRef.BuildDeclRefExpr(VD, Type, VK_LValue, Loc);
         }
       }
