@@ -881,10 +881,10 @@ bool EarlyIfConverter::shouldConvertIf() {
   // read to same value multiple times.
   if (CurrentLoop && all_of(IfConv.Cond, [&](MachineOperand &MO) {
         if (!MO.isReg() || !MO.isUse())
-          return false;
+          return true;
         Register Reg = MO.getReg();
         if (Register::isPhysicalRegister(Reg))
-          return false;
+          return true;
 
         MachineInstr *Def = MRI->getVRegDef(Reg);
         return CurrentLoop->isLoopInvariant(*Def) ||
@@ -892,10 +892,10 @@ bool EarlyIfConverter::shouldConvertIf() {
                  if (Op.isImm())
                    return true;
                  if (!MO.isReg() || !MO.isUse())
-                   return false;
+                   return true;
                  Register Reg = MO.getReg();
                  if (Register::isPhysicalRegister(Reg))
-                   return false;
+                   return true;
 
                  MachineInstr *Def = MRI->getVRegDef(Reg);
                  return CurrentLoop->isLoopInvariant(*Def);
