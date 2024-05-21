@@ -1057,8 +1057,11 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
 
     // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
     if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
-      Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
-      return Builder.CreateSDiv(Y, Shl, "", I.isExact());
+      // These operands are intentionally swapped. See:
+      // https://alive2.llvm.org/ce/z/H4vGV7
+      Value *NewShl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z, "", true,
+                                        Shl->hasNoUnsignedWrap());
+      return Builder.CreateSDiv(Y, NewShl, "", I.isExact());
     }
   }
 
@@ -1172,8 +1175,9 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         auto *Mul = BinaryOperator::Create(Instruction::Mul, X,
                                            ConstantInt::get(Ty, Quotient));
         auto *OBO = cast<OverflowingBinaryOperator>(Op0);
-        Mul->setHasNoUnsignedWrap(!IsSigned && OBO->hasNoUnsignedWrap());
-        Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
+        Mul->setHasNoUnsignedWrap(
+            !IsSigned || (OBO->hasNoUnsignedWrap() && OBO->hasNoSignedWrap()));
+        Mul->setHasNoSignedWrap(IsSigned || OBO->hasNoSignedWrap());
         return Mul;
       }
     }
@@ -1198,8 +1202,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         auto *Mul = BinaryOperator::Create(Instruction::Mul, X,
                                            ConstantInt::get(Ty, Quotient));
         auto *OBO = cast<OverflowingBinaryOperator>(Op0);
-        Mul->setHasNoUnsignedWrap(!IsSigned && OBO->hasNoUnsignedWrap());
-        Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
+        Mul->setHasNoUnsignedWrap(OBO->hasNoUnsignedWrap());
+        Mul->setHasNoSignedWrap(!IsSigned || OBO->hasNoSignedWrap());
         return Mul;
       }
     }
@@ -1273,15 +1277,35 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   }
 
   // (X << Z) / (X * Y) -> (1 << Z) / Y
-  // TODO: Handle sdiv.
   if (!IsSigned && Op1->hasOneUse() &&
       match(Op0, m_NUWShl(m_Value(X), m_Value(Z))) &&
       match(Op1, m_c_Mul(m_Specific(X), m_Value(Y))))
     if (cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap()) {
       Instruction *NewDiv = BinaryOperator::CreateUDiv(
-          Builder.CreateShl(ConstantInt::get(Ty, 1), Z, "", /*NUW*/ true), Y);
+          Builder.CreateShl(
+              ConstantInt::get(Ty, 1), Z, "", /*NUW*/ true,
+              /*NSW*/ cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap()),
+          Y);
       NewDiv->setIsExact(I.isExact());
       return NewDiv;
+    }
+
+  // (X << Z) / (X * Y) -> (1 << Z) / Y
+  if (IsSigned && Op1->hasOneUse() &&
+      match(Op0, m_NSWShl(m_Value(X), m_Value(Z))) &&
+      match(Op1, m_c_Mul(m_Specific(X), m_Value(Y))))
+    if (cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap()) {
+      if (cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap()) {
+        if (cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap()) {
+          Instruction *NewDiv = BinaryOperator::CreateSDiv(
+              Builder.CreateShl(ConstantInt::get(Ty, 1), Z, "",
+                                /*NUW*/ true,
+                                /*NSW*/ true),
+              Y);
+          NewDiv->setIsExact(I.isExact());
+          return NewDiv;
+        }
+      }
     }
 
   if (Value *R = foldIDivShl(I, Builder))
