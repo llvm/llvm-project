@@ -16,6 +16,16 @@ ldr s0, [sp]
 add z0.d, z0.d, z0.d
 # LLVM-MCA-END
 
+# LLVM-MCA-BEGIN FPR64-bit
+ldr d0, [sp]
+add z0.d, z0.d, z0.d
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN FPR128-bit
+ldr q0, [sp]
+add z0.d, z0.d, z0.d
+# LLVM-MCA-END
+
 # LLVM-MCA-BEGIN SIMD64-bit-b
 ld1 {v0.8b}, [sp]
 add z0.d, z0.d, z0.d
@@ -269,7 +279,159 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
 # CHECK-NEXT:        4     4.3    0.6    0.6       <total>
 
-# CHECK:      [3] Code Region - SIMD64-bit-b
+# CHECK:      [3] Code Region - FPR64-bit
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    16
+# CHECK-NEXT: uOps Per Cycle:    4.55
+# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: Block RThroughput: 0.3
+
+# CHECK:      Instruction Info:
+# CHECK-NEXT: [1]: #uOps
+# CHECK-NEXT: [2]: Latency
+# CHECK-NEXT: [3]: RThroughput
+# CHECK-NEXT: [4]: MayLoad
+# CHECK-NEXT: [5]: MayStore
+# CHECK-NEXT: [6]: HasSideEffects (U)
+
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      6     0.33    *                   ldr	d0, [sp]
+# CHECK-NEXT:  1      2     0.25                        add	z0.d, z0.d, z0.d
+
+# CHECK:      Resources:
+# CHECK-NEXT: [0.0] - V2UnitB
+# CHECK-NEXT: [0.1] - V2UnitB
+# CHECK-NEXT: [1.0] - V2UnitD
+# CHECK-NEXT: [1.1] - V2UnitD
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
+
+# CHECK:      Resource pressure per iteration:
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+
+# CHECK:      Resource pressure by instruction:
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+
+# CHECK:      Timeline view:
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeeeeeER ..   ldr	d0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	d0, [sp]
+# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	d0, [sp]
+# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	d0, [sp]
+# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	d0, [sp]
+# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+
+# CHECK:      [4] Code Region - FPR128-bit
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    16
+# CHECK-NEXT: uOps Per Cycle:    4.55
+# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: Block RThroughput: 0.3
+
+# CHECK:      Instruction Info:
+# CHECK-NEXT: [1]: #uOps
+# CHECK-NEXT: [2]: Latency
+# CHECK-NEXT: [3]: RThroughput
+# CHECK-NEXT: [4]: MayLoad
+# CHECK-NEXT: [5]: MayStore
+# CHECK-NEXT: [6]: HasSideEffects (U)
+
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      6     0.33    *                   ldr	q0, [sp]
+# CHECK-NEXT:  1      2     0.25                        add	z0.d, z0.d, z0.d
+
+# CHECK:      Resources:
+# CHECK-NEXT: [0.0] - V2UnitB
+# CHECK-NEXT: [0.1] - V2UnitB
+# CHECK-NEXT: [1.0] - V2UnitD
+# CHECK-NEXT: [1.1] - V2UnitD
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
+
+# CHECK:      Resource pressure per iteration:
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+
+# CHECK:      Resource pressure by instruction:
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+
+# CHECK:      Timeline view:
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeeeeeER ..   ldr	q0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	q0, [sp]
+# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	q0, [sp]
+# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	q0, [sp]
+# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	q0, [sp]
+# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+
+# CHECK:      [5] Code Region - SIMD64-bit-b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
@@ -345,7 +507,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
 # CHECK-NEXT:        4     4.3    0.6    0.6       <total>
 
-# CHECK:      [4] Code Region - SIMD64-bit-h
+# CHECK:      [6] Code Region - SIMD64-bit-h
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
@@ -421,7 +583,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
 # CHECK-NEXT:        4     4.3    0.6    0.6       <total>
 
-# CHECK:      [5] Code Region - SIMD64-bit-s
+# CHECK:      [7] Code Region - SIMD64-bit-s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
@@ -497,7 +659,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
 # CHECK-NEXT:        4     4.3    0.6    0.6       <total>
 
-# CHECK:      [6] Code Region - SIMD64-bit-d
+# CHECK:      [8] Code Region - SIMD64-bit-d
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
@@ -573,7 +735,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
 # CHECK-NEXT:        4     4.3    0.6    0.6       <total>
 
-# CHECK:      [7] Code Region - insr
+# CHECK:      [9] Code Region - insr
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
