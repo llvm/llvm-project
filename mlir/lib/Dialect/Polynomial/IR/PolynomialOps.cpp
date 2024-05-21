@@ -189,37 +189,38 @@ LogicalResult INTTOp::verify() {
 ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {
   // Using the built-in parser.parseAttribute requires the full
   // #polynomial.typed_int_polynomial syntax, which is excessive.
-  // Instead we manually parse the components.
+  // Instead we parse a keyword int to signal it's an integer polynomial
   Type type;
-  parser.parseOptionalAttribute();
-
-  IntPolynomialAttr intPolyAttr;
-  parser.parseOptionalAttribute(intPolyAttr);
-  if (intPolyAttr) {
-    if (parser.parseColon() || parser.parseType(type))
-      return failure();
-
-    result.addAttribute("value",
-                        TypedIntPolynomialAttr::get(type, intPolyAttr));
-    result.addTypes(type);
-    return success();
+  if (succeeded(parser.parseOptionalKeyword("float"))) {
+    Attribute floatPolyAttr = FloatPolynomialAttr::parse(parser, nullptr);
+    if (floatPolyAttr) {
+      if (parser.parseColon() || parser.parseType(type))
+        return failure();
+      result.addAttribute("value",
+                          TypedFloatPolynomialAttr::get(type, floatPolyAttr));
+      result.addTypes(type);
+      return success();
+    }
   }
 
-  Attribute floatPolyAttr = FloatPolynomialAttr::parse(parser, nullptr, /*optional=*/true);
-  if (floatPolyAttr) {
-    if (parser.parseColon() || parser.parseType(type))
-      return failure();
-    result.addAttribute("value",
-                        TypedFloatPolynomialAttr::get(type, intPolyAttr));
-    result.addTypes(type);
-    return success();
+  if (succeeded(parser.parseOptionalKeyword("int"))) {
+    Attribute intPolyAttr = IntPolynomialAttr::parse(parser, nullptr);
+    if (intPolyAttr) {
+      if (parser.parseColon() || parser.parseType(type))
+        return failure();
+
+      result.addAttribute("value",
+                          TypedIntPolynomialAttr::get(type, intPolyAttr));
+      result.addTypes(type);
+      return success();
+    }
   }
 
   // In the worst case, still accept the verbose versions.
   TypedIntPolynomialAttr typedIntPolyAttr;
-  ParseResult res = parser.parseAttribute<TypedIntPolynomialAttr>(
+  OptionalParseResult res = parser.parseOptionalAttribute<TypedIntPolynomialAttr>(
       typedIntPolyAttr, "value", result.attributes);
-  if (succeeded(res)) {
+  if (res.has_value() && succeeded(res.value())) {
     result.addTypes(typedIntPolyAttr.getType());
     return success();
   }
@@ -227,7 +228,7 @@ ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {
   TypedFloatPolynomialAttr typedFloatPolyAttr;
   res = parser.parseAttribute<TypedFloatPolynomialAttr>(
       typedFloatPolyAttr, "value", result.attributes);
-  if (succeeded(res)) {
+  if (res.has_value() && succeeded(res.value())) {
     result.addTypes(typedFloatPolyAttr.getType());
     return success();
   }
@@ -237,7 +238,17 @@ ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void ConstantOp::print(OpAsmPrinter &p) {
   p << " ";
-  p.printAttribute(getValue());
+  if (auto intPoly = dyn_cast<TypedIntPolynomialAttr>(getValue())) {
+    p << "int";
+    intPoly.getValue().print(p);
+  } else if (auto floatPoly = dyn_cast<TypedFloatPolynomialAttr>(getValue())) {
+    p << "float";
+    floatPoly.getValue().print(p);
+  } else {
+    assert(false && "unexpected attribute type");
+  }
+  p << " : ";
+  p.printType(getOutput().getType());
 }
 
 LogicalResult ConstantOp::inferReturnTypes(
