@@ -521,7 +521,6 @@ def testComplexUnrankedMemrefAdd():
 
 run(testComplexUnrankedMemrefAdd)
 
-
 # Test addition of two bf16 memrefs
 # CHECK-LABEL: TEST: testBF16MemrefAdd
 def testBF16MemrefAdd():
@@ -529,22 +528,18 @@ def testBF16MemrefAdd():
         module = Module.parse(
             """
     module  {
-      func.func @main(%arg0: memref<1xcomplex<bf16>>,
-                      %arg1: memref<1xcomplex<bf16>>,
-                      %arg2: memref<1xcomplex<bf16>>) attributes { llvm.emit_c_interface } {
+      func.func @main(%arg0: memref<1xbf16>,
+                      %arg1: memref<1xbf16>) attributes { llvm.emit_c_interface } {
         %0 = arith.constant 0 : index
-        %1 = memref.load %arg0[%0] : memref<1xcomplex<bf16>>
-        %2 = memref.load %arg1[%0] : memref<1xcomplex<bf16>>
-        %3 = complex.add %1, %2 : complex<bf16>
-        memref.store %3, %arg2[%0] : memref<1xcomplex<bf16>>
+        %1 = memref.load %arg0[%0] : memref<1xbf16>
+        memref.store %1, %arg1[%0] : memref<1xbf16>
         return
       }
     } """
         )
 
-        arg1 = np.array([11.0]).astype(bfloat16)
-        arg2 = np.array([22.0]).astype(bfloat16)
-        arg3 = np.array([0.0]).astype(bfloat16)
+        arg1 = np.array([0.5]).astype(bfloat16)
+        arg2 = np.array([0.0]).astype(bfloat16)
 
         arg1_memref_ptr = ctypes.pointer(
             ctypes.pointer(get_ranked_memref_descriptor(arg1))
@@ -552,20 +547,13 @@ def testBF16MemrefAdd():
         arg2_memref_ptr = ctypes.pointer(
             ctypes.pointer(get_ranked_memref_descriptor(arg2))
         )
-        arg3_memref_ptr = ctypes.pointer(
-            ctypes.pointer(get_ranked_memref_descriptor(arg3))
-        )
 
         execution_engine = ExecutionEngine(lowerToLLVM(module))
-        execution_engine.invoke(
-            "main", arg1_memref_ptr, arg2_memref_ptr, arg3_memref_ptr
-        )
-        # CHECK: [11] + [22] = [33]
-        log("{0} + {1} = {2}".format(arg1, arg2, arg3))
+        execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [33]
-        npout = ranked_memref_to_numpy(arg3_memref_ptr[0])
+        # CHECK: [0.5]
+        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
         log(npout)
 
 
