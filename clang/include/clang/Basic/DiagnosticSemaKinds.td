@@ -3975,7 +3975,7 @@ def warn_acquired_before : Warning<
   "%0 '%1' must be acquired before '%2'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_acquired_before_after_cycle : Warning<
-  "Cycle in acquired_before/after dependencies, starting with '%0'">,
+  "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
 
