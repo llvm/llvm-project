@@ -39,7 +39,7 @@ def _getAndroidDeviceApi(cfg):
     )
 
 
-def _windowsSupportsModules(cfg):
+def _mingwSupportsModules(cfg):
     # Only mingw headers are known to work with libc++ built as a module,
     # at the moment.
     if not "__MINGW32__" in compilerMacros(cfg):
@@ -314,7 +314,7 @@ DEFAULT_FEATURES = [
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
         or "__FreeBSD__" in compilerMacros(cfg)
-        or ("_WIN32" in compilerMacros(cfg) and not _windowsSupportsModules(cfg))
+        or ("_WIN32" in compilerMacros(cfg) and not _mingwSupportsModules(cfg))
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
         or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
