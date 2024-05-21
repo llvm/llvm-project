@@ -990,11 +990,12 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 - **Syntax:** `CALL GETCWD(C, STATUS)`, `STATUS = GETCWD(C)`
 
 #### Example
-Here is an example usage from [Gfortran GETCWD](https://gcc.gnu.org/onlinedocs/gfortran/GETCWD.html)
 ```Fortran
-PROGRAM test_getcwd
+PROGRAM example_getcwd
   CHARACTER(len=255) :: cwd
-  CALL getcwd(cwd)
-  WRITE(*,*) TRIM(cwd)
+  INTEGER :: status
+  CALL getcwd(cwd, status)
+  PRINT *, cwd
+  PRINT *, status
 END PROGRAM
 ```
