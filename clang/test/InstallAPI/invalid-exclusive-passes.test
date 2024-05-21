@@ -42,7 +42,7 @@
 ; RUN: -install_name @rpath/libfoo.dylib -current_version 1 \
 ; RUN: -compatibility_version 1 -optionlist %t/invalid_loc.json \
 ; RUN: -I/fake/path -I%t -dynamiclib \
-; RUN: -o %t/output.tbd %t 2>&1 | FileCheck %s --check-prefix=INVALID_JSON_LOC -DMSG=%errc_ENOENT %s
+; RUN: -o %t/output.tbd %t 2>&1 | FileCheck %s --check-prefix=INVALID_JSON_LOC -DMSG=%errc_ENOENT
 ; INVALID_JSON_LOC: error: cannot open file {{.*}}invalid_loc.json': [[MSG]] 
 
 // Validate invalid json format 
