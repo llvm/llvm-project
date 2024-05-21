@@ -160,7 +160,7 @@ class CommandInterpreterAPICase(TestBase):
                 "error": "error: 'an-unknown-command' is not a valid command.\n",
             })
 
-        # (lldb) br set -f main.c -l <line>
+        # (lldb) br s -f main.c -l <line>
         self.assertEqual(transcript[2]["command"], "br s -f main.c -l %d" % self.line)
         self.assertEqual(transcript[2]["resolvedCommand"], "breakpoint set -f main.c -l %d" % self.line)
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
