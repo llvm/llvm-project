@@ -3720,14 +3720,8 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
     buildDomain(Stmt);
     buildAccessRelations(Stmt);
 
-    if (DetectReductions) {
-      BasicBlock *BB = Stmt.getBasicBlock();
-      if (BB)
-        checkForReductions(Stmt, BB);
-      else
-        for (BasicBlock *Block : Stmt.getRegion()->blocks())
-          checkForReductions(Stmt, Block);
-    }
+    if (DetectReductions)
+      checkForReductions(Stmt, Block);
   }
 
   // Check early for a feasible runtime context.
