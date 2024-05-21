@@ -56,16 +56,14 @@ static void init_aarch64_has_sme(void) {
 #if __GNUC__ >= 9
 #pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
 #endif
-__attribute__((constructor(90)))
-void get_aarch64_cpu_features(void) {
+__attribute__((constructor(90))) void get_aarch64_cpu_features(void) {
   if (!__aarch64_cpu_features.features)
     __init_cpu_features();
 }
 
-__attribute__((target("sve")))
-long emit_cntd(void) {
+__attribute__((target("sve"))) long emit_cntd(void) {
   long vl;
-  __asm__ __volatile__("cntd %0" : "=r" (vl));
+  __asm__ __volatile__("cntd %0" : "=r"(vl));
   return vl;
 }
 
