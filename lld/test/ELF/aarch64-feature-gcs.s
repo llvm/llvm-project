@@ -13,28 +13,26 @@
 # RUN: ld.lld func1-gcs.o func3-gcs.o --shared -o gcs.so
 # RUN: llvm-readelf -n gcs.so | FileCheck --check-prefix GCS %s
 # RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o force-gcs -z gcs=always
-# RUN: llvm-readelf -n force-gcs | FileCheck --allow-empty --check-prefix GCS %s
+# RUN: llvm-readelf -n force-gcs | FileCheck --check-prefix GCS %s
 # RUN: ld.lld func2-gcs.o func3.o --shared -o force-gcs.so -z gcs=always
-# RUN: llvm-readelf -n force-gcs.so | FileCheck --allow-empty --check-prefix GCS %s
+# RUN: llvm-readelf -n force-gcs.so | FileCheck --check-prefix GCS %s
 # RUN: ld.lld func2-gcs.o func3.o --shared -o force-gcs2.so -z gcs=never -z gcs=always
-# RUN: llvm-readelf -n force-gcs2.so | FileCheck --allow-empty --check-prefix GCS %s
+# RUN: llvm-readelf -n force-gcs2.so | FileCheck --check-prefix GCS %s
 
 # GCS: Properties:    aarch64 feature: GCS
 
 ## GCS should not be enabled if it's not enabled in at least one input.
 
 # RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o no-gcs
-# RUN: llvm-readelf -n no-gcs | FileCheck --allow-empty --check-prefix NOGCS %s
+# RUN: llvm-readelf -n no-gcs | count 0
 # RUN: ld.lld func2-gcs.o func3.o --shared -o no-gcs.so
-
-# NOGCS-NOT: Properties
 
 ## GCS should be disabled with gcs=never, even if GCS is present in all inputs.
 
 # RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs=never -o never-gcs
-# RUN: llvm-readelf -n never-gcs | FileCheck --allow-empty --check-prefix NOGCS %s
+# RUN: llvm-readelf -n never-gcs | count 0
 # RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs=always -z gcs=never -o never-gcs2
-# RUN: llvm-readelf -n never-gcs2 | FileCheck --allow-empty --check-prefix NOGCS %s
+# RUN: llvm-readelf -n never-gcs2 | count 0
 
 ## gcs-report should report any input files that don't have the gcs property.
 
@@ -44,13 +42,12 @@
 # RUN: not ld.lld func2-gcs.o func3.o --shared -o /dev/null -z gcs-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
 # RUN: not ld.lld func2-gcs.o func3.o --shared -o /dev/null -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
 # RUN: not ld.lld func2-gcs.o func3.o --shared -o /dev/null -z gcs-report=error -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
-# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning | FileCheck --allow-empty --check-prefix=REPORT-NONE %s
-# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=always | FileCheck --allow-empty --check-prefix=REPORT-NONE %s
-# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=never | FileCheck --allow-empty --check-prefix=REPORT-NONE %s
+# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=never 2>&1 | count 0
 
 # REPORT-WARN: warning: func2.o: -z gcs-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
 # REPORT-ERROR: error: func3.o: -z gcs-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
-# REPORT-NONE-NOT: -z gcs-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
 
 ## An invalid gcs option should give an error
 # RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs=nonsense 2>&1 | FileCheck --check-prefix=INVALID %s
