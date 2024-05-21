@@ -220,7 +220,7 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
     ScEnd = AR->evaluateAtIteration(Ex, *SE);
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
-    // For expressions with negative step, the& upper bound is ScStart and the
+    // For expressions with negative step, the upper bound is ScStart and the
     // lower bound is ScEnd.
     if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
       if (CStep->getValue()->isNegative())
