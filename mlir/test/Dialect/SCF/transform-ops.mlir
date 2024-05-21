@@ -10,7 +10,7 @@
 // CHECK:   scf.for
 // CHECK:     arith.addi
 //
-// CHECK-LABEL @loop_outline_op
+// CHECK-LABEL: @loop_outline_op
 func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
   // CHECK: scf.for
   // CHECK-NOT: scf.for
