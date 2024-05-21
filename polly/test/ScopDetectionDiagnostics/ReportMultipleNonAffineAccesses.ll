@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -disable-output < %s 2>&1| FileCheck %s
-; RUN: opt %loadPolly -basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -polly-delinearize=false -polly-detect-keep-going -disable-output < %s 2>&1| FileCheck %s -check-prefix=ALL
-; RUN: opt %loadPolly -basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -disable-output < %s 2>&1| FileCheck %s -check-prefix=DELIN
-; RUN: opt %loadPolly -basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -polly-detect-keep-going -disable-output < %s 2>&1| FileCheck %s -check-prefix=DELIN-ALL
-; RUN: opt %loadPolly -basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -polly-allow-nonaffine -disable-output < %s 2>&1| FileCheck %s -check-prefix=NONAFFINE
-; RUN: opt %loadPolly -basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -polly-allow-nonaffine -disable-output < %s 2>&1| FileCheck %s -check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -polly-delinearize=false -polly-detect-keep-going -disable-output < %s 2>&1| FileCheck %s -check-prefix=ALL
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output < %s 2>&1| FileCheck %s -check-prefix=DELIN
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -polly-detect-keep-going -disable-output < %s 2>&1| FileCheck %s -check-prefix=DELIN-ALL
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -polly-allow-nonaffine -disable-output < %s 2>&1| FileCheck %s -check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -polly-allow-nonaffine -disable-output < %s 2>&1| FileCheck %s -check-prefix=NONAFFINE
 
 ;  1 void manyaccesses(float A[restrict], long n, float B[restrict][n])
 ;  2 {

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-process-unprofitable=true -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable=true '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: Valid Region for Scop:
 

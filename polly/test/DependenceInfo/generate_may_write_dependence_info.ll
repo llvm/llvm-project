@@ -1,4 +1,4 @@
-; RUN: opt -S %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s -check-prefix=VALUE
+; RUN: opt -S %loadNPMPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s -check-prefix=VALUE
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ;                     for (int i = 0; i < N; i++) {

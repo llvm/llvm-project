@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree-normalize-phi=true -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-optree-normalize-phi=true '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Contains a self-referencing PHINode that would require a
 ; transitive closure to handle.

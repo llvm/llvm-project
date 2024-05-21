@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; Test case to trigger the hard way of creating a unique entering
 ; edge for the SCoP. It is triggered because the entering edge
