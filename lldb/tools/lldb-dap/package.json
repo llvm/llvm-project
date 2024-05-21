@@ -1,14 +1,14 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
   "license": "Apache 2.0 License with LLVM exceptions",
   "repository": {
     "type": "git",
-    "url": "https://github.com/llvm/llvm-project.git"
+    "url": "https://github.com/llvm/vscode-lldb.git"
   },
   "bugs": {
     "url": "https://github.com/llvm/llvm-project/issues"

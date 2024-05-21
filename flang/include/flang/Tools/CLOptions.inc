@@ -294,7 +294,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(fir::createPolymorphicOpConversion());
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
-    pm.addPass(fir::createAliasTagsPass());
+    pm.addPass(fir::createAddAliasTags());
 
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
@@ -317,9 +317,10 @@ inline void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    pm.addPass(hlfir::createSimplifyHLFIRIntrinsicsPass());
+    addNestedPassToAllTopLevelOperations(
+        pm, hlfir::createSimplifyHLFIRIntrinsics);
   }
-  pm.addPass(hlfir::createInlineElementalsPass());
+  addNestedPassToAllTopLevelOperations(pm, hlfir::createInlineElementals);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());

@@ -1189,12 +1189,6 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
-  if (FormatTok->is(tok::identifier) &&
-      Tokens->peekNextToken()->is(tok::colon)) {
-    nextToken();
-    nextToken();
-  }
-
   // Errors during a preprocessor directive can only affect the layout of the
   // preprocessor directive, and thus we ignore them. An alternative approach
   // would be to use the same approach we use on the file level (no
@@ -1681,7 +1675,8 @@ void UnwrappedLineParser::parseStructuralElement(
     if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
-      Line->Tokens.begin()->Tok->MustBreakBefore = true;
+      if (!Line->InMacroBody || CurrentLines->size() > 1)
+        Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
       parseLabel(!Style.IndentGotoLabels);
       if (HasLabel)
@@ -4008,8 +4003,6 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   };
 
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
-    if (FormatTok->is(tok::colon))
-      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -4017,9 +4010,13 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       else if (FormatTok->is(tok::greater))
         --AngleNestingLevel;
 
-      if (AngleNestingLevel == 0 && FormatTok->is(tok::l_paren) &&
-          IsNonMacroIdentifier(FormatTok->Previous)) {
-        break;
+      if (AngleNestingLevel == 0) {
+        if (FormatTok->is(tok::colon)) {
+          IsDerived = true;
+        } else if (FormatTok->is(tok::l_paren) &&
+                   IsNonMacroIdentifier(FormatTok->Previous)) {
+          break;
+        }
       }
       if (FormatTok->is(tok::l_brace)) {
         if (AngleNestingLevel == 0 && IsListInitialization())

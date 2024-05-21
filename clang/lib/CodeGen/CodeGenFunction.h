@@ -137,7 +137,8 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
   SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
   SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0)                \
-  SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)
+  SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)              \
+  SANITIZER_CHECK(BoundsSafety, bounds_safety, 0)
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version) Enum,

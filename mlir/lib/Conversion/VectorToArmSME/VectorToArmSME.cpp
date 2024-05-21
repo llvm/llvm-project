@@ -356,6 +356,20 @@ struct TransposeOpToArmSMELowering
       return failure();
 
     auto loc = transposeOp.getLoc();
+    Value input = transposeOp.getVector();
+
+    if (auto xferOp = input.getDefiningOp<vector::TransferReadOp>();
+        xferOp && xferOp->hasOneUse()) {
+      // Fold transpose into transfer_read to enable in-flight transpose when
+      // converting to arm_sme.tile_load.
+      rewriter.modifyOpInPlace(xferOp, [&]() {
+        xferOp->setAttr(xferOp.getPermutationMapAttrName(),
+                        AffineMapAttr::get(AffineMap::getPermutationMap(
+                            permutation, transposeOp.getContext())));
+      });
+      rewriter.replaceOp(transposeOp, xferOp);
+      return success();
+    }
 
     // Allocate buffer to store input tile to.
     Value vscale =
@@ -371,8 +385,6 @@ struct TransposeOpToArmSMELowering
                         tileType.getElementType());
     auto buffer = rewriter.create<memref::AllocaOp>(
         loc, bufferType, ValueRange{numTileSlices, numTileSlices});
-
-    Value input = transposeOp.getVector();
 
     // Store input tile.
     auto tileStoreOp = rewriter.create<arm_sme::TileStoreOp>(
