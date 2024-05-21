@@ -1758,9 +1758,11 @@ void CIRGenItaniumRTTIBuilder::BuildVMIClassTypeInfo(mlir::Location loc,
     if (Base.isVirtual())
       Offset = CGM.getItaniumVTableContext().getVirtualBaseOffsetOffset(
           RD, BaseDecl);
-    else
-      llvm_unreachable("Multi-inheritence NYI");
-
+    else {
+      const ASTRecordLayout &Layout =
+          CGM.getASTContext().getASTRecordLayout(RD);
+      Offset = Layout.getBaseClassOffset(BaseDecl);
+    }
     OffsetFlags = uint64_t(Offset.getQuantity()) << 8;
 
     // The low-order byte of __offset_flags contains flags, as given by the
