@@ -586,6 +586,7 @@ define i1 @add_ultcmp_i32_i16(i32 %x) nounwind {
 ; RV64I-NEXT:    lui a1, 8
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srliw a0, a0, 16
+; RV64I-NEXT:    slli a0, a0, 16
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;

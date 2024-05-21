@@ -2000,6 +2000,9 @@ public:
     return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Determine if a SHL/SRL/SRA operation is known to be exact/nuw/nsw.
+  SDNodeFlags computeShiftFlags(SDValue Op) const;
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set.

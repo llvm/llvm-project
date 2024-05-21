@@ -4520,6 +4520,27 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         }
       }
     }
+
+    // Optimize
+    //    (setcc (shift N00, N01), 0, eq/ne) -> (setcc N00, 0, eq/ne)
+    // If all shifted out bits are known to be zero, then the zero'd ness
+    // doesn't change and we can omit the shift.
+    // If all shifted out bits are equal to at least one bit that isn't
+    // shifted out, then the zero'd ness doesn't change and we can omit the
+    // shift.
+    if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && C1.isZero() &&
+        N0.hasOneUse() &&
+        (N0.getOpcode() == ISD::SHL || N0.getOpcode() == ISD::SRL ||
+         N0.getOpcode() == ISD::SRA)) {
+      bool IsRightShift = N0.getOpcode() != ISD::SHL;
+      SDValue N00 = N0.getOperand(0);
+      // We can't rely on flags already being present on all shift operations,
+      // so let's compute the flags using value tracking.
+      SDNodeFlags Flags = DAG.computeShiftFlags(N0);
+      if (IsRightShift ? Flags.hasExact()
+                       : (Flags.hasNoUnsignedWrap() || Flags.hasNoSignedWrap()))
+        return DAG.getSetCC(dl, VT, N00, N1, Cond);
+    }
   }
 
   // FIXME: Support vectors.

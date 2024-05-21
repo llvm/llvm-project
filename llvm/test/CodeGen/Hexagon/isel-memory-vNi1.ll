@@ -173,64 +173,61 @@ define void @f6(ptr %a0, i16 %a1) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = extractu(r1,#8,#8)
+; CHECK-NEXT:     r2 = #255
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = #255
+; CHECK-NEXT:     r3 = ##65280
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = !bitsclr(r1,r3)
+; CHECK-NEXT:     p1 = !bitsclr(r1,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = cmp.eq(r2,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) r2 = #0
+; CHECK-NEXT:     p0 = !bitsclr(r1,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = mux(p1,#8,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = mux(p1,#2,#0)
+; CHECK-NEXT:     r2 = mux(p1,#2,#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = mux(p0,##128,#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = mux(p0,#32,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5 = setbit(r1,#2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = setbit(r3,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (!p0) r2 = #128
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = mux(p0,#0,#32)
+; CHECK-NEXT:     r6 = setbit(r2,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     if (!p1) r5 = add(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (!p1) r6 = add(r3,#0)
+; CHECK-NEXT:     r1 = setbit(r3,#6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = setbit(r2,#6)
+; CHECK-NEXT:     if (!p1) r6 = add(r2,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = setbit(r4,#4)
+; CHECK-NEXT:     r2 = setbit(r4,#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = or(r6,r5)
+; CHECK-NEXT:     if (!p0) r2 = add(r4,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (!p0) r2 = add(r1,#0)
+; CHECK-NEXT:     if (!p0) r1 = add(r3,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (!p0) r4 = add(r3,#0)
+; CHECK-NEXT:     r4 = or(r6,r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 |= or(r4,r2)
+; CHECK-NEXT:     r4 |= or(r2,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memb(r0+#0) = r5
+; CHECK-NEXT:     memb(r0+#0) = r4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31

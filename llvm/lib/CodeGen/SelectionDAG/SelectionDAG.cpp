@@ -4319,6 +4319,37 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   return OFK_Sometime;
 }
 
+SDNodeFlags SelectionDAG::computeShiftFlags(SDValue Op) const {
+  assert((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA ||
+          Op.getOpcode() == ISD::SHL) &&
+         "Expecting an SHL/SRL/SRA operation.");
+  SDValue Op0 = Op.getOperand(0);
+  SDNodeFlags Flags = Op->getFlags();
+
+  // Left shift: Try to derive 'nsw' and 'nuw' via value tracking.
+  if (Op.getOpcode() == ISD::SHL) {
+    if (const APInt *ShAmt = getValidMaximumShiftAmountConstant(Op)) {
+      if (!Flags.hasNoSignedWrap() && ShAmt->ult(ComputeNumSignBits(Op0)))
+        Flags.setNoSignedWrap(true);
+      if (!Flags.hasNoUnsignedWrap() &&
+          ShAmt->ule(computeKnownBits(Op0).countMinLeadingZeros()))
+        Flags.setNoUnsignedWrap(true);
+    }
+    return Flags;
+  }
+
+  // Right shift: Try to derive 'exact' via value tracking.
+  if ((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA)) {
+    if (!Flags.hasExact())
+      if (const APInt *ShAmt = getValidMaximumShiftAmountConstant(Op)) {
+        if (ShAmt->ule(computeKnownBits(Op0).countMinTrailingZeros()))
+          Flags.setExact(true);
+      }
+  }
+
+  return Flags;
+}
+
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
