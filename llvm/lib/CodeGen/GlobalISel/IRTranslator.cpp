@@ -1945,6 +1945,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FSIN;
     case Intrinsic::sqrt:
       return TargetOpcode::G_FSQRT;
+    case Intrinsic::tan:
+      return TargetOpcode::G_FTAN;
     case Intrinsic::trunc:
       return TargetOpcode::G_INTRINSIC_TRUNC;
     case Intrinsic::readcyclecounter:
@@ -2053,11 +2055,8 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
     Flags |= MachineInstr::NoFPExcept;
 
   SmallVector<llvm::SrcOp, 4> VRegs;
-  VRegs.push_back(getOrCreateVReg(*FPI.getArgOperand(0)));
-  if (!FPI.isUnaryOp())
-    VRegs.push_back(getOrCreateVReg(*FPI.getArgOperand(1)));
-  if (FPI.isTernaryOp())
-    VRegs.push_back(getOrCreateVReg(*FPI.getArgOperand(2)));
+  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
+    VRegs.push_back(getOrCreateVReg(*FPI.getArgOperand(I)));
 
   MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(FPI)}, VRegs, Flags);
   return true;
@@ -2852,7 +2851,7 @@ bool IRTranslator::translateInvoke(const User &U,
     return false;
 
   // FIXME: support whatever these are.
-  if (I.countOperandBundlesOfType(LLVMContext::OB_deopt))
+  if (I.hasDeoptState())
     return false;
 
   // FIXME: support control flow guard targets.

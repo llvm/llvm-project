@@ -397,15 +397,65 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Default:
       OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
       break;
+    case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Attach:
+    case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::PCopy:
+    case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::If:
-    case OpenACCClauseKind::Self:
+    case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
+    case OpenACCClauseKind::Self:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
+      break;
+    case OpenACCClauseKind::CopyIn:
+    case OpenACCClauseKind::PCopyIn:
+    case OpenACCClauseKind::PresentOrCopyIn:
+      OS << " clause";
+      if (cast<OpenACCCopyInClause>(C)->isReadOnly())
+        OS << " : readonly";
+      break;
+    case OpenACCClauseKind::CopyOut:
+    case OpenACCClauseKind::PCopyOut:
+    case OpenACCClauseKind::PresentOrCopyOut:
+      OS << " clause";
+      if (cast<OpenACCCopyOutClause>(C)->isZero())
+        OS << " : zero";
+      break;
+    case OpenACCClauseKind::Create:
+    case OpenACCClauseKind::PCreate:
+    case OpenACCClauseKind::PresentOrCreate:
+      OS << " clause";
+      if (cast<OpenACCCreateClause>(C)->isZero())
+        OS << " : zero";
+      break;
+    case OpenACCClauseKind::Wait:
+      OS << " clause";
+      if (cast<OpenACCWaitClause>(C)->hasDevNumExpr())
+        OS << " has devnum";
+      if (cast<OpenACCWaitClause>(C)->hasQueuesTag())
+        OS << " has queues tag";
+      break;
+    case OpenACCClauseKind::DeviceType:
+    case OpenACCClauseKind::DType:
+      OS << "(";
+      llvm::interleaveComma(
+          cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
+          [&](const DeviceTypeArgument &Arch) {
+            if (Arch.first == nullptr)
+              OS << "*";
+            else
+              OS << Arch.first->getName();
+          });
+      OS << ")";
       break;
     default:
       // Nothing to do here.

@@ -40,6 +40,7 @@ class TestRosetta(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessAppleSilicon
+    @skipIfLLVMTargetMissing("X86")
     @skipIfDarwinEmbedded
     def test_rosetta(self):
         """There can be many tests in a test case - describe this test here."""

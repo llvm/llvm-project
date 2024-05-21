@@ -1,6 +1,8 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 use omp_lib
 !2.11.4 Allocate Clause
 !For any list item that is specified in the allocate

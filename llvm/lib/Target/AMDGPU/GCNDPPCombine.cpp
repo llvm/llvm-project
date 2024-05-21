@@ -140,7 +140,8 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   if (!hasNoImmOrEqual(MI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
       !hasNoImmOrEqual(MI, AMDGPU::OpName::src1_modifiers, 0, Mask) ||
       !hasNoImmOrEqual(MI, AMDGPU::OpName::clamp, 0) ||
-      !hasNoImmOrEqual(MI, AMDGPU::OpName::omod, 0)) {
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::omod, 0) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::byte_sel, 0)) {
     LLVM_DEBUG(dbgs() << "  Inst has non-default modifiers\n");
     return false;
   }

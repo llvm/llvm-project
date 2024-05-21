@@ -1116,7 +1116,8 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
-  CanQualType DependentTy, OverloadTy, BoundMemberTy, UnknownAnyTy;
+  CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
+      UnknownAnyTy;
   CanQualType BuiltinFnTy;
   CanQualType PseudoObjectTy, ARCUnbridgedCastTy;
   CanQualType ObjCBuiltinIdTy, ObjCBuiltinClassTy, ObjCBuiltinSelTy;
@@ -2610,7 +2611,7 @@ public:
   ///
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
-  QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals);
+  QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.

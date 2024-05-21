@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -ast-dump -ast-dump-filter=foo %s | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -std=c++20 -triple i386-windows-pc -fsyntax-only -ast-dump -ast-dump-filter=foo %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -std=c++20 -ast-dump -ast-dump-filter=foo %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -std=c++20 -triple i386-windows-pc -ast-dump -ast-dump-filter=foo %s | FileCheck %s --strict-whitespace
 
 namespace std {
 template <typename, typename...> struct coroutine_traits;

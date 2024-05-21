@@ -70,49 +70,62 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction &MF = *MBB->getParent();
 
-  // Get two load or store instructions.  Use the original instruction for one
-  // of them (arbitrarily the second here) and create a clone for the other.
-  MachineInstr *EarlierMI = MF.CloneMachineInstr(&*MI);
-  MBB->insert(MI, EarlierMI);
+  // Get two load or store instructions.  Use the original instruction for
+  // one of them and create a clone for the other.
+  MachineInstr *HighPartMI = MF.CloneMachineInstr(&*MI);
+  MachineInstr *LowPartMI = &*MI;
+  MBB->insert(LowPartMI, HighPartMI);
 
   // Set up the two 64-bit registers and remember super reg and its flags.
-  MachineOperand &HighRegOp = EarlierMI->getOperand(0);
-  MachineOperand &LowRegOp = MI->getOperand(0);
+  MachineOperand &HighRegOp = HighPartMI->getOperand(0);
+  MachineOperand &LowRegOp = LowPartMI->getOperand(0);
   Register Reg128 = LowRegOp.getReg();
   unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
   unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
   LowRegOp.setReg(RI.getSubReg(LowRegOp.getReg(), SystemZ::subreg_l64));
 
-  if (MI->mayStore()) {
-    // Add implicit uses of the super register in case one of the subregs is
-    // undefined. We could track liveness and skip storing an undefined
-    // subreg, but this is hopefully rare (discovered with llvm-stress).
-    // If Reg128 was killed, set kill flag on MI.
-    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
-    MachineInstrBuilder(MF, EarlierMI).addReg(Reg128, Reg128UndefImpl);
-    MachineInstrBuilder(MF, MI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
-  }
-
   // The address in the first (high) instruction is already correct.
   // Adjust the offset in the second (low) instruction.
-  MachineOperand &HighOffsetOp = EarlierMI->getOperand(2);
-  MachineOperand &LowOffsetOp = MI->getOperand(2);
+  MachineOperand &HighOffsetOp = HighPartMI->getOperand(2);
+  MachineOperand &LowOffsetOp = LowPartMI->getOperand(2);
   LowOffsetOp.setImm(LowOffsetOp.getImm() + 8);
-
-  // Clear the kill flags on the registers in the first instruction.
-  if (EarlierMI->getOperand(0).isReg() && EarlierMI->getOperand(0).isUse())
-    EarlierMI->getOperand(0).setIsKill(false);
-  EarlierMI->getOperand(1).setIsKill(false);
-  EarlierMI->getOperand(3).setIsKill(false);
 
   // Set the opcodes.
   unsigned HighOpcode = getOpcodeForOffset(NewOpcode, HighOffsetOp.getImm());
   unsigned LowOpcode = getOpcodeForOffset(NewOpcode, LowOffsetOp.getImm());
   assert(HighOpcode && LowOpcode && "Both offsets should be in range");
+  HighPartMI->setDesc(get(HighOpcode));
+  LowPartMI->setDesc(get(LowOpcode));
 
-  EarlierMI->setDesc(get(HighOpcode));
-  MI->setDesc(get(LowOpcode));
+  MachineInstr *FirstMI = HighPartMI;
+  if (MI->mayStore()) {
+    FirstMI->getOperand(0).setIsKill(false);
+    // Add implicit uses of the super register in case one of the subregs is
+    // undefined. We could track liveness and skip storing an undefined
+    // subreg, but this is hopefully rare (discovered with llvm-stress).
+    // If Reg128 was killed, set kill flag on MI.
+    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
+    MachineInstrBuilder(MF, HighPartMI).addReg(Reg128, Reg128UndefImpl);
+    MachineInstrBuilder(MF, LowPartMI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
+  } else {
+    // If HighPartMI clobbers any of the address registers, it needs to come
+    // after LowPartMI.
+    auto overlapsAddressReg = [&](Register Reg) -> bool {
+      return RI.regsOverlap(Reg, MI->getOperand(1).getReg()) ||
+             RI.regsOverlap(Reg, MI->getOperand(3).getReg());
+    };
+    if (overlapsAddressReg(HighRegOp.getReg())) {
+      assert(!overlapsAddressReg(LowRegOp.getReg()) &&
+             "Both loads clobber address!");
+      MBB->splice(HighPartMI, MBB, LowPartMI);
+      FirstMI = LowPartMI;
+    }
+  }
+
+  // Clear the kill flags on the address registers in the first instruction.
+  FirstMI->getOperand(1).setIsKill(false);
+  FirstMI->getOperand(3).setIsKill(false);
 }
 
 // Split ADJDYNALLOC instruction MI.
@@ -640,6 +653,48 @@ bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
   unsigned DefOpc = DefMI.getOpcode();
+
+  if (DefOpc == SystemZ::VGBM) {
+    int64_t ImmVal = DefMI.getOperand(1).getImm();
+    if (ImmVal != 0) // TODO: Handle other values
+      return false;
+
+    // Fold gr128 = COPY (vr128 VGBM imm)
+    //
+    // %tmp:gr64 = LGHI 0
+    // to  gr128 = REG_SEQUENCE %tmp, %tmp
+    assert(DefMI.getOperand(0).getReg() == Reg);
+
+    if (!UseMI.isCopy())
+      return false;
+
+    Register CopyDstReg = UseMI.getOperand(0).getReg();
+    if (CopyDstReg.isVirtual() &&
+        MRI->getRegClass(CopyDstReg) == &SystemZ::GR128BitRegClass &&
+        MRI->hasOneNonDBGUse(Reg)) {
+      // TODO: Handle physical registers
+      // TODO: Handle gr64 uses with subregister indexes
+      // TODO: Should this multi-use cases?
+      Register TmpReg = MRI->createVirtualRegister(&SystemZ::GR64BitRegClass);
+      MachineBasicBlock &MBB = *UseMI.getParent();
+
+      loadImmediate(MBB, UseMI.getIterator(), TmpReg, ImmVal);
+
+      UseMI.setDesc(get(SystemZ::REG_SEQUENCE));
+      UseMI.getOperand(1).setReg(TmpReg);
+      MachineInstrBuilder(*MBB.getParent(), &UseMI)
+          .addImm(SystemZ::subreg_h64)
+          .addReg(TmpReg)
+          .addImm(SystemZ::subreg_l64);
+
+      if (MRI->use_nodbg_empty(Reg))
+        DefMI.eraseFromParent();
+      return true;
+    }
+
+    return false;
+  }
+
   if (DefOpc != SystemZ::LHIMux && DefOpc != SystemZ::LHI &&
       DefOpc != SystemZ::LGHI)
     return false;
@@ -853,6 +908,22 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       copyPhysReg(MBB, MBBI, DL, DestRegHi, SrcReg, false);
     BuildMI(MBB, MBBI, DL, get(SystemZ::VREPG), DestRegLo)
       .addReg(SrcReg, getKillRegState(KillSrc)).addImm(1);
+    return;
+  }
+
+  if (SystemZ::FP128BitRegClass.contains(DestReg) &&
+      SystemZ::GR128BitRegClass.contains(SrcReg)) {
+    MCRegister DestRegHi = RI.getSubReg(DestReg, SystemZ::subreg_h64);
+    MCRegister DestRegLo = RI.getSubReg(DestReg, SystemZ::subreg_l64);
+    MCRegister SrcRegHi = RI.getSubReg(SrcReg, SystemZ::subreg_h64);
+    MCRegister SrcRegLo = RI.getSubReg(SrcReg, SystemZ::subreg_l64);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegHi)
+        .addReg(SrcRegHi)
+        .addReg(DestReg, RegState::ImplicitDefine);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegLo)
+        .addReg(SrcRegLo, getKillRegState(KillSrc));
     return;
   }
 
@@ -2085,8 +2156,8 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
 
 unsigned SystemZ::reverseCCMask(unsigned CCMask) {
   return ((CCMask & SystemZ::CCMASK_CMP_EQ) |
-          (CCMask & SystemZ::CCMASK_CMP_GT ? SystemZ::CCMASK_CMP_LT : 0) |
-          (CCMask & SystemZ::CCMASK_CMP_LT ? SystemZ::CCMASK_CMP_GT : 0) |
+          ((CCMask & SystemZ::CCMASK_CMP_GT) ? SystemZ::CCMASK_CMP_LT : 0) |
+          ((CCMask & SystemZ::CCMASK_CMP_LT) ? SystemZ::CCMASK_CMP_GT : 0) |
           (CCMask & SystemZ::CCMASK_CMP_UO));
 }
 
@@ -2217,6 +2288,19 @@ areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     if (LowWidth.hasValue() &&
         LowOffset + (int)LowWidth.getValue() <= HighOffset)
       return true;
+  }
+
+  return false;
+}
+
+bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
+                                               const Register Reg,
+                                               int64_t &ImmVal) const {
+
+  if (MI.getOpcode() == SystemZ::VGBM && Reg == MI.getOperand(0).getReg()) {
+    ImmVal = MI.getOperand(1).getImm();
+    // TODO: Handle non-0 values
+    return ImmVal == 0;
   }
 
   return false;
