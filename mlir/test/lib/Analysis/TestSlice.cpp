@@ -25,7 +25,8 @@ struct TestTopologicalSortPass
 
   StringRef getArgument() const final { return "test-print-topological-sort"; }
   StringRef getDescription() const final {
-    return "Print operations in topological order";
+    return "Sorts operations topologically and attaches attributes with their "
+           "corresponding index in the ordering to them";
   }
   void runOnOperation() override {
     SetVector<Operation *> toSort;

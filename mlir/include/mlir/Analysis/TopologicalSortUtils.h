@@ -104,12 +104,12 @@ bool computeTopologicalSorting(
     MutableArrayRef<Operation *> ops,
     function_ref<bool(Value, Operation *)> isOperandReady = nullptr);
 
-/// Get a list of blocks that is sorted according to dominance. This sort is
+/// Gets a list of blocks that is sorted according to dominance. This sort is
 /// stable.
 SetVector<Block *> getBlocksSortedByDominance(Region &region);
 
-/// Sorts all operation in `toSort` topologically while also region semantics.
-/// Does not support multi-sets.
+/// Sorts all operations in `toSort` topologically while also considering region
+/// semantics. Does not support multi-sets.
 SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
 
 } // end namespace mlir

@@ -168,12 +168,12 @@ SetVector<Block *> mlir::getBlocksSortedByDominance(Region &region) {
   return blocks;
 }
 
-/// Computes the common ancestor region of all operations in `ops`. Remembers
-/// all the traversed regions in `traversedRegions`.
-static Region *findCommonParentRegion(const SetVector<Operation *> &ops,
-                                      DenseSet<Region *> &traversedRegions) {
+/// Computes the closest common ancestor region of all operations in `ops`.
+/// Remembers all the traversed regions in `traversedRegions`.
+static Region *findCommonAncestorRegion(const SetVector<Operation *> &ops,
+                                        DenseSet<Region *> &traversedRegions) {
   // Map to count the number of times a region was encountered.
-  llvm::DenseMap<Region *, size_t> regionCounts;
+  DenseMap<Region *, size_t> regionCounts;
   size_t expectedCount = ops.size();
 
   // Walk the region tree for each operation towards the root and add to the
@@ -182,10 +182,8 @@ static Region *findCommonParentRegion(const SetVector<Operation *> &ops,
   for (Operation *op : ops) {
     Region *current = op->getParentRegion();
     while (current) {
-      // Insert or get the count.
-      auto it = regionCounts.try_emplace(current, 0).first;
-      size_t count = ++it->getSecond();
-      if (count == expectedCount) {
+      // Insert or update the count and compare it.
+      if (++regionCounts[current] == expectedCount) {
         res = current;
         break;
       }
@@ -197,11 +195,11 @@ static Region *findCommonParentRegion(const SetVector<Operation *> &ops,
   return res;
 }
 
-/// Topologically traverses `region` and insers all encountered operations in
+/// Topologically traverses `region` and inserts all encountered operations in
 /// `toSort` into the result. Recursively traverses regions when they are
 /// present in `relevantRegions`.
 static void topoSortRegion(Region &region,
-                           const DenseSet<Region *> &relevantRegions,
+                           const DenseSet<Region *> &ancestorRegions,
                            const SetVector<Operation *> &toSort,
                            SetVector<Operation *> &result) {
   SetVector<Block *> sortedBlocks = getBlocksSortedByDominance(region);
@@ -211,9 +209,9 @@ static void topoSortRegion(Region &region,
         result.insert(&op);
       for (Region &subRegion : op.getRegions()) {
         // Skip regions that do not contain operations from `toSort`.
-        if (!relevantRegions.contains(&region))
+        if (!ancestorRegions.contains(&region))
           continue;
-        topoSortRegion(subRegion, relevantRegions, toSort, result);
+        topoSortRegion(subRegion, ancestorRegions, toSort, result);
       }
     }
   }
@@ -224,19 +222,15 @@ mlir::topologicalSort(const SetVector<Operation *> &toSort) {
   if (toSort.size() <= 1)
     return toSort;
 
-  assert(llvm::all_of(toSort,
-                      [&](Operation *op) { return toSort.count(op) == 1; }) &&
-         "expected only unique set entries");
-
   // First, find the root region to start the recursive traversal through the
   // IR.
-  DenseSet<Region *> relevantRegions;
-  Region *rootRegion = findCommonParentRegion(toSort, relevantRegions);
+  DenseSet<Region *> ancestorRegions;
+  Region *rootRegion = findCommonAncestorRegion(toSort, ancestorRegions);
   assert(rootRegion && "expected all ops to have a common ancestor");
 
   // Sort all element in `toSort` by recursively traversing the IR.
   SetVector<Operation *> result;
-  topoSortRegion(*rootRegion, relevantRegions, toSort, result);
+  topoSortRegion(*rootRegion, ancestorRegions, toSort, result);
   assert(result.size() == toSort.size() &&
          "expected all operations to be present in the result");
   return result;

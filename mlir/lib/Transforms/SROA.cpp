@@ -108,14 +108,19 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
 
     // An operation that has blocking uses must be promoted. If it is not
     // promotable, destructuring must fail.
-    if (!promotable)
+    if (!promotable) {
+      // user->emitError() << "not promotable";
       return {};
+    }
 
     SmallVector<OpOperand *> newBlockingUses;
     // If the operation decides it cannot deal with removing the blocking uses,
     // destructuring must fail.
-    if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses, dataLayout))
+    if (!promotable.canUsesBeRemoved(blockingUses, newBlockingUses,
+                                     dataLayout)) {
+      // promotable->emitError() << "not removable";
       return {};
+    }
 
     // Then, register any new blocking uses for coming operations.
     for (OpOperand *blockingUse : newBlockingUses) {
