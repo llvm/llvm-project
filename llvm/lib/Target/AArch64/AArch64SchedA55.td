@@ -26,7 +26,6 @@ def CortexA55Model : SchedMachineModel {
                               // a latency of 3, but some have a latency of 4
                               // or 5. Setting it 4 looked to be good trade-off.
   let MispredictPenalty = 8;  // A branch direction mispredict.
-  let PostRAScheduler = 1;    // Enable PostRA scheduler pass.
   let CompleteModel = 0;      // Covers instructions applicable to Cortex-A55.
 
   list<Predicate> UnsupportedFeatures = [HasSVE, HasMTE];

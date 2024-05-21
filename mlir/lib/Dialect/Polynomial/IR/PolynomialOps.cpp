@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Polynomial/IR/PolynomialOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 
@@ -103,4 +105,106 @@ LogicalResult MulScalarOp::verify() {
                          << getScalar().getType();
 
   return success();
+}
+
+/// Test if a value is a primitive nth root of unity modulo cmod.
+bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
+                               const APInt &cmod) {
+  // Root bitwidth may be 1 less then cmod.
+  APInt r = APInt(root).zext(cmod.getBitWidth());
+  assert(r.ule(cmod) && "root must be less than cmod");
+
+  APInt a = r;
+  for (size_t k = 1; k < n; k++) {
+    if (a.isOne())
+      return false;
+    a = (a * r).urem(cmod);
+  }
+  return a.isOne();
+}
+
+/// Verify that the types involved in an NTT or INTT operation are
+/// compatible.
+static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
+                                 RankedTensorType tensorType) {
+  Attribute encoding = tensorType.getEncoding();
+  if (!encoding) {
+    return op->emitOpError()
+           << "expects a ring encoding to be provided to the tensor";
+  }
+  auto encodedRing = dyn_cast<RingAttr>(encoding);
+  if (!encodedRing) {
+    return op->emitOpError()
+           << "the provided tensor encoding is not a ring attribute";
+  }
+
+  if (encodedRing != ring) {
+    return op->emitOpError()
+           << "encoded ring type " << encodedRing
+           << " is not equivalent to the polynomial ring " << ring;
+  }
+
+  unsigned polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
+  ArrayRef<int64_t> tensorShape = tensorType.getShape();
+  bool compatible = tensorShape.size() == 1 && tensorShape[0] == polyDegree;
+  if (!compatible) {
+    InFlightDiagnostic diag = op->emitOpError()
+                              << "tensor type " << tensorType
+                              << " does not match output type " << ring;
+    diag.attachNote() << "the tensor must have shape [d] where d "
+                         "is exactly the degree of the polynomialModulus of "
+                         "the polynomial type's ring attribute";
+    return diag;
+  }
+
+  if (!ring.getPrimitiveRoot()) {
+    return op->emitOpError()
+           << "ring type " << ring << " does not provide a primitive root "
+           << "of unity, which is required to express an NTT";
+  }
+
+  if (!isPrimitiveNthRootOfUnity(ring.getPrimitiveRoot().getValue(), polyDegree,
+                                 ring.getCoefficientModulus().getValue())) {
+    return op->emitOpError()
+           << "ring type " << ring << " has a primitiveRoot attribute '"
+           << ring.getPrimitiveRoot()
+           << "' that is not a primitive root of the coefficient ring";
+  }
+
+  return success();
+}
+
+LogicalResult NTTOp::verify() {
+  auto ring = getInput().getType().getRing();
+  auto tensorType = getOutput().getType();
+  return verifyNTTOp(this->getOperation(), ring, tensorType);
+}
+
+LogicalResult INTTOp::verify() {
+  auto tensorType = getInput().getType();
+  auto ring = getOutput().getType().getRing();
+  return verifyNTTOp(this->getOperation(), ring, tensorType);
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+namespace {
+#include "PolynomialCanonicalization.inc"
+} // namespace
+
+void SubOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results.add<SubAsAdd>(context);
+}
+
+void NTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results.add<NTTAfterINTT>(context);
+}
+
+void INTTOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<INTTAfterNTT>(context);
 }

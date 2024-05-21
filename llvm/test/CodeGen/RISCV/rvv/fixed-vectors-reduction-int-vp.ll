@@ -802,27 +802,25 @@ define signext i32 @vpreduce_xor_v64i32(i32 signext %s, <64 x i32> %v, <64 x i1>
 ; CHECK-LABEL: vpreduce_xor_v64i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
+; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 4
-; CHECK-NEXT:    addi a2, a1, -32
-; CHECK-NEXT:    sltu a3, a1, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    li a4, 32
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    bltu a1, a4, .LBB49_2
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    bltu a1, a3, .LBB49_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:  .LBB49_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v25, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vredxor.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vredxor.vs v25, v8, v25, v0.t
+; CHECK-NEXT:    addi a0, a1, -32
+; CHECK-NEXT:    sltu a1, a1, a0
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vredxor.vs v8, v16, v8, v0.t
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredxor.vs v25, v16, v25, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vp.reduce.xor.v64i32(i32 %s, <64 x i32> %v, <64 x i1> %m, i32 %evl)
   ret i32 %r

@@ -21,7 +21,6 @@ def ThunderX3T110Model : SchedMachineModel {
   let MispredictPenalty     =  12; // Extra cycles for mispredicted branch.
   // Determined via a mix of micro-arch details and experimentation.
   let LoopMicroOpBufferSize = 128; // FIXME: might be much bigger in TX3.
-  let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,

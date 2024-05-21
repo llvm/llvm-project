@@ -25,14 +25,14 @@
 ; }
 
 ; ; xchg is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-; define <2 x bfloat> @test_atomicrmw_xchg_v2bf16_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-;   %res = atomicrmw xchg ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory.access !0
+; define <2 x bfloat> @test_atomicrmw_xchg_v2bf16_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+;   %res = atomicrmw xchg ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory !0
 ;   ret <2 x bfloat> %res
 ; }
 
 ; ; xchg is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-; define <2 x bfloat> @test_atomicrmw_xchg_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-;   %res = atomicrmw xchg ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+; define <2 x bfloat> @test_atomicrmw_xchg_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+;   %res = atomicrmw xchg ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
 ;   ret <2 x bfloat> %res
 ; }
 
@@ -84,8 +84,8 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_gr
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -102,12 +102,12 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_remote_
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -124,12 +124,12 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_v2bf16_daz(ptr addrspace(1) %ptr, <2 x bfloat> %value) #0 {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_v2bf16_daz(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(ptr addrspace(1) %ptr, <2 x bfloat> %value) #0 {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -146,12 +146,12 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_v2bf16_dynamic(ptr addrspace(1) %ptr, <2 x bfloat> %value) #1 {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access___denormal_fp_mode_v2bf16_dynamic(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(ptr addrspace(1) %ptr, <2 x bfloat> %value) #1 {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -168,7 +168,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
@@ -216,8 +216,8 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -234,12 +234,12 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -256,12 +256,12 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(ptr addrspace(1) %ptr, <2 x bfloat> %value) #0 {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_daz(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(ptr addrspace(1) %ptr, <2 x bfloat> %value) #0 {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -278,12 +278,12 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(ptr addrspace(1) %ptr, <2 x bfloat> %value) #1 {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access__denormal_mode_dynamic(
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(ptr addrspace(1) %ptr, <2 x bfloat> %value) #1 {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR2]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -300,7 +300,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -352,8 +352,8 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_gr
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -370,12 +370,12 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_remote_
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -392,7 +392,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
@@ -440,8 +440,8 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -458,12 +458,12 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -480,7 +480,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -532,8 +532,8 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_fine_gr
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -550,12 +550,12 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_remote_
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -572,7 +572,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
@@ -620,8 +620,8 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -638,12 +638,12 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -660,7 +660,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -712,8 +712,8 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_fine_gr
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -730,12 +730,12 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_remote_
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -752,7 +752,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret <2 x bfloat> %res
 }
 
@@ -800,8 +800,8 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -818,12 +818,12 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
-define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
-; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -840,7 +840,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
