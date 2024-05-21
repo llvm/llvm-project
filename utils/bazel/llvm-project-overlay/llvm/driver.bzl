@@ -42,7 +42,6 @@ _EXTRA_ALIASES = {
     "llvm-cxxfilt": ["c++filt"],
     "llvm-objcopy": ["bitcode-strip", "install-name-tool", "strip"],
     "llvm-objdump": ["otool"],
-    "llvm-profdata": ["gcov-tool"],
     "llvm-rc": ["windres"],
     "llvm-readobj": ["readelf"],
     "llvm-symbolizer": ["addr2line"],
