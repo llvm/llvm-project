@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 
 ! 2.15.3 Although variables in common blocks can be accessed by use association
