@@ -2058,10 +2058,8 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
         PGOOpt->ProfileRemappingFile, PGOOpt->FS);
 
   // Instrument function entry and exit before all inlining.
-  if (LTOPreLink) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        EntryExitInstrumenterPass(/*PostInlining=*/false)));
-  }
+  MPM.addPass(createModuleToFunctionPassAdaptor(
+      EntryExitInstrumenterPass(/*PostInlining=*/false)));
 
   invokePipelineStartEPCallbacks(MPM, Level);
 
