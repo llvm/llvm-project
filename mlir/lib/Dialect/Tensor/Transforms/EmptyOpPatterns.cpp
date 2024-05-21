@@ -96,10 +96,7 @@ private:
 /// tensor.empty does not define any tensor contents, so an unpadded pack
 /// can be folded away.
 struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
-  FoldEmptyTensorWithPackOp(MLIRContext *ctx, PatternBenefit benefit = 1,
-                            bool foldSingleUseOnly = false)
-      : OpRewritePattern<PackOp>(ctx, benefit),
-        foldSingleUseOnly(foldSingleUseOnly) {}
+  using OpRewritePattern<PackOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
@@ -108,32 +105,22 @@ struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
     if (!emptyOp)
       return failure();
 
-    // Check for single use.
-    if (foldSingleUseOnly && !llvm::hasSingleElement(emptyOp->getUses()))
-      return failure();
-
     // Check for padding.
     // Packing with padding cannot be simply removed.
     if (packOp.getPaddingValue())
-      return failure();
+      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
 
     // Replace the pack directly with its destination.
     rewriter.replaceOp(packOp, packOp.getDest());
 
     return success();
   }
-
-private:
-  bool foldSingleUseOnly = false;
 };
 
 /// tensor.empty does not define any tensor contents, so an unpack
 /// can be folded away.
 struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
-  FoldEmptyTensorWithUnPackOp(MLIRContext *ctx, PatternBenefit benefit = 1,
-                              bool foldSingleUseOnly = false)
-      : OpRewritePattern<UnPackOp>(ctx, benefit),
-        foldSingleUseOnly(foldSingleUseOnly) {}
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
@@ -142,18 +129,11 @@ struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
     if (!emptyOp)
       return failure();
 
-    // Check for single use.
-    if (foldSingleUseOnly && !llvm::hasSingleElement(emptyOp->getUses()))
-      return failure();
-
     // Replace the unpack directly with its destination.
     rewriter.replaceOp(unPackOp, unPackOp.getDest());
 
     return success();
   }
-
-private:
-  bool foldSingleUseOnly = false;
 };
 
 } // namespace
@@ -162,7 +142,8 @@ void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
                                                    bool foldSingleUseOnly) {
   patterns.add<FoldEmptyTensorWithExtractSliceOp,
                FoldEmptyTensorWithReshapeOp<tensor::ExpandShapeOp>,
-               FoldEmptyTensorWithReshapeOp<tensor::CollapseShapeOp>,
-               FoldEmptyTensorWithPackOp, FoldEmptyTensorWithUnPackOp>(
+               FoldEmptyTensorWithReshapeOp<tensor::CollapseShapeOp>>(
       patterns.getContext(), /*benefit=*/1, foldSingleUseOnly);
+  patterns.add<FoldEmptyTensorWithPackOp, FoldEmptyTensorWithUnPackOp>(
+      patterns.getContext(), /*benefit=*/1);
 }
