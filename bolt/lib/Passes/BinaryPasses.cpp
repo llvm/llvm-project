@@ -1553,15 +1553,29 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
       llvm::stable_sort(Functions,
                         [Ascending, &Stats](const BinaryFunction *A,
                                             const BinaryFunction *B) {
-                          return Ascending ? Stats.at(A) < Stats.at(B)
-                                           : Stats.at(B) < Stats.at(A);
+                          auto StatsItr = Stats.find(A);
+                          assert(StatsItr != Stats.end());
+                          const DynoStats &StatsA = StatsItr->second;
+
+                          StatsItr = Stats.find(B);
+                          assert(StatsItr != Stats.end());
+                          const DynoStats &StatsB = StatsItr->second;
+
+                          return Ascending ? StatsA < StatsB
+                                           : StatsB < StatsA;
                         });
     } else {
       llvm::stable_sort(
           Functions, [Ascending, &Stats](const BinaryFunction *A,
                                          const BinaryFunction *B) {
-            const DynoStats &StatsA = Stats.at(A);
-            const DynoStats &StatsB = Stats.at(B);
+            auto StatsItr = Stats.find(A);
+            assert(StatsItr != Stats.end());
+            const DynoStats &StatsA = StatsItr->second;
+
+            StatsItr = Stats.find(B);
+            assert(StatsItr != Stats.end());
+            const DynoStats &StatsB = StatsItr->second;
+
             return Ascending ? StatsA.lessThan(StatsB, opts::PrintSortedBy)
                              : StatsB.lessThan(StatsA, opts::PrintSortedBy);
           });
