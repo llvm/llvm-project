@@ -36,7 +36,6 @@ static void getKernelVersion(uint32_t *Val) {
   // release should be in the format: %d.%d.%d
   // major, minor, release
   struct UtsNameTy UtsName;
-  int Ret = __uname(&UtsName);
   const char *Buf = UtsName.release;
   const char *End = Buf + strLen(Buf);
   const char Delims[2][2] = {".", "."};
