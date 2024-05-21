@@ -170,9 +170,8 @@ public:
 /// form where each clause has at least one and at most three literals.
 /// `Atomics` is populated with a mapping from `Variables` to the corresponding
 /// `Atom`s for atomic booleans in the input formulas.
-CNFFormula
-buildCNF(const llvm::ArrayRef<const Formula *> &Formulas,
-         llvm::DenseMap<Variable, Atom> &Atomics);
+CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Formulas,
+                    llvm::DenseMap<Variable, Atom> &Atomics);
 
 } // namespace dataflow
 } // namespace clang
