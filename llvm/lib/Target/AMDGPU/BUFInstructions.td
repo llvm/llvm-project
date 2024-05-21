@@ -1726,7 +1726,7 @@ let SubtargetPredicate = isGFX12Plus in {
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["noret"]>;
 }
 
-let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
+let OtherPredicates = [isGFX6GFX7GFX10Plus] in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f32, "BUFFER_ATOMIC_FMIN">;
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmax", f32, "BUFFER_ATOMIC_FMAX">;
 }
@@ -2456,13 +2456,19 @@ class get_BUF_ps<string name> {
 
 // gfx11 instruction that accept both old and new assembler name.
 class Mnem_gfx11_gfx12 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Plus]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX11Plus;
+}
 
 class Mnem_gfx11 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX11Only]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX11Only;
+}
 
 class Mnem_gfx12 <string mnemonic, string real_name> :
-  MnemonicAlias<mnemonic, real_name>, Requires<[isGFX12Plus]>;
+    AMDGPUMnemonicAlias<mnemonic, real_name> {
+  let AssemblerPredicate = isGFX12Plus;
+}
 
 multiclass MUBUF_Real_AllAddr_gfx11_Impl2<bits<8> op, string real_name> {
   defm _BOTHEN : MUBUF_Real_gfx11<op, real_name>;

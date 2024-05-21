@@ -680,9 +680,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     }
   }
 
-  // Determine if there is a call to setjmp in the machine function.
-  MF->setExposesReturnsTwice(Fn.callsFunctionThatReturnsTwice());
-
   // Determine if floating point is used for msvc
   computeUsesMSVCFloatingPoint(TM.getTargetTriple(), Fn, MF->getMMI());
 
@@ -1059,6 +1056,8 @@ public:
     SDNode *CurNode = &*ISelPosition;
     if (MDNode *MD = DAG.getPCSections(CurNode))
       DAG.addPCSections(N, MD);
+    if (MDNode *MMRA = DAG.getMMRAMetadata(CurNode))
+      DAG.addMMRAMetadata(N, MMRA);
   }
 };
 

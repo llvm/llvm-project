@@ -2004,8 +2004,18 @@ public:
   // Instruction creation methods: Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
-  Value *CreateTrunc(Value *V, Type *DestTy, const Twine &Name = "") {
-    return CreateCast(Instruction::Trunc, V, DestTy, Name);
+  Value *CreateTrunc(Value *V, Type *DestTy, const Twine &Name = "",
+                     bool IsNUW = false, bool IsNSW = false) {
+    if (V->getType() == DestTy)
+      return V;
+    if (Value *Folded = Folder.FoldCast(Instruction::Trunc, V, DestTy))
+      return Folded;
+    Instruction *I = CastInst::Create(Instruction::Trunc, V, DestTy);
+    if (IsNUW)
+      I->setHasNoUnsignedWrap();
+    if (IsNSW)
+      I->setHasNoSignedWrap();
+    return Insert(I, Name);
   }
 
   Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "",
@@ -2340,7 +2350,7 @@ public:
 
   Value *CreateICmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
                     const Twine &Name = "") {
-    if (auto *V = Folder.FoldICmp(P, LHS, RHS))
+    if (auto *V = Folder.FoldCmp(P, LHS, RHS))
       return V;
     return Insert(new ICmpInst(P, LHS, RHS), Name);
   }

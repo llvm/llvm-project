@@ -908,7 +908,8 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     for (const auto *FI : RD->fields()) {
       if (!First)
         Out << ", ";
-      if (FI->isUnnamedBitfield()) continue;
+      if (FI->isUnnamedBitField())
+        continue;
       getStructField(FI->getFieldIndex()).
         printPretty(Out, Policy, FI->getType(), Ctx);
       First = false;
