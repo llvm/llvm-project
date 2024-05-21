@@ -7906,6 +7906,51 @@ static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   return new FCmpInst(Pred, Op0, Zero, "", &I);
 }
 
+static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
+                                         Constant *RHSC, InstCombinerImpl &CI) {
+  const CmpInst::Predicate Pred = I.getPredicate();
+  Value *X, *Y;
+  switch (Pred) {
+  default:
+    break;
+  case FCmpInst::FCMP_UGT:
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_UNE:
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_OLE:
+    // Skip optimization: fsub x, y unless guaranteed !isinf(x) ||
+    // !isinf(y).
+    if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
+        !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
+                              CI.getSimplifyQuery().getWithInstruction(&I)) &&
+        !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
+                              CI.getSimplifyQuery().getWithInstruction(&I)))
+      break;
+
+    [[fallthrough]];
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UEQ:
+  case FCmpInst::FCMP_UGE:
+  case FCmpInst::FCMP_ULE:
+    // fcmp pred (x - y), 0 --> fcmp pred x, y
+    if (match(RHSC, m_AnyZeroFP()) &&
+        match(LHSI, m_FSub(m_Value(X), m_Value(Y))) &&
+        I.getFunction()->getDenormalMode(
+            LHSI->getType()->getScalarType()->getFltSemantics()) ==
+            DenormalMode::getIEEE()) {
+      CI.replaceOperand(I, 0, X);
+      CI.replaceOperand(I, 1, Y);
+      return &I;
+    }
+    break;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -8077,44 +8122,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return NV;
       break;
     case Instruction::FSub:
-      switch (Pred) {
-      default:
-        break;
-      case FCmpInst::FCMP_UGT:
-      case FCmpInst::FCMP_ULT:
-      case FCmpInst::FCMP_UNE:
-      case FCmpInst::FCMP_OEQ:
-      case FCmpInst::FCMP_OGE:
-      case FCmpInst::FCMP_OLE:
-        // Skip optimization: fsub x, y unless guaranteed !isinf(x) ||
-        // !isinf(y).
-        if (!LHSI->hasOneUse() ||
-            (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
-             !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
-                                   getSimplifyQuery().getWithInstruction(&I)) &&
-             !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
-                                   getSimplifyQuery().getWithInstruction(&I))))
-          break;
-
-        [[fallthrough]];
-      case FCmpInst::FCMP_OGT:
-      case FCmpInst::FCMP_OLT:
-      case FCmpInst::FCMP_ONE:
-      case FCmpInst::FCMP_UEQ:
-      case FCmpInst::FCMP_UGE:
-      case FCmpInst::FCMP_ULE:
-        // fcmp pred (x - y), 0 --> fcmp pred x, y
-        if (match(RHSC, m_AnyZeroFP()) &&
-            match(LHSI, m_OneUse(m_FSub(m_Value(X), m_Value(Y)))) &&
-            I.getFunction()->getDenormalMode(
-                LHSI->getType()->getScalarType()->getFltSemantics()) ==
-                DenormalMode::getIEEE()) {
-          replaceOperand(I, 0, X);
-          replaceOperand(I, 1, Y);
-          return &I;
-        }
-        break;
-      }
+      if (LHSI->hasOneUse())
+        if (Instruction *NV = foldFCmpFSubIntoFCmp(I, LHSI, RHSC, *this))
+          return NV;
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
