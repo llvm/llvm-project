@@ -11235,9 +11235,9 @@ SDValue TargetLowering::expandMCOMPRESS(SDNode *Node, SelectionDAG &DAG) const {
   EVT ScalarVT = VecVT.getScalarType();
   EVT MaskScalarVT = Mask.getValueType().getScalarType();
 
+  // Needs to be handled by targets that have scalable vector types.
   if (VecVT.isScalableVector())
-    report_fatal_error(
-        "Expanding masked_compress for scalable vectors is undefined.");
+    report_fatal_error("Cannot expand masked_compress for scalable vectors.");
 
   SDValue StackPtr = DAG.CreateStackTemporary(
       VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));

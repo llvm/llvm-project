@@ -203,21 +203,53 @@ define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
     ret <8 x i32> %out
 }
 
-define <4 x i32> @test_compress_const(<4 x i32> %vec, <4 x i1> %mask) {
-; CHECK-LABEL: test_compress_const:
+define <4 x i32> @test_compress_all_const() {
+; CHECK:       lCPI4_0:
+; CHECK-NEXT:	.long	5
+; CHECK-NEXT:	.long	9
+; CHECK-LABEL: test_compress_all_const:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, #3 ; =0x3
-; CHECK-NEXT:    mov w9, #9 ; =0x9
-; CHECK-NEXT:    movk x8, #7, lsl #32
-; CHECK-NEXT:    str x8, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov w8, #5 ; =0x5
-; CHECK-NEXT:    str w9, [sp, #8]
-; CHECK-NEXT:    str w8, [sp]
-; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, lCPI4_0@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr q0, [x8, lCPI4_0@PAGEOFF]
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress.v4i32(<4 x i32> <i32 3, i32 5, i32 7, i32 9>,
-                                                      <4 x i1>   <i1 0,  i1 1,  i1 1,  i1 0>)
+    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> <i32 3, i32 5, i32 7, i32 9>,
+                                                <4 x i1>   <i1 0,  i1 1,  i1 0,  i1 1>)
+    ret <4 x i32> %out
+}
+
+define <4 x i32> @test_compress_const_mask(<4 x i32> %vec) {
+; CHECK-LABEL: test_compress_const_mask:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov.s v0[1], v0[3]
+; CHECK-NEXT:    ret
+    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>)
+    ret <4 x i32> %out
+}
+
+; We pass a placeholder value for the const_mask* tests to check that they are converted to a no-op by simply copying
+; the second vector input register to the return register or doing nothing.
+define <4 x i32> @test_compress_const_splat1_mask(<4 x i32> %ignore, <4 x i32> %vec) {
+; CHECK-LABEL: test_compress_const_splat1_mask:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    ret
+    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> splat (i1 -1))
+    ret <4 x i32> %out
+}
+define <4 x i32> @test_compress_const_splat0_mask(<4 x i32> %ignore, <4 x i32> %vec) {
+; CHECK-LABEL: test_compress_const_splat0_mask:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ret
+    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> splat (i1 0))
+    ret <4 x i32> %out
+}
+define <4 x i32> @test_compress_undef_mask(<4 x i32> %ignore, <4 x i32> %vec) {
+; CHECK-LABEL: test_compress_undef_mask:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ret
+    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> undef)
     ret <4 x i32> %out
 }
 

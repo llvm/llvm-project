@@ -6279,7 +6279,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
+  // MCOMPRESS is not defined for scalars. We handle constants before this call.
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
+      Opcode == ISD::MCOMPRESS)
     return SDValue();
 
   unsigned NumOps = Ops.size();
@@ -7195,6 +7197,48 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getOpcode() == ISD::INSERT_SUBVECTOR && N2 == N1.getOperand(2) &&
         VT == N1.getOperand(1).getValueType())
       return N1.getOperand(1);
+    break;
+  }
+  case ISD::MCOMPRESS: {
+    EVT VecVT = N1.getValueType();
+    EVT MaskVT = N2.getValueType();
+    (void)MaskVT;
+    assert(VT == VecVT && "Vector and result type don't match.");
+    assert(VecVT.isVector() && MaskVT.isVector() &&
+           "Both inputs must be vectors.");
+    assert(VecVT.isScalableVector() == MaskVT.isScalableVector() &&
+           "Inputs must both be either fixed or scalable vectors.");
+    assert(VecVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "Vector and mask must have same number of elements.");
+
+    APInt SplatVal;
+    if (ISD::isConstantSplatVector(N2.getNode(), SplatVal))
+      return SplatVal.isAllOnes() ? N1 : getUNDEF(VecVT);
+
+    // No need for potentially expensive compress if the mask is constant.
+    if (ISD::isBuildVectorOfConstantSDNodes(N2.getNode())) {
+      SmallVector<SDValue, 16> Ops;
+      EVT ScalarVT = VecVT.getVectorElementType();
+      unsigned NumSelected = 0;
+      unsigned NumElmts = VecVT.getVectorNumElements();
+      for (unsigned I = 0; I < NumElmts; ++I) {
+        SDValue MaskI = N2.getOperand(I);
+        if (MaskI.isUndef())
+          continue;
+
+        ConstantSDNode *CMaskI = cast<ConstantSDNode>(MaskI);
+        if (CMaskI->isAllOnes()) {
+          SDValue VecI = getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, N1,
+                                 getVectorIdxConstant(I, DL));
+          Ops.push_back(VecI);
+          NumSelected++;
+        }
+      }
+      for (unsigned Rest = NumSelected; Rest < NumElmts; ++Rest) {
+        Ops.push_back(getUNDEF(ScalarVT));
+      }
+      return getBuildVector(VecVT, DL, Ops);
+    }
     break;
   }
   }
