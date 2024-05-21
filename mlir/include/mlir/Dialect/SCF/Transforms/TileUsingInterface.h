@@ -36,9 +36,7 @@ struct SCFTilingOptions {
   /// Returning a tile size of zero implies no tiling for that loop. If the
   /// size of the returned vector is smaller than the number of loops, the inner
   /// loops are not tiled. If the size of the returned vector is larger, then
-  /// the vector is truncated to number of loops.  Only one of
-  /// `tileSizeComputationFunction` or `maxNumTilesComputationFunction` should
-  /// be used.
+  /// the vector is truncated to number of loops.
   SCFTileSizeComputationFunction tileSizeComputationFunction = nullptr;
 
   SCFTilingOptions &
@@ -51,23 +49,25 @@ struct SCFTilingOptions {
   /// proper interaction with folding.
   SCFTilingOptions &setTileSizes(ArrayRef<OpFoldResult> tileSizes);
 
-  /// Computation function that returns the maximum number of tile to use for
-  /// each loop. Returning a tile size of zero implies no tiling for that loop.
-  /// If the size of the returned vector is smaller than the number of loops,
-  /// the inner loops are not tiled. If the size of the returned vector is
-  /// larger, then the vector is truncated to number of loops. Only one of
-  /// `tileSizeComputationFunction` or `maxNumTilesComputationFunction` should
-  /// be used.
-  SCFTileSizeComputationFunction maxNumTilesComputationFunction = nullptr;
+  /// Computation function that returns the number of threads to use for
+  /// each loop. Returning a num threads of zero implies no tiling for that
+  /// loop. If the size of the returned vector is smaller than the number of
+  /// loops, the inner loops are not tiled. If the size of the returned vector
+  /// is larger, then the vector is truncated to number of loops. Note: This
+  /// option is only supported with loopType set to `LoopType::ForallOp`. If the
+  /// tile size function is not specified while the num threads computation is,
+  /// then the tile size is determined automatically to map at most one tile per
+  /// thread.
+  SCFTileSizeComputationFunction numThreadsComputationFunction = nullptr;
 
   SCFTilingOptions &
-  setMaxNumTilesComputationFunction(SCFTileSizeComputationFunction fun) {
-    maxNumTilesComputationFunction = std::move(fun);
+  setNumThreadsComputationFunction(SCFTileSizeComputationFunction fun) {
+    numThreadsComputationFunction = std::move(fun);
     return *this;
   }
   /// Convenience function to set the `tileSizeComputationFunction` to a
   /// function that computes tile sizes at the point they are needed.
-  SCFTilingOptions &setMaxNumTiles(ArrayRef<OpFoldResult> numTiles);
+  SCFTilingOptions &setNumThreads(ArrayRef<OpFoldResult> numThreads);
 
   /// The interchange vector to reorder the tiled loops.
   SmallVector<int64_t> interchangeVector = {};

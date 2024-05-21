@@ -1,4 +1,4 @@
-// RUN: mlir-opt --transform-interpreter --mlir-print-local-scope --split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter --mlir-print-local-scope --split-input-file --verify-diagnostics --cse %s | FileCheck %s
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -178,12 +178,11 @@ module {
 
 // CHECK-LABEL:   func.func @scalable_tile(
 // CHECK-SAME:      %[[ARG_0:.*]]: tensor<?xf32>, %[[ARG_1:.*]]: tensor<?xf32>, %[[ARG_2:.*]]: tensor<?xf32>,
-// CHECK:           %[[C4:.*]] = arith.constant 0 : index
-// CHECK:           %[[DIM:.*]] = tensor.dim %[[ARG_0]], %[[C4]] : tensor<?xf32>
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : tensor<?xf32>
 // CHECK:           %[[VEC_SIZE:.*]] = arith.constant 4 : index
 // CHECK:           %[[VS:.*]] = vector.vscale
 // CHECK:           %[[STEP:.*]] = arith.muli %[[VEC_SIZE]], %[[VS]] : index
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           scf.for %[[IV:.*]] = %[[C0]] to %[[DIM]] step %[[STEP]] iter_args(%[[VAL:.*]] = %[[ARG_2]]) -> (tensor<?xf32>) {
 // CHECK:             %[[SIZE:.*]] = affine.min affine_map<(d0)[s0, s1] -> (s0, -d0 + s1)>(%[[IV]])[%[[STEP]], %[[DIM]]]
 // CHECK:             %[[SLICE_ARG0:.*]] = tensor.extract_slice %[[ARG_0]][%[[IV]]] [%[[SIZE]]] [1] : tensor<?xf32> to tensor<?xf32>
@@ -202,20 +201,14 @@ module {
 // -----
 
 // CHECK-LABEL:   func.func @scalable_and_fixed_length_tile
-// CHECK:           %[[C4:.*]] = arith.constant 4 : index
-// CHECK:           %[[VS:.*]] = vector.vscale
-// CHECK:           %[[STEP_2:.*]] = arith.muli %[[C4]], %[[VS]] : index
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C128:.*]] = arith.constant 128 : index
-// CHECK:           %[[STEP_0:.*]] = arith.constant 4 : index
-// CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C128]] step %[[STEP_0]]
-// CHECK:             %[[C0_1:.*]] = arith.constant 0 : index
-// CHECK:             %[[C128_1:.*]] = arith.constant 128 : index
-// CHECK:             %[[STEP_1:.*]] = arith.constant 4 : index
-// CHECK:             scf.for %[[VAL_16:.*]] = %[[C0_1]] to %[[C128_1]] step %[[STEP_1]]
-// CHECK:               %[[C0_2:.*]] = arith.constant 0 : index
-// CHECK:               %[[C128_2:.*]] = arith.constant 128 : index
-// CHECK:               scf.for %{{.*}} = %[[C0_2]] to %[[C128_2]] step %[[STEP_2]]
+//   CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+//   CHECK-DAG:     %[[VS:.*]] = vector.vscale
+//   CHECK-DAG:     %[[STEP_2:.*]] = arith.muli %[[C4]], %[[VS]] : index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+//       CHECK:     scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C128]] step %[[C4]]
+//       CHECK:       scf.for %[[VAL_16:.*]] = %[[C0]] to %[[C128]] step %[[C4]]
+//       CHECK:         scf.for %{{.*}} = %[[C0]] to %[[C128]] step %[[STEP_2]]
 
 func.func @scalable_and_fixed_length_tile(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
