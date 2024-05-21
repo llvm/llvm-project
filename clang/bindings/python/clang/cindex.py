@@ -865,7 +865,7 @@ CursorKind.CXX_BASE_SPECIFIER = CursorKind(44)
 # template parameter, or class template partial specialization.
 CursorKind.TEMPLATE_REF = CursorKind(45)
 
-# A reference to a namespace or namepsace alias.
+# A reference to a namespace or namespace alias.
 CursorKind.NAMESPACE_REF = CursorKind(46)
 
 # A reference to a member of a struct, union, or class that occurs in
@@ -2769,7 +2769,7 @@ class _CXUnsavedFile(Structure):
 
 
 # Functions calls through the python interface are rather slow. Fortunately,
-# for most symboles, we do not need to perform a function call. Their spelling
+# for most symbols, we do not need to perform a function call. Their spelling
 # never changes and is consequently provided by this spelling cache.
 SpellingCache = {
     # 0: CompletionChunk.Kind("Optional"),
