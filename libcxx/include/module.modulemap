@@ -1066,7 +1066,11 @@ module std_private_atomic_atomic_flag         [system] {
 }
 module std_private_atomic_atomic_init         [system] { header "__atomic/atomic_init.h" }
 module std_private_atomic_atomic_lock_free    [system] { header "__atomic/atomic_lock_free.h" }
-module std_private_atomic_atomic_sync         [system] { header "__atomic/atomic_sync.h" }
+module std_private_atomic_atomic_ref          [system] { header "__atomic/atomic_ref.h" }
+module std_private_atomic_atomic_sync         [system] {
+  header "__atomic/atomic_sync.h"
+  export std_private_atomic_to_gcc_order
+}
 module std_private_atomic_check_memory_order  [system] { header "__atomic/check_memory_order.h" }
 module std_private_atomic_contention_t        [system] { header "__atomic/contention_t.h" }
 module std_private_atomic_cxx_atomic_impl     [system] { header "__atomic/cxx_atomic_impl.h" }
@@ -1074,6 +1078,10 @@ module std_private_atomic_fence               [system] { header "__atomic/fence.
 module std_private_atomic_is_always_lock_free [system] { header "__atomic/is_always_lock_free.h" }
 module std_private_atomic_kill_dependency     [system] { header "__atomic/kill_dependency.h" }
 module std_private_atomic_memory_order        [system] { header "__atomic/memory_order.h" }
+module std_private_atomic_to_gcc_order        [system] {
+  header "__atomic/to_gcc_order.h"
+  export std_private_atomic_memory_order
+}
 
 module std_private_bit_bit_cast       [system] { header "__bit/bit_cast.h" }
 module std_private_bit_bit_ceil       [system] { header "__bit/bit_ceil.h" }
