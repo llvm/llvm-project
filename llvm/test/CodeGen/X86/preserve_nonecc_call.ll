@@ -27,6 +27,7 @@ define void @caller1(ptr %a) {
 ; CHECK-NEXT:    .cfi_offset %r13, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
+; CHECK-NEXT:    movq %rdi, %r12
 ; CHECK-NEXT:    callq callee@PLT
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
@@ -61,17 +62,17 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %r13, %r12
+; CHECK-NEXT:    movq %r14, %r13
+; CHECK-NEXT:    movq %r15, %r14
+; CHECK-NEXT:    movq %rdi, %r15
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    movq %rdx, %rsi
 ; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    movq %r8, %rcx
 ; CHECK-NEXT:    movq %r9, %r8
 ; CHECK-NEXT:    movq %r11, %r9
-; CHECK-NEXT:    movq %r12, %r11
-; CHECK-NEXT:    movq %r13, %r12
-; CHECK-NEXT:    movq %r14, %r13
-; CHECK-NEXT:    movq %r15, %r14
-; CHECK-NEXT:    movq %rax, %r15
+; CHECK-NEXT:    movq %rax, %r11
 ; CHECK-NEXT:    callq callee_with_many_param2@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -98,17 +99,17 @@ define i64 @caller3() {
 ; CHECK-NEXT:    .cfi_offset %r13, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movl $1, %edi
-; CHECK-NEXT:    movl $2, %esi
-; CHECK-NEXT:    movl $3, %edx
-; CHECK-NEXT:    movl $4, %ecx
-; CHECK-NEXT:    movl $5, %r8d
-; CHECK-NEXT:    movl $6, %r9d
-; CHECK-NEXT:    movl $7, %r11d
-; CHECK-NEXT:    movl $8, %r12d
-; CHECK-NEXT:    movl $9, %r13d
-; CHECK-NEXT:    movl $10, %r14d
-; CHECK-NEXT:    movl $11, %r15d
+; CHECK-NEXT:    movl $1, %r12d
+; CHECK-NEXT:    movl $2, %r13d
+; CHECK-NEXT:    movl $3, %r14d
+; CHECK-NEXT:    movl $4, %r15d
+; CHECK-NEXT:    movl $5, %edi
+; CHECK-NEXT:    movl $6, %esi
+; CHECK-NEXT:    movl $7, %edx
+; CHECK-NEXT:    movl $8, %ecx
+; CHECK-NEXT:    movl $9, %r8d
+; CHECK-NEXT:    movl $10, %r9d
+; CHECK-NEXT:    movl $11, %r11d
 ; CHECK-NEXT:    movl $12, %eax
 ; CHECK-NEXT:    callq callee_with_many_param@PLT
 ; CHECK-NEXT:    popq %rbx
@@ -124,4 +125,21 @@ define i64 @caller3() {
 ; CHECK-NEXT:    retq
   %ret = call preserve_nonecc i64 @callee_with_many_param(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12)
   ret i64 %ret
+}
+
+; Non-volatile registers are used to pass the first few parameters.
+declare void @boring()
+declare preserve_nonecc void @continuation(ptr, ptr, ptr, ptr)
+define preserve_nonecc void @entry(ptr %r12, ptr %r13, ptr %r14, ptr %r15) {
+; CHECK-LABEL: entry:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq boring@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    jmp continuation@PLT # TAILCALL
+  call void @boring()
+  musttail call preserve_nonecc void @continuation(ptr %r12, ptr %r13, ptr %r14, ptr %r15)
+  ret void
 }

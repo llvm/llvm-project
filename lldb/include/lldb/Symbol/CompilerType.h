@@ -262,6 +262,12 @@ public:
   size_t GetPointerByteSize() const;
   /// \}
 
+  unsigned GetPtrAuthKey() const;
+
+  unsigned GetPtrAuthDiscriminator() const;
+
+  bool GetPtrAuthAddressDiversity() const;
+
   /// Accessors.
   /// \{
 
@@ -369,6 +375,12 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Return a new CompilerType adds a ptrauth modifier from the given 32-bit
+  /// opaque payload to this type if this type is valid and the type system
+  /// supports ptrauth modifiers, else return an invalid type. Note that this
+  /// does not check if this type is a pointer.
+  CompilerType AddPtrAuthModifier(uint32_t payload) const;
   /// \}
 
   /// Exploring the type.
@@ -415,6 +427,8 @@ public:
 
   CompilerType GetVirtualBaseClassAtIndex(size_t idx,
                                           uint32_t *bit_offset_ptr) const;
+
+  CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
 
   uint32_t GetIndexOfFieldWithName(const char *name,
                                    CompilerType *field_compiler_type = nullptr,

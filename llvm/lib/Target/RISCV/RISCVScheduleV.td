@@ -514,8 +514,9 @@ def WriteVMovXS : SchedWrite;
 def WriteVMovSF : SchedWrite;
 def WriteVMovFS : SchedWrite;
 // 16.3. Vector Slide Instructions
-defm "" : LMULSchedWrites<"WriteVISlideX">;
-defm "" : LMULSchedWrites<"WriteVISlideI">;
+defm "" : LMULSchedWrites<"WriteVSlideUpX">;
+defm "" : LMULSchedWrites<"WriteVSlideDownX">;
+defm "" : LMULSchedWrites<"WriteVSlideI">;
 defm "" : LMULSchedWrites<"WriteVISlide1X">;
 defm "" : LMULSchedWrites<"WriteVFSlide1F">;
 // 16.4. Vector Register Gather Instructions
@@ -949,8 +950,9 @@ def : WriteRes<WriteVMovSX, []>;
 def : WriteRes<WriteVMovXS, []>;
 def : WriteRes<WriteVMovSF, []>;
 def : WriteRes<WriteVMovFS, []>;
-defm "" : LMULWriteRes<"WriteVISlideX", []>;
-defm "" : LMULWriteRes<"WriteVISlideI", []>;
+defm "" : LMULWriteRes<"WriteVSlideUpX", []>;
+defm "" : LMULWriteRes<"WriteVSlideDownX", []>;
+defm "" : LMULWriteRes<"WriteVSlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
 defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
 defm "" : LMULSEWWriteRes<"WriteVRGatherVV", []>;

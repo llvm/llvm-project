@@ -1110,14 +1110,15 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
 
 // This is hasSideEffects to allow its use in readcyclecounter selection.
 // FIXME: Need to truncate immediate to 16-bits.
-// FIXME: Missing mode register use. Should have separate pseudos for
-// known may read MODE and only read MODE.
+// FIXME: Should have separate pseudos for known may read MODE and
+// only read MODE.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
   "$sdst, $simm16",
   [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
   let hasSideEffects = 1;
+  let Uses = [MODE];
 }
 
 let Defs = [MODE], Uses = [MODE] in {
@@ -1803,7 +1804,7 @@ def : GCNPat<
 let SubtargetPredicate = isNotGFX12Plus in
   def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 0))>;
 let SubtargetPredicate = isGFX12Plus in
-  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 1))>;
+  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 2))>;
 
 // The first 10 bits of the mode register are the core FP mode on all
 // subtargets.
@@ -1974,7 +1975,9 @@ multiclass SOP1_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   def _gfx11 : SOP1_Real<op, ps, name>,
                Select_gfx11<ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX11Only;
+    }
 }
 
 multiclass SOP1_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
@@ -1982,7 +1985,9 @@ multiclass SOP1_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
   def _gfx12 : SOP1_Real<op, ps, name>,
                Select_gfx12<ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX12Plus;
+    }
 }
 
 multiclass SOP1_M0_Real_gfx12<bits<8> op> {
@@ -2207,7 +2212,9 @@ multiclass SOP2_Real_gfx12<bits<7> op, string name = !tolower(NAME)> {
   def _gfx12 : SOP2_Real32<op, ps, name>,
                Select_gfx12<ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX12Plus;
+    }
 }
 
 defm S_MINIMUM_F32 : SOP2_Real_gfx12<0x04f>;
@@ -2224,7 +2231,9 @@ multiclass SOP2_Real_gfx11<bits<7> op, string name = !tolower(NAME)> {
   def _gfx11 : SOP2_Real32<op, ps, name>,
                Select_gfx11<ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX11Only;
+    }
 }
 
 multiclass SOP2_Real_gfx11_gfx12<bits<7> op, string name = !tolower(NAME)> :
@@ -2412,7 +2421,9 @@ multiclass SOPK_Real32_gfx12<bits<5> op, string name = !tolower(NAME)> {
   def _gfx12 : SOPK_Real32<op, ps, name>,
                Select_gfx12<ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX12Plus;
+    }
 }
 
 multiclass SOPK_Real32_gfx11<bits<5> op> {
@@ -2541,7 +2552,9 @@ multiclass SOPP_Real_32_gfx12<bits<7> op, string name = !tolower(NAME)> {
   def _gfx12 : SOPP_Real_32<op, ps, name>,
                Select_gfx12<ps.PseudoInstr>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX12Plus;
+    }
 }
 
 defm S_BARRIER_WAIT         : SOPP_Real_32_gfx12<0x014>;
@@ -2567,7 +2580,9 @@ multiclass SOPP_Real_32_gfx11<bits<7> op, string name = !tolower(NAME)> {
                Select_gfx11<ps.PseudoInstr>,
                SOPPRelaxTable<0, ps.KeyName, "_gfx11">;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
+    def : AMDGPUMnemonicAlias<ps.Mnemonic, name> {
+      let AssemblerPredicate = isGFX11Only;
+    }
 }
 
 multiclass SOPP_Real_64_gfx12<bits<7> op> {

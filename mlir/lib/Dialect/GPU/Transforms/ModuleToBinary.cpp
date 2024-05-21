@@ -88,10 +88,7 @@ void GpuModuleToBinaryPass::runOnOperation() {
   TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
                               lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
-          getOperation(),
-          offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(
-                                  offloadingHandler.getValue())
-                            : OffloadingLLVMTranslationAttrInterface(nullptr),
+          getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))
     return signalPassFailure();
 }

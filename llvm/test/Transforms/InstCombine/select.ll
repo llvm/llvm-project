@@ -2736,7 +2736,7 @@ define void @select_freeze_icmp_multuses(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TRAILING:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true)
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
@@ -3830,14 +3830,17 @@ entry:
   ret i32 %cond
 }
 
-; FIXME: This is a miscompile.
 define <2 x i32> @src_and_eq_C_xor_OrAndNotC_vec_poison(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2) {
 ; CHECK-LABEL: @src_and_eq_C_xor_OrAndNotC_vec_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[TMP2:%.*]], <i32 -1, i32 poison>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], [[TMP2:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 poison>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[OR]], [[NOT]]
-; CHECK-NEXT:    ret <2 x i32> [[AND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[XOR]], <2 x i32> [[AND1]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
 entry:
   %and = and <2 x i32> %1, %0
@@ -4576,4 +4579,36 @@ define i32 @sequence_select_with_same_cond_extra_use(i1 %c1, i1 %c2){
   %s2 = select i1 %c2, i32 666, i32 %s1
   %s3 = select i1 %c1, i32 789, i32 %s2
   ret i32 %s3
+}
+
+define i8 @test_replace_freeze_multiuse(i1 %x, i8 %y) {
+; CHECK-LABEL: @test_replace_freeze_multiuse(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_FR:%.*]] = freeze i8 [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X]], i8 0, i8 [[SHL_FR]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SHL_FR]], [[SEL]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %ext = zext i1 %x to i8
+  %shl = shl nuw i8 %ext, %y
+  %shl.fr = freeze i8 %shl
+  %sel = select i1 %x, i8 0, i8 %shl.fr
+  %add = add i8 %shl.fr, %sel
+  ret i8 %add
+}
+
+define i8 @test_replace_freeze_oneuse(i1 %x, i8 %y) {
+; CHECK-LABEL: @test_replace_freeze_oneuse(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[EXT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHL_FR:%.*]] = freeze i8 [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X]], i8 0, i8 [[SHL_FR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %ext = zext i1 %x to i8
+  %shl = shl nuw i8 %ext, %y
+  %shl.fr = freeze i8 %shl
+  %sel = select i1 %x, i8 0, i8 %shl.fr
+  ret i8 %sel
 }
