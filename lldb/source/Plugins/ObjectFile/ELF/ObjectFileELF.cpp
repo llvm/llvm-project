@@ -3557,7 +3557,7 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
           // decrease by one
           llvm::StringRef loader_name(buffer, read_size - 1);
           llvm::StringRef freebsd_kernel_loader_name("/red/herring");
-          if (loader_name.equals(freebsd_kernel_loader_name))
+          if (loader_name == freebsd_kernel_loader_name)
             return eStrataKernel;
         }
       }

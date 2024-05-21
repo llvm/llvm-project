@@ -401,14 +401,14 @@ define void @masked_load_v32i64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a3, a1, 128
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vle64.v v16, (a3)
 ; RV32-NEXT:    vle64.v v0, (a1)
+; RV32-NEXT:    vle64.v v24, (a3)
 ; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.i v24, 0
+; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vmseq.vv v8, v0, v24
-; RV32-NEXT:    vmseq.vv v0, v16, v24
+; RV32-NEXT:    vmseq.vv v8, v0, v16
+; RV32-NEXT:    vmseq.vv v0, v24, v16
 ; RV32-NEXT:    addi a1, a0, 128
 ; RV32-NEXT:    vle64.v v16, (a1), v0.t
 ; RV32-NEXT:    vmv1r.v v0, v8

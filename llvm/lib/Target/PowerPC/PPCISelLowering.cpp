@@ -9338,7 +9338,7 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   if ((Op.getValueType() != MVT::f128) ||
       (Op0.getOpcode() != ISD::BUILD_PAIR) ||
       (Op0.getOperand(0).getValueType() != MVT::i64) ||
-      (Op0.getOperand(1).getValueType() != MVT::i64))
+      (Op0.getOperand(1).getValueType() != MVT::i64) || !Subtarget.isPPC64())
     return SDValue();
 
   return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Op0.getOperand(0),
@@ -14945,7 +14945,7 @@ static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  // If the vector extract indicies are not correct, add the appropriate
+  // If the vector extract indices are not correct, add the appropriate
   // vector_shuffle.
   int TgtElemArrayIdx;
   int InputSize = Input.getValueType().getScalarSizeInBits();

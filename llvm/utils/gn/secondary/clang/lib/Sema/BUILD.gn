@@ -84,7 +84,7 @@ static_library("Sema") {
     "SemaOpenMP.cpp",
     "SemaOverload.cpp",
     "SemaPseudoObject.cpp",
-    "SemaRISCVVectorLookup.cpp",
+    "SemaRISCV.cpp",
     "SemaSYCL.cpp",
     "SemaStmt.cpp",
     "SemaStmtAsm.cpp",

@@ -3478,11 +3478,11 @@ public:
     SS.Adopt(QualifierLoc);
 
     if (TemplateArgs || TemplateKWLoc.isValid())
-      return getSema().BuildQualifiedTemplateIdExpr(SS, TemplateKWLoc, NameInfo,
-                                                    TemplateArgs);
+      return getSema().BuildQualifiedTemplateIdExpr(
+          SS, TemplateKWLoc, NameInfo, TemplateArgs, IsAddressOfOperand);
 
     return getSema().BuildQualifiedDeclarationNameExpr(
-        SS, NameInfo, IsAddressOfOperand, /*S*/nullptr, RecoveryTSI);
+        SS, NameInfo, IsAddressOfOperand, RecoveryTSI);
   }
 
   /// Build a new template-id expression.
@@ -4818,14 +4818,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     TemplateArgumentLoc In = *First;
 
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
-      // When building the deduction guides, we rewrite the argument packs
-      // instead of unpacking.
-      if (getSema().CodeSynthesisContexts.back().Kind ==
-          Sema::CodeSynthesisContext::BuildingDeductionGuides) {
-        if (getDerived().TransformTemplateArgument(In, Out, Uneval))
-          return true;
-        continue;
-      }
       // Unpack argument packs, which we translate them into separate
       // arguments.
       // FIXME: We could do much better if we could guarantee that the
@@ -14981,7 +14973,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
     return ExprError();
 
   SmallVector<Expr *, 5> ExpandedExprs;
-  if (E->getExpressions().empty()) {
+  if (!E->expandsToEmptyPack() && E->getExpressions().empty()) {
     Expr *Pattern = E->getPackIdExpression();
     SmallVector<UnexpandedParameterPack, 2> Unexpanded;
     getSema().collectUnexpandedParameterPacks(E->getPackIdExpression(),
@@ -15035,9 +15027,7 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
         return true;
       ExpandedExprs.push_back(Out.get());
     }
-  }
-
-  else {
+  } else if (!E->expandsToEmptyPack()) {
     if (getDerived().TransformExprs(E->getExpressions().data(),
                                     E->getExpressions().size(), false,
                                     ExpandedExprs))
@@ -16242,10 +16232,11 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
       return getSema().CreateBuiltinUnaryOp(OpLoc, Opc, First);
     }
   } else {
-    if (!First->getType()->isOverloadableType() &&
+    if (!First->isTypeDependent() && !Second->isTypeDependent() &&
+        !First->getType()->isOverloadableType() &&
         !Second->getType()->isOverloadableType()) {
-      // Neither of the arguments is an overloadable type, so try to
-      // create a built-in binary operation.
+      // Neither of the arguments is type-dependent or has an overloadable
+      // type, so try to create a built-in binary operation.
       BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
       ExprResult Result
         = SemaRef.CreateBuiltinBinOp(OpLoc, Opc, First, Second);
@@ -16256,12 +16247,8 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
     }
   }
 
-  // Add any functions found via argument-dependent lookup.
-  Expr *Args[2] = { First, Second };
-  unsigned NumArgs = 1 + (Second != nullptr);
-
   // Create the overloaded operator invocation for unary operators.
-  if (NumArgs == 1 || isPostIncDec) {
+  if (!Second || isPostIncDec) {
     UnaryOperatorKind Opc
       = UnaryOperator::getOverloadedOpcode(Op, isPostIncDec);
     return SemaRef.CreateOverloadedUnaryOp(OpLoc, Opc, Functions, First,
@@ -16270,8 +16257,8 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
 
   // Create the overloaded operator invocation for binary operators.
   BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(Op);
-  ExprResult Result = SemaRef.CreateOverloadedBinOp(
-      OpLoc, Opc, Functions, Args[0], Args[1], RequiresADL);
+  ExprResult Result = SemaRef.CreateOverloadedBinOp(OpLoc, Opc, Functions,
+                                                    First, Second, RequiresADL);
   if (Result.isInvalid())
     return ExprError();
 

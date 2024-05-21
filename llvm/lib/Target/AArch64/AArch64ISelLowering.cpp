@@ -1040,7 +1040,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::UINT_TO_FP});
 
   setTargetDAGCombine({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                       ISD::FP_TO_UINT_SAT, ISD::FADD, ISD::FDIV});
+                       ISD::FP_TO_UINT_SAT, ISD::FADD});
 
   // Try and combine setcc with csel
   setTargetDAGCombine(ISD::SETCC);
@@ -1868,7 +1868,12 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  return !Subtarget->hasSVEorSME() || VT != MVT::nxv16i1;
+  if (!Subtarget->hasSVEorSME())
+    return true;
+
+  // We can only use the BRKB + CNTP sequence with legal predicate types.
+  return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
+         VT != MVT::nxv2i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -13907,45 +13912,52 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
                                                       SelectionDAG &DAG) const {
-  assert(Op.getValueType().isFixedLengthVector() &&
+  EVT VT = Op.getValueType();
+  assert(VT.isFixedLengthVector() &&
          "Only cases that extract a fixed length vector are supported!");
-
   EVT InVT = Op.getOperand(0).getValueType();
-  unsigned Idx = Op.getConstantOperandVal(1);
-  unsigned Size = Op.getValueSizeInBits();
 
   // If we don't have legal types yet, do nothing
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(InVT))
+  if (!isTypeLegal(InVT))
     return SDValue();
 
-  if (InVT.isScalableVector()) {
-    // This will be matched by custom code during ISelDAGToDAG.
-    if (Idx == 0 && isPackedVectorType(InVT, DAG))
+  if (InVT.is128BitVector()) {
+    assert(VT.is64BitVector() && "Extracting unexpected vector type!");
+    unsigned Idx = Op.getConstantOperandVal(1);
+
+    // This will get lowered to an appropriate EXTRACT_SUBREG in ISel.
+    if (Idx == 0)
       return Op;
 
-    return SDValue();
+    // If this is extracting the upper 64-bits of a 128-bit vector, we match
+    // that directly.
+    if (Idx * InVT.getScalarSizeInBits() == 64 && Subtarget->isNeonAvailable())
+      return Op;
   }
 
-  // This will get lowered to an appropriate EXTRACT_SUBREG in ISel.
-  if (Idx == 0 && InVT.getSizeInBits() <= 128)
-    return Op;
-
-  // If this is extracting the upper 64-bits of a 128-bit vector, we match
-  // that directly.
-  if (Size == 64 && Idx * InVT.getScalarSizeInBits() == 64 &&
-      InVT.getSizeInBits() == 128 && Subtarget->isNeonAvailable())
-    return Op;
-
-  if (useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable())) {
+  if (InVT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable())) {
     SDLoc DL(Op);
+    SDValue Vec = Op.getOperand(0);
+    SDValue Idx = Op.getOperand(1);
 
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
-    SDValue NewInVec =
-        convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+    EVT PackedVT = getPackedSVEVectorVT(InVT.getVectorElementType());
+    if (PackedVT != InVT) {
+      // Pack input into the bottom part of an SVE register and try again.
+      SDValue Container = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PackedVT,
+                                      DAG.getUNDEF(PackedVT), Vec,
+                                      DAG.getVectorIdxConstant(0, DL));
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Container, Idx);
+    }
 
-    SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, ContainerVT, NewInVec,
-                                 NewInVec, DAG.getConstant(Idx, DL, MVT::i64));
-    return convertFromScalableVector(DAG, Op.getValueType(), Splice);
+    // This will get matched by custom code during ISelDAGToDAG.
+    if (isNullConstant(Idx))
+      return Op;
+
+    assert(InVT.isScalableVector() && "Unexpected vector type!");
+    // Move requested subvector to the start of the vector and try again.
+    SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, InVT, Vec, Vec, Idx);
+    return convertFromScalableVector(DAG, VT, Splice);
   }
 
   return SDValue();
@@ -17958,75 +17970,6 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   return FixConv;
 }
 
-/// Fold a floating-point divide by power of two into fixed-point to
-/// floating-point conversion.
-static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  const AArch64Subtarget *Subtarget) {
-  if (!Subtarget->hasNEON())
-    return SDValue();
-
-  SDValue Op = N->getOperand(0);
-  unsigned Opc = Op->getOpcode();
-  if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
-      !Op.getOperand(0).getValueType().isSimple() ||
-      (Opc != ISD::SINT_TO_FP && Opc != ISD::UINT_TO_FP))
-    return SDValue();
-
-  SDValue ConstVec = N->getOperand(1);
-  if (!isa<BuildVectorSDNode>(ConstVec))
-    return SDValue();
-
-  MVT IntTy = Op.getOperand(0).getSimpleValueType().getVectorElementType();
-  int32_t IntBits = IntTy.getSizeInBits();
-  if (IntBits != 16 && IntBits != 32 && IntBits != 64)
-    return SDValue();
-
-  MVT FloatTy = N->getSimpleValueType(0).getVectorElementType();
-  int32_t FloatBits = FloatTy.getSizeInBits();
-  if (FloatBits != 32 && FloatBits != 64)
-    return SDValue();
-
-  // Avoid conversions where iN is larger than the float (e.g., i64 -> float).
-  if (IntBits > FloatBits)
-    return SDValue();
-
-  BitVector UndefElements;
-  BuildVectorSDNode *BV = cast<BuildVectorSDNode>(ConstVec);
-  int32_t C = BV->getConstantFPSplatPow2ToLog2Int(&UndefElements, FloatBits + 1);
-  if (C == -1 || C == 0 || C > FloatBits)
-    return SDValue();
-
-  MVT ResTy;
-  unsigned NumLanes = Op.getValueType().getVectorNumElements();
-  switch (NumLanes) {
-  default:
-    return SDValue();
-  case 2:
-    ResTy = FloatBits == 32 ? MVT::v2i32 : MVT::v2i64;
-    break;
-  case 4:
-    ResTy = FloatBits == 32 ? MVT::v4i32 : MVT::v4i64;
-    break;
-  }
-
-  if (ResTy == MVT::v4i64 && DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  SDLoc DL(N);
-  SDValue ConvInput = Op.getOperand(0);
-  bool IsSigned = Opc == ISD::SINT_TO_FP;
-  if (IntBits < FloatBits)
-    ConvInput = DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
-                            ResTy, ConvInput);
-
-  unsigned IntrinsicOpcode = IsSigned ? Intrinsic::aarch64_neon_vcvtfxs2fp
-                                      : Intrinsic::aarch64_neon_vcvtfxu2fp;
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
-                     DAG.getConstant(IntrinsicOpcode, DL, MVT::i32), ConvInput,
-                     DAG.getConstant(C, DL, MVT::i32));
-}
-
 static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64TargetLowering &TLI) {
   EVT VT = N->getValueType(0);
@@ -19558,7 +19501,8 @@ static SDValue performBuildVectorCombine(SDNode *N,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
-  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+      (VT == MVT::v4f16 || VT == MVT::v4bf16)) {
     SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
             Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
     if (Elt0->getOpcode() == ISD::FP_ROUND &&
@@ -23938,7 +23882,7 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
 
   // For "scalar + vector of indices", just scale the indices. This only
   // applies to non-temporal scatters because there's no instruction that takes
-  // indicies.
+  // indices.
   if (Opcode == AArch64ISD::SSTNT1_INDEX_PRED) {
     Offset =
         getScaledOffsetForBitWidth(DAG, Offset, DL, SrcElVT.getSizeInBits());
@@ -24715,8 +24659,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
-  case ISD::FDIV:
-    return performFDivCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget, *this);
   case ISD::AND:
@@ -27390,9 +27332,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue IncSplat = DAG.getSplatVector(MemVT, DL, Inc);
   SDValue Ops[] = {Chain, PassThru, Mask, Ptr, Index, Scale};
 
-  // Set the MMO to load only, rather than load|store.
-  MachineMemOperand *GMMO = HG->getMemOperand();
-  GMMO->setFlags(MachineMemOperand::MOLoad);
+  MachineMemOperand *MMO = HG->getMemOperand();
+  // Create an MMO for the gather, without load|store flags.
+  MachineMemOperand *GMMO = DAG.getMachineFunction().getMachineMemOperand(
+      MMO->getPointerInfo(), MachineMemOperand::MOLoad, MMO->getSize(),
+      MMO->getAlign(), MMO->getAAInfo());
   ISD::MemIndexType IndexType = HG->getIndexType();
   SDValue Gather =
       DAG.getMaskedGather(DAG.getVTList(MemVT, MVT::Other), MemVT, DL, Ops,
@@ -27407,10 +27351,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue Mul = DAG.getNode(ISD::MUL, DL, MemVT, HistCnt, IncSplat);
   SDValue Add = DAG.getNode(ISD::ADD, DL, MemVT, Gather, Mul);
 
-  // Create a new MMO for the scatter.
+  // Create an MMO for the scatter, without load|store flags.
   MachineMemOperand *SMMO = DAG.getMachineFunction().getMachineMemOperand(
-      GMMO->getPointerInfo(), MachineMemOperand::MOStore, GMMO->getSize(),
-      GMMO->getAlign(), GMMO->getAAInfo());
+      MMO->getPointerInfo(), MachineMemOperand::MOStore, MMO->getSize(),
+      MMO->getAlign(), MMO->getAAInfo());
 
   SDValue ScatterOps[] = {GChain, Add, Mask, Ptr, Index, Scale};
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MemVT, DL,
