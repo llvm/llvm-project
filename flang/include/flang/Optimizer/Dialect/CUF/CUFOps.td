@@ -152,15 +152,21 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
       a = adev ! transfer device to host
       bdev = adev ! transfer device to device
     ```
+    
+    When the data transfer is done on data hold by descriptors, the LHS data
+    hold by the descriptor are updated. When required, the LHS decriptor is also
+    updated.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$src,
-                       Arg<AnyReferenceLike, "", [MemWrite]>:$dst,
+  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$src,
+                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
   let assemblyFormat = [{
     $src `to` $dst attr-dict `:` type(operands)
   }];
+
+  let hasVerifier = 1;
 }
 
 def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
