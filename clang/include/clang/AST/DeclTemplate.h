@@ -1185,7 +1185,7 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   /// The default template argument, if any.
   using DefArgStorage =
-      DefaultArgStorage<TemplateTypeParmDecl, TypeSourceInfo *>;
+      DefaultArgStorage<TemplateTypeParmDecl, TemplateArgumentLoc *>;
   DefArgStorage DefaultArgument;
 
   TemplateTypeParmDecl(DeclContext *DC, SourceLocation KeyLoc,
@@ -1225,13 +1225,9 @@ public:
   bool hasDefaultArgument() const { return DefaultArgument.isSet(); }
 
   /// Retrieve the default argument, if any.
-  QualType getDefaultArgument() const {
-    return DefaultArgument.get()->getType();
-  }
-
-  /// Retrieves the default argument's source information, if any.
-  TypeSourceInfo *getDefaultArgumentInfo() const {
-    return DefaultArgument.get();
+  const TemplateArgumentLoc &getDefaultArgument() const {
+    static const TemplateArgumentLoc NoneLoc;
+    return DefaultArgument.isSet() ? *DefaultArgument.get() : NoneLoc;
   }
 
   /// Retrieves the location of the default argument declaration.
@@ -1244,9 +1240,8 @@ public:
   }
 
   /// Set the default argument for this template parameter.
-  void setDefaultArgument(TypeSourceInfo *DefArg) {
-    DefaultArgument.set(DefArg);
-  }
+  void setDefaultArgument(const ASTContext &C,
+                          const TemplateArgumentLoc &DefArg);
 
   /// Set that this default argument was inherited from another
   /// parameter.

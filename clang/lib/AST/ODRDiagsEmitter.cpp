@@ -1409,13 +1409,15 @@ bool ODRDiagsEmitter::diagnoseMismatch(
         }
 
         if (HasFirstDefaultArgument && HasSecondDefaultArgument) {
-          QualType FirstType = FirstTTPD->getDefaultArgument();
-          QualType SecondType = SecondTTPD->getDefaultArgument();
-          if (computeODRHash(FirstType) != computeODRHash(SecondType)) {
+          TemplateArgument FirstTA =
+              FirstTTPD->getDefaultArgument().getArgument();
+          TemplateArgument SecondTA =
+              SecondTTPD->getDefaultArgument().getArgument();
+          if (computeODRHash(FirstTA) != computeODRHash(SecondTA)) {
             DiagTemplateError(FunctionTemplateParameterDifferentDefaultArgument)
-                << (i + 1) << FirstType;
+                << (i + 1) << FirstTA;
             DiagTemplateNote(FunctionTemplateParameterDifferentDefaultArgument)
-                << (i + 1) << SecondType;
+                << (i + 1) << SecondTA;
             return true;
           }
         }
