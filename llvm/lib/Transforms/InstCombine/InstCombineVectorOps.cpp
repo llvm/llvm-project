@@ -1319,7 +1319,7 @@ static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
 static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
   // Check if the vector operand of this insert is an identity shuffle.
   auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
-  if (!Shuf || !match(Shuf->getOperand(1), m_Undef()) ||
+  if (!Shuf || !match(Shuf->getOperand(1), m_Poison()) ||
       !(Shuf->isIdentityWithExtract() || Shuf->isIdentityWithPadding()))
     return nullptr;
 
