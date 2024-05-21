@@ -795,7 +795,7 @@ func.func @reduction_pack_transpose_inner_dims(%arg0: tensor<128x256x32xi32>,
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
 // CHECK:         %[[ARG1_EMPTY:.+]] = tensor.empty() : tensor<4x16x16x32xi32>
 // CHECK:         %[[PACK_ARG1:.+]] = tensor.pack %[[ARG1]]
-// CHECK-SME:      inner_dims_pos = [1, 0] inner_tiles = [16, 32]
+// CHECK-SAME:     inner_dims_pos = [1, 0] inner_tiles = [16, 32]
 // CHECK-SAME:     into %[[ARG1_EMPTY]]
 // CHECK:         %[[ARG0_EMPTY:.+]] = tensor.empty() : tensor<4x16x32x16x32xi32>
 // CHECK:         %[[PACK_ARG0:.+]] = tensor.pack %[[ARG0]]

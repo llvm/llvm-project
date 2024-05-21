@@ -466,14 +466,14 @@ llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i6
 
 // CHECK-LABEL: @wgmma_fence_aligned
 func.func @wgmma_fence_aligned() {
-  // CHECK : nvvm.wgmma.fence.aligned
+  // CHECK: nvvm.wgmma.fence.aligned
   nvvm.wgmma.fence.aligned
   return
 }
 
 // CHECK-LABEL: @wgmma_commit_group_sync_aligned
 func.func @wgmma_commit_group_sync_aligned() {
-  // CHECK : nvvm.wgmma.commit.group.sync.aligned
+  // CHECK: nvvm.wgmma.commit.group.sync.aligned
   nvvm.wgmma.commit.group.sync.aligned
   return
 }
@@ -481,7 +481,7 @@ func.func @wgmma_commit_group_sync_aligned() {
 
 // CHECK-LABEL: @wgmma_commit_group_sync_aligned
 func.func @wgmma_wait_group_sync_aligned() {
-  // CHECK : nvvm.wgmma.wait.group.sync.aligned
+  // CHECK: nvvm.wgmma.wait.group.sync.aligned
   nvvm.wgmma.wait.group.sync.aligned 0
   return
 }

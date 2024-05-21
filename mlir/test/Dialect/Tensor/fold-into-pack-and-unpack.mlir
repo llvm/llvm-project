@@ -544,7 +544,7 @@ func.func @linalg_transpose_tensor_unpack_fold(%arg0: tensor<1x1x4x16xi32>) -> t
 // CHECK-SAME:        outer_dims_perm = [1, 0]
 // CHECK-SAME:        inner_dims_pos = [1, 0]
 // CHECK-SAME:        inner_tiles = [4, 16]
-// CHEKC-SAME:        into %[[OUT]] : tensor<1x1x4x16xi32> -> tensor<16x4xi32>
+// CHECK-SAME:        into %[[OUT]] : tensor<1x1x4x16xi32> -> tensor<16x4xi32>
 //      CHECK:     return %[[UNPACK]] : tensor<16x4xi32>
 //      CHECK:   }
 
