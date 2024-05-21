@@ -124,3 +124,11 @@ extern typeof(aAi) aAi;
 extern typeof_unqual(aAi) ai;
 extern typeof(aAii) aAii;
 extern typeof_unqual(aAii) aii;
+
+const char* const animals[] = { "aardvark", "bluejay", "catte" };
+void GH92667(void) {
+ const char* animals2_array1[3];
+ typeof_unqual(animals) animals2_array;
+ animals2_array1[0] = 0;
+ animals2_array[0] = 0;
+}
