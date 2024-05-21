@@ -1,5 +1,6 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -emit-llvm -O2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -emit-llvm -O2 -o - %s -mllvm -expand-variadics-override=disable | FileCheck %s
+
 #include <stdarg.h>
 #include <arm_neon.h>
 
