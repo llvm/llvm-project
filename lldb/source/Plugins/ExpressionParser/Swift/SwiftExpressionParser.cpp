@@ -1389,16 +1389,16 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   invocation.getFrontendOptions().ModuleName = expr_name_buf;
   invocation.getIRGenOptions().ModuleName = expr_name_buf;
 
+  auto &lang_opts = invocation.getLangOptions();
   bool enable_bare_slash_regex_literals =
       sc.target_sp->GetSwiftEnableBareSlashRegex();
-  if (enable_bare_slash_regex_literals) {
-    invocation.getLangOptions().enableFeature(
-        swift::Feature::BareSlashRegexLiterals);
-  }
-  if (uint32_t version = expr.Language().version) {
-    invocation.getLangOptions().EffectiveLanguageVersion =
+  if (enable_bare_slash_regex_literals)
+    lang_opts.enableFeature(swift::Feature::BareSlashRegexLiterals);
+  if (uint32_t version = expr.Language().version)
+    lang_opts.EffectiveLanguageVersion =
         llvm::VersionTuple(version / 100, version % 100);
-  }
+  if (lang_opts.EffectiveLanguageVersion >= swift::version::Version({6}))
+    lang_opts.StrictConcurrencyLevel = swift::StrictConcurrency::Complete;
 
   auto should_use_prestable_abi = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
@@ -1411,8 +1411,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     return !runtime->IsABIStable();
   };
 
-  invocation.getLangOptions().UseDarwinPreStableABIBit =
-      should_use_prestable_abi();
+  lang_opts.UseDarwinPreStableABIBit = should_use_prestable_abi();
 
   LLDBNameLookup *external_lookup;
   if (options.GetPlaygroundTransformEnabled() || options.GetREPLEnabled()) {

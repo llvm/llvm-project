@@ -174,6 +174,8 @@ public:
 
   llvm::StringRef GetSwiftExtraClangFlags() const;
 
+  llvm::StringRef GetSwiftClangOverrideOptions() const;
+
   bool GetSwiftReadMetadataFromFileCache() const;
 
   bool GetSwiftUseReflectionSymbols() const;

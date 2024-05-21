@@ -270,7 +270,8 @@ public:
 
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
-  void AddExtraClangArgs(const std::vector<std::string> &ExtraArgs);
+  void AddExtraClangArgs(const std::vector<std::string> &ExtraArgs,
+                         llvm::StringRef overrideOpts = "");
   static void AddExtraClangArgs(const std::vector<std::string>& source,
                                 std::vector<std::string>& dest);
   static std::string GetPluginServer(llvm::StringRef plugin_library_path);
@@ -328,9 +329,9 @@ public:
   /// Collect Swift modules in the .swift_ast section of \p module.
   void RegisterSectionModules(Module &module,
                               std::vector<std::string> &module_names);
-
-  void ValidateSectionModules(Module &module, // this is used to print errors
-                              const std::vector<std::string> &module_names);
+  /// Import Swift modules in the .swift_ast section of \p module.
+  void ImportSectionModules(Module &module,
+                            const std::vector<std::string> &module_names);
 
   // Swift modules that are backed by dylibs (libFoo.dylib) rather than
   // frameworks don't actually record the library dependencies in the module.

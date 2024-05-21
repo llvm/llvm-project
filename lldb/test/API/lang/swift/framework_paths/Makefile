@@ -1,6 +1,6 @@
 SWIFT_SOURCES := main.swift
 
-SWIFTFLAGS_EXTRAS = -F $(BUILDDIR) -framework Direct -Xlinker -rpath -Xlinker $(BUILDDIR)
+SWIFTFLAGS_EXTRAS = -F $(BUILDDIR) -framework Direct -Xlinker -rpath -Xlinker $(BUILDDIR) -Fother_secret_path
 
 all: Direct.framework $(EXE)
 
@@ -24,5 +24,5 @@ Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework
 		DYLIB_SWIFT_SOURCES=Direct.swift \
 		DYLIB_MODULENAME=Direct \
 		FRAMEWORK=Direct \
-		SWIFTFLAGS_EXTRAS=-F$(BUILDDIR)/secret_path
+		SWIFTFLAGS_EXTRAS="-F$(BUILDDIR)/secret_path"
 	rm -f $(BUILDDIR)/Direct.swiftmodule $(BUILDDIR)/Direct.swiftinterface $(BUILDDIR)/Direct.swift

@@ -3175,7 +3175,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
               AsMangledName(type));
     return {};
   };
-  FALLBACK(GetBitSize, (ReconstructType(type, exe_scope), exe_scope), {});
+  FALLBACK(GetBitSize, (ReconstructType(type), exe_scope), {});
   if (exe_scope && exe_scope->CalculateProcess()) {
     VALIDATE_AND_RETURN(impl, GetBitSize, type, exe_scope,
                         (ReconstructType(type, exe_scope), exe_scope),
@@ -3339,7 +3339,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                                               ExecutionContext *exe_ctx) {
   LLDB_SCOPED_TIMER();
-  FALLBACK(GetNumFields, (ReconstructType(type, exe_ctx), exe_ctx), {});
+  FALLBACK(GetNumFields, (ReconstructType(type), exe_ctx), {});
 
   auto impl = [&]() -> std::optional<uint32_t> {
     if (exe_ctx)
@@ -3472,7 +3472,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     return {};
   };
   FALLBACK(GetChildCompilerTypeAtIndex,
-           (ReconstructType(type, exe_ctx), exe_ctx, idx, transparent_pointers,
+           (ReconstructType(type), exe_ctx, idx, transparent_pointers,
             omit_empty_base_classes, ignore_array_bounds, child_name,
             child_byte_size, child_byte_offset, child_bitfield_bit_size,
             child_bitfield_bit_offset, child_is_base_class,
@@ -3720,7 +3720,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   LLDB_SCOPED_TIMER();
   FALLBACK(GetIndexOfChildMemberWithName,
-           (ReconstructType(type, exe_ctx), name, exe_ctx,
+           (ReconstructType(type), name, exe_ctx,
             omit_empty_base_classes, child_indexes),
            {});
   if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
@@ -4518,7 +4518,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
 
 #ifndef NDEBUG
   FALLBACK(DumpTypeValue,
-           (ReconstructType(type, exe_scope), s, format, data, data_offset,
+           (ReconstructType(type), s, format, data, data_offset,
             data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
             is_base_class),
            {});
@@ -4558,7 +4558,7 @@ std::optional<size_t>
 TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
                                         ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
-  FALLBACK(GetTypeBitAlign, (ReconstructType(type, exe_scope), exe_scope), {});
+  FALLBACK(GetTypeBitAlign, (ReconstructType(type), exe_scope), {});
   // This method doesn't use VALIDATE_AND_RETURN because except for
   // fixed-size types the SwiftASTContext implementation forwards to
   // SwiftLanguageRuntime anyway and for many fixed-size types the

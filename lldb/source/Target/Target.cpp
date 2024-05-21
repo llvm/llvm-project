@@ -5154,6 +5154,11 @@ llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
   return GetPropertyAtIndexAs<llvm::StringRef>(idx, "");
 }
 
+llvm::StringRef TargetProperties::GetSwiftClangOverrideOptions() const {
+  const uint32_t idx = ePropertySwiftClangOverrideOptions;
+  return GetPropertyAtIndexAs<llvm::StringRef>(idx, "");
+}
+
 FileSpecList TargetProperties::GetClangModuleSearchPaths() {
   const uint32_t idx = ePropertyClangModuleSearchPaths;
   return GetPropertyAtIndexAs<FileSpecList>(idx, {});
