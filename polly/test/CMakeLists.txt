@@ -1,7 +1,7 @@
 set(LLVM_SHLIBEXT "${CMAKE_SHARED_MODULE_SUFFIX}")
 
 add_custom_target(check-polly)
-set_target_properties(check-polly PROPERTIES FOLDER "Polly/Tests")
+set_target_properties(check-polly PROPERTIES FOLDER "Polly/Meta")
 
 if(NOT LLVM_MAIN_SRC_DIR)
   find_program(LLVM_OPT NAMES opt HINTS ${LLVM_TOOLS_BINARY_DIR})
@@ -111,5 +111,5 @@ configure_file(
 
 # Add a legacy target spelling: polly-test
 add_custom_target(polly-test)
-set_target_properties(polly-test PROPERTIES FOLDER "Polly/Tests")
+set_target_properties(polly-test PROPERTIES FOLDER "Polly/Meta")
 add_dependencies(polly-test check-polly)

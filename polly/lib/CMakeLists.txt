@@ -118,7 +118,7 @@ if (WIN32 OR CYGWIN OR NOT LLVM_ENABLE_PIC)
   # Add dummy target, either because loadable modules are not supported
   # as on Windows or because PIC code has been disabled
   add_custom_target(LLVMPolly)
-  set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly/Meta")
+  set_target_properties(LLVMPolly PROPERTIES FOLDER "Polly/Loadable Modules")
 else ()
   add_polly_loadable_module(LLVMPolly
     Plugin/Polly.cpp
