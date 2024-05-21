@@ -5241,8 +5241,20 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
         << ResultType << BaseExpr->getSourceRange();
       return ExprError();
     }
-  } else if (const VectorType *VTy = LHSTy->getAs<VectorType>()) {
-    BaseExpr = LHSExp;    // vectors: V[123]
+  } else if (LHSTy->isSubscriptableVectorType()) {
+    if (LHSTy->isBuiltinType() &&
+        LHSTy->getAs<BuiltinType>()->isSveVLSBuiltinType()) {
+      const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
+      if (BTy->isSVEBool())
+        return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
+                         << LHSExp->getSourceRange()
+                         << RHSExp->getSourceRange());
+      ResultType = BTy->getSveEltType(Context);
+    } else {
+      const VectorType *VTy = LHSTy->getAs<VectorType>();
+      ResultType = VTy->getElementType();
+    }
+    BaseExpr = LHSExp; // vectors: V[123]
     IndexExpr = RHSExp;
     // We apply C++ DR1213 to vector subscripting too.
     if (getLangOpts().CPlusPlus11 && LHSExp->isPRValue()) {
@@ -5254,34 +5266,6 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     VK = LHSExp->getValueKind();
     if (VK != VK_PRValue)
       OK = OK_VectorComponent;
-
-    ResultType = VTy->getElementType();
-    QualType BaseType = BaseExpr->getType();
-    Qualifiers BaseQuals = BaseType.getQualifiers();
-    Qualifiers MemberQuals = ResultType.getQualifiers();
-    Qualifiers Combined = BaseQuals + MemberQuals;
-    if (Combined != MemberQuals)
-      ResultType = Context.getQualifiedType(ResultType, Combined);
-  } else if (LHSTy->isBuiltinType() &&
-             LHSTy->getAs<BuiltinType>()->isSveVLSBuiltinType()) {
-    const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
-    if (BTy->isSVEBool())
-      return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
-                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
-
-    BaseExpr = LHSExp;
-    IndexExpr = RHSExp;
-    if (getLangOpts().CPlusPlus11 && LHSExp->isPRValue()) {
-      ExprResult Materialized = TemporaryMaterializationConversion(LHSExp);
-      if (Materialized.isInvalid())
-        return ExprError();
-      LHSExp = Materialized.get();
-    }
-    VK = LHSExp->getValueKind();
-    if (VK != VK_PRValue)
-      OK = OK_VectorComponent;
-
-    ResultType = BTy->getSveEltType(Context);
 
     QualType BaseType = BaseExpr->getType();
     Qualifiers BaseQuals = BaseType.getQualifiers();
