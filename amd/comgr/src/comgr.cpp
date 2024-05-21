@@ -2126,7 +2126,7 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data,
         }
         StringRef SecName = std::move(SecNameOrError.get());
 
-        if (SecName.equals(StringRef(".rodata")))
+        if (SecName == StringRef(".rodata"))
           rodataShdr = Shdr;
       }
     }

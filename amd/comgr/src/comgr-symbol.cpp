@@ -146,7 +146,7 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
         return NULL;
       }
       StringRef SymName = *SymNameOrErr;
-      if (SymName.equals(Sname)) {
+      if (SymName == Sname) {
 #if DEBUG
         outs() << "Found! " << sname.data() << "\n";
 #endif
