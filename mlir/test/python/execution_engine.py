@@ -521,9 +521,10 @@ def testComplexUnrankedMemrefAdd():
 
 run(testComplexUnrankedMemrefAdd)
 
+
 # Test addition of two bf16 memrefs
 # CHECK-LABEL: TEST: testBF16MemrefAdd
-def testBF16MemrefAdd():
+def testBF16Memref():
     with Context():
         module = Module.parse(
             """
@@ -557,7 +558,7 @@ def testBF16MemrefAdd():
         log(npout)
 
 
-run(testBF16MemrefAdd)
+run(testBF16Memref)
 
 
 #  Test addition of two 2d_memref
