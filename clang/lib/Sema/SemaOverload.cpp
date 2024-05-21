@@ -6735,7 +6735,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
           if (ToType.isNull())
             ToType = CurToType.getUnqualifiedType();
           else if (HasUniqueTargetType &&
-                   (CurToType.getUnqualifiedType() != ToType))
+                   !Context.hasSameType(CurToType.getUnqualifiedType(), ToType))
             HasUniqueTargetType = false;
         }
         ViableConversions.addDecl(I.getDecl(), I.getAccess());
