@@ -64,11 +64,6 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool> ForceStreamingCompatible(
-    "force-streaming-compatible",
-    cl::desc("Force the use of streaming-compatible code for all functions"),
-    cl::Hidden);
-
 static cl::opt<AArch64PAuth::AuthCheckMethod>
     AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
                                cl::Hidden,
@@ -544,20 +539,6 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 }
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
-
-bool AArch64Subtarget::isStreamingCompatible() const {
-  return IsStreamingCompatible || ForceStreamingCompatible;
-}
-
-bool AArch64Subtarget::isNeonAvailable() const {
-  return hasNEON() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
-
-bool AArch64Subtarget::isSVEAvailable() const {
-  return hasSVE() &&
-         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
-}
 
 // If return address signing is enabled, tail calls are emitted as follows:
 //

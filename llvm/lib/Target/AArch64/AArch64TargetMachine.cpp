@@ -187,6 +187,11 @@ static cl::opt<unsigned> SVEVectorBitsMinOpt(
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
 
+static cl::opt<bool> ForceStreamingCompatible(
+    "force-streaming-compatible",
+    cl::desc("Force the use of streaming-compatible code for all functions"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
 static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
@@ -410,7 +415,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   bool IsStreaming = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
                      F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool IsStreamingCompatible = F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  bool IsStreamingCompatible =
+      F.hasFnAttribute("aarch64_pstate_sm_compatible") ||
+      ForceStreamingCompatible;
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
