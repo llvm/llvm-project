@@ -1446,6 +1446,127 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   return NewMI;
 }
 
+int RISCVInstrInfo::getICmpCost(unsigned CC,
+                                const TargetSchedModel &SchedModel) const {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown condition code!");
+  case RISCVCC::COND_LT:
+    return SchedModel.computeInstrLatency(RISCV::SLT);
+  case RISCVCC::COND_LTU:
+    return SchedModel.computeInstrLatency(RISCV::SLTU);
+  case RISCVCC::COND_EQ:
+    return SchedModel.computeInstrLatency(RISCV::XOR) +
+           SchedModel.computeInstrLatency(RISCV::SLTIU);
+  case RISCVCC::COND_NE:
+    return SchedModel.computeInstrLatency(RISCV::XOR) +
+           SchedModel.computeInstrLatency(RISCV::SLTU);
+  case RISCVCC::COND_GE:
+    return SchedModel.computeInstrLatency(RISCV::XORI) +
+           SchedModel.computeInstrLatency(RISCV::SLT);
+  case RISCVCC::COND_GEU:
+    return SchedModel.computeInstrLatency(RISCV::XORI) +
+           SchedModel.computeInstrLatency(RISCV::SLTU);
+  }
+}
+
+void RISCVInstrInfo::insertICmp(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI,
+                                const DebugLoc &DL, Register DstReg,
+                                ArrayRef<MachineOperand> Cond) const {
+  MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
+  unsigned CC = Cond[0].getImm();
+  Register LHSReg = Cond[1].getReg();
+  Register RHSReg = Cond[2].getReg();
+
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown condition code!");
+  case RISCVCC::COND_LT:
+  case RISCVCC::COND_LTU: {
+    BuildMI(MBB, MI, DL, get(CC == RISCVCC::COND_LT ? RISCV::SLT : RISCV::SLTU),
+            DstReg)
+        .addReg(LHSReg)
+        .addReg(RHSReg);
+    return;
+  }
+  case RISCVCC::COND_EQ:
+  case RISCVCC::COND_NE: {
+    Register XorReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, MI, DL, get(RISCV::XOR), XorReg).addReg(LHSReg).addReg(RHSReg);
+    if (CC == RISCVCC::COND_EQ) {
+      BuildMI(MBB, MI, DL, get(RISCV::SLTIU), DstReg).addReg(XorReg).addImm(1);
+      return;
+    } else {
+      BuildMI(MBB, MI, DL, get(RISCV::SLTU), DstReg)
+          .addReg(RISCV::X0)
+          .addReg(XorReg);
+      return;
+    }
+  }
+  case RISCVCC::COND_GE:
+  case RISCVCC::COND_GEU: {
+    Register NotCCReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, MI, DL, get(CC == RISCVCC::COND_GE ? RISCV::SLT : RISCV::SLTU),
+            NotCCReg)
+        .addReg(LHSReg)
+        .addReg(RHSReg);
+    BuildMI(MBB, MI, DL, get(RISCV::XORI), DstReg).addReg(NotCCReg).addImm(1);
+    return;
+  }
+  }
+}
+
+void RISCVInstrInfo::insertSelect(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI,
+                                  const DebugLoc &DL, Register DstReg,
+                                  ArrayRef<MachineOperand> Cond,
+                                  Register TrueReg, Register FalseReg) const {
+  MachineFunction &MF = *MI->getParent()->getParent();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register CCReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  insertICmp(MBB, MI, DL, CCReg, Cond);
+  unsigned CondZeroEqzOpc =
+      ST.hasVendorXVentanaCondOps() ? RISCV::VT_MASKC : RISCV::CZERO_EQZ;
+  unsigned CondZeroNezOpc =
+      ST.hasVendorXVentanaCondOps() ? RISCV::VT_MASKCN : RISCV::CZERO_NEZ;
+  Register TrueValOrZeroReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  Register FalseValOrZeroReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  BuildMI(MBB, MI, DL, get(CondZeroEqzOpc), TrueValOrZeroReg)
+      .addReg(TrueReg)
+      .addReg(CCReg);
+  BuildMI(MBB, MI, DL, get(CondZeroNezOpc), FalseValOrZeroReg)
+      .addReg(FalseReg)
+      .addReg(CCReg);
+  BuildMI(MBB, MI, DL, get(RISCV::OR), DstReg)
+      .addReg(TrueValOrZeroReg)
+      .addReg(FalseValOrZeroReg);
+  return;
+}
+
+bool RISCVInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
+                                     ArrayRef<MachineOperand> Cond,
+                                     Register DstReg, Register TrueReg,
+                                     Register FalseReg, int &CondCycles,
+                                     int &TrueCycles, int &FalseCycles) const {
+  TargetSchedModel SchedModel;
+  SchedModel.init(&STI);
+
+  CondCycles = getICmpCost(Cond[0].getImm(), SchedModel);
+  TrueCycles = SchedModel.computeInstrLatency(RISCV::OR) +
+               SchedModel.computeInstrLatency(STI.hasVendorXVentanaCondOps()
+                                                  ? RISCV::VT_MASKC
+                                                  : RISCV::CZERO_EQZ);
+  FalseCycles = SchedModel.computeInstrLatency(RISCV::OR) +
+                SchedModel.computeInstrLatency(STI.hasVendorXVentanaCondOps()
+                                                   ? RISCV::VT_MASKCN
+                                                   : RISCV::CZERO_NEZ);
+
+  return true;
+}
+
 unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     return 0;

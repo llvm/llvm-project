@@ -65,6 +65,11 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
+static cl::opt<bool>
+    RISCVDisableEarlyIfcvt("riscv-disable-early-ifcvt", cl::Hidden,
+                           cl::desc("Disable early if-conversion"),
+                           cl::init(true), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -202,4 +207,12 @@ unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
   return RISCVMinimumJumpTableEntries.getNumOccurrences() > 0
              ? RISCVMinimumJumpTableEntries
              : TuneInfo->MinimumJumpTableEntries;
+}
+
+bool RISCVSubtarget::enableEarlyIfConversion() const {
+  TargetSchedModel SchedModel;
+  SchedModel.init(this);
+  return !RISCVDisableEarlyIfcvt &&
+         (hasStdExtZicond() || hasVendorXVentanaCondOps()) &&
+         SchedModel.hasInstrSchedModelOrItineraries();
 }
