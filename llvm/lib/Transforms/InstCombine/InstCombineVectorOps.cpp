@@ -619,7 +619,7 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
          "Invalid CollectSingleShuffleElements");
   unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
-  if (match(V, m_Undef())) {
+  if (match(V, m_Poison())) {
     Mask.assign(NumElts, -1);
     return true;
   }
