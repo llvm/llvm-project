@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -fexceptions %s -verify
+// RUN: %clang_cc1 -std=c++1z -fsized-deallocation -fexceptions %s -verify
 
 using size_t = decltype(sizeof(0));
 namespace std { enum class align_val_t : size_t {}; }

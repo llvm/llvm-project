@@ -15,7 +15,7 @@ void t1() {
 }
 
 // CHECK: declare noundef nonnull ptr @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPvm(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPv(ptr noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 // CHECK: declare noundef nonnull ptr @_Znam(i64 noundef) [[ATTR_NOBUILTIN]]
 // CHECK: declare void @_ZdaPv(ptr noundef) [[ATTR_NOBUILTIN_NOUNWIND]]
 
@@ -192,7 +192,7 @@ void f() {
   // CHECK: store i64 200
   delete[] new (nothrow) Alloc[10][20];
   // CHECK: call noalias noundef nonnull ptr @_Znwm
-  // CHECK: call void @_ZdlPvm(ptr noundef {{%.*}}, i64 noundef 1)
+  // CHECK: call void @_ZdlPv(ptr
   delete new bool;
   // CHECK: ret void
 }
@@ -317,7 +317,7 @@ namespace N3664 {
   void f() {
     // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
     int *p = new int; // expected-note {{allocated with 'new' here}}
-    // CHECK: call void @_ZdlPvm({{.*}}) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
+    // CHECK: call void @_ZdlPv({{.*}}) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
     delete p;
 
     // CHECK: call noalias noundef nonnull ptr @_Znam(i64 noundef 12) [[ATTR_BUILTIN_NEW]]

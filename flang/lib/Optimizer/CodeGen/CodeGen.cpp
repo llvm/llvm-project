@@ -12,7 +12,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "CGOps.h"
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -169,6 +169,28 @@ genAllocationScaleSize(OP op, mlir::Type ity,
   }
   return nullptr;
 }
+
+namespace {
+struct DeclareOpConversion : public fir::FIROpConversion<fir::cg::XDeclareOp> {
+public:
+  using FIROpConversion::FIROpConversion;
+  mlir::LogicalResult
+  matchAndRewrite(fir::cg::XDeclareOp declareOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto memRef = adaptor.getOperands()[0];
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(declareOp.getLoc())) {
+      if (auto varAttr =
+              mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
+                  fusedLoc.getMetadata())) {
+        rewriter.create<mlir::LLVM::DbgDeclareOp>(memRef.getLoc(), memRef,
+                                                  varAttr, nullptr);
+      }
+    }
+    rewriter.replaceOp(declareOp, memRef);
+    return mlir::success();
+  }
+};
+} // namespace
 
 namespace {
 /// convert to LLVM IR dialect `alloca`
@@ -1964,12 +1986,12 @@ struct ValueOpCommon {
                  mlir::ArrayAttr arrAttr) {
     llvm::SmallVector<int64_t> indices;
     for (auto i = arrAttr.begin(), e = arrAttr.end(); i != e; ++i) {
-      if (auto intAttr = i->dyn_cast<mlir::IntegerAttr>()) {
+      if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(*i)) {
         indices.push_back(intAttr.getInt());
       } else {
-        auto fieldName = i->cast<mlir::StringAttr>().getValue();
+        auto fieldName = mlir::cast<mlir::StringAttr>(*i).getValue();
         ++i;
-        auto ty = i->cast<mlir::TypeAttr>().getValue();
+        auto ty = mlir::cast<mlir::TypeAttr>(*i).getValue();
         auto index = mlir::cast<fir::RecordType>(ty).getFieldIndex(fieldName);
         indices.push_back(index);
       }
@@ -3014,7 +3036,7 @@ static void selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering,
       caseValues.push_back(intAttr.getInt());
       continue;
     }
-    assert(attr.template dyn_cast_or_null<mlir::UnitAttr>());
+    assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
     assert((t + 1 == conds) && "unit must be last");
     defaultDestination = dest;
     defaultOperands = destOps ? *destOps : mlir::ValueRange{};
@@ -3497,7 +3519,7 @@ public:
     rewriter.startOpModification(op);
     auto callee = op.getCallee();
     if (callee)
-      if (callee->equals("hypotf"))
+      if (*callee == "hypotf")
         op.setCalleeAttr(mlir::SymbolRefAttr::get(op.getContext(), "_hypotf"));
 
     rewriter.finalizeOpModification(op);
@@ -3514,7 +3536,7 @@ public:
   matchAndRewrite(mlir::LLVM::LLVMFuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startOpModification(op);
-    if (op.getSymName().equals("hypotf"))
+    if (op.getSymName() == "hypotf")
       op.setSymNameAttr(rewriter.getStringAttr("_hypotf"));
     rewriter.finalizeOpModification(op);
     return mlir::success();
@@ -3629,11 +3651,11 @@ public:
             auto callee = op.getCallee();
             if (!callee)
               return true;
-            return !callee->equals("hypotf");
+            return *callee != "hypotf";
           });
       target.addDynamicallyLegalOp<mlir::LLVM::LLVMFuncOp>(
           [](mlir::LLVM::LLVMFuncOp op) {
-            return !op.getSymName().equals("hypotf");
+            return op.getSymName() != "hypotf";
           });
     }
 
@@ -3714,19 +3736,19 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
-      CoordinateOpConversion, DTEntryOpConversion, DivcOpConversion,
-      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-      HasValueOpConversion, InsertOnRangeOpConversion, InsertValueOpConversion,
-      IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
-      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion,
+      CoordinateOpConversion, DTEntryOpConversion, DeclareOpConversion,
+      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
+      GlobalOpConversion, HasValueOpConversion, InsertOnRangeOpConversion,
+      InsertValueOpConversion, IsPresentOpConversion, LenParamIndexOpConversion,
+      LoadOpConversion, MulcOpConversion, NegcOpConversion,
+      NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
+      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
       UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
       XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
                                                                 options);

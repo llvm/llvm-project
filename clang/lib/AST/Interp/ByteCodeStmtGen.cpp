@@ -292,8 +292,9 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
   case Stmt::GotoStmtClass:
-  case Stmt::LabelStmtClass:
     return this->emitInvalid(S);
+  case Stmt::LabelStmtClass:
+    return this->visitStmt(cast<LabelStmt>(S)->getSubStmt());
   default: {
     if (auto *Exp = dyn_cast<Expr>(S))
       return this->discard(Exp);
@@ -332,7 +333,8 @@ bool ByteCodeStmtGen<Emitter>::visitCompoundStmt(
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
-    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl>(D))
+    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
+            FunctionDecl>(D))
       continue;
 
     const auto *VD = dyn_cast<VarDecl>(D);
