@@ -2315,15 +2315,7 @@ void DAGTypeLegalizer::SplitVecRes_MCOMPRESS(SDNode *N, SDValue &Lo,
   // operation and then extract the Lo and Hi vectors from that. This gets rid
   // of MCOMPRESS and all other operands can be legalized later.
   SDValue Compressed = TLI.expandMCOMPRESS(N, DAG);
-
-  SDLoc DL(N);
-  EVT SubVecVT =
-      Compressed.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
-  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed,
-                   DAG.getVectorIdxConstant(0, DL));
-  Hi = DAG.getNode(
-      ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Compressed,
-      DAG.getVectorIdxConstant(SubVecVT.getVectorNumElements(), DL));
+  std::tie(Lo, Hi) = DAG.SplitVector(Compressed, SDLoc(N));
 }
 
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {

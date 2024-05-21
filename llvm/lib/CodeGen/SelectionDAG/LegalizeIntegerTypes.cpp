@@ -2348,15 +2348,10 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_MCOMPRESS(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Can only promote MCOMPRESS mask.");
   SDValue Vec = N->getOperand(0);
-  SDValue Mask = N->getOperand(1);
   EVT VT = Vec.getValueType();
-
-  if (OpNo == 0)
-    Vec = GetPromotedInteger(Vec);
-  else
-    Mask = PromoteTargetBoolean(Mask, VT);
-
+  SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
   return DAG.getNode(ISD::MCOMPRESS, SDLoc(N), VT, Vec, Mask);
 }
 
