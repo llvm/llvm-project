@@ -252,7 +252,7 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 # Create *.inc before compiling any sources
 # objects depend on : .inc files
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
-set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Tablegenning")
+set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Codegenning")
 add_dependencies(omp libomp-needed-headers)
 
 # Windows specific build rules
@@ -294,7 +294,7 @@ if(WIN32)
   set(LIBOMP_IMP_LIB_TARGET omp)
   set(LIBOMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.def)
   add_custom_target(libomp-needed-def-file DEPENDS ${LIBOMP_GENERATED_DEF_FILE})
-  set_target_properties(libomp-needed-def-file PROPERTIES FOLDER "OpenMP/Tablegenning")
+  set_target_properties(libomp-needed-def-file PROPERTIES FOLDER "OpenMP/Codegenning")
   add_dependencies(omp libomp-needed-def-file)
 
   # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
@@ -323,7 +323,7 @@ if(WIN32)
     # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one,
     # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
     add_library(${LIBOMP_IMP_LIB_TARGET} STATIC kmp_dummy.txt)
-    set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES FOLDER "OpenMP/Resources")
+    set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES FOLDER "OpenMP/Libraries")
     set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
         PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
         STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
