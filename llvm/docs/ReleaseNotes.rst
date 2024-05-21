@@ -129,6 +129,7 @@ Changes to the RISC-V Backend
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
+* Zaamo and Zalrsc are no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
