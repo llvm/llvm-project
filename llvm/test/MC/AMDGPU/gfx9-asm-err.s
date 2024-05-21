@@ -41,3 +41,6 @@ global_load_dword v[2:3], off
 
 scratch_load_dword v2, off, offset:256
 // GFX9ERR: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
+
+s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_HOST_TRAP_ACK)
+// GFX9ERR: :[[@LINE-1]]:{{[0-9]+}}: error: specified operation id is not supported on this GPU

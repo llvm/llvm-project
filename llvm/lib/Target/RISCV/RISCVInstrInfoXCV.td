@@ -704,3 +704,29 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
             (CV_BITREV GPR:$rs1, cv_tuimm2:$radix, cv_tuimm5:$pts)>;
   def : Pat<(bitreverse (XLenVT GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;
 }
+
+//===----------------------------------------------------------------------===//
+// Patterns for immediate branching operations 
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
+  def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
+            (CV_BEQIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+  def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
+            (CV_BNEIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+
+  let usesCustomInserter = 1 in
+  def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
+                             (ins GPR:$lhs, simm5:$imm5, ixlenimm:$cc,
+                              GPR:$truev, GPR:$falsev), []>;
+
+
+  class Selectbi<CondCode Cond>
+      : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
+                                     (i32 GPR:$truev), GPR:$falsev),
+            (Select_GPR_Using_CC_Imm GPR:$lhs, simm5:$Constant,
+             (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+  def : Selectbi<SETEQ>;
+  def : Selectbi<SETNE>;
+}
