@@ -25,10 +25,10 @@ body:             |
     ; SGPR_SPILLED-LABEL: name: stack-slot-share-equal-sized-spills
     ; SGPR_SPILLED: liveins: $vgpr62, $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: {{  $}}
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr62, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62, implicit killed $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62_lo16, 0, 32, $vgpr62_lo16, 1, 32
+    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr0, 1, [[DEF]], implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr1, 2, [[DEF]], implicit $sgpr0_sgpr1
@@ -92,10 +92,10 @@ body:             |
     ; SGPR_SPILLED-LABEL: name: stack-slot-share-unequal-sized-spills-with-large-spill-first
     ; SGPR_SPILLED: liveins: $vgpr62, $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: {{  $}}
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr62, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62, implicit killed $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62_lo16, 0, 32, $vgpr62_lo16, 1, 32
+    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr2, 1, [[DEF]], implicit-def $sgpr2_sgpr3, implicit $sgpr2_sgpr3
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr3, 2, [[DEF]], implicit $sgpr2_sgpr3
@@ -157,10 +157,10 @@ body:             |
     ; SGPR_SPILLED-LABEL: name: stack-slot-share-unequal-sized-spills-with-small-spill-first
     ; SGPR_SPILLED: liveins: $vgpr62, $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: {{  $}}
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr62, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62, implicit killed $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62_lo16, 0, 32, $vgpr62_lo16, 1, 32
+    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr0, 1, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF

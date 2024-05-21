@@ -183,7 +183,7 @@ body:             |
   bb.0:
     liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-LABEL: name: func_add_constant_to_fi_uniform_live_SCC_i32
-    ; GCN: liveins: $sgpr10, $sgpr30_sgpr31
+    ; GCN: liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32

@@ -46,15 +46,12 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
-  ; CHECK-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
   ; CHECK-NEXT:   renamable $sgpr10 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, killed $vgpr0
+  ; CHECK-NEXT:   $vgpr0 = IMPLICIT_DEF
+  ; CHECK-NEXT:   $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, killed $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $vgpr0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0
-  ; CHECK-NEXT:   KILL killed renamable $vgpr0
+  ; CHECK-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF
