@@ -779,7 +779,6 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    vmsne.vv v0, v8, v12
 ; RV64MV-NEXT:    vmv.v.i v8, 0
 ; RV64MV-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64MV-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64MV-NEXT:    vslidedown.vi v10, v8, 2
 ; RV64MV-NEXT:    vmv.x.s a2, v10
 ; RV64MV-NEXT:    slli a3, a2, 31
