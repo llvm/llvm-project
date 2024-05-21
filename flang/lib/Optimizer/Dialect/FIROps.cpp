@@ -394,11 +394,17 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
     } else {
       auto s = mlir::cast<fir::ShiftType>(shapeTy);
       shapeTyRank = s.getRank();
+      // TODO: it looks like PreCGRewrite and CodeGen can support
+      // fir.shift with plain array reference, so we may consider
+      // removing this check.
       if (!mlir::isa<fir::BaseBoxType>(getMemref().getType()))
         return emitOpError("shift can only be provided with fir.box memref");
     }
     if (arrDim && arrDim != shapeTyRank)
       return emitOpError("rank of dimension mismatched");
+    // TODO: support slicing with changing the numbder of dimensions,
+    // e.g. when array_coord represents an element access to array(:,1,:)
+    // slice: the shape is 3D and the number of indices is 2 in this case.
     if (shapeTyRank != getIndices().size())
       return emitOpError("number of indices do not match dim rank");
   }
@@ -415,6 +421,93 @@ mlir::LogicalResult fir::ArrayCoorOp::verify() {
     return emitOpError("invalid type parameters");
 
   return mlir::success();
+}
+
+// Pull in fir.embox and fir.rebox into fir.array_coor when possible.
+struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
+  using mlir::OpRewritePattern<fir::ArrayCoorOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::ArrayCoorOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Value memref = op.getMemref();
+    if (!mlir::isa<fir::BaseBoxType>(memref.getType()))
+      return mlir::failure();
+
+    mlir::Value boxedMemref, boxedShape, boxedSlice;
+    if (auto emboxOp =
+            mlir::dyn_cast_or_null<fir::EmboxOp>(memref.getDefiningOp())) {
+      boxedMemref = emboxOp.getMemref();
+      boxedShape = emboxOp.getShape();
+      boxedSlice = emboxOp.getSlice();
+      // If any of operands, that are not currently supported for migration
+      // to ArrayCoorOp, is present, don't rewrite.
+      if (!emboxOp.getTypeparams().empty() || emboxOp.getSourceBox() ||
+          emboxOp.getAccessMap())
+        return mlir::failure();
+    } else if (auto reboxOp = mlir::dyn_cast_or_null<fir::ReboxOp>(
+                   memref.getDefiningOp())) {
+      boxedMemref = reboxOp.getBox();
+      boxedShape = reboxOp.getShape();
+      boxedSlice = reboxOp.getSlice();
+    } else {
+      return mlir::failure();
+    }
+
+    // Slices changing the number of dimensions are not supported
+    // for array_coor yet.
+    unsigned origBoxRank;
+    if (mlir::isa<fir::BaseBoxType>(boxedMemref.getType()))
+      origBoxRank = fir::getBoxRank(boxedMemref.getType());
+    else if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(
+                 fir::unwrapRefType(boxedMemref.getType())))
+      origBoxRank = arrTy.getDimension();
+    else
+      return mlir::failure();
+
+    if (fir::getBoxRank(memref.getType()) != origBoxRank)
+      return mlir::failure();
+
+    // Slices with substring are not supported by array_coor.
+    if (boxedSlice)
+      if (auto sliceOp =
+              mlir::dyn_cast_or_null<fir::SliceOp>(boxedSlice.getDefiningOp()))
+        if (!sliceOp.getSubstr().empty())
+          return mlir::failure();
+
+    // If embox/rebox and array_coor have conflicting shapes or slices,
+    // do nothing.
+    if (op.getShape() && boxedShape && boxedShape != op.getShape())
+      return mlir::failure();
+    if (op.getSlice() && boxedSlice && boxedSlice != op.getSlice())
+      return mlir::failure();
+
+    // TODO: temporarily avoid producing array_coor with the shape shift
+    // and plain array reference (it seems to be a limitation of
+    // ArrayCoorOp verifier).
+    if (!mlir::isa<fir::BaseBoxType>(boxedMemref.getType())) {
+      if (boxedShape) {
+        if (mlir::isa<fir::ShiftType>(boxedShape.getType()))
+          return mlir::failure();
+      } else if (op.getShape() &&
+                 mlir::isa<fir::ShiftType>(op.getShape().getType())) {
+        return mlir::failure();
+      }
+    }
+
+    rewriter.modifyOpInPlace(op, [&]() {
+      op.getMemrefMutable().assign(boxedMemref);
+      if (boxedShape)
+        op.getShapeMutable().assign(boxedShape);
+      if (boxedSlice)
+        op.getSliceMutable().assign(boxedSlice);
+    });
+    return mlir::success();
+  }
+};
+
+void fir::ArrayCoorOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<SimplifyArrayCoorOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

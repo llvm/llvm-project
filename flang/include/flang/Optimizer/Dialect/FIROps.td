@@ -1650,6 +1650,7 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
