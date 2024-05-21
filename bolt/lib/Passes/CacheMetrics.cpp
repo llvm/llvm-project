@@ -164,8 +164,7 @@ double expectedCacheHitRatio(
       continue;
     auto BBAddrIt = BBAddr.find(BF->getLayout().block_front());
     assert(BBAddrIt != BBAddr.end());
-    const uint64_t Page =
-        BBAddrIt->second / ITLBPageSize;
+    const uint64_t Page = BBAddrIt->second / ITLBPageSize;
 
     auto FunctionSamplesIt = FunctionSamples.find(BF);
     assert(FunctionSamplesIt != FunctionSamples.end());
@@ -184,8 +183,7 @@ double expectedCacheHitRatio(
 
     auto BBAddrIt = BBAddr.find(BF->getLayout().block_front());
     assert(BBAddrIt != BBAddr.end());
-    const uint64_t Page =
-        BBAddrIt->second / ITLBPageSize;
+    const uint64_t Page = BBAddrIt->second / ITLBPageSize;
     // The probability that the page is not present in the cache
     const double MissProb =
         pow(1.0 - PageSamples[Page] / TotalSamples, ITLBEntries);
@@ -196,8 +194,7 @@ double expectedCacheHitRatio(
 
       BBAddrIt = BBAddr.find(SrcFunction->getLayout().block_front());
       assert(BBAddrIt != BBAddr.end());
-      const uint64_t SrcPage =
-          BBAddrIt->second / ITLBPageSize;
+      const uint64_t SrcPage = BBAddrIt->second / ITLBPageSize;
       // Is this a 'long' or a 'short' call?
       if (Page != SrcPage) {
         // This is a miss

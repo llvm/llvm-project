@@ -1561,8 +1561,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
                           assert(StatsItr != Stats.end());
                           const DynoStats &StatsB = StatsItr->second;
 
-                          return Ascending ? StatsA < StatsB
-                                           : StatsB < StatsA;
+                          return Ascending ? StatsA < StatsB : StatsB < StatsA;
                         });
     } else {
       llvm::stable_sort(

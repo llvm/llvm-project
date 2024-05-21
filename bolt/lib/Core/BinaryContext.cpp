@@ -935,8 +935,8 @@ std::string BinaryContext::generateJumpTableName(const BinaryFunction &BF,
   if (const JumpTable *JT = BF.getJumpTableContainingAddress(Address)) {
     Offset = Address - JT->getAddress();
     auto JTLabelsIt = JT->Labels.find(Offset);
-    if ( JTLabelsIt != JT->Labels.end())
-      return std::string(JTLabelsIt ->second->getName());
+    if (JTLabelsIt != JT->Labels.end())
+      return std::string(JTLabelsIt->second->getName());
 
     auto JTIdsIt = JumpTableIds.find(JT->getAddress());
     assert(JTIdsIt != JumpTableIds.end());
