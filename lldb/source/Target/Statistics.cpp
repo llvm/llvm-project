@@ -16,6 +16,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -362,6 +363,36 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     global_stats.try_emplace("modules", std::move(json_modules));
     global_stats.try_emplace("memory", std::move(json_memory));
     global_stats.try_emplace("commands", std::move(cmd_stats));
+
+    // When transcript is available, add it to the to-be-returned statistics.
+    //
+    // NOTE:
+    // When the statistics is polled by an LLDB command:
+    // - The transcript in the returned statistics *will NOT* contain the
+    //   returned statistics itself.
+    // - The returned statistics *will* be written to the internal transcript
+    //   buffer as the output of the said LLDB command. It *will* appear in
+    //   the next statistcs or transcript poll.
+    //
+    // For example, let's say the following commands are run in order:
+    // - "version"
+    // - "statistics dump"  <- call it "A"
+    // - "statistics dump"  <- call it "B"
+    // The output of "A" will contain the transcript of "version" and
+    // "statistics dump" (A), with the latter having empty output. The output
+    // of B will contain the trascnript of "version", "statistics dump" (A),
+    // "statistics dump" (B), with A's output populated and B's output empty.
+    const StructuredData::Array &transcript =
+        debugger.GetCommandInterpreter().GetTranscript();
+    if (transcript.GetSize() != 0) {
+      std::string buffer;
+      llvm::raw_string_ostream ss(buffer);
+      json::OStream json_os(ss);
+      transcript.Serialize(json_os);
+      if (auto json_transcript = llvm::json::parse(ss.str()))
+        global_stats.try_emplace("transcript",
+                                 std::move(json_transcript.get()));
+    }
   }
 
   return std::move(global_stats);

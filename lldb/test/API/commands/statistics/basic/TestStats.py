@@ -623,3 +623,33 @@ class TestCase(TestBase):
         # Verify that the top level statistic that aggregates the number of
         # modules with debugInfoHadVariableErrors is greater than zero
         self.assertGreater(stats["totalModuleCountWithVariableErrors"], 0)
+
+def test_transcript(self):
+        """
+        Test "statistics dump" and the transcript information.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        self.runCmd("settings set target.save-transcript true")
+        self.runCmd("version")
+
+        # Verify the output of a first "statistics dump"
+        debug_stats = self.get_stats()
+        self.assertIn("transcript", debug_stats)
+        transcript = debug_stats["transcript"]
+        self.assertEqual(len(transcript), 2)
+        self.assertEqual(transcript[0]["command"], "version")
+        self.assertEqual(transcript[1]["command"], "statistics dump")
+        self.assertEqual(transcript[1]["output"], "")
+
+        # Verify the output of a second "statistics dump"
+        debug_stats = self.get_stats()
+        self.assertIn("transcript", debug_stats)
+        transcript = debug_stats["transcript"]
+        self.assertEqual(len(transcript), 3)
+        self.assertEqual(transcript[0]["command"], "version")
+        self.assertEqual(transcript[1]["command"], "statistics dump")
+        self.assertNotEqual(transcript[1]["output"], "")
+        self.assertEqual(transcript[2]["command"], "statistics dump")
+        self.assertEqual(transcript[2]["output"], "")

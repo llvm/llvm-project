@@ -580,7 +580,7 @@ public:
   void SetEchoCommentCommands(bool enable);
 
   bool GetRepeatPreviousCommand() const;
-  
+
   bool GetRequireCommandOverwrite() const;
 
   const CommandObject::CommandMap &GetUserCommands() const {
@@ -776,7 +776,8 @@ private:
 
   /// Contains a list of handled commands and their details. Each element in
   /// the list is a dictionary with the following keys/values:
-  /// - "command" (string): The command that was executed.
+  /// - "command" (string): The command that was given by the user.
+  /// - "resolvedCommand" (string): The expanded command that was executed.
   /// - "output" (string): The output of the command. Empty ("") if no output.
   /// - "error" (string): The error of the command. Empty ("") if no error.
   /// - "seconds" (float): The time it took to execute the command.

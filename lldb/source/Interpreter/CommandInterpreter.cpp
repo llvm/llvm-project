@@ -2011,6 +2011,12 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
               wants_raw_input ? "True" : "False");
   }
 
+  // To test whether or not transcript should be saved, `transcript_item` is
+  // used instead of `GetSaveTrasncript()`. This is because the latter will
+  // fail when the command is "settings set interpreter.save-transcript true".
+  if (transcript_item)
+    transcript_item->AddStringItem("resolvedCommand", command_string);
+
   // Phase 2.
   // Take care of things like setting up the history command & calling the
   // appropriate Execute method on the CommandObject, with the appropriate
