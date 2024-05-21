@@ -139,7 +139,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
   // regardless of whether there's a path between the two blocks.
   if (DT) {
     for (auto *BB : StopSet) {
-      if (DT->isReachableFromEntry(BB)) {
+      if (!DT->isReachableFromEntry(BB)) {
         DT = nullptr;
         break;
       }
