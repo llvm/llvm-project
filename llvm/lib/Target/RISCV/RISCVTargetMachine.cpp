@@ -97,8 +97,9 @@ static cl::opt<bool> EnableMISchedLoadClustering(
     cl::init(false));
 
 static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
-    "riscv-vsetvli-after-rvv-regalloc", cl::Hidden,
-    cl::desc("vsetvl insertion after rvv regalloc"), cl::init(true));
+    "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
+    cl::desc("Insert vsetvls after vector register allocation"),
+    cl::init(true));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
