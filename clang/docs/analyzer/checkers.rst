@@ -2794,8 +2794,8 @@ Warn on mmap() calls that are both writable and executable.
 
 .. _alpha-security-putenv-stack-array:
 
-alpha.security.PutenvStackArray
-"""""""""""""""""""""""""""""""
+alpha.security.PutenvStackArray (C)
+"""""""""""""""""""""""""""""""""""
 Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
 (automatic) array as the argument. Function ``putenv`` does not copy the passed
 string, only a pointer to the data is stored and this data can be read even by
@@ -2813,7 +2813,7 @@ The check corresponds to CERT rule
 .. code-block:: c
 
   int f() {
-    char[] env = "NAME=value";
+    char env[] = "NAME=value";
     return putenv(env); // putenv function should not be called with stack-allocated string
   }
 
