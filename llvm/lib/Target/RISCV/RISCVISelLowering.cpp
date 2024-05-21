@@ -1919,7 +1919,7 @@ bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
-         !isa<ConstantSDNode>(Y);
+         (!isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque());
 }
 
 bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
