@@ -3030,8 +3030,13 @@ SDValue SITargetLowering::LowerFormalArguments(
       RC = &AMDGPU::VGPR_32RegClass;
     else if (AMDGPU::SGPR_32RegClass.contains(Reg))
       RC = &AMDGPU::SGPR_32RegClass;
-    else
-      llvm_unreachable("Unexpected register class in LowerFormalArguments!");
+    else {
+      if (VT == MVT::i1)
+        RC = Subtarget->getBoolRC();
+      else
+        llvm_unreachable("Unexpected register class in LowerFormalArguments!");
+    }
+
     EVT ValVT = VA.getValVT();
 
     Reg = MF.addLiveIn(Reg, RC);
@@ -3148,6 +3153,9 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
+  if (!Subtarget->enableFlatScratch())
+    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+
   // Analyze outgoing return values.
   CCInfo.AnalyzeReturn(Outs, CCAssignFnForReturn(CallConv, isVarArg));
 
@@ -3227,6 +3235,13 @@ SDValue SITargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
+
+  if (!Subtarget->enableFlatScratch()) {
+    SIMachineFunctionInfo *FuncInfo =
+        DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  }
+
   CCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Copy all of the result registers out of their specified physreg.
@@ -3238,6 +3253,23 @@ SDValue SITargetLowering::LowerCallResult(
       Val = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), VA.getLocVT(), InGlue);
       Chain = Val.getValue(1);
       InGlue = Val.getValue(2);
+
+      // For i1 return value allocated to an SGPR, the following is a
+      // workaround before SILowerI1Copies is fixed. Basically we want the
+      // dst reg for the above CopyFromReg not to be of the VReg_1 class
+      // when emitting machine code. This workaround creats an addional
+      // CopyToReg with a new virtual register, followed by another
+      // CopyFromReg.
+      if (VA.getLocVT() == MVT::i1) {
+        const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+        MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+
+        if (TRI->isSGPRReg(MRI, VA.getLocReg())) {
+          Register TmpVReg = MRI.createVirtualRegister(TRI->getBoolRC());
+          SDValue TmpCopyTo = DAG.getCopyToReg(Chain, DL, TmpVReg, Val);
+          Val = DAG.getCopyFromReg(TmpCopyTo, DL, TmpVReg, MVT::i1);
+        }
+      }
     } else if (VA.isMemLoc()) {
       report_fatal_error("TODO: return values in memory");
     } else
@@ -3670,6 +3702,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
+  }
+
+  // In code below (after call of AnalyzeCallOperands),
+  // if (!Subtarget->enableFlatScratch()), it would use either s[48:51] or
+  // s[0:3]. Therefore, before calling AnalyzeCallOperands, we may need to
+  // reserve these registers.
+  if (!Subtarget->enableFlatScratch()) {
+    if (IsChainCallConv)
+      CCInfo.AllocateReg(AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51);
+    else
+      CCInfo.AllocateReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3);
   }
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
@@ -15981,6 +16024,28 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   return false;
 }
 
+LLVM_ATTRIBUTE_UNUSED
+static bool isCopyFromRegForI1Return(const SDNode *N) {
+  assert(N->getOpcode() == ISD::CopyFromReg);
+  SDNode *N1 = N->getOperand(0).getNode();
+  if (N1->getOpcode() != ISD::CopyToReg)
+    return false;
+  SDNode *N2 = N1->getOperand(0).getNode();
+  if (N2->getOpcode() != ISD::CopyFromReg)
+    return false;
+
+  // Possibly multiple CopyFromReg nodes before getting to CALLSEQ_END,
+  // e.g., when the return value is an array.
+  SDNode *N3 = N2;
+  do {
+    N3 = N3->getOperand(0).getNode();
+  } while (N3->getOpcode() == ISD::CopyFromReg);
+
+  if (N3->getOpcode() != ISD::CALLSEQ_END)
+    return false;
+  return true;
+}
+
 bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
                                                   FunctionLoweringInfo *FLI,
                                                   UniformityInfo *UA) const {
@@ -15998,7 +16063,8 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
       return UA->isDivergent(V);
 
-    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
+    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N) ||
+           isCopyFromRegForI1Return(N));
     return !TRI->isSGPRReg(MRI, Reg);
   }
   case ISD::LOAD: {

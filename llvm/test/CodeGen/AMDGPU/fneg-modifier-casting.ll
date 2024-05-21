@@ -7,18 +7,13 @@ define i32 @fneg_xor_select_i32(i1 %cond, i32 %arg0, i32 %arg1) {
 ; GCN-LABEL: fneg_xor_select_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -v2, -v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v1, -v0, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_xor_select_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, -v2, -v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, -v1, -v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i32 %arg0, i32 %arg1
   %fneg = xor i32 %select, -2147483648
@@ -57,10 +52,8 @@ define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr ad
 ; GFX7-LABEL: fneg_xor_select_i32_multi_use:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX7-NEXT:    flat_store_dword v[3:4], v0
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
+; GFX7-NEXT:    flat_store_dword v[2:3], v0
 ; GFX7-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -68,10 +61,8 @@ define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr ad
 ; GFX9-LABEL: fneg_xor_select_i32_multi_use:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -79,12 +70,10 @@ define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr ad
 ; GFX11-LABEL: fneg_xor_select_i32_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
-; GFX11-NEXT:    global_store_b32 v[3:4], v1, off
+; GFX11-NEXT:    global_store_b32 v[2:3], v1, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i32 %arg0, i32 %arg1
   store i32 %select, ptr addrspace(1) %ptr
@@ -96,20 +85,15 @@ define i64 @fneg_xor_select_i64(i1 %cond, i64 %arg0, i64 %arg1) {
 ; GCN-LABEL: fneg_xor_select_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v4, -v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v3, -v1, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_xor_select_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v4, -v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v3, -v1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i64 %arg0, i64 %arg1
   %fneg = xor i64 %select, 9223372036854775808
@@ -152,19 +136,15 @@ define i16 @fneg_xor_select_i16(i1 %cond, i16 %arg0, i16 %arg1) {
 ; GCN-LABEL: fneg_xor_select_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GCN-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_xor_select_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i16 %arg0, i16 %arg1
@@ -231,10 +211,8 @@ define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr ad
 ; GFX7-LABEL: fneg_xor_select_i16_multi_use:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX7-NEXT:    flat_store_short v[3:4], v0
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
+; GFX7-NEXT:    flat_store_short v[2:3], v0
 ; GFX7-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -242,10 +220,8 @@ define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr ad
 ; GFX9-LABEL: fneg_xor_select_i16_multi_use:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX9-NEXT:    global_store_short v[3:4], v0, off
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
+; GFX9-NEXT:    global_store_short v[2:3], v0, off
 ; GFX9-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -253,12 +229,10 @@ define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr ad
 ; GFX11-LABEL: fneg_xor_select_i16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v1
-; GFX11-NEXT:    global_store_b16 v[3:4], v1, off
+; GFX11-NEXT:    global_store_b16 v[2:3], v1, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i16 %arg0, i16 %arg1
   store i16 %select, ptr addrspace(1) %ptr
@@ -270,38 +244,34 @@ define i64 @fneg_xor_select_i64_multi_user(i1 %cond, i64 %arg0, i64 %arg1, ptr a
 ; GFX7-LABEL: fneg_xor_select_i64_multi_user:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX7-NEXT:    v_mov_b32_e32 v7, v1
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v3, v7, vcc
-; GFX7-NEXT:    flat_store_dwordx2 v[5:6], v[0:1]
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, -v4, -v2, vcc
+; GFX7-NEXT:    v_mov_b32_e32 v6, v1
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, v3, v6, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GFX7-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, -v3, -v6, s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: fneg_xor_select_i64_multi_user:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v7, v1
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v7, vcc
-; GFX9-NEXT:    global_store_dwordx2 v[5:6], v[0:1], off
-; GFX9-NEXT:    v_cndmask_b32_e64 v1, -v4, -v2, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v6, v1
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, v3, v6, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, -v3, -v6, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_xor_select_i64_multi_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_and_b32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_dual_cndmask_b32 v1, v4, v2 :: v_dual_cndmask_b32 v0, v3, v7
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, -v4, -v2, vcc_lo
-; GFX11-NEXT:    global_store_b64 v[5:6], v[0:1], off
+; GFX11-NEXT:    v_mov_b32_e32 v6, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v3, v6, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, -v3, -v6, s0
+; GFX11-NEXT:    global_store_b64 v[4:5], v[0:1], off
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i64 %arg0, i64 %arg1
@@ -314,30 +284,21 @@ define i32 @select_fneg_xor_select_i32(i1 %cond0, i1 %cond1, i32 %arg0, i32 %arg
 ; GCN-LABEL: select_fneg_xor_select_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
-; GCN-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[6:7]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_xor_select_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = xor i32 %arg0, -2147483648
   %select0 = select i1 %cond0, i32 %arg1, i32 %fneg0
@@ -350,25 +311,16 @@ define float @select_fneg_select_f32(i1 %cond0, i1 %cond1, float %arg0, float %a
 ; GCN-LABEL: select_fneg_select_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, -v2, v3, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, s[6:7]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_select_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, -v2, v3, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = fneg float %arg0
   %select0 = select i1 %cond0, float %arg1, float %fneg0
@@ -381,20 +333,15 @@ define double @fneg_xor_select_f64(i1 %cond, double %arg0, double %arg1) {
 ; GCN-LABEL: fneg_xor_select_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v4, -v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v3, -v1, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_xor_select_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v4, -v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v3, -v1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, double %arg0, double %arg1
   %fneg = fneg double %select
@@ -405,12 +352,9 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX7-LABEL: fneg_xor_select_f64_multi_user:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX7-NEXT:    v_mov_b32_e32 v7, v1
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v3, v7, vcc
-; GFX7-NEXT:    flat_store_dwordx2 v[5:6], v[0:1]
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GFX7-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -418,12 +362,9 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX9-LABEL: fneg_xor_select_f64_multi_user:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v7, v1
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v7, vcc
-; GFX9-NEXT:    global_store_dwordx2 v[5:6], v[0:1], off
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GFX9-NEXT:    global_store_dwordx2 v[4:5], v[0:1], off
 ; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -431,13 +372,11 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX11-LABEL: fneg_xor_select_f64_multi_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_and_b32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_dual_cndmask_b32 v1, v4, v2 :: v_dual_cndmask_b32 v0, v3, v7
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
-; GFX11-NEXT:    global_store_b64 v[5:6], v[0:1], off
+; GFX11-NEXT:    global_store_b64 v[4:5], v[0:1], off
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, double %arg0, double %arg1
@@ -450,21 +389,18 @@ define double @fneg_xor_select_i64_user_with_srcmods(i1 %cond, i64 %arg0, i64 %a
 ; GCN-LABEL: fneg_xor_select_i64_user_with_srcmods:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; GCN-NEXT:    v_add_f64 v[0:1], -v[1:2], 2.0
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GCN-NEXT:    v_add_f64 v[0:1], -v[0:1], 2.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_xor_select_i64_user_with_srcmods:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_dual_cndmask_b32 v1, v3, v1 :: v_dual_cndmask_b32 v2, v4, v2
-; GFX11-NEXT:    v_add_f64 v[0:1], -v[1:2], 2.0
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_f64 v[0:1], -v[0:1], 2.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i64 %arg0, i64 %arg1
   %fneg = xor i64 %select, 9223372036854775808
@@ -477,32 +413,23 @@ define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, d
 ; GCN-LABEL: select_fneg_select_fneg_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v3, v5, vcc
-; GCN-NEXT:    v_xor_b32_e32 v3, 0x80000000, v2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v3, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[4:5]
+; GCN-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[6:7]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_select_fneg_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v2, v3, v5, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v2
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v3, s0
+; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = fneg double %arg0
   %select0 = select i1 %cond0, double %arg1, double %fneg0
@@ -515,32 +442,23 @@ define i64 @select_fneg_xor_select_i64(i1 %cond0, i1 %cond1, i64 %arg0, i64 %arg
 ; GCN-LABEL: select_fneg_xor_select_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v3, v5, vcc
-; GCN-NEXT:    v_xor_b32_e32 v3, 0x80000000, v2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v3, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[4:5]
+; GCN-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[6:7]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_xor_select_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v2, v3, v5, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v2
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v3, s0
+; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = xor i64 %arg0, 9223372036854775808
   %select0 = select i1 %cond0, i64 %arg1, i64 %fneg0
@@ -553,45 +471,32 @@ define half @select_fneg_select_f16(i1 %cond0, i1 %cond1, half %arg0, half %arg1
 ; GFX7-LABEL: select_fneg_select_f16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX7-NEXT:    v_cvt_f16_f32_e64 v2, -v2
-; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX7-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, vcc
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e64 v0, v0, -v0, s[6:7]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: select_fneg_select_f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_xor_b32_e32 v2, 0x8000, v2
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
-; GFX9-NEXT:    v_xor_b32_e32 v2, 0x8000, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[6:7]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_select_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0x8000, v2
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0x8000, v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = fneg half %arg0
   %select0 = select i1 %cond0, half %arg1, half %fneg0
@@ -604,30 +509,21 @@ define i16 @select_fneg_xor_select_i16(i1 %cond0, i1 %cond1, i16 %arg0, i16 %arg
 ; GCN-LABEL: select_fneg_xor_select_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
-; GCN-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
+; GCN-NEXT:    v_xor_b32_e32 v1, 0xffff8000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[6:7]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_xor_select_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v2
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v0
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0xffff8000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = xor i16 %arg0, -32768
   %select0 = select i1 %cond0, i16 %arg1, i16 %fneg0

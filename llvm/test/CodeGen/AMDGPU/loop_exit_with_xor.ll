@@ -99,9 +99,7 @@ define void @break_cond_is_arg(i32 %arg, i1 %breakcond) {
 ; GCN-LABEL: break_cond_is_arg:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
 ; GCN-NEXT:    s_mov_b32 s10, 1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB2_2
