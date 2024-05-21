@@ -3476,8 +3476,8 @@ IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
   assert((args.size() == 1 && resultType.has_value()) ||
          (args.size() >= 1 && !resultType.has_value()));
 
-  auto cwd = fir::getBase(args[0]);
-  auto statusValue = fir::runtime::genGetCwd(builder, loc, cwd);
+  mlir::Value cwd = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genGetCwd(builder, loc, cwd);
 
   if (resultType.has_value()) {
     // Function form, return status.
