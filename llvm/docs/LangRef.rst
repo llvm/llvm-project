@@ -19197,6 +19197,71 @@ the follow sequence of operations:
 
 The ``mask`` operand will apply to at least the gather and scatter operations.
 
+
+.. _int_masked_compress:
+
+'``llvm.masked.compress.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
+Semantically, this is similar to :ref:`llvm.masked.compressstore <int_compressstore>` but with weaker assumptions
+and without storing the results to memory, i.e., the data remains in the vector.
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. A number of scalar values of integer, floating point or pointer data type are collected
+from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
+
+:: code-block:: llvm
+
+      declare <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>)
+      declare <16 x float> @llvm.masked.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Selects elements from input vector '``value``' according to the '``mask``'.
+All selected elements are written into adjacent lanes in the result vector, from lower to higher.
+The mask holds an entry for each vector lane, and is used to select elements to be kept.
+The number of valid lanes is equal to the number of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values are undefined.
+The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the remainder of the vector may
+contain undefined values.
+This allows for branchless code and better optimization for all targets that do not support the explicit semantics of
+:ref:`llvm.masked.compressstore <int_compressstore>` but still have some form of compress operations (e.g., ARM SVE and RISCV V)
+The result vector can be written with a similar effect, as all the selected values are at the lower positions of the
+vector, but without requiring branches to avoid writes where the mask is ``false``.
+
+Arguments:
+""""""""""
+
+The first operand is the input vector, from which elements are selected.
+The second operand is the mask, a vector of boolean values.
+The mask and the input vector must have the same number of vector elements.
+
+Semantics:
+""""""""""
+
+The ``llvm.masked.compress`` intrinsic compresses data within a vector.
+It collects elements from possibly non-adjacent lanes of a vector and place them contiguously in the result vector based on a selection mask.
+This intrinsic performs the logic of the following C++ example.
+All values in ``out`` after the last selected one are undefined.
+If all entries in the ``mask`` are 0, the entire ``out`` vector is undefined.
+
+.. code-block:: cpp
+
+    // Consecutively place selected values in a vector.
+    using VecT __attribute__((vector_size(N))) = int;
+    VecT compress(VecT vec, VecT mask) {
+      VecT out;
+      int idx = 0;
+      for (int i = 0; i < N / sizeof(int); ++i) {
+        out[idx] = vec[i];
+        idx += static_cast<bool>(mask[i]);
+      }
+      return out;
+    }
+
+
 Matrix Intrinsics
 -----------------
 
@@ -24974,72 +25039,6 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
-
-Masked Vector Compress Intrinsic
---------------------------------
-
-LLVM provides an intrinsic for compressing data within a vector based on a selection mask.
-Semantically, this is similar to :ref:`llvm.masked.compressstore <int_compressstore>` but with weaker assumptions
-and without storing the results to memory, i.e., the data remains in the vector.
-
-.. _int_masked_compress:
-
-'``llvm.masked.compress.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic. A number of scalar values of integer, floating point or pointer data type are collected
-from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
-
-:: code-block:: llvm
-
-      declare <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>)
-      declare <16 x float> @llvm.masked.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>)
-
-Overview:
-"""""""""
-
-Selects elements from input vector '``value``' according to the '``mask``'.
-All selected elements are written into adjacent lanes in the result vector, from lower to higher.
-The mask holds an entry for each vector lane, and is used to select elements to be kept.
-The number of valid lanes is equal to the number of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values are undefined.
-The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the remainder of the vector may
-contain undefined values.
-This allows for branchless code and better optimization for all targets that do not support the explicit semantics of
-:ref:`llvm.masked.compressstore <int_compressstore>` but still have some form of compress operations (e.g., ARM SVE and RISCV V)
-The result vector can be written with a similar effect, as all the selected values are at the lower positions of the
-vector, but without requiring branches to avoid writes where the mask is ``false``.
-
-Arguments:
-""""""""""
-
-The first operand is the input vector, from which elements are selected.
-The second operand is the mask, a vector of boolean values.
-The mask and the input vector must have the same number of vector elements.
-
-Semantics:
-""""""""""
-
-The ``llvm.masked.compress`` intrinsic compresses data within a vector.
-It collects elements from possibly non-adjacent lanes of a vector and place them contiguously in the result vector based on a selection mask.
-This intrinsic performs the logic of the following C++ example.
-All values in ``out`` after the last selected one are undefined.
-If all entries in the ``mask`` are 0, the entire ``out`` vector is undefined.
-
-.. code-block:: cpp
-
-    // Consecutively place selected values in a vector.
-    using VecT __attribute__((vector_size(N))) = int;
-    VecT compress(VecT vec, VecT mask) {
-      VecT out;
-      int idx = 0;
-      for (int i = 0; i < N / sizeof(int); ++i) {
-        out[idx] = vec[i];
-        idx += static_cast<bool>(mask[i]);
-      }
-      return out;
-    }
 
 
 Memory Use Markers
