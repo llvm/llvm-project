@@ -21230,6 +21230,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_storef16_f32);
     return Builder.CreateCall(Callee, {Val, Addr});
   }
+  case WebAssembly::BI__builtin_wasm_splat_f16x8: {
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_splat_f16x8);
+    return Builder.CreateCall(Callee, {Val});
+  }
   case WebAssembly::BI__builtin_wasm_table_get: {
     assert(E->getArg(0)->getType()->isArrayType());
     Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
