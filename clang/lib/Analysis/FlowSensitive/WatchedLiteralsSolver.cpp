@@ -27,20 +27,6 @@
 namespace clang {
 namespace dataflow {
 
-// `WatchedLiteralsSolver` is an implementation of Algorithm D from Knuth's
-// The Art of Computer Programming Volume 4: Satisfiability, Fascicle 6. It is
-// based on the backtracking DPLL algorithm [1], keeps references to a single
-// "watched" literal per clause, and uses a set of "active" variables to perform
-// unit propagation.
-//
-// The solver expects that its input is a boolean formula in conjunctive normal
-// form that consists of clauses of at least one literal. A literal is either a
-// boolean variable or its negation. Below we define types, data structures, and
-// utilities that are used to represent boolean formulas in conjunctive normal
-// form.
-//
-// [1] https://en.wikipedia.org/wiki/DPLL_algorithm
-
 namespace {
 
 class WatchedLiteralsSolverImpl {

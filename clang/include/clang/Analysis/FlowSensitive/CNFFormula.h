@@ -48,14 +48,14 @@ constexpr ClauseID NullClause = 0;
 /// Returns the positive literal `V`.
 inline constexpr Literal posLit(Variable V) { return 2 * V; }
 
+/// Returns the negative literal `!V`.
+inline constexpr Literal negLit(Variable V) { return 2 * V + 1; }
+
 /// Returns whether `L` is a positive literal.
 inline constexpr bool isPosLit(Literal L) { return 0 == (L & 1); }
 
 /// Returns whether `L` is a negative literal.
 inline constexpr bool isNegLit(Literal L) { return 1 == (L & 1); }
-
-/// Returns the negative literal `!V`.
-inline constexpr Literal negLit(Variable V) { return 2 * V + 1; }
 
 /// Returns the negated literal `!L`.
 inline constexpr Literal notLit(Literal L) { return L ^ 1; }
