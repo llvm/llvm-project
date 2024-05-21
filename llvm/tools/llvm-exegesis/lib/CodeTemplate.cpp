@@ -57,11 +57,12 @@ const MCOperand &InstructionTemplate::getValueFor(const Operand &Op) const {
   return getValueFor(Instr->Variables[Op.getVariableIndex()]);
 }
 
-MCOperand &InstructionTemplate::getValueFor(unsigned OpIdx) {
+MCOperand &InstructionTemplate::getValueForOperandIdx(unsigned OpIdx) {
   return getValueFor(Instr->Variables[OpIdx]);
 }
 
-const MCOperand &InstructionTemplate::getValueFor(unsigned OpIdx) const {
+const MCOperand &
+InstructionTemplate::getValueForOperandIdx(unsigned OpIdx) const {
   return getValueFor(Instr->Variables[OpIdx]);
 }
 

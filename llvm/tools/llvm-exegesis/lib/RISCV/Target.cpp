@@ -371,7 +371,7 @@ Error ExegesisRISCVTarget::randomizeTargetMCOperand(
 // explicitly for each instruction according to RVC spec.
 void ExegesisRISCVTarget::processInstructionReservedRegs(
     InstructionTemplate &IT) const {
-  MCOperand &AssignedValue = IT.getValueFor(0);
+  MCOperand &AssignedValue = IT.getValueForOperandIdx(0);
 
   switch (IT.getOpcode()) {
   case RISCV::C_ADDI16SP:

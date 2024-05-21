@@ -212,10 +212,6 @@ public:
   ExegesisDefaultTarget() : ExegesisTarget({}, opcodeIsNotAvailable) {}
 
 private:
-  unsigned findRegisterByName(const StringRef RegName) const override {
-    llvm_unreachable("Not yet implemented");
-  }
-
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override {
     llvm_unreachable("Not yet implemented");

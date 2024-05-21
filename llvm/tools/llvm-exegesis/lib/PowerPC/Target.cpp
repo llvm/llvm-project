@@ -33,8 +33,6 @@ public:
       : ExegesisTarget(PPCCpuPfmCounters, PPC_MC::isOpcodeAvailable) {}
 
 private:
-  unsigned findRegisterByName(const StringRef RegName) const override;
-
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
   bool matchesArch(Triple::ArchType Arch) const override {
@@ -92,11 +90,6 @@ void ExegesisPowerPCTarget::fillMemoryOperands(InstructionTemplate &IT,
   else
     setMemOp(IT, DispOpIdx, MCOperand::createImm(Offset)); // Disp
   setMemOp(IT, MemOpIdx + 2, MCOperand::createReg(Reg));   // BaseReg
-}
-
-unsigned
-ExegesisPowerPCTarget::findRegisterByName(const StringRef RegName) const {
-  return PPC::NoRegister;
 }
 
 std::vector<MCInst> ExegesisPowerPCTarget::setRegTo(const MCSubtargetInfo &STI,

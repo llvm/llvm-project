@@ -62,7 +62,6 @@ private:
   unsigned getMaxMemoryAccessSize() const override { return 64; }
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
-  unsigned findRegisterByName(const StringRef RegName) const override;
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
   bool matchesArch(Triple::ArchType Arch) const override {
@@ -146,10 +145,6 @@ void ExegesisMipsTarget::fillMemoryOperands(InstructionTemplate &IT,
   setMemOp(IT, 0, MCOperand::createReg(0));      // IndexReg
   setMemOp(IT, 1, MCOperand::createReg(Reg));    // BaseReg
   setMemOp(IT, 2, MCOperand::createImm(Offset)); // Disp
-}
-
-unsigned ExegesisMipsTarget::findRegisterByName(const StringRef RegName) const {
-  return Mips::NoRegister;
 }
 
 std::vector<MCInst> ExegesisMipsTarget::setRegTo(const MCSubtargetInfo &STI,

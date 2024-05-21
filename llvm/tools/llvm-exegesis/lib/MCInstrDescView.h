@@ -166,7 +166,6 @@ struct Instruction {
   const BitVector &ImplUseRegs; // The set of aliased implicit use registers.
   const BitVector &AllDefRegs;  // The set of all aliased def registers.
   const BitVector &AllUseRegs;  // The set of all aliased use registers.
-  const BitVector &MemoryRegs;  // The set of all aliased memory use registers.
   // The set of all aliased not memory use registers.
   const BitVector &NotMemoryRegs;
 
@@ -175,8 +174,7 @@ private:
               SmallVector<Operand, 8> Operands,
               SmallVector<Variable, 4> Variables, const BitVector *ImplDefRegs,
               const BitVector *ImplUseRegs, const BitVector *AllDefRegs,
-              const BitVector *AllUseRegs, const BitVector *MemoryRegs,
-              const BitVector *NotMemoryRegs);
+              const BitVector *AllUseRegs, const BitVector *NotMemoryRegs);
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of

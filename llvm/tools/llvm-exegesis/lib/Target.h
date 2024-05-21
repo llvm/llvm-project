@@ -92,7 +92,9 @@ public:
   }
 
   // Find register by name, NoRegister if not found.
-  virtual unsigned findRegisterByName(const StringRef RegName) const = 0;
+  virtual unsigned findRegisterByName(const StringRef RegName) const {
+    return MCRegister::NoRegister;
+  }
 
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}

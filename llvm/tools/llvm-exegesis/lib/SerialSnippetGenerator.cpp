@@ -125,7 +125,7 @@ static void appendCodeTemplates(const LLVMState &State,
       if (DefOpIt == I.Operands.end())
         return;
 
-      auto &DefOp = *DefOpIt;
+      const Operand &DefOp = *DefOpIt;
       auto &ET = State.getExegesisTarget();
       auto ScratchMemoryRegister = ET.getScratchMemoryRegister(
           State.getTargetMachine().getTargetTriple());
