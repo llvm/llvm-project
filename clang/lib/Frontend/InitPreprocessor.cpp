@@ -1006,6 +1006,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   else if (LangOpts.hasDWARFExceptions() &&
            (TI.getTriple().isThumb() || TI.getTriple().isARM()))
     Builder.defineMacro("__ARM_DWARF_EH__");
+  else if (LangOpts.hasWasmExceptions() && TI.getTriple().isWasm())
+    Builder.defineMacro("__WASM_EXCEPTIONS__");
 
   if (LangOpts.Deprecated)
     Builder.defineMacro("__DEPRECATED");
