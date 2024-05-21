@@ -77,7 +77,7 @@ end program
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFFreduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = {{.*}}, uniq_name = "_QFFreduceEr"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+! CHECK:             %[[VAL_4:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFFreduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 10 : i32

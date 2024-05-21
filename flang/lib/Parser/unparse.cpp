@@ -2194,11 +2194,23 @@ public:
     case llvm::omp::Directive::OMPD_do_simd:
       Word("DO SIMD ");
       break;
+    case llvm::omp::Directive::OMPD_masked_taskloop_simd:
+      Word("MASKED TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_masked_taskloop:
+      Word("MASKED TASKLOOP");
+      break;
     case llvm::omp::Directive::OMPD_parallel_do:
       Word("PARALLEL DO ");
       break;
     case llvm::omp::Directive::OMPD_parallel_do_simd:
       Word("PARALLEL DO SIMD ");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
+      Word("PARALLEL MASKED TASKLOOP SIMD");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
+      Word("PARALLEL MASKED TASKLOOP");
       break;
     case llvm::omp::Directive::OMPD_simd:
       Word("SIMD ");
@@ -2283,11 +2295,17 @@ public:
   }
   void Unparse(const OmpBlockDirective &x) {
     switch (x.v) {
+    case llvm::omp::Directive::OMPD_masked:
+      Word("MASKED");
+      break;
     case llvm::omp::Directive::OMPD_master:
       Word("MASTER");
       break;
     case llvm::omp::Directive::OMPD_ordered:
       Word("ORDERED ");
+      break;
+    case llvm::omp::Directive::OMPD_parallel_masked:
+      Word("PARALLEL MASKED");
       break;
     case llvm::omp::Directive::OMPD_parallel_workshare:
       Word("PARALLEL WORKSHARE ");

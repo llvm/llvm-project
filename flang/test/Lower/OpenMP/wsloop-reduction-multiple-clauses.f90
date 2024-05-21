@@ -107,7 +107,7 @@ endprogram
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0.000000e+00 : f64
 ! CHECK:           hlfir.assign %[[VAL_10]] to %[[VAL_4]]#0 : f64, !fir.ref<!fir.array<3x3xf64>>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_11:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+! CHECK:             %[[VAL_11:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 10 : i32

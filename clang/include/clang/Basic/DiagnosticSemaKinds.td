@@ -9464,8 +9464,6 @@ def err_static_data_member_not_allowed_in_local_class : Error<
 def err_base_clause_on_union : Error<"unions cannot have base classes">;
 def err_base_must_be_class : Error<"base specifier must name a class">;
 def err_union_as_base_class : Error<"unions cannot be base classes">;
-def err_circular_inheritance : Error<
-  "circular inheritance between %0 and %1">;
 def err_base_class_has_flexible_array_member : Error<
   "base class %0 has a flexible array member">;
 def err_incomplete_base_class : Error<"base class has incomplete type">;
@@ -12345,7 +12343,8 @@ def err_acc_num_gangs_num_args
             "provided}0">;
 def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
-            "element, or composite variable member">;
+            "element,%select{| member of a composite variable,}0 or composite "
+            "variable member">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -12376,5 +12375,18 @@ def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 def err_acc_clause_after_device_type
     : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
             "compute construct">;
-
+def err_acc_reduction_num_gangs_conflict
+    : Error<
+          "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
+          "with a 'num_gangs' clause with more than 1 argument, have %0">;
+def err_acc_reduction_type
+    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
+            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+def err_acc_reduction_composite_type
+    : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
+            "%1 %select{is not a class or struct|is incomplete|is not an "
+            "aggregate}0">;
+def err_acc_reduction_composite_member_type :Error<
+    "OpenACC 'reduction' composite variable must not have non-scalar field">;
+def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 } // end of sema component.

@@ -4168,7 +4168,7 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
 
   auto ShiftAmt = B.buildConstant(S32, 32u - NumBits);
   auto Extend = B.buildAnyExt(S32, {Src}).getReg(0u);
-  auto Shift = B.buildLShr(S32, {Extend}, ShiftAmt);
+  auto Shift = B.buildShl(S32, Extend, ShiftAmt);
   auto Ctlz = B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {S32}, {Shift});
   B.buildTrunc(Dst, Ctlz);
   MI.eraseFromParent();
