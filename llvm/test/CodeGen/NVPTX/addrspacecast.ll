@@ -98,3 +98,95 @@ define i32 @conv8(ptr %ptr) {
   %val = load i32, ptr addrspace(5) %specptr
   ret i32 %val
 }
+
+; Check that we support addrspacecast when splitting the vector
+; result (<2 x ptr> => 2 x <1 x ptr>).
+; This also checks that scalarization works for addrspacecast
+; (when going from <1 x ptr> to ptr.)
+; ALL-LABEL: split1To0
+define void @split1To0(ptr nocapture noundef readonly %xs) {
+; CLS32: cvta.global.u32
+; CLS32: cvta.global.u32
+; CLS64: cvta.global.u64
+; CLS64: cvta.global.u64
+; ALL: st.u32
+; ALL: st.u32
+  %vec_addr = load <2 x ptr addrspace(1)>, ptr %xs, align 16
+  %addrspacecast = addrspacecast <2 x ptr addrspace(1)> %vec_addr to <2 x ptr>
+  %extractelement0 = extractelement <2 x ptr> %addrspacecast, i64 0
+  store float 0.5, ptr %extractelement0, align 4
+  %extractelement1 = extractelement <2 x ptr> %addrspacecast, i64 1
+  store float 1.0, ptr %extractelement1, align 4
+  ret void
+}
+
+; Same as split1To0 but from 0 to 1, to make sure the addrspacecast preserve
+; the source and destination addrspaces properly.
+; ALL-LABEL: split0To1
+define void @split0To1(ptr nocapture noundef readonly %xs) {
+; CLS32: cvta.to.global.u32
+; CLS32: cvta.to.global.u32
+; CLS64: cvta.to.global.u64
+; CLS64: cvta.to.global.u64
+; ALL: st.global.u32
+; ALL: st.global.u32
+  %vec_addr = load <2 x ptr>, ptr %xs, align 16
+  %addrspacecast = addrspacecast <2 x ptr> %vec_addr to <2 x ptr addrspace(1)>
+  %extractelement0 = extractelement <2 x ptr addrspace(1)> %addrspacecast, i64 0
+  store float 0.5, ptr addrspace(1) %extractelement0, align 4
+  %extractelement1 = extractelement <2 x ptr addrspace(1)> %addrspacecast, i64 1
+  store float 1.0, ptr addrspace(1) %extractelement1, align 4
+  ret void
+}
+
+; Check that we support addrspacecast when a widening is required
+; (3 x ptr => 4 x ptr).
+; ALL-LABEL: widen1To0
+define void @widen1To0(ptr nocapture noundef readonly %xs) {
+; CLS32: cvta.global.u32
+; CLS32: cvta.global.u32
+; CLS32: cvta.global.u32
+
+; CLS64: cvta.global.u64
+; CLS64: cvta.global.u64
+; CLS64: cvta.global.u64
+
+; ALL: st.u32
+; ALL: st.u32
+; ALL: st.u32
+  %vec_addr = load <3 x ptr addrspace(1)>, ptr %xs, align 16
+  %addrspacecast = addrspacecast <3 x ptr addrspace(1)> %vec_addr to <3 x ptr>
+  %extractelement0 = extractelement <3 x ptr> %addrspacecast, i64 0
+  store float 0.5, ptr %extractelement0, align 4
+  %extractelement1 = extractelement <3 x ptr> %addrspacecast, i64 1
+  store float 1.0, ptr %extractelement1, align 4
+  %extractelement2 = extractelement <3 x ptr> %addrspacecast, i64 2
+  store float 1.5, ptr %extractelement2, align 4
+  ret void
+}
+
+; Same as widen1To0 but from 0 to 1, to make sure the addrspacecast preserve
+; the source and destination addrspaces properly.
+; ALL-LABEL: widen0To1
+define void @widen0To1(ptr nocapture noundef readonly %xs) {
+; CLS32: cvta.to.global.u32
+; CLS32: cvta.to.global.u32
+; CLS32: cvta.to.global.u32
+
+; CLS64: cvta.to.global.u64
+; CLS64: cvta.to.global.u64
+; CLS64: cvta.to.global.u64
+
+; ALL: st.global.u32
+; ALL: st.global.u32
+; ALL: st.global.u32
+  %vec_addr = load <3 x ptr>, ptr %xs, align 16
+  %addrspacecast = addrspacecast <3 x ptr> %vec_addr to <3 x ptr addrspace(1)>
+  %extractelement0 = extractelement <3 x ptr addrspace(1)> %addrspacecast, i64 0
+  store float 0.5, ptr addrspace(1) %extractelement0, align 4
+  %extractelement1 = extractelement <3 x ptr addrspace(1)> %addrspacecast, i64 1
+  store float 1.0, ptr addrspace(1) %extractelement1, align 4
+  %extractelement2 = extractelement <3 x ptr addrspace(1)> %addrspacecast, i64 2
+  store float 1.5, ptr addrspace(1) %extractelement2, align 4
+  ret void
+}

@@ -2156,8 +2156,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
 ; MIPS32-NEXT:    srav $4, $2, $10
-; MIPS32-NEXT:    sll $4, $4, 16
-; MIPS32-NEXT:    srl $4, $4, 16
+; MIPS32-NEXT:    andi $4, $4, 65535
 ; MIPS32-NEXT:    or $1, $zero, $4
 ; MIPS32-NEXT:    sllv $4, $4, $10
 ; MIPS32-NEXT:    sltu $5, $4, $7
@@ -2695,8 +2694,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
 ; MIPS32-NEXT:    srav $4, $2, $10
-; MIPS32-NEXT:    sll $4, $4, 16
-; MIPS32-NEXT:    srl $4, $4, 16
+; MIPS32-NEXT:    andi $4, $4, 65535
 ; MIPS32-NEXT:    or $1, $zero, $4
 ; MIPS32-NEXT:    sllv $4, $4, $10
 ; MIPS32-NEXT:    sltu $5, $4, $7
@@ -4313,8 +4311,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
 ; MIPS32-NEXT:    srav $4, $2, $10
-; MIPS32-NEXT:    sll $4, $4, 24
-; MIPS32-NEXT:    srl $4, $4, 24
+; MIPS32-NEXT:    andi $4, $4, 255
 ; MIPS32-NEXT:    or $1, $zero, $4
 ; MIPS32-NEXT:    sllv $4, $4, $10
 ; MIPS32-NEXT:    sltu $5, $4, $7
@@ -4852,8 +4849,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
 ; MIPS32-NEXT:    srav $4, $2, $10
-; MIPS32-NEXT:    sll $4, $4, 24
-; MIPS32-NEXT:    srl $4, $4, 24
+; MIPS32-NEXT:    andi $4, $4, 255
 ; MIPS32-NEXT:    or $1, $zero, $4
 ; MIPS32-NEXT:    sllv $4, $4, $10
 ; MIPS32-NEXT:    sltu $5, $4, $7
