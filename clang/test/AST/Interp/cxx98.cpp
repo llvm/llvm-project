@@ -45,3 +45,8 @@ struct C0 {
 };
 const int c0_test = C0::Data<int*>;
 _Static_assert(c0_test == 0, "");
+
+
+int a = 0; // both-note {{declared here}}
+_Static_assert(a == 0, ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                            // both-note {{read of non-const variable 'a' is not allowed in a constant expression}}

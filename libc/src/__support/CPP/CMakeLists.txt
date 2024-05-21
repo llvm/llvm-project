@@ -52,6 +52,12 @@ add_header_library(
 )
 
 add_header_library(
+  mutex
+  HDRS
+    mutex.h
+)
+
+add_header_library(
   span
   HDRS
     span.h

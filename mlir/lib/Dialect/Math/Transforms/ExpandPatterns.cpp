@@ -73,14 +73,14 @@ static LogicalResult convertSinhOp(math::SinhOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
-  Value exp = b.create<math::ExpOp>(operand);
 
-  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
-  Value nexp = b.create<arith::DivFOp>(one, exp);
+  Value exp = b.create<math::ExpOp>(operand);
+  Value neg = b.create<arith::NegFOp>(operand);
+  Value nexp = b.create<math::ExpOp>(neg);
   Value sub = b.create<arith::SubFOp>(exp, nexp);
-  Value two = createFloatConst(op->getLoc(), opType, 2.0, rewriter);
-  Value div = b.create<arith::DivFOp>(sub, two);
-  rewriter.replaceOp(op, div);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value res = b.create<arith::MulFOp>(sub, half);
+  rewriter.replaceOp(op, res);
   return success();
 }
 
@@ -89,14 +89,14 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
-  Value exp = b.create<math::ExpOp>(operand);
 
-  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
-  Value nexp = b.create<arith::DivFOp>(one, exp);
+  Value exp = b.create<math::ExpOp>(operand);
+  Value neg = b.create<arith::NegFOp>(operand);
+  Value nexp = b.create<math::ExpOp>(neg);
   Value add = b.create<arith::AddFOp>(exp, nexp);
-  Value two = createFloatConst(op->getLoc(), opType, 2.0, rewriter);
-  Value div = b.create<arith::DivFOp>(add, two);
-  rewriter.replaceOp(op, div);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value res = b.create<arith::MulFOp>(add, half);
+  rewriter.replaceOp(op, res);
   return success();
 }
 
@@ -149,6 +149,57 @@ static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
   Value cos = b.create<math::CosOp>(type, operand);
   Value div = b.create<arith::DivFOp>(type, sin, cos);
   rewriter.replaceOp(op, div);
+  return success();
+}
+
+// asinh(float x) -> log(x + sqrt(x**2 + 1))
+static LogicalResult convertAsinhOp(math::AsinhOp op,
+                                    PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  Value fma = b.create<math::FmaOp>(operand, operand, one);
+  Value sqrt = b.create<math::SqrtOp>(fma);
+  Value add = b.create<arith::AddFOp>(operand, sqrt);
+  Value res = b.create<math::LogOp>(add);
+  rewriter.replaceOp(op, res);
+  return success();
+}
+
+// acosh(float x) -> log(x + sqrt(x**2 - 1))
+static LogicalResult convertAcoshOp(math::AcoshOp op,
+                                    PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+
+  Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter);
+  Value fma = b.create<math::FmaOp>(operand, operand, negOne);
+  Value sqrt = b.create<math::SqrtOp>(fma);
+  Value add = b.create<arith::AddFOp>(operand, sqrt);
+  Value res = b.create<math::LogOp>(add);
+  rewriter.replaceOp(op, res);
+  return success();
+}
+
+// atanh(float x) -> log((1 + x) / (1 - x)) / 2
+static LogicalResult convertAtanhOp(math::AtanhOp op,
+                                    PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  Value add = b.create<arith::AddFOp>(operand, one);
+  Value neg = b.create<arith::NegFOp>(operand);
+  Value sub = b.create<arith::AddFOp>(neg, one);
+  Value div = b.create<arith::DivFOp>(add, sub);
+  Value log = b.create<math::LogOp>(div);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value res = b.create<arith::MulFOp>(log, half);
+  rewriter.replaceOp(op, res);
   return success();
 }
 
@@ -564,6 +615,23 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   return success();
 }
 
+// Convert `math.rsqrt` into `arith.divf` + `math.sqrt`
+static LogicalResult convertRsqrtOp(math::RsqrtOp op,
+                                    PatternRewriter &rewriter) {
+
+  auto operand = op.getOperand();
+  auto operandTy = operand.getType();
+  auto eTy = getElementTypeOrSelf(operandTy);
+  if (!isa<FloatType>(eTy))
+    return failure();
+
+  Location loc = op->getLoc();
+  auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter);
+  auto sqrtOp = rewriter.create<math::SqrtOp>(loc, operand);
+  rewriter.replaceOpWithNewOp<arith::DivFOp>(op, constOneFloat, sqrtOp);
+  return success();
+}
+
 void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
   patterns.add(convertCtlzOp);
 }
@@ -582,6 +650,18 @@ void mlir::populateExpandTanPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {
   patterns.add(convertTanhOp);
+}
+
+void mlir::populateExpandAsinhPattern(RewritePatternSet &patterns) {
+  patterns.add(convertAsinhOp);
+}
+
+void mlir::populateExpandAcoshPattern(RewritePatternSet &patterns) {
+  patterns.add(convertAcoshOp);
+}
+
+void mlir::populateExpandAtanhPattern(RewritePatternSet &patterns) {
+  patterns.add(convertAtanhOp);
 }
 
 void mlir::populateExpandFmaFPattern(RewritePatternSet &patterns) {
@@ -614,4 +694,8 @@ void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandRoundEvenPattern(RewritePatternSet &patterns) {
   patterns.add(convertRoundEvenOp);
+}
+
+void mlir::populateExpandRsqrtPattern(RewritePatternSet &patterns) {
+  patterns.add(convertRsqrtOp);
 }

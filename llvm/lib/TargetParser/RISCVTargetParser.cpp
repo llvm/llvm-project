@@ -14,7 +14,7 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
