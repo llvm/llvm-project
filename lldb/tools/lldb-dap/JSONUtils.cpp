@@ -1065,9 +1065,9 @@ llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
 }
 
 std::string VariableDescription::GetResult(llvm::StringRef context) {
-  // In repl and hover context, the results can be displayed as multiple lines
-  // so more detailed descriptions can be returned.
-  if (context != "repl" && context != "hover")
+  // In repl context, the results can be displayed as multiple lines so more
+  // detailed descriptions can be returned.
+  if (context != "repl")
     return display_value;
 
   if (!v.IsValid())

@@ -27,7 +27,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         )
 
     def isResultExpandedDescription(self):
-        return self.context == "repl" or self.context == "hover"
+        return self.context == "repl"
 
     def isExpressionParsedExpected(self):
         return self.context != "hover"
