@@ -2331,10 +2331,9 @@ define <4 x i16> @blend_elements_from_load(ptr align 8 %_0) {
   ret <4 x i16> %rv
 }
 
-; FIXME: This is a miscompile.
 define i16 @pr92887(<2 x i16> %v) {
 ; CHECK-LABEL: @pr92887(
-; CHECK-NEXT:    ret i16 poison
+; CHECK-NEXT:    ret i16 undef
 ;
   %v0 = extractelement <2 x i16> %v, i64 0
   %v0lo = and i16 %v0, 1
