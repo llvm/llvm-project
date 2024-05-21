@@ -247,13 +247,13 @@ std::int32_t RTNAME(GetCwd)(
 
   RUNTIME_CHECK(terminator, IsValidCharDescriptor(&cwd));
 
-  char *buf = getcwd(nullptr, 0);
+  char *buf{getcwd(nullptr, 0)};
   if (!buf) {
     return StatMissingCurrentWorkDirectory;
   }
 
-  std::int64_t strLen = StringLength(buf);
-  std::int32_t status = CopyCharsToDescriptor(cwd, buf, strLen);
+  std::int64_t strLen{StringLength(buf)};
+  std::int32_t status{CopyCharsToDescriptor(cwd, buf, strLen)};
 
   std::free(buf);
   return status;
