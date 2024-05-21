@@ -957,6 +957,11 @@ const GCNSubtarget *SITargetLowering::getSubtarget() const {
   return Subtarget;
 }
 
+ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {AMDGPU::MODE};
+  return RCRegs;
+}
+
 //===----------------------------------------------------------------------===//
 // TargetLowering queries
 //===----------------------------------------------------------------------===//
