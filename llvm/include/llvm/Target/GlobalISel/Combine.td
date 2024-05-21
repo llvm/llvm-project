@@ -1695,7 +1695,7 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
 
-def integer_reasso_combines: GICombineGroup<[
+def integer_reassoc_combines: GICombineGroup<[
 ZeroMinusAPlusB,
 APlusZeroMinusB,
 APlusBMinusB,
@@ -1763,7 +1763,7 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
 def constant_fold_binops : GICombineGroup<[constant_fold_binop,
                                            constant_fold_fp_binop]>;
 
-def all_combines : GICombineGroup<[integer_reasso_combines, trivial_combines,
+def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
     combine_extracted_vector_load,
