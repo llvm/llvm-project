@@ -1084,10 +1084,6 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
 
 void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
                                                    IRBuilder<> &B) {
-  // Don't assign types to LLVM tokens.
-  if (isConvergenceIntrinsic(I))
-    return;
-
   reportFatalOnTokenType(I);
   if (!isPointerTy(I->getType()) || !requireAssignType(I) ||
       isa<BitCastInst>(I))
@@ -1106,10 +1102,6 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
                                                 IRBuilder<> &B) {
-  // Don't assign types to LLVM tokens.
-  if (isConvergenceIntrinsic(I))
-    return;
-
   reportFatalOnTokenType(I);
   Type *Ty = I->getType();
   if (!Ty->isVoidTy() && !isPointerTy(Ty) && requireAssignType(I)) {
@@ -1319,6 +1311,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     Worklist.push_back(&I);
 
   for (auto &I : Worklist) {
+    // Don't emit intrinsincs for convergence intrinsics.
+    if (isConvergenceIntrinsic(I))
+      continue;
+
     insertAssignPtrTypeIntrs(I, B);
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);

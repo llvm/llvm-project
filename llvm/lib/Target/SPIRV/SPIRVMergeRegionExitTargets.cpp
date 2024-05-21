@@ -61,9 +61,8 @@ public:
 
     if (auto *SI = dyn_cast<SwitchInst>(T)) {
       output.insert(SI->getDefaultDest());
-      for (auto &Case : SI->cases()) {
+      for (auto &Case : SI->cases())
         output.insert(Case.getCaseSuccessor());
-      }
       return output;
     }
 
@@ -80,9 +79,8 @@ public:
       BasicBlock *BB,
       const std::unordered_map<BasicBlock *, ConstantInt *> &TargetToValue) {
     auto *T = BB->getTerminator();
-    if (auto *RI = dyn_cast<ReturnInst>(T)) {
+    if (auto *RI = dyn_cast<ReturnInst>(T))
       return nullptr;
-    }
 
     IRBuilder<> Builder(BB);
     Builder.SetInsertPoint(T);
