@@ -394,6 +394,11 @@ struct DfsPathFinder : public ICFGPathFinder {
 
             std::sort(nodes.begin(), nodes.end());
             for (const auto &node : nodes) {
+                // 从 u -> node.v -(1)-> node.edge.target -(node.d)-> target
+                // 经过的调用深度超过，就直接跳过
+                if (callDepth + node.d + 1 > maxCallDepth)
+                    break;
+
                 const auto &e = node.edge;
 
                 std::stack<int> oldCallStack = callStack;
