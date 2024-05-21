@@ -182,7 +182,7 @@ void uses() {
   while(1);
   // expected-error@+2{{OpenACC clause 'reduction' may not follow a 'device_type' clause in a compute construct}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc kernels device_type(*) reduction(+:Var)
+#pragma acc serial device_type(*) reduction(+:Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'collapse' may not follow a 'device_type' clause in a compute construct}}
   // expected-note@+1{{previous clause is here}}
