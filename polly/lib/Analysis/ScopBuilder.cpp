@@ -3721,7 +3721,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
     buildAccessRelations(Stmt);
 
     if (DetectReductions)
-      checkForReductions(Stmt, Block);
+      checkForReductions(Stmt);
   }
 
   // Check early for a feasible runtime context.
