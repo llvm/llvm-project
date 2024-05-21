@@ -937,10 +937,11 @@ foreach mx = SchedMxList in {
   defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
-    defm "" : LMULWriteResMX<"WriteVISlideX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVISlideI",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVISlide1X",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFSlide1F",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideI",     [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1X",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1F",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
   }
 }
 
