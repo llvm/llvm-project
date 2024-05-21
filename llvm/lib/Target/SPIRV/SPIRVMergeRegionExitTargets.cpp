@@ -255,7 +255,6 @@ public:
       modified = true;
     }
 
-    F.dump();
 #if !NDEBUG
     validateRegionExits(TopLevelRegion);
 #endif
