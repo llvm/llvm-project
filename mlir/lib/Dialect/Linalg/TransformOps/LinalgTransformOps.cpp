@@ -2933,7 +2933,7 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   scf::SCFTilingOptions options;
   options.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
   if (!mixedNumThreads.empty()) {
-    options.setMaxNumTiles(mixedNumThreads);
+    options.setNumThreads(mixedNumThreads);
   } else {
     SmallVector<Range> loopRanges = tileableOp.getIterationDomain(rewriter);
     unsigned nLoops = loopRanges.size();
@@ -2951,7 +2951,8 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
             {loopRanges[i].size, numTiles});
       numThreads.push_back(numTiles);
     }
-    options.setMaxNumTiles(numThreads);
+    options.setNumThreads(numThreads);
+    options.setTileSizes(mixedTileSizes);
   }
   if (mapping) {
     options.setMapping(mapping.value().getValue());
