@@ -1551,6 +1551,70 @@ define float @mul_pos_zero_neg_const_nnan(float %a) {
   ret float %f2
 }
 
+define float @mul_pos_zero_neg_const_nnan_res(float %a) {
+; CHECK-LABEL: @mul_pos_zero_neg_const_nnan_res(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call nnan float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, 0.000000
+  %f2 = fmul nnan float %f1, -1.000000
+  ret float %f2
+}
+
+define float @mul_neg_const_with_nnan_fmul_result(float %a) {
+; CHECK-LABEL: @mul_neg_const_with_nnan_fmul_result(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul nnan float %a, 0.000000
+  %f2 = fmul float %f1, -1.000000
+  ret float %f2
+}
+
+define float @mul_pos_zero_neg_const_ninf_res(float %a) {
+; CHECK-LABEL: @mul_pos_zero_neg_const_ninf_res(
+; CHECK-NEXT:    [[F2:%.*]] = fmul ninf float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul float %a, 0.000000
+  %f2 = fmul ninf float %f1, -1.000000
+  ret float %f2
+}
+
+define float @mul_neg_const_with_ninf_fmul_result(float %a) {
+; CHECK-LABEL: @mul_neg_const_with_ninf_fmul_result(
+; CHECK-NEXT:    [[F2:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul ninf float %a, 0.000000
+  %f2 = fmul float %f1, -1.000000
+  ret float %f2
+}
+
+define float @mul_pos_zero_neg_const_with_mixed_fmf_test1(float %a) {
+; CHECK-LABEL: @mul_pos_zero_neg_const_with_mixed_fmf_test1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call nnan float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul ninf float %a, 0.000000
+  %f2 = fmul nnan float %f1, -1.000000
+  ret float %f2
+}
+
+define float @mul_pos_zero_neg_const_with_mixed_fmf_test2(float %a) {
+; CHECK-LABEL: @mul_pos_zero_neg_const_with_mixed_fmf_test2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul nnan float %a, 0.000000
+  %f2 = fmul ninf float %f1, -1.000000
+  ret float %f2
+}
+
 define float @mul_neg_zero_const_expr(float %a) {
 ; CHECK-LABEL: @mul_neg_zero_const_expr(
 ; CHECK-NEXT:    [[F3:%.*]] = fmul float [[A:%.*]], -0.000000e+00
