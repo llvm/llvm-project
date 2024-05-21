@@ -81,6 +81,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool IsISA3_0 = false;
   bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
+  bool HasAIXShLibTLSModelOpt = false;
 
 protected:
   std::string ABI;
@@ -359,14 +360,21 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("r1") || RegName.equals("x1");
+    return RegName == "r1" || RegName == "x1";
   }
 
   // We support __builtin_cpu_supports/__builtin_cpu_is on targets that
   // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
   static constexpr int MINIMUM_AIX_OS_MAJOR = 7;
   static constexpr int MINIMUM_AIX_OS_MINOR = 2;
-  bool supportsCpuSupports() const override { return getTriple().isOSGlibc(); }
+  bool supportsCpuSupports() const override {
+    llvm::Triple Triple = getTriple();
+    // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
+    return Triple.isOSGlibc() ||
+           (Triple.isOSAIX() &&
+            !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
+  }
+
   bool supportsCpuIs() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().

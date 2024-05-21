@@ -1,4 +1,4 @@
-// RUN: mlir-opt --transform-interpreter --split-input-file --verify-diagnostics
+// RUN: mlir-opt --transform-interpreter --split-input-file --verify-diagnostics %s
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op) {

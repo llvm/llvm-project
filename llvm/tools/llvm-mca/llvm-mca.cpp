@@ -135,6 +135,35 @@ static cl::opt<unsigned>
                                "(instructions per cycle)"),
                       cl::cat(ToolOptions), cl::init(0));
 
+enum class SkipType { NONE, LACK_SCHED, PARSE_FAILURE, ANY_FAILURE };
+
+static cl::opt<enum SkipType> SkipUnsupportedInstructions(
+    "skip-unsupported-instructions",
+    cl::desc("Force analysis to continue in the presence of unsupported "
+             "instructions"),
+    cl::values(
+        clEnumValN(SkipType::NONE, "none",
+                   "Exit with an error when an instruction is unsupported for "
+                   "any reason (default)"),
+        clEnumValN(
+            SkipType::LACK_SCHED, "lack-sched",
+            "Skip instructions on input which lack scheduling information"),
+        clEnumValN(
+            SkipType::PARSE_FAILURE, "parse-failure",
+            "Skip lines on the input which fail to parse for any reason"),
+        clEnumValN(SkipType::ANY_FAILURE, "any",
+                   "Skip instructions or lines on input which are unsupported "
+                   "for any reason")),
+    cl::init(SkipType::NONE), cl::cat(ViewOptions));
+
+bool shouldSkip(enum SkipType skipType) {
+  if (SkipUnsupportedInstructions == SkipType::NONE)
+    return false;
+  if (SkipUnsupportedInstructions == SkipType::ANY_FAILURE)
+    return true;
+  return skipType == SkipUnsupportedInstructions;
+}
+
 static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
                            cl::desc("Print register file statistics"),
@@ -235,11 +264,6 @@ static cl::opt<bool> DisableInstrumentManager(
     "disable-im",
     cl::desc("Disable instrumentation manager (use the default class which "
              "ignores instruments.)."),
-    cl::cat(ViewOptions), cl::init(false));
-
-static cl::opt<bool> SkipUnsupportedInstructions(
-    "skip-unsupported-instructions",
-    cl::desc("Make unsupported instruction errors into warnings."),
     cl::cat(ViewOptions), cl::init(false));
 
 namespace {
@@ -440,7 +464,8 @@ int main(int argc, char **argv) {
   mca::AsmAnalysisRegionGenerator CRG(*TheTarget, SrcMgr, ACtx, *MAI, *STI,
                                       *MCII);
   Expected<const mca::AnalysisRegions &> RegionsOrErr =
-      CRG.parseAnalysisRegions(std::move(IPtemp));
+      CRG.parseAnalysisRegions(std::move(IPtemp),
+                               shouldSkip(SkipType::PARSE_FAILURE));
   if (!RegionsOrErr) {
     if (auto Err =
             handleErrors(RegionsOrErr.takeError(), [](const StringError &E) {
@@ -482,7 +507,8 @@ int main(int argc, char **argv) {
   mca::AsmInstrumentRegionGenerator IRG(*TheTarget, SrcMgr, ICtx, *MAI, *STI,
                                         *MCII, *IM);
   Expected<const mca::InstrumentRegions &> InstrumentRegionsOrErr =
-      IRG.parseInstrumentRegions(std::move(IPtemp));
+      IRG.parseInstrumentRegions(std::move(IPtemp),
+                                 shouldSkip(SkipType::PARSE_FAILURE));
   if (!InstrumentRegionsOrErr) {
     if (auto Err = handleErrors(InstrumentRegionsOrErr.takeError(),
                                 [](const StringError &E) {
@@ -593,7 +619,7 @@ int main(int argc, char **argv) {
                 [&IP, &STI](const mca::InstructionError<MCInst> &IE) {
                   std::string InstructionStr;
                   raw_string_ostream SS(InstructionStr);
-                  if (SkipUnsupportedInstructions)
+                  if (shouldSkip(SkipType::LACK_SCHED))
                     WithColor::warning()
                         << IE.Message
                         << ", skipping with -skip-unsupported-instructions, "
@@ -601,7 +627,8 @@ int main(int argc, char **argv) {
                   else
                     WithColor::error()
                         << IE.Message
-                        << ", use -skip-unsupported-instructions to ignore.\n";
+                        << ", use -skip-unsupported-instructions=lack-sched to "
+                           "ignore these on the input.\n";
                   IP->printInst(&IE.Inst, 0, "", *STI, SS);
                   SS.flush();
                   WithColor::note()
@@ -610,7 +637,7 @@ int main(int argc, char **argv) {
           // Default case.
           WithColor::error() << toString(std::move(NewE));
         }
-        if (SkipUnsupportedInstructions) {
+        if (shouldSkip(SkipType::LACK_SCHED)) {
           DroppedInsts.insert(&MCI);
           continue;
         }

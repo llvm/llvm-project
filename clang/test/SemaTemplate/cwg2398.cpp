@@ -59,28 +59,37 @@ namespace templ {
   template struct C<B<int>>;
 } // namespace templ
 
+namespace class_template {
+  template <class T1, class T2 = float> struct A;
+
+  template <class T3> struct B;
+
+  template <template <class T4> class TT1, class T5> struct B<TT1<T5>>;
+  // new-note@-1 {{partial specialization matches}}
+
+  template <class T6, class T7> struct B<A<T6, T7>> {};
+  // new-note@-1 {{partial specialization matches}}
+
+  template struct B<A<int>>;
+  // new-error@-1 {{ambiguous partial specialization}}
+} // namespace class_template
+
 namespace type_pack1 {
   template<class T2> struct A;
   template<template<class ...T3s> class TT1, class T4> struct A<TT1<T4>>   ;
-  // new-note@-1 {{partial specialization matches}}
   template<template<class    T5 > class TT2, class T6> struct A<TT2<T6>> {};
-  // new-note@-1 {{partial specialization matches}}
 
   template<class T1> struct B;
   template struct A<B<char>>;
-  // new-error@-1 {{ambiguous partial specialization}}
 } // namespace type_pack1
 
 namespace type_pack2 {
   template<class T2> struct A;
   template<template<class ...T3s> class TT1, class ...T4> struct A<TT1<T4...>>   ;
-  // new-note@-1 {{partial specialization matches}}
   template<template<class    T5 > class TT2, class ...T6> struct A<TT2<T6...>> {};
-  // new-note@-1 {{partial specialization matches}}
 
   template<class T1> struct B;
   template struct A<B<char>>;
-  // new-error@-1 {{ambiguous partial specialization}}
 } // namespace type_pack2
 
 namespace type_pack3 {
@@ -137,3 +146,58 @@ namespace ttp_defaults {
   // old-error@-2 {{template template argument has different template parameters}}
   // old-error@-3 {{explicit instantiation of 'f' does not refer to a function template}}
 } // namespace ttp_defaults
+
+namespace ttp_only {
+  template <template <class...    > class TT1> struct A      { static constexpr int V = 0; };
+  template <template <class       > class TT2> struct A<TT2> { static constexpr int V = 1; };
+  // new-note@-1 {{partial specialization matches}}
+  template <template <class, class> class TT3> struct A<TT3> { static constexpr int V = 2; };
+  // new-note@-1 {{partial specialization matches}}
+
+  template <class ...          > struct B;
+  template <class              > struct C;
+  template <class, class       > struct D;
+  template <class, class, class> struct E;
+
+  static_assert(A<B>::V == 0); // new-error {{ambiguous partial specializations}}
+  static_assert(A<C>::V == 1);
+  static_assert(A<D>::V == 2);
+  static_assert(A<E>::V == 0);
+} // namespace ttp_only
+
+namespace consistency {
+  template<class T> struct nondeduced { using type = T; };
+  template<class T8, class T9 = float> struct B;
+
+  namespace t1 {
+    template<class T1, class T2, class T3> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T2>>::type> {};
+
+    template<template<class> class UU1,
+             template<class> class UU2,
+             class U1, class U2>
+    struct A<UU1<U1>, UU2<U2>, typename nondeduced<UU1<U1>>::type>;
+
+    template struct A<B<int>, B<int>, B<int>>;
+  } // namespace t1
+  namespace t2 {
+    template<class T1, class T2, class T3> struct A;
+
+    template<template<class, class> class TT1,
+             class T1, class T2, class T3, class T4>
+    struct A<TT1<T1, T2>, TT1<T3, T4>, typename nondeduced<TT1<T1, T4>>::type> {};
+    // new-note@-1 {{partial specialization matches}}
+
+    template<template<class> class UU1,
+             template<class> class UU2,
+             class U1, class U2>
+    struct A<UU1<U1>, UU2<U2>, typename nondeduced<UU1<U1>>::type>;
+    // new-note@-1 {{partial specialization matches}}
+
+    template struct A<B<int>, B<int>, B<int>>;
+    // new-error@-1 {{ambiguous partial specializations}}
+  } // namespace t2
+} // namespace consistency

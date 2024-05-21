@@ -1763,7 +1763,7 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       if (!MRI->getRegClassOrNull(GWSPtr))
         MRI->setRegClass(GWSPtr, &SPIRV::IDRegClass);
       // TODO: Maybe simplify generation of the type of the fields.
-      unsigned Size = Call->Builtin->Name.equals("ndrange_3D") ? 3 : 2;
+      unsigned Size = Call->Builtin->Name == "ndrange_3D" ? 3 : 2;
       unsigned BitWidth = GR->getPointerSize() == 64 ? 64 : 32;
       Type *BaseTy = IntegerType::get(MF.getFunction().getContext(), BitWidth);
       Type *FieldTy = ArrayType::get(BaseTy, Size);
@@ -1886,7 +1886,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // Local sizes arguments: Sizes of block invoke arguments. Clang generates
   // local size operands as an array, so we need to unpack them.
   SmallVector<Register, 16> LocalSizes;
-  if (Call->Builtin->Name.find("_varargs") != StringRef::npos || IsSpirvOp) {
+  if (Call->Builtin->Name.contains("_varargs") || IsSpirvOp) {
     const unsigned LocalSizeArrayIdx = HasEvents ? 9 : 6;
     Register GepReg = Call->Arguments[LocalSizeArrayIdx];
     MachineInstr *GepMI = MRI->getUniqueVRegDef(GepReg);

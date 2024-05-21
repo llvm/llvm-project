@@ -177,13 +177,6 @@ private:
       DIEValue &HighPCAttrInfo,
       std::optional<uint64_t> RangesBase = std::nullopt);
 
-  /// Adds a \p Str to .debug_str section.
-  /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
-  /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
-  /// for this contribution of \p Unit.
-  void addStringHelper(DIEBuilder &DIEBldr, DIE &Die, const DWARFUnit &Unit,
-                       DIEValue &DIEAttrInfo, StringRef Str);
-
 public:
   DWARFRewriter(BinaryContext &BC) : BC(BC) {}
 
@@ -210,13 +203,16 @@ public:
   using OverriddenSectionsMap = std::unordered_map<DWARFSectionKind, StringRef>;
   /// Output .dwo files.
   void writeDWOFiles(DWARFUnit &, const OverriddenSectionsMap &,
-                     const std::string &, DebugLocWriter &);
+                     const std::string &, DebugLocWriter &,
+                     DebugStrOffsetsWriter &, DebugStrWriter &);
   using KnownSectionsEntry = std::pair<MCSection *, DWARFSectionKind>;
   struct DWPState {
     std::unique_ptr<ToolOutputFile> Out;
     std::unique_ptr<BinaryContext> TmpBC;
     std::unique_ptr<MCStreamer> Streamer;
     std::unique_ptr<DWPStringPool> Strings;
+    /// Used to store String sections for .dwo files if they are being modified.
+    std::vector<std::unique_ptr<DebugBufferVector>> StrSections;
     const MCObjectFileInfo *MCOFI = nullptr;
     const DWARFUnitIndex *CUIndex = nullptr;
     std::deque<SmallString<32>> UncompressedSections;
@@ -237,7 +233,8 @@ public:
 
   /// add content of dwo to .dwp file.
   void updateDWP(DWARFUnit &, const OverriddenSectionsMap &, const UnitMeta &,
-                 UnitMetaVectorType &, DWPState &, DebugLocWriter &);
+                 UnitMetaVectorType &, DWPState &, DebugLocWriter &,
+                 DebugStrOffsetsWriter &, DebugStrWriter &);
 };
 
 } // namespace bolt

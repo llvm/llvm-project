@@ -68,7 +68,7 @@ private:
       const auto Region = SkipRegions.size();
       // The first region has an extra bit of encoding space.
       return SingleUseRegions[Region] <
-             ((Region == MaxNumberOfSkipRegions) ? 0b1111 : 0b111);
+             ((Region == MaxNumberOfSkipRegions) ? 0b1111U : 0b111U);
     }
 
     unsigned encodeImm() {

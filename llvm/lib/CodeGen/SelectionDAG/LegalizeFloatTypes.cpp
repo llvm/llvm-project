@@ -1197,7 +1197,6 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo) {
-  assert(ISD::isUNINDEXEDStore(N) && "Indexed store during type legalization!");
   assert(OpNo == 1 && "Can only soften the stored value!");
   AtomicSDNode *ST = cast<AtomicSDNode>(N);
   SDValue Val = ST->getVal();
@@ -2288,6 +2287,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::SELECT_CC:  R = PromoteFloatOp_SELECT_CC(N, OpNo); break;
     case ISD::SETCC:      R = PromoteFloatOp_SETCC(N, OpNo); break;
     case ISD::STORE:      R = PromoteFloatOp_STORE(N, OpNo); break;
+    case ISD::ATOMIC_STORE: R = PromoteFloatOp_ATOMIC_STORE(N, OpNo); break;
   }
   // clang-format on
 
@@ -2408,6 +2408,23 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_STORE(SDNode *N, unsigned OpNo) {
 
   return DAG.getStore(ST->getChain(), DL, NewVal, ST->getBasePtr(),
                       ST->getMemOperand());
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatOp_ATOMIC_STORE(SDNode *N,
+                                                      unsigned OpNo) {
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  SDLoc DL(N);
+
+  SDValue Promoted = GetPromotedFloat(Val);
+  EVT VT = ST->getOperand(1).getValueType();
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+
+  SDValue NewVal = DAG.getNode(GetPromotionOpcode(Promoted.getValueType(), VT),
+                               DL, IVT, Promoted);
+
+  return DAG.getAtomic(ISD::ATOMIC_STORE, DL, IVT, ST->getChain(), NewVal,
+                       ST->getBasePtr(), ST->getMemOperand());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2864,6 +2881,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to soft promote this operator's "
                        "result!");
 
+  case ISD::ARITH_FENCE:
+    R = SoftPromoteHalfRes_ARITH_FENCE(N); break;
   case ISD::BITCAST:    R = SoftPromoteHalfRes_BITCAST(N); break;
   case ISD::ConstantFP: R = SoftPromoteHalfRes_ConstantFP(N); break;
   case ISD::EXTRACT_VECTOR_ELT:
@@ -2941,6 +2960,11 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
 
   if (R.getNode())
     SetSoftPromotedHalf(SDValue(N, ResNo), R);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ARITH_FENCE(SDNode *N) {
+  return DAG.getNode(ISD::ARITH_FENCE, SDLoc(N), MVT::i16,
+                     BitConvertToInteger(N->getOperand(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BITCAST(SDNode *N) {
@@ -3232,6 +3256,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::SELECT_CC:  Res = SoftPromoteHalfOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:      Res = SoftPromoteHalfOp_SETCC(N); break;
   case ISD::STORE:      Res = SoftPromoteHalfOp_STORE(N, OpNo); break;
+  case ISD::ATOMIC_STORE:
+    Res = SoftPromoteHalfOp_ATOMIC_STORE(N, OpNo);
+    break;
   case ISD::STACKMAP:
     Res = SoftPromoteHalfOp_STACKMAP(N, OpNo);
     break;
@@ -3383,6 +3410,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo) {
   SDValue Promoted = GetSoftPromotedHalf(Val);
   return DAG.getStore(ST->getChain(), dl, Promoted, ST->getBasePtr(),
                       ST->getMemOperand());
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N,
+                                                         unsigned OpNo) {
+  assert(OpNo == 1 && "Can only soften the stored value!");
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  SDLoc dl(N);
+
+  SDValue Promoted = GetSoftPromotedHalf(Val);
+  return DAG.getAtomic(ISD::ATOMIC_STORE, dl, Promoted.getValueType(),
+                       ST->getChain(), Promoted, ST->getBasePtr(),
+                       ST->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {

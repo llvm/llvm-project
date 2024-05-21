@@ -1593,6 +1593,11 @@ replacement=\ *string-literal*
   a warning about use of a deprecated declaration. The Fix-It will replace
   the deprecated declaration with the new declaration specified.
 
+environment=\ *identifier*
+  Target environment in which this declaration is available. If present,
+  the availability attribute applies only to targets with the same platform
+  and environment. The parameter is currently supported only in HLSL.
+
 Multiple availability attributes can be placed on a declaration, which may
 correspond to different platforms. For most platforms, the availability
 attribute with the platform corresponding to the target platform will be used;
@@ -2526,6 +2531,9 @@ effect on code generation are the same as for the command-line option
 Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2",
 "avx", "xop" and largely correspond to the machine specific options handled by
 the front end.
+
+Note that this attribute does not apply transitively to nested functions such
+as blocks or C++ lambdas.
 
 Additionally, this attribute supports function multiversioning for ELF based
 x86/x86-64 targets, which can be used to create multiple implementations of the
@@ -3782,6 +3790,12 @@ for that function.
 
 This attribute is incompatible with the ``always_inline`` and ``minsize``
 attributes.
+
+Note that this attribute does not apply recursively to nested functions such as
+lambdas or blocks when using declaration-specific attribute syntaxes such as double
+square brackets (``[[]]``) or ``__attribute__``. The ``#pragma`` syntax can be
+used to apply the attribute to all functions, including nested functions, in a
+range of source code.
   }];
 }
 
@@ -5654,11 +5668,12 @@ The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
 impact floating-point registers (XMMs/YMMs). Floating-point registers still
-follow the c calling convention.
+follow the c calling convention. ``preserve_none``'s ABI is still unstable, and
+may be changed in the future.
 
 - Only RSP and RBP are preserved by callee.
 
-- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+- Register R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
   be used to pass function arguments.
   }];
 }
@@ -7398,6 +7413,26 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLPackOffsetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The packoffset attribute is used to change the layout of a cbuffer.
+Attribute spelling in HLSL is: ``packoffset( c[Subcomponent][.component] )``.
+A subcomponent is a register number, which is an integer. A component is in the form of [.xyzw].
+
+Examples:
+
+.. code-block:: c++
+
+  cbuffer A {
+    float3 a : packoffset(c0.y);
+    float4 b : packoffset(c4);
+  }
+
+The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
+  }];
+}
+
 def HLSLSV_DispatchThreadIDDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8056,6 +8091,20 @@ requirement:
     p->array[index] = val;
   }
   }];
+}
+
+def ClspvLibclcBuiltinDoc : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify functions coming from `libclc`_ (OpenCL-C builtin library).
+
+.. code-block:: c
+
+  void __attribute__((clspv_libclc_builtin)) libclc_builtin() {}
+
+.. _`clspv`: https://github.com/google/clspv
+.. _`libclc`: https://libclc.llvm.org
+}];
 }
 
 def DocCatNonBlockingNonAllocating : DocumentationCategory<"Performance Constraint Attributes"> {

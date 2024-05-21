@@ -18,6 +18,7 @@
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -238,6 +239,46 @@ static void printConditionalAlias(AsmPrinter &p, StringAttr value) {
   if (succeeded(p.printAlias(value)))
     return;
   p.printKeywordOrString(value);
+}
+
+//===----------------------------------------------------------------------===//
+// Custom Float Attribute
+//===----------------------------------------------------------------------===//
+
+static void printCustomFloatAttr(AsmPrinter &p, StringAttr typeStrAttr,
+                                 APFloat value) {
+  p << typeStrAttr << " : " << value;
+}
+
+static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
+                                        FailureOr<APFloat> &value) {
+
+  std::string str;
+  if (p.parseString(&str))
+    return failure();
+
+  typeStrAttr = StringAttr::get(p.getContext(), str);
+
+  if (p.parseColon())
+    return failure();
+
+  const llvm::fltSemantics *semantics;
+  if (str == "float")
+    semantics = &llvm::APFloat::IEEEsingle();
+  else if (str == "double")
+    semantics = &llvm::APFloat::IEEEdouble();
+  else if (str == "fp80")
+    semantics = &llvm::APFloat::x87DoubleExtended();
+  else
+    return p.emitError(p.getCurrentLocation(), "unknown float type, expected "
+                                               "'float', 'double' or 'fp80'");
+
+  APFloat parsedValue(0.0);
+  if (p.parseFloat(*semantics, parsedValue))
+    return failure();
+
+  value.emplace(parsedValue);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
