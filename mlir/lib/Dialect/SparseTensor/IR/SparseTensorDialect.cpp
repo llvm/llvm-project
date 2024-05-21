@@ -2253,7 +2253,7 @@ LogicalResult ExtractIterSpaceOp::verify() {
   }
 
   if (pIter) {
-    IterSpaceType spaceTp = getResultSpace().getType();
+    IterSpaceType spaceTp = getExtractedSpace().getType();
     if (pIter.getType().getEncoding() != spaceTp.getEncoding())
       return emitOpError(
           "mismatch in parent iterator encoding and iteration space encoding.");
