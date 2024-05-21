@@ -170,15 +170,10 @@ namespace {
     /// back and when processing we pop off of the back.
     ///
     /// The worklist will not contain duplicates but may contain null entries
-    /// due to nodes being deleted from the underlying DAG.
+    /// due to nodes being deleted from the underlying DAG. For fast lookup and
+    /// deduplication, the index of the node in this vector is stored in the
+    /// node in SDNode::CombinerWorklistIndex.
     SmallVector<SDNode *, 64> Worklist;
-
-    /// Mapping from an SDNode to its position on the worklist.
-    ///
-    /// This is used to find and remove nodes from the worklist (by nulling
-    /// them) when they are deleted from the underlying DAG. It relies on
-    /// stable indices of nodes within the worklist.
-    DenseMap<SDNode *, unsigned> WorklistMap;
 
     /// This records all nodes attempted to be added to the worklist since we
     /// considered a new worklist entry. As we keep do not add duplicate nodes
@@ -238,10 +233,9 @@ namespace {
       }
 
       if (N) {
-        bool GoodWorklistEntry = WorklistMap.erase(N);
-        (void)GoodWorklistEntry;
-        assert(GoodWorklistEntry &&
+        assert(N->getCombinerWorklistIndex() >= 0 &&
                "Found a worklist entry without a corresponding map entry!");
+        N->setCombinerWorklistIndex(-1);
       }
       return N;
     }
@@ -285,8 +279,10 @@ namespace {
       if (IsCandidateForPruning)
         ConsiderForPruning(N);
 
-      if (WorklistMap.insert(std::make_pair(N, Worklist.size())).second)
+      if (N->getCombinerWorklistIndex() == -1) {
+        N->setCombinerWorklistIndex(Worklist.size());
         Worklist.push_back(N);
+      }
     }
 
     /// Remove all instances of N from the worklist.
@@ -295,13 +291,13 @@ namespace {
       PruningList.remove(N);
       StoreRootCountMap.erase(N);
 
-      auto It = WorklistMap.find(N);
-      if (It == WorklistMap.end())
+      int WorklistIndex = N->getCombinerWorklistIndex();
+      if (WorklistIndex == -1)
         return; // Not in the worklist.
 
       // Null out the entry rather than erasing it to avoid a linear operation.
-      Worklist[It->second] = nullptr;
-      WorklistMap.erase(It);
+      Worklist[WorklistIndex] = nullptr;
+      N->setCombinerWorklistIndex(-1);
     }
 
     void deleteAndRecombine(SDNode *N);

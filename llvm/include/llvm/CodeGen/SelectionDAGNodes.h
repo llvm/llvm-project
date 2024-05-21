@@ -619,6 +619,9 @@ private:
   /// Unique id per SDNode in the DAG.
   int NodeId = -1;
 
+  /// Index in worklist of DAGCombiner, or -1.
+  int CombinerWorklistIndex = -1;
+
   /// The values that are used by this operation.
   SDUse *OperandList = nullptr;
 
@@ -746,6 +749,12 @@ public:
 
   /// Set unique node id.
   void setNodeId(int Id) { NodeId = Id; }
+
+  /// Get worklist index for DAGCombiner
+  int getCombinerWorklistIndex() const { return CombinerWorklistIndex; }
+
+  /// Set worklist index for DAGCombiner
+  void setCombinerWorklistIndex(int Index) { CombinerWorklistIndex = Index; }
 
   /// Return the node ordering.
   unsigned getIROrder() const { return IROrder; }
