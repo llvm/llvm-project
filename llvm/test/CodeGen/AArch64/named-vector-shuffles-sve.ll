@@ -692,6 +692,104 @@ define <vscale x 2 x double> @splice_nxv2f64_neg3(<vscale x 2 x double> %a, <vsc
   ret <vscale x 2 x double> %res
 }
 
+define <vscale x 2 x bfloat> @splice_nxv2bf16_neg_idx(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv2bf16_neg_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x bfloat> @llvm.vector.splice.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, i32 -1)
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 2 x bfloat> @splice_nxv2bf16_neg2_idx(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv2bf16_neg2_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    rev p0.d, p0.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x bfloat> @llvm.vector.splice.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, i32 -2)
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 2 x bfloat> @splice_nxv2bf16_first_idx(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv2bf16_first_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x bfloat> @llvm.vector.splice.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, i32 1)
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 2 x bfloat> @splice_nxv2bf16_last_idx(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) vscale_range(16,16) #0 {
+; CHECK-LABEL: splice_nxv2bf16_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x bfloat> @llvm.vector.splice.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, i32 31)
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @splice_nxv4bf16_neg_idx(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv4bf16_neg_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, i32 -1)
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @splice_nxv4bf16_neg3_idx(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv4bf16_neg3_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl3
+; CHECK-NEXT:    rev p0.s, p0.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, i32 -3)
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @splice_nxv4bf16_first_idx(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv4bf16_first_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, i32 1)
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @splice_nxv4bf16_last_idx(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) vscale_range(16,16) #0 {
+; CHECK-LABEL: splice_nxv4bf16_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, i32 63)
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 8 x bfloat> @splice_nxv8bf16_first_idx(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: splice_nxv8bf16_first_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #2
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, i32 1)
+  ret <vscale x 8 x bfloat> %res
+}
+
+define <vscale x 8 x bfloat> @splice_nxv8bf16_last_idx(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) vscale_range(16,16) #0 {
+; CHECK-LABEL: splice_nxv8bf16_last_idx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #254
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, i32 127)
+  ret <vscale x 8 x bfloat> %res
+}
+
 ; Ensure predicate based splice is promoted to use ZPRs.
 define <vscale x 2 x i1> @splice_nxv2i1(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i1:
@@ -834,12 +932,14 @@ declare <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1>, <vscale 
 declare <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>, i32)
 declare <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i32)
+
 declare <vscale x 2 x i8> @llvm.vector.splice.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, i32)
 declare <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, i32)
 declare <vscale x 8 x i16> @llvm.vector.splice.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
 declare <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
 declare <vscale x 8 x i32> @llvm.vector.splice.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, i32)
 declare <vscale x 2 x i64> @llvm.vector.splice.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, i32)
+
 declare <vscale x 2 x half> @llvm.vector.splice.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, i32)
 declare <vscale x 4 x half> @llvm.vector.splice.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, i32)
 declare <vscale x 8 x half> @llvm.vector.splice.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, i32)
@@ -847,5 +947,9 @@ declare <vscale x 2 x float> @llvm.vector.splice.nxv2f32(<vscale x 2 x float>, <
 declare <vscale x 4 x float> @llvm.vector.splice.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, i32)
 declare <vscale x 16 x float> @llvm.vector.splice.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, i32)
 declare <vscale x 2 x double> @llvm.vector.splice.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, i32)
+
+declare <vscale x 2 x bfloat> @llvm.vector.splice.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, i32)
+declare <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, i32)
+declare <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i32)
 
 attributes #0 = { nounwind "target-features"="+sve" }

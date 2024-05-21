@@ -1,6 +1,8 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 
 use omp_lib
   implicit none

@@ -176,8 +176,9 @@ mlir::Value fir::FirOpBuilder::createRealConstant(mlir::Location loc,
   llvm_unreachable("should use builtin floating-point type");
 }
 
-static llvm::SmallVector<mlir::Value>
-elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape) {
+llvm::SmallVector<mlir::Value>
+fir::factory::elideExtentsAlreadyInType(mlir::Type type,
+                                        mlir::ValueRange shape) {
   auto arrTy = mlir::dyn_cast<fir::SequenceType>(type);
   if (shape.empty() || !arrTy)
     return {};
@@ -191,8 +192,9 @@ elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape) {
   return dynamicShape;
 }
 
-static llvm::SmallVector<mlir::Value>
-elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
+llvm::SmallVector<mlir::Value>
+fir::factory::elideLengthsAlreadyInType(mlir::Type type,
+                                        mlir::ValueRange lenParams) {
   if (lenParams.empty())
     return {};
   if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(type))
@@ -211,9 +213,9 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
   // Convert the shape extents to `index`, as needed.
   llvm::SmallVector<mlir::Value> indices;
   llvm::SmallVector<mlir::Value> elidedShape =
-      elideExtentsAlreadyInType(ty, shape);
+      fir::factory::elideExtentsAlreadyInType(ty, shape);
   llvm::SmallVector<mlir::Value> elidedLenParams =
-      elideLengthsAlreadyInType(ty, lenParams);
+      fir::factory::elideLengthsAlreadyInType(ty, lenParams);
   auto idxTy = getIndexType();
   for (mlir::Value sh : elidedShape)
     indices.push_back(createConvert(loc, idxTy, sh));
@@ -283,9 +285,9 @@ fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
                                    mlir::ValueRange lenParams,
                                    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   llvm::SmallVector<mlir::Value> dynamicShape =
-      elideExtentsAlreadyInType(type, shape);
+      fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
-      elideLengthsAlreadyInType(type, lenParams);
+      fir::factory::elideLengthsAlreadyInType(type, lenParams);
   InsertPoint insPt;
   const bool hoistAlloc = dynamicShape.empty() && dynamicLength.empty();
   if (hoistAlloc) {
@@ -306,9 +308,9 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
     mlir::ValueRange shape, mlir::ValueRange lenParams,
     llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   llvm::SmallVector<mlir::Value> dynamicShape =
-      elideExtentsAlreadyInType(type, shape);
+      fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
-      elideLengthsAlreadyInType(type, lenParams);
+      fir::factory::elideLengthsAlreadyInType(type, lenParams);
 
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
@@ -320,18 +322,18 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
-    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
+    bool isTarget, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
   llvm::SmallVector<mlir::NamedAttribute> attrs;
-  if (cudaAttr) {
+  if (dataAttr) {
     auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
                                             module.getContext());
     attrs.push_back(mlir::NamedAttribute(
-        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+        fir::GlobalOp::getDataAttrAttrName(globalOpName), dataAttr));
   }
   auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
                                     linkage, attrs);
@@ -344,7 +346,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
   if (auto global = getNamedGlobal(name))
     return global;
   auto module = getModule();
@@ -660,7 +662,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
   mlir::Type valueOrSequenceType = fir::unwrapPassByRefType(boxType);
   return create<fir::EmboxOp>(
       loc, boxType, addr, shape, slice,
-      elideLengthsAlreadyInType(valueOrSequenceType, lengths), tdesc);
+      fir::factory::elideLengthsAlreadyInType(valueOrSequenceType, lengths),
+      tdesc);
 }
 
 void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }

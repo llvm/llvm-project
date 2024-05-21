@@ -1222,6 +1222,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VP_REDUCE_UMIN:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_SEQ_FADD:
   case ISD::VP_REDUCE_SEQ_FMUL:
     Action = TLI.getOperationAction(
@@ -2048,8 +2050,15 @@ SDValue SelectionDAGLegalize::ExpandSPLAT_VECTOR(SDNode *Node) {
 std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                             TargetLowering::ArgListTy &&Args,
                                             bool isSigned) {
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
+  EVT CodePtrTy = TLI.getPointerTy(DAG.getDataLayout());
+  SDValue Callee;
+  if (const char *LibcallName = TLI.getLibcallName(LC))
+    Callee = DAG.getExternalSymbol(LibcallName, CodePtrTy);
+  else {
+    Callee = DAG.getUNDEF(CodePtrTy);
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                Node->getOperationName(&DAG));
+  }
 
   EVT RetVT = Node->getValueType(0);
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
@@ -5006,7 +5015,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::INSERT_VECTOR_ELT) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
-  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
+  if (Node->getOpcode() == ISD::ATOMIC_STORE ||
+      Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_SINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_FSETCC ||
       Node->getOpcode() == ISD::STRICT_FSETCCS ||
@@ -5014,6 +5024,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::VP_REDUCE_FMUL ||
       Node->getOpcode() == ISD::VP_REDUCE_FMAX ||
       Node->getOpcode() == ISD::VP_REDUCE_FMIN ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMAXIMUM ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMINIMUM ||
       Node->getOpcode() == ISD::VP_REDUCE_SEQ_FADD)
     OVT = Node->getOperand(1).getSimpleValueType();
   if (Node->getOpcode() == ISD::BR_CC ||
@@ -5027,7 +5039,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTPOP:
+  case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
         Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
@@ -5035,7 +5047,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
 
-    if (Node->getOpcode() == ISD::CTTZ) {
+    unsigned NewOpc = Node->getOpcode();
+    if (NewOpc == ISD::CTTZ) {
       // The count is the same in the promoted type except if the original
       // value was zero.  This can be handled by setting the bit just off
       // the top of the original type.
@@ -5043,12 +5056,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
+      NewOpc = ISD::CTTZ_ZERO_UNDEF;
     }
     // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
     // already the correct result.
-    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
-    if (Node->getOpcode() == ISD::CTLZ ||
-        Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+    Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
+    if (NewOpc == ISD::CTLZ || NewOpc == ISD::CTLZ_ZERO_UNDEF) {
       // Tmp1 = Tmp1 - (sizeinbits(NVT) - sizeinbits(Old VT))
       Tmp1 = DAG.getNode(ISD::SUB, dl, NVT, Tmp1,
                           DAG.getConstant(NVT.getSizeInBits() -
@@ -5056,6 +5069,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     }
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
+  }
   case ISD::BITREVERSE:
   case ISD::BSWAP: {
     unsigned DiffBits = NVT.getSizeInBits() - OVT.getSizeInBits();
@@ -5622,7 +5636,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(CvtVec);
     break;
   }
-  case ISD::ATOMIC_SWAP: {
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_STORE: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
     SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NVT, AM->getVal());
@@ -5631,13 +5646,22 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&
            "unexpected atomic_swap with illegal type");
 
-    SDValue NewAtomic
-      = DAG.getAtomic(ISD::ATOMIC_SWAP, SL, NVT,
-                      DAG.getVTList(NVT, MVT::Other),
-                      { AM->getChain(), AM->getBasePtr(), CastVal },
-                      AM->getMemOperand());
-    Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
-    Results.push_back(NewAtomic.getValue(1));
+    SDValue Op0 = AM->getBasePtr();
+    SDValue Op1 = CastVal;
+
+    // ATOMIC_STORE uses a swapped operand order from every other AtomicSDNode,
+    // but really it should merge with ISD::STORE.
+    if (AM->getOpcode() == ISD::ATOMIC_STORE)
+      std::swap(Op0, Op1);
+
+    SDValue NewAtomic = DAG.getAtomic(AM->getOpcode(), SL, NVT, AM->getChain(),
+                                      Op0, Op1, AM->getMemOperand());
+
+    if (AM->getOpcode() != ISD::ATOMIC_STORE) {
+      Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
+      Results.push_back(NewAtomic.getValue(1));
+    } else
+      Results.push_back(NewAtomic);
     break;
   }
   case ISD::ATOMIC_LOAD: {
@@ -5676,6 +5700,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::VP_REDUCE_FMUL:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_SEQ_FADD:
     Results.push_back(PromoteReduction(Node));
     break;

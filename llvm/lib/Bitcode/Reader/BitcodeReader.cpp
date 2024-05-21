@@ -306,7 +306,8 @@ static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
         return error("Invalid section name record");
       // Check for the i386 and other (x86_64, ARM) conventions
       if (S.find("__DATA,__objc_catlist") != std::string::npos ||
-          S.find("__OBJC,__category") != std::string::npos)
+          S.find("__OBJC,__category") != std::string::npos ||
+          S.find("__TEXT,__swift") != std::string::npos)
         return true;
       break;
     }
@@ -2939,7 +2940,7 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
       if (!BB)
         return error("Invalid bbentry record");
 
-      BB->setName(StringRef(ValueName.data(), ValueName.size()));
+      BB->setName(ValueName.str());
       ValueName.clear();
       break;
     }
@@ -6896,7 +6897,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         MDString *MDS = cast<MDString>(MD->getOperand(0));
         StringRef ProfName = MDS->getString();
         // Check consistency of !prof branch_weights metadata.
-        if (!ProfName.equals("branch_weights"))
+        if (ProfName != "branch_weights")
           continue;
         unsigned ExpectedNumOperands = 0;
         if (BranchInst *BI = dyn_cast<BranchInst>(&I))
@@ -7513,14 +7514,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.setFlags(Record[0]);
       break;
     }
-    case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
+    case bitc::FS_VALUE_GUID: { // [valueid, refguid]
       uint64_t ValueID = Record[0];
-      GlobalValue::GUID RefGUID;
-      if (Version >= 10) {
-        RefGUID = Record[1] << 32 | Record[2];
-      } else {
-        RefGUID = Record[1];
-      }
+      GlobalValue::GUID RefGUID = Record[1];
       ValueIdToValueInfoMap[ValueID] = std::make_tuple(
           TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
       break;

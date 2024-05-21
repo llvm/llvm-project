@@ -1282,6 +1282,7 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       if (DeclContext *DC = PreS->getEntity())
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
   }
+
   // C++23 [temp.dep.general]p2:
   //   The component name of an unqualified-id is dependent if
   //   - it is a conversion-function-id whose conversion-type-id
@@ -1292,20 +1293,6 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       Name.getCXXNameType()->isDependentType()) {
     R.setNotFoundInCurrentInstantiation();
     return false;
-  }
-
-  // If this is the name of an implicitly-declared special member function,
-  // go through the scope stack to implicitly declare
-  if (isImplicitlyDeclaredMemberFunctionName(Name)) {
-    for (Scope *PreS = S; PreS; PreS = PreS->getParent())
-      if (DeclContext *DC = PreS->getEntity()) {
-        if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
-            Name.getCXXOverloadedOperator() == OO_Equal) {
-          R.setNotFoundInCurrentInstantiation();
-          return false;
-        }
-        DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
-      }
   }
 
   // Implicitly declare member functions with the name we're looking for, if in
@@ -2485,10 +2472,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     //     is operator=, or
     //   - [...]
     if (DeclarationName Name = R.getLookupName();
-        (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
-         Name.getCXXNameType()->isDependentType()) ||
-        (Name.getCXXOverloadedOperator() == OO_Equal && LookupRec &&
-         LookupRec->isDependentContext())) {
+        Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+        Name.getCXXNameType()->isDependentType()) {
       R.setNotFoundInCurrentInstantiation();
       return false;
     }
@@ -2786,9 +2771,6 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
-    if (NestedNameSpecifier *NNS = SS->getScopeRep();
-        NNS->getKind() == NestedNameSpecifier::Super)
-      return LookupInSuper(R, NNS->getAsRecordDecl());
     // This nested-name-specifier occurs after another nested-name-specifier,
     // so long into the context associated with the prior nested-name-specifier.
     if ((DC = computeDeclContext(*SS, EnteringContext))) {
@@ -2796,6 +2778,12 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
       R.setContextRange(SS->getRange());
+      // FIXME: '__super' lookup semantics could be implemented by a
+      // LookupResult::isSuperLookup flag which skips the initial search of
+      // the lookup context in LookupQualified.
+      if (NestedNameSpecifier *NNS = SS->getScopeRep();
+          NNS->getKind() == NestedNameSpecifier::Super)
+        return LookupInSuper(R, NNS->getAsRecordDecl());
     }
     IsDependent = !DC && isDependentScopeSpecifier(*SS);
   } else {
@@ -3378,15 +3366,6 @@ NamedDecl *Sema::LookupSingleName(Scope *S, DeclarationName Name,
   LookupResult R(*this, Name, Loc, NameKind, Redecl);
   LookupName(R, S);
   return R.getAsSingle<NamedDecl>();
-}
-
-/// Find the protocol with the given name, if any.
-ObjCProtocolDecl *Sema::LookupProtocol(IdentifierInfo *II,
-                                       SourceLocation IdLoc,
-                                       RedeclarationKind Redecl) {
-  Decl *D = LookupSingleName(TUScope, II, IdLoc,
-                             LookupObjCProtocolName, Redecl);
-  return cast_or_null<ObjCProtocolDecl>(D);
 }
 
 void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,

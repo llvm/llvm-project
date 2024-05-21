@@ -674,7 +674,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
   MCPlusBuilder *MIB = Function.getBinaryContext().MIB.get();
   for (BinaryBasicBlock &BB : Function) {
     auto checkAndPatch = [&](BinaryBasicBlock *Pred, BinaryBasicBlock *Succ,
-                             const MCSymbol *SuccSym) {
+                             const MCSymbol *SuccSym,
+                             std::optional<uint32_t> Offset) {
       // Ignore infinite loop jumps or fallthrough tail jumps.
       if (Pred == Succ || Succ == &BB)
         return false;
@@ -715,6 +716,11 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
           Pred->removeSuccessor(&BB);
           Pred->eraseInstruction(Pred->findInstruction(Branch));
           Pred->addTailCallInstruction(SuccSym);
+          if (Offset) {
+            MCInst *TailCall = Pred->getLastNonPseudoInstr();
+            assert(TailCall);
+            MIB->setOffset(*TailCall, *Offset);
+          }
         } else {
           return false;
         }
@@ -757,7 +763,8 @@ static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
       if (Pred->getSuccessor() == &BB ||
           (Pred->getConditionalSuccessor(true) == &BB && !IsTailCall) ||
           Pred->getConditionalSuccessor(false) == &BB)
-        if (checkAndPatch(Pred, Succ, SuccSym) && MarkInvalid)
+        if (checkAndPatch(Pred, Succ, SuccSym, MIB->getOffset(*Inst)) &&
+            MarkInvalid)
           BB.markValid(BB.pred_size() != 0 || BB.isLandingPad() ||
                        BB.isEntryPoint());
     }
@@ -910,6 +917,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
       CTCAnnotation = CTCTakenFreq;
+      // Preserve Offset annotation, used in BAT.
+      // Instr is a direct tail call instruction that was created when CTCs are
+      // first expanded, and has the original CTC offset set.
+      if (std::optional<uint32_t> Offset = MIB->getOffset(*Instr))
+        MIB->setOffset(*CondBranch, *Offset);
 
       // Remove the unused successor which may be eliminated later
       // if there are no other users.

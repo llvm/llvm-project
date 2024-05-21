@@ -1,6 +1,8 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 ! OpenMP version 5.0.0
 ! 2.13.3 parallel sections Construct
 ! The restrictions for the parallel construct and the sections construct apply

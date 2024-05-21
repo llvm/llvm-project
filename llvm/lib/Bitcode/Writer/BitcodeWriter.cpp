@@ -986,7 +986,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
   Stream.EnterSubblock(bitc::TYPE_BLOCK_ID_NEW, 4 /*count from # abbrevs */);
   SmallVector<uint64_t, 64> TypeVals;
 
-  uint64_t NumBits = VE.computeBitsRequiredForTypeIndicies();
+  uint64_t NumBits = VE.computeBitsRequiredForTypeIndices();
 
   // Abbrev for TYPE_CODE_OPAQUE_POINTER.
   auto Abbv = std::make_shared<BitCodeAbbrev>();
@@ -3721,7 +3721,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::CST_CODE_SETTYPE));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
-                              VE.computeBitsRequiredForTypeIndicies()));
+                              VE.computeBitsRequiredForTypeIndices()));
     if (Stream.EmitBlockInfoAbbrev(bitc::CONSTANTS_BLOCK_ID, Abbv) !=
         CONSTANTS_SETTYPE_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
@@ -3741,7 +3741,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(bitc::CST_CODE_CE_CAST));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4));  // cast opc
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,       // typeid
-                              VE.computeBitsRequiredForTypeIndicies()));
+                              VE.computeBitsRequiredForTypeIndices()));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));    // value id
 
     if (Stream.EmitBlockInfoAbbrev(bitc::CONSTANTS_BLOCK_ID, Abbv) !=
@@ -3763,7 +3763,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_LOAD));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Ptr
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,    // dest ty
-                              VE.computeBitsRequiredForTypeIndicies()));
+                              VE.computeBitsRequiredForTypeIndices()));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // Align
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // volatile
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
@@ -3815,7 +3815,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_CAST));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));    // OpVal
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,       // dest ty
-                              VE.computeBitsRequiredForTypeIndicies()));
+                              VE.computeBitsRequiredForTypeIndices()));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4));  // opc
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_INST_CAST_ABBREV)
@@ -3826,7 +3826,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_CAST));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // OpVal
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,    // dest ty
-                              VE.computeBitsRequiredForTypeIndicies()));
+                              VE.computeBitsRequiredForTypeIndices()));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // opc
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8)); // flags
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
@@ -4299,20 +4299,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     return;
   }
 
-  auto Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_VALUE_GUID));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  // GUIDS often use up most of 64-bits, so encode as two Fixed 32.
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  unsigned ValueGuidAbbrev = Stream.EmitAbbrev(std::move(Abbv));
-
   for (const auto &GVI : valueIds()) {
     Stream.EmitRecord(bitc::FS_VALUE_GUID,
-                      ArrayRef<uint32_t>{GVI.second,
-                                         static_cast<uint32_t>(GVI.first >> 32),
-                                         static_cast<uint32_t>(GVI.first)},
-                      ValueGuidAbbrev);
+                      ArrayRef<uint64_t>{GVI.second, GVI.first});
   }
 
   if (!Index->stackIds().empty()) {
@@ -4326,7 +4315,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   }
 
   // Abbrev for FS_PERMODULE_PROFILE.
-  Abbv = std::make_shared<BitCodeAbbrev>();
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // flags
@@ -4478,20 +4467,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // Write the index flags.
   Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Index.getFlags()});
 
-  auto Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_VALUE_GUID));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  // GUIDS often use up most of 64-bits, so encode as two Fixed 32.
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  unsigned ValueGuidAbbrev = Stream.EmitAbbrev(std::move(Abbv));
-
   for (const auto &GVI : valueIds()) {
     Stream.EmitRecord(bitc::FS_VALUE_GUID,
-                      ArrayRef<uint32_t>{GVI.second,
-                                         static_cast<uint32_t>(GVI.first >> 32),
-                                         static_cast<uint32_t>(GVI.first)},
-                      ValueGuidAbbrev);
+                      ArrayRef<uint64_t>{GVI.second, GVI.first});
   }
 
   if (!StackIdIndices.empty()) {
@@ -4510,7 +4488,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   }
 
   // Abbrev for FS_COMBINED_PROFILE.
-  Abbv = std::make_shared<BitCodeAbbrev>();
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid

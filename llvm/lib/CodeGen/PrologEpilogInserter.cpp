@@ -1444,7 +1444,7 @@ bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
   // pointer as the base register.
   if (MI.getOpcode() == TargetOpcode::STATEPOINT) {
     assert((!MI.isDebugValue() || OpIdx == 0) &&
-           "Frame indicies can only appear as the first operand of a "
+           "Frame indices can only appear as the first operand of a "
            "DBG_VALUE machine instruction");
     Register Reg;
     MachineOperand &Offset = MI.getOperand(OpIdx + 1);

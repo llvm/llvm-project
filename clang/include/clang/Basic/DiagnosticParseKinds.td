@@ -1112,6 +1112,8 @@ def err_zero_version : Error<
   "version number must have non-zero major, minor, or sub-minor version">;
 def err_availability_expected_platform : Error<
   "expected a platform name, e.g., 'macos'">;
+def err_availability_expected_environment : Error<
+  "expected an environment name, e.g., 'compute'">;
 
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<
@@ -1759,5 +1761,7 @@ def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hls
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
   InGroup<HLSLExtension>;
+def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
+def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
 
 } // end of Parser diagnostics
