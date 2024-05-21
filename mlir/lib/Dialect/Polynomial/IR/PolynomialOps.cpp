@@ -186,6 +186,60 @@ LogicalResult INTTOp::verify() {
   return verifyNTTOp(this->getOperation(), ring, tensorType);
 }
 
+ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Using the built-in parser.parseAttribute requires the full
+  // #polynomial.typed_int_polynomial syntax, which is excessive.
+  // Instead we manually parse the components.
+  Type type;
+  parser.parseOptionalAttribute();
+
+  IntPolynomialAttr intPolyAttr;
+  parser.parseOptionalAttribute(intPolyAttr);
+  if (intPolyAttr) {
+    if (parser.parseColon() || parser.parseType(type))
+      return failure();
+
+    result.addAttribute("value",
+                        TypedIntPolynomialAttr::get(type, intPolyAttr));
+    result.addTypes(type);
+    return success();
+  }
+
+  Attribute floatPolyAttr = FloatPolynomialAttr::parse(parser, nullptr, /*optional=*/true);
+  if (floatPolyAttr) {
+    if (parser.parseColon() || parser.parseType(type))
+      return failure();
+    result.addAttribute("value",
+                        TypedFloatPolynomialAttr::get(type, intPolyAttr));
+    result.addTypes(type);
+    return success();
+  }
+
+  // In the worst case, still accept the verbose versions.
+  TypedIntPolynomialAttr typedIntPolyAttr;
+  ParseResult res = parser.parseAttribute<TypedIntPolynomialAttr>(
+      typedIntPolyAttr, "value", result.attributes);
+  if (succeeded(res)) {
+    result.addTypes(typedIntPolyAttr.getType());
+    return success();
+  }
+
+  TypedFloatPolynomialAttr typedFloatPolyAttr;
+  res = parser.parseAttribute<TypedFloatPolynomialAttr>(
+      typedFloatPolyAttr, "value", result.attributes);
+  if (succeeded(res)) {
+    result.addTypes(typedFloatPolyAttr.getType());
+    return success();
+  }
+
+  return failure();
+}
+
+void ConstantOp::print(OpAsmPrinter &p) {
+  p << " ";
+  p.printAttribute(getValue());
+}
+
 LogicalResult ConstantOp::inferReturnTypes(
     MLIRContext *context, std::optional<mlir::Location> location,
     ConstantOp::Adaptor adaptor,
@@ -196,6 +250,7 @@ LogicalResult ConstantOp::inferReturnTypes(
   } else if (auto floatPoly = dyn_cast<TypedFloatPolynomialAttr>(operand)) {
     inferredReturnTypes.push_back(floatPoly.getType());
   } else {
+    assert(false && "unexpected attribute type");
     return failure();
   }
   return success();

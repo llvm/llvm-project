@@ -295,7 +295,7 @@ def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant",
   }];
   let arguments = (ins Polynomial_AnyTypedPolynomialAttr:$value);
   let results = (outs Polynomial_PolynomialType:$output);
-  let assemblyFormat = "attr-dict $value";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {

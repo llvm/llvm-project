@@ -74,15 +74,15 @@ module {
 
   func.func @test_monic_monomial_mul() {
     %five = arith.constant 5 : index
-    %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<ring=#ring1>
+    %0 = polynomial.constant <1 + x**2> : !polynomial.polynomial<ring=#ring1>
     %1 = polynomial.monic_monomial_mul %0, %five : (!polynomial.polynomial<ring=#ring1>, index) -> !polynomial.polynomial<ring=#ring1>
     return
   }
 
   func.func @test_constant() {
-    %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<ring=#ring1>
-    %1 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<ring=#ring1>
-    %2 = polynomial.constant #polynomial.float_polynomial<1.5 + 0.5 x**2> : !polynomial.polynomial<ring=#ring2>
+    %0 = polynomial.constant <1 + x**2> : !polynomial.polynomial<ring=#ring1>
+    %1 = polynomial.constant <1 + x**2> : !polynomial.polynomial<ring=#ring1>
+    %2 = polynomial.constant <1.5 + 0.5 x**2> : !polynomial.polynomial<ring=#ring2>
     return
   }
 

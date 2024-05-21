@@ -38,6 +38,11 @@ def Polynomial_IntPolynomialAttr : Polynomial_Attr<"IntPolynomial", "int_polynom
   }];
   let parameters = (ins "::mlir::polynomial::IntPolynomial":$polynomial);
   let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// A parser which, upon failure to parse, does not emit errors and just returns
+    /// a null attribute.
+    static Attribute parse(AsmParser &parser, Type type, bool optional);
+  }];
 }
 
 def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_polynomial"> {
@@ -60,6 +65,11 @@ def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_p
   }];
   let parameters = (ins "FloatPolynomial":$polynomial);
   let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// A parser which, upon failure to parse, does not emit errors and just returns
+    /// a null attribute.
+    static Attribute parse(AsmParser &parser, Type type, bool optional);
+  }];
 }
 
 def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
@@ -81,7 +91,6 @@ def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
     }]>
   ];
   let extraClassDeclaration = [{
-    // used for constFoldBinaryOp
     using ValueType = ::mlir::Attribute;
   }];
 }
@@ -105,7 +114,6 @@ def Polynomial_TypedFloatPolynomialAttr : Polynomial_Attr<
     }]>
   ];
   let extraClassDeclaration = [{
-    // used for constFoldBinaryOp
     using ValueType = ::mlir::Attribute;
   }];
 }

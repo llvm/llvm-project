@@ -38,10 +38,11 @@ using ParseCoefficientFn = std::function<OptionalParseResult(MonomialType &)>;
 /// a '+'.
 ///
 template <typename Monomial>
-ParseResult
-parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
-              bool &isConstantTerm, bool &shouldParseMore,
-              ParseCoefficientFn<Monomial> parseAndStoreCoefficient) {
+ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
+                          llvm::StringRef &variable, bool &isConstantTerm,
+                          bool &shouldParseMore,
+                          ParseCoefficientFn<Monomial> parseAndStoreCoefficient,
+                          bool optional) {
   OptionalParseResult parsedCoeffResult = parseAndStoreCoefficient(monomial);
 
   isConstantTerm = false;
@@ -85,8 +86,9 @@ parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
     // If there's a **, then the integer exponent is required.
     APInt parsedExponent(apintBitWidth, 0);
     if (failed(parser.parseInteger(parsedExponent))) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "found invalid integer exponent");
+      if (!optional)
+        parser.emitError(parser.getCurrentLocation(),
+                         "found invalid integer exponent");
       return failure();
     }
 
@@ -101,11 +103,12 @@ parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
   return success();
 }
 
-template <typename PolynoimalAttrTy, typename Monomial>
+template <typename Monomial>
 LogicalResult
 parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
                     llvm::StringSet<> &variables,
-                    ParseCoefficientFn<Monomial> parseAndStoreCoefficient) {
+                    ParseCoefficientFn<Monomial> parseAndStoreCoefficient,
+                    bool optional) {
   while (true) {
     Monomial parsedMonomial;
     llvm::StringRef parsedVariableRef;
@@ -113,8 +116,9 @@ parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
     bool shouldParseMore;
     if (failed(parseMonomial<Monomial>(
             parser, parsedMonomial, parsedVariableRef, isConstantTerm,
-            shouldParseMore, parseAndStoreCoefficient))) {
-      parser.emitError(parser.getCurrentLocation(), "expected a monomial");
+            shouldParseMore, parseAndStoreCoefficient, optional))) {
+      if (!optional)
+        parser.emitError(parser.getCurrentLocation(), "expected a monomial");
       return failure();
     }
 
@@ -130,18 +134,20 @@ parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
     if (succeeded(parser.parseOptionalGreater())) {
       break;
     }
-    parser.emitError(
-        parser.getCurrentLocation(),
-        "expected + and more monomials, or > to end polynomial attribute");
+    if (!optional)
+      parser.emitError(
+          parser.getCurrentLocation(),
+          "expected + and more monomials, or > to end polynomial attribute");
     return failure();
   }
 
   if (variables.size() > 1) {
     std::string vars = llvm::join(variables.keys(), ", ");
-    parser.emitError(
-        parser.getCurrentLocation(),
-        "polynomials must have one indeterminate, but there were multiple: " +
-            vars);
+    if (!optional)
+      parser.emitError(
+          parser.getCurrentLocation(),
+          "polynomials must have one indeterminate, but there were multiple: " +
+              vars);
     return failure();
   }
 
@@ -149,13 +155,18 @@ parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
 }
 
 Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
+  return IntPolynomialAttr::parse(parser, type, /*optional=*/false);
+}
+
+Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type,
+                                   bool optional) {
   if (failed(parser.parseLess()))
     return {};
 
   llvm::SmallVector<IntMonomial> monomials;
   llvm::StringSet<> variables;
 
-  if (failed(parsePolynomialAttr<IntPolynomialAttr, IntMonomial>(
+  if (failed(parsePolynomialAttr<IntMonomial>(
           parser, monomials, variables,
           [&](IntMonomial &monomial) -> OptionalParseResult {
             APInt parsedCoeff(apintBitWidth, 1);
@@ -163,20 +174,27 @@ Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
                 parser.parseOptionalInteger(parsedCoeff);
             monomial.setCoefficient(parsedCoeff);
             return result;
-          }))) {
+          },
+          optional))) {
     return {};
   }
 
   auto result = IntPolynomial::fromMonomials(monomials);
   if (failed(result)) {
-    parser.emitError(parser.getCurrentLocation())
-        << "parsed polynomial must have unique exponents among monomials";
+    if (!optional)
+      parser.emitError(parser.getCurrentLocation())
+          << "parsed polynomial must have unique exponents among monomials";
     return {};
   }
   return IntPolynomialAttr::get(parser.getContext(), result.value());
 }
 
 Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
+  return FloatPolynomialAttr::parse(parser, type, /*optional=*/false);
+}
+
+Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type,
+                                     bool optional) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -191,8 +209,8 @@ Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
     return OptionalParseResult(result);
   };
 
-  if (failed(parsePolynomialAttr<FloatPolynomialAttr, FloatMonomial>(
-          parser, monomials, variables, parseAndStoreCoefficient))) {
+  if (failed(parsePolynomialAttr<FloatMonomial>(
+          parser, monomials, variables, parseAndStoreCoefficient, optional))) {
     return {};
   }
 
