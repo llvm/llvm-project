@@ -999,11 +999,11 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
             DeclarationFragments::FragmentKind::GenericParameter);
 
       if (TemplateParam->hasDefaultArgument()) {
-        DeclarationFragments After;
+        const auto Default = TemplateParam->getDefaultArgument();
         Fragments.append(" = ", DeclarationFragments::FragmentKind::Text)
-            .append(getFragmentsForType(TemplateParam->getDefaultArgument(),
-                                        TemplateParam->getASTContext(), After));
-        Fragments.append(std::move(After));
+            .append(getFragmentsForTemplateArguments(
+                {Default.getArgument()}, TemplateParam->getASTContext(),
+                {Default}));
       }
     } else if (const auto *NTP =
                    dyn_cast<NonTypeTemplateParmDecl>(ParameterArray[i])) {
