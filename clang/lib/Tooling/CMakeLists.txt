@@ -13,8 +13,6 @@ add_subdirectory(Syntax)
 add_subdirectory(DependencyScanning)
 add_subdirectory(Transformer)
 
-  set_target_properties(run-ast-api-dump-tool PROPERTIES FOLDER "Clang/Tablegenning")
-  set_target_properties(run-ast-api-generate-tool PROPERTIES FOLDER "Clang/Tablegenning")
 add_clang_library(clangTooling
   AllTUsExecution.cpp
   ArgumentsAdjusters.cpp
