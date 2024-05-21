@@ -150,7 +150,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           return failure();
         }]
       >,
-      StaticInterfaceMethod<
+      InterfaceMethod<
         /*desc=*/[{
           Method to generate the tiled implementation of an operation from
           operand tile position.
@@ -177,14 +177,19 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*retType=*/"FailureOr<::mlir::TilingResult>",
         /*methodName=*/"getTiledImplementationFromOperandTile",
         /*args=*/(ins
-          "Operation*":$op,
           "OpBuilder &":$b,
           "unsigned":$operandNumber,
           "ArrayRef<OpFoldResult>":$offsets,
           "ArrayRef<OpFoldResult>":$sizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return failure();
+          ::llvm::SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+          auto tilingInterfaceOp = cast<::mlir::TilingInterface>($_op.getOperation());
+          if (failed(tilingInterfaceOp.getIterationDomainTileFromOperandTile(
+                  b, operandNumber, offsets, sizes, mappedOffsets, mappedSizes))) {
+            return failure();
+          }
+          return tilingInterfaceOp.getTiledImplementation(b, mappedOffsets, mappedSizes);
         }]
       >,
       InterfaceMethod<

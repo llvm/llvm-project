@@ -519,9 +519,9 @@ struct UnPackOpTiling
   }
 
   /// Method to return the tiled implementation of tensor.unpack as a consumer.
-  static FailureOr<TilingResult> getTiledImplementationFromOperandTile(
+  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
       Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) {
+      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
     auto unPackOp = cast<UnPackOp>(op);
     // tensor.unpack op is fusible (as a consumer) only if inner dims are not
     // tiled.
@@ -537,8 +537,8 @@ struct UnPackOpTiling
     // Fetch offset/size for creating the slice of the dest operand of
     // unpack op.
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
-    if (failed(cast<TilingInterface>(op).getIterationDomainTileFromOperandTile(
-            b, /*operandNumber=*/0, offsets, sizes, outputOffsets,
+    if (failed(getIterationDomainTileFromOperandTile(
+            op, b, /*operandNumber=*/0, offsets, sizes, outputOffsets,
             outputSizes)))
       return failure();
 

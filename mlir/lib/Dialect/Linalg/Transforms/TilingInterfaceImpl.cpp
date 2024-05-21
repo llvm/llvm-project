@@ -215,21 +215,6 @@ struct LinalgOpTilingInterface
     return success();
   }
 
-  /// Method to generate the tiled implementation of an operation from operand
-  /// tile position.
-  static FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) {
-    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
-    auto tilingInterfaceOp = cast<TilingInterface>(op);
-    if (failed(tilingInterfaceOp.getIterationDomainTileFromOperandTile(
-            b, operandNumber, offsets, sizes, mappedOffsets, mappedSizes))) {
-      return failure();
-    }
-    return tilingInterfaceOp.getTiledImplementation(b, mappedOffsets,
-                                                    mappedSizes);
-  }
-
   FailureOr<TilingResult>
   generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
                           ArrayRef<OpFoldResult> offsets,
