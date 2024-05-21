@@ -335,10 +335,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     return ValTy.isPointerVector() && ValTy.getAddressSpace() == 0;
   };
 
+  auto &LoadActions = getActionDefinitionsBuilder(G_LOAD);
+  auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
+
   if (ST.hasSVE()) {
-    for (const auto OpCode : {G_LOAD, G_STORE}) {
-      getActionDefinitionsBuilder(OpCode)
-      .legalForTypesWithMemDesc({
+    for (auto *Actions : {&LoadActions, &StoreActions}) {
+      Actions->legalForTypesWithMemDesc({
         // 128 bit base sizes
         {nxv16s8, p0, nxv16s8, 128},
         {nxv8s16, p0, nxv8s16, 128},
@@ -349,7 +351,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     }
   }
 
-  getActionDefinitionsBuilder(G_LOAD)
+  LoadActions
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering == AtomicOrdering::Acquire;
@@ -399,7 +401,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0);
 
-  getActionDefinitionsBuilder(G_STORE)
+  StoreActions
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering == AtomicOrdering::Release;
