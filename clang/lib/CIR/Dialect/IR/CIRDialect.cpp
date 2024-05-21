@@ -2790,32 +2790,38 @@ VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     emitError() << "expected !cir.struct type result";
     return failure();
   }
-  if (sTy.getMembers().size() != 1 || vtableData.size() != 1) {
-    emitError() << "expected struct type with only one subtype";
+  if (sTy.getMembers().empty() || vtableData.empty()) {
+    emitError() << "expected struct type with one or more subtype";
     return failure();
   }
 
-  auto arrayTy = sTy.getMembers()[0].dyn_cast<mlir::cir::ArrayType>();
-  auto constArrayAttr = vtableData[0].dyn_cast<mlir::cir::ConstArrayAttr>();
-  if (!arrayTy || !constArrayAttr) {
-    emitError() << "expected struct type with one array element";
-    return failure();
-  }
+  for (size_t i = 0; i < sTy.getMembers().size(); ++i) {
 
-  if (mlir::cir::ConstStructAttr::verify(emitError, type, vtableData).failed())
-    return failure();
+    auto arrayTy = sTy.getMembers()[i].dyn_cast<mlir::cir::ArrayType>();
+    auto constArrayAttr = vtableData[i].dyn_cast<mlir::cir::ConstArrayAttr>();
+    if (!arrayTy || !constArrayAttr) {
+      emitError() << "expected struct type with one array element";
+      return failure();
+    }
 
-  LogicalResult eltTypeCheck = success();
-  if (auto arrayElts = constArrayAttr.getElts().dyn_cast<ArrayAttr>()) {
-    arrayElts.walkImmediateSubElements(
-        [&](Attribute attr) {
-          if (attr.isa<GlobalViewAttr>() || attr.isa<ConstPtrAttr>())
-            return;
-          emitError() << "expected GlobalViewAttr attribute";
-          eltTypeCheck = failure();
-        },
-        [&](Type type) {});
-    return eltTypeCheck;
+    if (mlir::cir::ConstStructAttr::verify(emitError, type, vtableData)
+            .failed())
+      return failure();
+
+    LogicalResult eltTypeCheck = success();
+    if (auto arrayElts = constArrayAttr.getElts().dyn_cast<ArrayAttr>()) {
+      arrayElts.walkImmediateSubElements(
+          [&](Attribute attr) {
+            if (attr.isa<GlobalViewAttr>() || attr.isa<ConstPtrAttr>())
+              return;
+            emitError() << "expected GlobalViewAttr attribute";
+            eltTypeCheck = failure();
+          },
+          [&](Type type) {});
+      if (eltTypeCheck.failed()) {
+        return eltTypeCheck;
+      }
+    }
   }
 
   return success();

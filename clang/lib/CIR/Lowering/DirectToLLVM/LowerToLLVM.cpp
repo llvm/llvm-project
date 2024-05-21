@@ -2773,20 +2773,31 @@ public:
     const auto *converter = getTypeConverter();
     auto targetType = converter->convertType(op.getType());
     mlir::Value symAddr = op.getSymAddr();
-
+    llvm::SmallVector<mlir::LLVM::GEPArg> offsets;
     mlir::Type eltType;
     if (!symAddr) {
+      // Get the vtable address point from a global variable
       auto module = op->getParentOfType<mlir::ModuleOp>();
-      auto symbol = dyn_cast<mlir::LLVM::GlobalOp>(
-          mlir::SymbolTable::lookupSymbolIn(module, op.getNameAttr()));
+      auto *symbol =
+          mlir::SymbolTable::lookupSymbolIn(module, op.getNameAttr());
+      if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(symbol)) {
+        eltType = llvmSymbol.getType();
+      } else if (auto cirSymbol = dyn_cast<mlir::cir::GlobalOp>(symbol)) {
+        eltType = converter->convertType(cirSymbol.getSymType());
+      }
       symAddr = rewriter.create<mlir::LLVM::AddressOfOp>(
           op.getLoc(), mlir::LLVM::LLVMPointerType::get(getContext()),
           *op.getName());
-      eltType = converter->convertType(symbol.getType());
+      offsets = llvm::SmallVector<mlir::LLVM::GEPArg>{
+          0, op.getVtableIndex(), op.getAddressPointIndex()};
+    } else {
+      // Get indirect vtable address point retrieval
+      symAddr = adaptor.getSymAddr();
+      eltType = converter->convertType(symAddr.getType());
+      offsets =
+          llvm::SmallVector<mlir::LLVM::GEPArg>{op.getAddressPointIndex()};
     }
 
-    auto offsets = llvm::SmallVector<mlir::LLVM::GEPArg>{
-        0, op.getVtableIndex(), op.getAddressPointIndex()};
     if (eltType)
       rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, targetType, eltType,
                                                      symAddr, offsets, true);

@@ -4,7 +4,7 @@
 
 cir.global external @const_ptr = #cir.ptr<4660 : i64> : !cir.ptr<!s32i>
 // CHECK: cir.global external @const_ptr = #cir.ptr<4660 : i64> : !cir.ptr<!s32i>
-cir.global external @signed_ptr = #cir.ptr<-1> : !cir.ptr<!s32i>
+cir.global external @signed_ptr = #cir.ptr<-1 : i64> : !cir.ptr<!s32i>
 // CHECK: cir.global external @signed_ptr = #cir.ptr<-1 : i64> : !cir.ptr<!s32i>
 cir.global external @null_ptr = #cir.ptr<null> : !cir.ptr<!s32i>
 // CHECK: cir.global external @null_ptr = #cir.ptr<null> : !cir.ptr<!s32i>

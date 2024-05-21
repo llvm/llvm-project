@@ -656,11 +656,49 @@ void CIRGenFunction::buildCtorPrologue(const CXXConstructorDecl *CD,
 }
 
 static Address ApplyNonVirtualAndVirtualOffset(
-    CIRGenFunction &CGF, Address addr, CharUnits nonVirtualOffset,
-    mlir::Value virtualOffset, const CXXRecordDecl *derivedClass,
-    const CXXRecordDecl *nearestVBase) {
-  llvm_unreachable("NYI");
-  return Address::invalid();
+    mlir::Location loc, CIRGenFunction &CGF, Address addr,
+    CharUnits nonVirtualOffset, mlir::Value virtualOffset,
+    const CXXRecordDecl *derivedClass, const CXXRecordDecl *nearestVBase) {
+  // Assert that we have something to do.
+  assert(!nonVirtualOffset.isZero() || virtualOffset != nullptr);
+
+  // Compute the offset from the static and dynamic components.
+  mlir::Value baseOffset;
+  if (!nonVirtualOffset.isZero()) {
+    mlir::Type OffsetType =
+        (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
+         CGF.CGM.getItaniumVTableContext().isRelativeLayout())
+            ? CGF.SInt32Ty
+            : CGF.PtrDiffTy;
+    baseOffset = CGF.getBuilder().getConstInt(loc, OffsetType,
+                                              nonVirtualOffset.getQuantity());
+    if (virtualOffset) {
+      baseOffset = CGF.getBuilder().createBinop(
+          virtualOffset, mlir::cir::BinOpKind::Add, baseOffset);
+    }
+  } else {
+    baseOffset = virtualOffset;
+  }
+
+  // Apply the base offset.
+  mlir::Value ptr = addr.getPointer();
+  ptr = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(loc, ptr.getType(), ptr,
+                                                        baseOffset);
+
+  // If we have a virtual component, the alignment of the result will
+  // be relative only to the known alignment of that vbase.
+  CharUnits alignment;
+  if (virtualOffset) {
+    assert(nearestVBase && "virtual offset without vbase?");
+    llvm_unreachable("NYI");
+    // alignment = CGF.CGM.getVBaseAlignment(addr.getAlignment(),
+    //                                       derivedClass, nearestVBase);
+  } else {
+    alignment = addr.getAlignment();
+  }
+  alignment = alignment.alignmentAtOffset(nonVirtualOffset);
+
+  return Address(ptr, alignment);
 }
 
 void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
@@ -687,8 +725,8 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   Address VTableField = LoadCXXThisAddress();
   if (!NonVirtualOffset.isZero() || VirtualOffset) {
     VTableField = ApplyNonVirtualAndVirtualOffset(
-        *this, VTableField, NonVirtualOffset, VirtualOffset, Vptr.VTableClass,
-        Vptr.NearestVBase);
+        loc, *this, VTableField, NonVirtualOffset, VirtualOffset,
+        Vptr.VTableClass, Vptr.NearestVBase);
   }
 
   // Finally, store the address point. Use the same CIR types as the field.
@@ -1415,8 +1453,9 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   }
 
   // Apply both offsets.
-  Value = ApplyNonVirtualAndVirtualOffset(*this, Value, NonVirtualOffset,
-                                          VirtualOffset, Derived, VBase);
+  Value = ApplyNonVirtualAndVirtualOffset(getLoc(Loc), *this, Value,
+                                          NonVirtualOffset, VirtualOffset,
+                                          Derived, VBase);
   // Cast to the destination type.
   Value = builder.createElementBitCast(Value.getPointer().getLoc(), Value,
                                        BaseValueTy);

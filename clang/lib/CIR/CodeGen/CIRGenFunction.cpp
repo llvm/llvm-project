@@ -645,12 +645,11 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   builder.setInsertionPointToStart(EntryBB);
 
   {
+    // Initialize lexical scope information.
     LexicalScope lexScope{*this, fusedLoc, EntryBB};
 
     // Emit the standard function prologue.
     StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
-
-    // Initialize lexical scope information.
 
     // Save parameters for coroutine function.
     if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
