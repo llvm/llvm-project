@@ -1476,7 +1476,7 @@ def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPURawPtrBufferAtomic<llvm_anyfloat_ty>;
-// gfx12+ intrinsic
+// gfx12+ intrinsic, and gfx950
 def int_amdgcn_raw_buffer_atomic_fadd_v2bf16 : Intrinsic <
   [llvm_v2bf16_ty],
   [llvm_v2bf16_ty,
@@ -1572,7 +1572,7 @@ def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_struct_ptr_buffer_atomic_fadd : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
-// gfx12 intrinsic
+// gfx12+ intrinsic, and gfx950
 def int_amdgcn_struct_buffer_atomic_fadd_v2bf16 : Intrinsic <
   [llvm_v2bf16_ty],
   [llvm_v2bf16_ty,

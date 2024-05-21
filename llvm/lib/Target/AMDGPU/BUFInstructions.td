@@ -1253,16 +1253,15 @@ defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
   "buffer_atomic_pk_add_f16", VGPR_32, v2f16, null_frag
 >;
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = isGFX12Plus in
 defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_cond_sub_u32", VGPR_32, i32
 >;
 
-let FPAtomic = 1 in
+let OtherPredicates = [HasAtomicBufferPkAddBF16Inst], FPAtomic = 1  in
 defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_pk_add_bf16", VGPR_32, v2bf16
 >;
-}
 
 //===----------------------------------------------------------------------===//
 // MTBUF Instructions
@@ -1735,8 +1734,13 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
 let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
+let OtherPredicates = [HasAtomicBufferPkAddBF16Inst] in
+  let SubtargetPredicate = isGFX12Plus in
+    defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
+  let SubtargetPredicate = HasGFX950Insts in
+    defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16">;
+
 let SubtargetPredicate = isGFX12Plus in {
-  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["ret"]>;
 
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
@@ -3268,6 +3272,7 @@ defm BUFFER_WBINVL1_VOL         : MUBUF_Real_vi <0x3f>;
 
 
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
+defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Real_Atomic_vi <0x52>;
 
 let SubtargetPredicate = HasAtomicFaddNoRtnInsts in {
 defm BUFFER_ATOMIC_ADD_F32    : MUBUF_Real_Atomic_vi <0x4d>;
