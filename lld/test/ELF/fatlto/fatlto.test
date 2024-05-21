@@ -6,11 +6,21 @@
 ;; Ensure that input files contain .llvm.lto section.
 ; RUN: llc %t/a-LTO.ll --filetype=obj -o %t/a-fatLTO.o --relocation-model=pic
 ; RUN: opt < %t/a-LTO.ll --module-summary -o %t/a-fatLTO.bc
-; RUN: llvm-objcopy --add-section=.llvm.lto=%t/a-fatLTO.bc --set-section-flags=.llvm.lto=exclude %t/a-fatLTO.o
+; RUN: llvm-objcopy --add-section=.llvm.lto=%t/a-fatLTO.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c %t/a-fatLTO.o
+
 
 ; RUN: llc %t/main-LTO.ll --filetype=obj -o %t/main-fatLTO.o --relocation-model=pic
 ; RUN: opt < %t/main-LTO.ll --module-summary -o %t/main-fatLTO.bc
-; RUN: llvm-objcopy --add-section=.llvm.lto=%t/main-fatLTO.bc --set-section-flags=.llvm.lto=exclude %t/main-fatLTO.o
+; RUN: llvm-objcopy --add-section=.llvm.lto=%t/main-fatLTO.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c %t/main-fatLTO.o
+
+; RUN: llvm-readobj -S %t/a-fatLTO.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
+; RUN: llvm-readobj -S %t/main-fatLTO.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
+
+;; Make sure that the section flags are set correctly
+; HAS_LLVM_LTO: Name: .llvm.lto
+; HAS_LLVM_LTO-NEXT: Type: SHT_LLVM_LTO
+; HAS_LLVM_LTO-NEXT: Flags
+; HAS_LLVM_LTO-NEXT: SHF_EXCLUDE
 
 ;; Final executable should not have .llvm.lto section no matter what the target is.
 ; RUN: ld.lld -o %t/foo-fatLTO %t/a-fatLTO.o %t/main-fatLTO.o --fat-lto-objects
@@ -59,8 +69,6 @@
 
 ; RUN: ld.lld --whole-archive %t/fatLTO-pic.a -r -o %t/fatLTO-pic-reolcatable.o
 ; RUN: llvm-readobj -S %t/fatLTO-pic-reolcatable.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
-
-; HAS_LLVM_LTO: Name: .llvm.lto
 
 ;--- a-LTO.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

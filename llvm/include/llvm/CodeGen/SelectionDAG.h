@@ -469,6 +469,7 @@ public:
   MachineFunction &getMachineFunction() const { return *MF; }
   const Pass *getPass() const { return SDAGISelPass; }
 
+  CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
   const TargetSubtargetInfo &getSubtarget() const { return MF->getSubtarget(); }
@@ -989,6 +990,11 @@ public:
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Return the expression required to zero extend the Op
+  /// value assuming it was the smaller SrcTy value.
+  SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
+                               const SDLoc &DL, EVT VT);
 
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as

@@ -41,6 +41,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
@@ -4619,10 +4620,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
       if (From->getType()->isObjCObjectPointerType() &&
           ToType->isObjCObjectPointerType())
-        EmitRelatedResultTypeNote(From);
+        ObjC().EmitRelatedResultTypeNote(From);
     } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
-               !CheckObjCARCUnavailableWeakConversion(ToType,
-                                                      From->getType())) {
+               !ObjC().CheckObjCARCUnavailableWeakConversion(ToType,
+                                                             From->getType())) {
       if (Action == AA_Initializing)
         Diag(From->getBeginLoc(), diag::err_arc_weak_unavailable_assign);
       else
@@ -4657,11 +4658,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // FIXME: doing this here is really ugly.
     if (Kind == CK_BlockPointerToObjCPointerCast) {
       ExprResult E = From;
-      (void) PrepareCastToObjCObjectPointer(E);
+      (void)ObjC().PrepareCastToObjCObjectPointer(E);
       From = E.get();
     }
     if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      CheckObjCConversion(SourceRange(), NewToType, From, CCK);
+      ObjC().CheckObjCConversion(SourceRange(), NewToType, From, CCK);
     From = ImpCastExprToType(From, NewToType, Kind, VK_PRValue, &BasePath, CCK)
                .get();
     break;
@@ -5216,10 +5217,18 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsFloatingPoint:
     return T->isFloatingType();
   case UTT_IsArray:
+    // Zero-sized arrays aren't considered arrays in partial specializations,
+    // so __is_array shouldn't consider them arrays either.
+    if (const auto *CAT = C.getAsConstantArrayType(T))
+      return CAT->getSize() != 0;
     return T->isArrayType();
   case UTT_IsBoundedArray:
     if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_bounded_array))
       return false;
+    // Zero-sized arrays aren't considered arrays in partial specializations,
+    // so __is_bounded_array shouldn't consider them arrays either.
+    if (const auto *CAT = C.getAsConstantArrayType(T))
+      return CAT->getSize() != 0;
     return T->isArrayType() && !T->isIncompleteArrayType();
   case UTT_IsUnboundedArray:
     if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_unbounded_array))
@@ -6142,7 +6151,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
 
     return Self.IsPointerInterconvertibleBaseOf(Lhs, Rhs);
   }
-    default: llvm_unreachable("not a BTT");
+  case BTT_IsDeducible: {
+    const auto *TSTToBeDeduced = cast<DeducedTemplateSpecializationType>(LhsT);
+    sema::TemplateDeductionInfo Info(KeyLoc);
+    return Self.DeduceTemplateArgumentsFromType(
+               TSTToBeDeduced->getTemplateName().getAsTemplateDecl(), RhsT,
+               Info) == TemplateDeductionResult::Success;
+  }
+  default:
+    llvm_unreachable("not a BTT");
   }
   llvm_unreachable("Unknown type trait or not implemented");
 }
@@ -7098,7 +7115,7 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return Composite;
 
   // Similarly, attempt to find composite type of two objective-c pointers.
-  Composite = FindCompositeObjCPointerType(LHS, RHS, QuestionLoc);
+  Composite = ObjC().FindCompositeObjCPointerType(LHS, RHS, QuestionLoc);
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
   if (!Composite.isNull())
@@ -8691,8 +8708,8 @@ static ExprResult attemptRecovery(Sema &SemaRef,
             NewSS, /*TemplateKWLoc*/ SourceLocation(), R,
             /*TemplateArgs*/ nullptr, /*S*/ nullptr);
     } else if (auto *Ivar = dyn_cast<ObjCIvarDecl>(ND)) {
-      return SemaRef.LookupInObjCMethod(R, Consumer.getScope(),
-                                        Ivar->getIdentifier());
+      return SemaRef.ObjC().LookupInObjCMethod(R, Consumer.getScope(),
+                                               Ivar->getIdentifier());
     }
   }
 

@@ -308,6 +308,12 @@ public:
   bool VisitCaseStmt(const CaseStmt *CS) { return VisitChildren(CS); }
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
+  // break, continue, goto, and label statements are always trivial.
+  bool VisitBreakStmt(const BreakStmt *) { return true; }
+  bool VisitContinueStmt(const ContinueStmt *) { return true; }
+  bool VisitGotoStmt(const GotoStmt *) { return true; }
+  bool VisitLabelStmt(const LabelStmt *) { return true; }
+
   bool VisitUnaryOperator(const UnaryOperator *UO) {
     // Unary operators are trivial if its operand is trivial except co_await.
     return UO->getOpcode() != UO_Coawait && Visit(UO->getSubExpr());
@@ -349,12 +355,17 @@ public:
       return false;
     const auto &Name = safeGetName(Callee);
 
+    if (Callee->isInStdNamespace() &&
+        (Name == "addressof" || Name == "forward" || Name == "move"))
+      return true;
+
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
+        Name == "WTFCrashWithSecurityImplication" || Name == "WTFCrash" ||
         Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
-        Name == "compilerFenceForCrash" || Name == "bitwise_cast" ||
-        Name == "addressof" || Name.find("__builtin") == 0)
+        Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
+        Name == "bitwise_cast" || Name.find("__builtin") == 0)
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
@@ -445,6 +456,14 @@ public:
     return Visit(VMT->getSubExpr());
   }
 
+  bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
+    if (auto *Temp = BTE->getTemporary()) {
+      if (!TrivialFunctionAnalysis::isTrivialImpl(Temp->getDestructor(), Cache))
+        return false;
+    }
+    return Visit(BTE->getSubExpr());
+  }
+
   bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
     return Visit(EWC->getSubExpr());
   }
@@ -506,11 +525,19 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   if (!IsNew)
     return It->second;
 
+  TrivialFunctionAnalysisVisitor V(Cache);
+
+  if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
+    for (auto *CtorInit : CtorDecl->inits()) {
+      if (!V.Visit(CtorInit->getInit()))
+        return false;
+    }
+  }
+
   const Stmt *Body = D->getBody();
   if (!Body)
     return false;
 
-  TrivialFunctionAnalysisVisitor V(Cache);
   bool Result = V.Visit(Body);
   if (Result)
     Cache[D] = true;
