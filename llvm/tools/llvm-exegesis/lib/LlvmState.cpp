@@ -45,12 +45,6 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
   if (CpuName == "native")
     CpuName = std::string(sys::getHostCPUName());
 
-  if (CpuName.empty()) {
-    std::unique_ptr<MCSubtargetInfo> Empty_STI(
-        TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-    CpuName = Empty_STI->getAllProcessorDescriptions().begin()->Key;
-  }
-
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, CpuName, ""));
   assert(STI && "Unable to create subtarget info!");

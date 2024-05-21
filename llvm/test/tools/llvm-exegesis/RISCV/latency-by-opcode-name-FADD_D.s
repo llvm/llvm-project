@@ -1,4 +1,4 @@
-# RUN: llvm-exegesis -mtriple=riscv64-unknown-linux-gnu -mode=latency --benchmark-phase=assemble-measured-code -mattr=+d -opcode-name=FADD_D | FileCheck %s
+# RUN: llvm-exegesis -mtriple=riscv64-unknown-linux-gnu --mcpu=generic -mode=latency --benchmark-phase=assemble-measured-code -mattr=+d -opcode-name=FADD_D | FileCheck %s
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

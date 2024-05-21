@@ -167,8 +167,8 @@ struct Instruction {
   const BitVector &AllDefRegs;  // The set of all aliased def registers.
   const BitVector &AllUseRegs;  // The set of all aliased use registers.
   const BitVector &MemoryRegs;  // The set of all aliased memory use registers.
-  const BitVector
-      &NotMemoryRegs; // The set of all aliased not memory use registers.
+  // The set of all aliased not memory use registers.
+  const BitVector &NotMemoryRegs;
 
 private:
   Instruction(const MCInstrDesc *Description, StringRef Name,

@@ -237,7 +237,7 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     MCPU("mcpu",
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-         cl::value_desc("cpu-name"), cl::cat(Options), cl::init(""));
+         cl::value_desc("cpu-name"), cl::cat(Options), cl::init("native"));
 
 static cl::opt<std::string>
     DumpObjectToDisk("dump-object-to-disk",
