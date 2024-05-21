@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -ast-print %s | FileCheck %s
 namespace N {
   template<typename T, typename U> void f(U);
   template<int> void f();
