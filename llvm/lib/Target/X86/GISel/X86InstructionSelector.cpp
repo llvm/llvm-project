@@ -107,6 +107,8 @@ private:
                      MachineFunction &MF) const;
   bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
+  bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI,
+                       MachineFunction &MF) const;
   bool selectTurnIntoCOPY(MachineInstr &I, MachineRegisterInfo &MRI,
                           const unsigned DstReg,
                           const TargetRegisterClass *DstRC,
@@ -419,6 +421,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectInsert(I, MRI, MF);
   case TargetOpcode::G_BRCOND:
     return selectCondBranch(I, MRI, MF);
+  case TargetOpcode::G_JUMP_TABLE:
+    return selectJumpTable(I, MRI, MF);
   case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_PHI:
     return selectImplicitDefOrPHI(I, MRI);
@@ -1465,6 +1469,33 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
   constrainSelectedInstRegOperands(TestInst, TII, TRI, RBI);
 
   I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectJumpTable(MachineInstr &I,
+                                             MachineRegisterInfo &MRI,
+                                             MachineFunction &MF) const {
+  auto Dst = I.getOperand(0).getReg();
+  auto JTI = I.getOperand(1).getIndex();
+  auto OpCode = STI.is64Bit() ? X86::LEA64r : X86::LEA32r;
+
+  auto *TLI = STI.getTargetLowering();
+
+  MachineInstr &Lea =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCode), Dst)
+           .addReg(TLI->isJumpTableRelative()
+                       ? (STI.is64Bit() ? X86::RIP : X86::EIP)
+                       : 0)
+           .addImm(1)
+           .addReg(0)
+           .addJumpTableIndex(JTI)
+           .addReg(0)
+           .getInstr();
+
+  constrainSelectedInstRegOperands(Lea, TII, TRI, RBI);
+
+  I.removeFromParent();
+
   return true;
 }
 

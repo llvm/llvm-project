@@ -1,0 +1,114 @@
+# RUN: split-file %s %t
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select --relocation-model=static %t/x64.mir -o - | \
+# RUN:     FileCheck %t/x64.mir --check-prefix=X64-STATIC
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select --relocation-model=pic    %t/x64.mir -o - | \
+# RUN:     FileCheck %t/x64.mir --check-prefix=X64-PIC
+# RUN: llc -mtriple=i386-linux-gnu -run-pass=instruction-select --relocation-model=static %t/x32.mir -o - | \
+# RUN:     FileCheck %t/x32.mir --check-prefix=X32-STATIC
+# RUN: llc -mtriple=i386-linux-gnu -run-pass=instruction-select --relocation-model=pic    %t/x32.mir -o - | \
+# RUN:     FileCheck %t/x32.mir --check-prefix=X32-PIC
+
+#--- x64.mir
+---
+name:            test64
+alignment:       16
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.1', '%bb.2' ]
+body:             |
+  ; X64-STATIC-LABEL: name: test64
+  ; X64-STATIC: bb.0.entry:
+  ; X64-STATIC-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; X64-STATIC-NEXT: {{  $}}
+  ; X64-STATIC-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r $noreg, 1, $noreg, %jump-table.0, $noreg
+  ; X64-STATIC-NEXT:   $rax = COPY [[LEA64r]]
+  ; X64-STATIC-NEXT:   RET 0, implicit $rax
+  ;
+  ; X64-PIC-LABEL: name: test64
+  ; X64-PIC: bb.0.entry:
+  ; X64-PIC-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; X64-PIC-NEXT: {{  $}}
+  ; X64-PIC-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; X64-PIC-NEXT:   $rax = COPY [[LEA64r]]
+  ; X64-PIC-NEXT:   RET 0, implicit $rax
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    %0:gpr(p0) = G_JUMP_TABLE %jump-table.0
+    $rax = COPY %0(p0)
+    RET 0, implicit $rax
+
+  bb.1:
+    successors: %bb.4(0x80000000)
+
+    G_BR %bb.4
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+
+    G_BR %bb.4
+
+  bb.4:
+    RET 0, implicit $rax
+
+...
+#--- x32.mir
+---
+name:            test32
+alignment:       16
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.1', '%bb.2' ]
+body:             |
+  ; X32-STATIC-LABEL: name: test32
+  ; X32-STATIC: bb.0.entry:
+  ; X32-STATIC-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; X32-STATIC-NEXT: {{  $}}
+  ; X32-STATIC-NEXT:   [[LEA32r:%[0-9]+]]:gr32 = LEA32r $noreg, 1, $noreg, %jump-table.0, $noreg
+  ; X32-STATIC-NEXT:   $eax = COPY [[LEA32r]]
+  ; X32-STATIC-NEXT:   RET 0, implicit $eax
+  ;
+  ; X32-PIC-LABEL: name: test32
+  ; X32-PIC: bb.0.entry:
+  ; X32-PIC-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; X32-PIC-NEXT: {{  $}}
+  ; X32-PIC-NEXT:   [[LEA32r:%[0-9]+]]:gr32 = LEA32r $eip, 1, $noreg, %jump-table.0, $noreg
+  ; X32-PIC-NEXT:   $eax = COPY [[LEA32r]]
+  ; X32-PIC-NEXT:   RET 0, implicit $eax
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    %0:gpr(p0) = G_JUMP_TABLE %jump-table.0
+    $eax = COPY %0(p0)
+    RET 0, implicit $eax
+
+  bb.1:
+    successors: %bb.4(0x80000000)
+
+    G_BR %bb.4
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+
+    G_BR %bb.4
+
+  bb.4:
+    RET 0, implicit $eax
+
+...

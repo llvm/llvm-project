@@ -14,10 +14,16 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace TargetOpcode;
@@ -327,6 +333,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
+  getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
+  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
+  getActionDefinitionsBuilder(G_BRJT).custom();
+
   // pointer handling
   const std::initializer_list<LLT> PtrTypes32 = {s1, s8, s16, s32};
   const std::initializer_list<LLT> PtrTypes64 = {s1, s8, s16, s32, s64};
@@ -550,6 +560,64 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
+}
+
+bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                                      LostDebugLocObserver &LocObserver) const {
+  switch (MI.getOpcode()) {
+  case G_BRJT:
+    return legalizeBrJT(Helper, MI);
+  default:
+    llvm_unreachable("instruction is not in switch");
+  }
+}
+
+bool X86LegalizerInfo::legalizeBrJT(LegalizerHelper &Helper,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+  MachineFunction &MF = *MI.getMF();
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+
+  unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
+
+  auto PtrReg = MI.getOperand(0).getReg();
+  auto PtrTy = MRI.getType(PtrReg);
+  auto IdxReg = MI.getOperand(2).getReg();
+  auto IdxTy = MRI.getType(IdxReg);
+
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
+      PtrTy.getSizeInBytes(), Align(EntrySize));
+
+  auto ShiftAmt =
+      MIB.buildConstant(IdxTy, Log2_32(MJTI->getEntrySize(MF.getDataLayout())));
+  auto Shift = MIB.buildShl(IdxTy, IdxReg, ShiftAmt);
+  auto Target = MIB.buildPtrAdd(PtrTy, PtrReg, Shift);
+
+  switch (MJTI->getEntryKind()) {
+  default:
+    return false;
+  case MachineJumpTableInfo::EK_BlockAddress: {
+    Target = MIB.buildLoad(PtrTy, Target, *MMO);
+    break;
+  }
+  case MachineJumpTableInfo::EK_LabelDifference64:
+    assert(Subtarget.is64Bit());
+    [[fallthrough]];
+  case MachineJumpTableInfo::EK_LabelDifference32:
+    auto Load = MIB.buildLoadInstr(
+        TargetOpcode::G_LOAD, LLT::scalar(PtrTy.getSizeInBits()), Target, *MMO);
+    Load = MIB.buildSExtOrTrunc(IdxTy, Load);
+    Target = MIB.buildPtrAdd(PtrTy, PtrReg, Load);
+    break;
+  }
+
+  MIB.buildBrIndirect(Target.getReg(0));
+
+  MI.removeFromParent();
+
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
