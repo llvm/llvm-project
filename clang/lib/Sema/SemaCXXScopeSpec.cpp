@@ -363,6 +363,8 @@ NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
   while (NNS->getPrefix())
     NNS = NNS->getPrefix();
 
+  // FIXME: This is a rather nasty hack! Ideally we should get the results
+  // from LookupTemplateName/BuildCXXNestedNameSpecifier.
   const IdentifierInfo *II = NNS->getAsIdentifier();
   if (!II) {
     if (const auto *DTST =
