@@ -5,28 +5,28 @@
 ; CHECK:	.long	("$ip2state$?crash@@YAXH@Z")
 
 ; CHECK-LABEL: "$stateUnwindMap$?crash@@YAXH@Z":
-; CHECK:	.long	-1 
+; CHECK:	.long	-1
 ; CHECK:	.long	"?dtor$
-; CHECK:	.long	0 
+; CHECK:	.long	0
 ; CHECK:	.long	"?dtor$
 ; CHECK:	.long	1
 ; CHECK:	.long	"?dtor$
 
 ; CHECK-LABEL: "$ip2state$?crash@@YAXH@Z":
 ; CHECK-NEXT:	.long	.Lfunc_begin0@IMGREL
-; CHECK-NEXT:	.long	-1                  
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	0                   
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	-1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	2                   
+; CHECK-NEXT:	.long	0
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	0                   
+; CHECK-NEXT:	.long	2
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	-1                  
+; CHECK-NEXT:	.long	1
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	0
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	-1
 
 ; ModuleID = 'windows-seh-EHa-CppDtors01.cpp'
 source_filename = "windows-seh-EHa-CppDtors01.cpp"

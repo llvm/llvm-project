@@ -281,13 +281,12 @@ define <128 x i16> @vwmulsu_v128i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vwmulsu.vv v8, v24, v16
+; CHECK-NEXT:    vwmulsu.vv v24, v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwmulsu.vv v8, v0, v16
@@ -329,13 +328,12 @@ define <64 x i32> @vwmulsu_v64i32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vwmulsu.vv v8, v24, v16
+; CHECK-NEXT:    vwmulsu.vv v24, v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwmulsu.vv v8, v0, v16
@@ -376,13 +374,12 @@ define <32 x i64> @vwmulsu_v32i64(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vslidedown.vi v8, v0, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vwmulsu.vv v8, v24, v16
+; CHECK-NEXT:    vwmulsu.vv v24, v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwmulsu.vv v8, v0, v16
@@ -793,8 +790,8 @@ define <2 x i64> @vwmulsu_vx_v2i64_i8(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
@@ -827,8 +824,8 @@ define <2 x i64> @vwmulsu_vx_v2i64_i16(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lhu a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
@@ -861,8 +858,8 @@ define <2 x i64> @vwmulsu_vx_v2i64_i32(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
