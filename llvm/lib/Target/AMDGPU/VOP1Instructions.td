@@ -153,19 +153,25 @@ multiclass VOP1Inst <string opName, VOPProfile P,
     def : LetDummies, AMDGPUMnemonicAlias<opName#"_dpp", opName, AMDGPUAsmVariants.DPP>;
 }
 
-multiclass VOP1Inst_t16<string opName,
+multiclass VOP1Inst_t16_with_profiles<string opName,
                         VOPProfile P,
+                        VOPProfile P_t16,
+                        VOPProfile P_fake16,
                         SDPatternOperator node = null_frag> {
   let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
     defm NAME : VOP1Inst<opName, P, node>;
   }
   let OtherPredicates = [UseRealTrue16Insts] in {
-    defm _t16 : VOP1Inst<opName#"_t16", VOPProfile_True16<P>, node>;
+    defm _t16 : VOP1Inst<opName#"_t16", P_t16, node>;
   }
   let OtherPredicates = [UseFakeTrue16Insts] in {
-    defm _fake16 : VOP1Inst<opName#"_fake16", VOPProfile_Fake16<P>, node>;
+    defm _fake16 : VOP1Inst<opName#"_fake16", P_fake16, node>;
   }
 }
+
+multiclass VOP1Inst_t16<string opName, VOPProfile P,
+                        SDPatternOperator node = null_frag> :
+  VOP1Inst_t16_with_profiles<opName, P, VOPProfile_True16<P>, VOPProfile_Fake16<P>, node>;
 
 // Special profile for instructions which have clamp
 // and output modifiers (but have no input modifiers)
@@ -1425,38 +1431,12 @@ defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
-//===----------------------------------------------------------------------===//
-// GFX10
-//===----------------------------------------------------------------------===//
-
-let OtherPredicates = [isGFX10Only] in {
-def : GCNPat <
+class MovDPP8Pattern<Predicate Pred, Instruction Inst> : GCNPat <
   (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
-  (V_MOV_B32_dpp8_gfx10 VGPR_32:$src, VGPR_32:$src,
-                        (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
->;
-} // End OtherPredicates = [isGFX10Only]
+  (Inst VGPR_32:$src, VGPR_32:$src, (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))> {
+  let OtherPredicates = [Pred];
+}
 
-//===----------------------------------------------------------------------===//
-// GFX11
-//===----------------------------------------------------------------------===//
-
-let OtherPredicates = [isGFX11Only] in {
-def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
-  (V_MOV_B32_dpp8_gfx11 VGPR_32:$src, VGPR_32:$src,
-                        (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
->;
-} // End OtherPredicates = [isGFX11Only]
-
-//===----------------------------------------------------------------------===//
-// GFX12
-//===----------------------------------------------------------------------===//
-
-let OtherPredicates = [isGFX12Only] in {
-def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
-  (V_MOV_B32_dpp8_gfx12 VGPR_32:$src, VGPR_32:$src,
-                        (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
->;
-} // End OtherPredicates = [isGFX12Only]
+def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10>;
+def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11>;
+def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12>;

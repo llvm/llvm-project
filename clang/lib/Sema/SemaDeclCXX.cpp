@@ -44,6 +44,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2655,188 +2656,122 @@ bool Sema::isCurrentClassNameTypo(IdentifierInfo *&II, const CXXScopeSpec *SS) {
   return false;
 }
 
-/// Determine whether the given class is a base class of the given
-/// class, including looking at dependent bases.
-static bool findCircularInheritance(const CXXRecordDecl *Class,
-                                    const CXXRecordDecl *Current) {
-  SmallVector<const CXXRecordDecl*, 8> Queue;
-
-  Class = Class->getCanonicalDecl();
-  while (true) {
-    for (const auto &I : Current->bases()) {
-      CXXRecordDecl *Base = I.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-
-      Base = Base->getDefinition();
-      if (!Base)
-        continue;
-
-      if (Base->getCanonicalDecl() == Class)
-        return true;
-
-      Queue.push_back(Base);
-    }
-
-    if (Queue.empty())
-      return false;
-
-    Current = Queue.pop_back_val();
-  }
-
-  return false;
-}
-
 /// Check the validity of a C++ base class specifier.
 ///
 /// \returns a new CXXBaseSpecifier if well-formed, emits diagnostics
 /// and returns NULL otherwise.
-CXXBaseSpecifier *
-Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
-                         SourceRange SpecifierRange,
-                         bool Virtual, AccessSpecifier Access,
-                         TypeSourceInfo *TInfo,
-                         SourceLocation EllipsisLoc) {
-  // In HLSL, unspecified class access is public rather than private.
-  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
-      Access == AS_none)
-    Access = AS_public;
-
+CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
+                                           SourceRange SpecifierRange,
+                                           bool Virtual, AccessSpecifier Access,
+                                           TypeSourceInfo *TInfo,
+                                           SourceLocation EllipsisLoc) {
   QualType BaseType = TInfo->getType();
+  SourceLocation BaseLoc = TInfo->getTypeLoc().getBeginLoc();
   if (BaseType->containsErrors()) {
     // Already emitted a diagnostic when parsing the error type.
     return nullptr;
   }
-  // C++ [class.union]p1:
-  //   A union shall not have base classes.
-  if (Class->isUnion()) {
-    Diag(Class->getLocation(), diag::err_base_clause_on_union)
-      << SpecifierRange;
-    return nullptr;
-  }
 
-  if (EllipsisLoc.isValid() &&
-      !TInfo->getType()->containsUnexpandedParameterPack()) {
+  if (EllipsisLoc.isValid() && !BaseType->containsUnexpandedParameterPack()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
       << TInfo->getTypeLoc().getSourceRange();
     EllipsisLoc = SourceLocation();
   }
 
-  SourceLocation BaseLoc = TInfo->getTypeLoc().getBeginLoc();
+  auto *BaseDecl =
+      dyn_cast_if_present<CXXRecordDecl>(computeDeclContext(BaseType));
+  // C++ [class.derived.general]p2:
+  //   A class-or-decltype shall denote a (possibly cv-qualified) class type
+  //   that is not an incompletely defined class; any cv-qualifiers are
+  //   ignored.
+  if (BaseDecl) {
+    // C++ [class.union.general]p4:
+    // [...]  A union shall not be used as a base class.
+    if (BaseDecl->isUnion()) {
+      Diag(BaseLoc, diag::err_union_as_base_class) << SpecifierRange;
+      return nullptr;
+    }
 
-  if (BaseType->isDependentType()) {
-    // Make sure that we don't have circular inheritance among our dependent
-    // bases. For non-dependent bases, the check for completeness below handles
-    // this.
-    if (CXXRecordDecl *BaseDecl = BaseType->getAsCXXRecordDecl()) {
-      if (BaseDecl->getCanonicalDecl() == Class->getCanonicalDecl() ||
-          ((BaseDecl = BaseDecl->getDefinition()) &&
-           findCircularInheritance(Class, BaseDecl))) {
-        Diag(BaseLoc, diag::err_circular_inheritance)
-          << BaseType << Context.getTypeDeclType(Class);
-
-        if (BaseDecl->getCanonicalDecl() != Class->getCanonicalDecl())
-          Diag(BaseDecl->getLocation(), diag::note_previous_decl)
-            << BaseType;
-
-        return nullptr;
+    // For the MS ABI, propagate DLL attributes to base class templates.
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
+        Context.getTargetInfo().getTriple().isPS()) {
+      if (Attr *ClassAttr = getDLLAttr(Class)) {
+        if (auto *BaseSpec =
+                dyn_cast<ClassTemplateSpecializationDecl>(BaseDecl)) {
+          propagateDLLAttrToBaseClassTemplate(Class, ClassAttr, BaseSpec,
+                                              BaseLoc);
+        }
       }
     }
 
+    if (RequireCompleteType(BaseLoc, BaseType, diag::err_incomplete_base_class,
+                            SpecifierRange)) {
+      Class->setInvalidDecl();
+      return nullptr;
+    }
+
+    BaseDecl = BaseDecl->getDefinition();
+    assert(BaseDecl && "Base type is not incomplete, but has no definition");
+
+    // Microsoft docs say:
+    // "If a base-class has a code_seg attribute, derived classes must have the
+    // same attribute."
+    const auto *BaseCSA = BaseDecl->getAttr<CodeSegAttr>();
+    const auto *DerivedCSA = Class->getAttr<CodeSegAttr>();
+    if ((DerivedCSA || BaseCSA) &&
+        (!BaseCSA || !DerivedCSA ||
+         BaseCSA->getName() != DerivedCSA->getName())) {
+      Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
+      Diag(BaseDecl->getLocation(), diag::note_base_class_specified_here)
+          << BaseDecl;
+      return nullptr;
+    }
+
+    // A class which contains a flexible array member is not suitable for use as
+    // a base class:
+    //   - If the layout determines that a base comes before another base,
+    //     the flexible array member would index into the subsequent base.
+    //   - If the layout determines that base comes before the derived class,
+    //     the flexible array member would index into the derived class.
+    if (BaseDecl->hasFlexibleArrayMember()) {
+      Diag(BaseLoc, diag::err_base_class_has_flexible_array_member)
+          << BaseDecl->getDeclName();
+      return nullptr;
+    }
+
+    // C++ [class]p3:
+    //   If a class is marked final and it appears as a base-type-specifier in
+    //   base-clause, the program is ill-formed.
+    if (FinalAttr *FA = BaseDecl->getAttr<FinalAttr>()) {
+      Diag(BaseLoc, diag::err_class_marked_final_used_as_base)
+          << BaseDecl->getDeclName() << FA->isSpelledAsSealed();
+      Diag(BaseDecl->getLocation(), diag::note_entity_declared_at)
+          << BaseDecl->getDeclName() << FA->getRange();
+      return nullptr;
+    }
+
+    // If the base class is invalid the derived class is as well.
+    if (BaseDecl->isInvalidDecl())
+      Class->setInvalidDecl();
+  } else if (BaseType->isDependentType()) {
     // Make sure that we don't make an ill-formed AST where the type of the
     // Class is non-dependent and its attached base class specifier is an
     // dependent type, which violates invariants in many clang code paths (e.g.
     // constexpr evaluator). If this case happens (in errory-recovery mode), we
     // explicitly mark the Class decl invalid. The diagnostic was already
     // emitted.
-    if (!Class->getTypeForDecl()->isDependentType())
+    if (!Class->isDependentContext())
       Class->setInvalidDecl();
-    return new (Context) CXXBaseSpecifier(
-        SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
-        Access, TInfo, EllipsisLoc);
-  }
-
-  // Base specifiers must be record types.
-  if (!BaseType->isRecordType()) {
+  } else {
+    // The base class is some non-dependent non-class type.
     Diag(BaseLoc, diag::err_base_must_be_class) << SpecifierRange;
     return nullptr;
   }
 
-  // C++ [class.union]p1:
-  //   A union shall not be used as a base class.
-  if (BaseType->isUnionType()) {
-    Diag(BaseLoc, diag::err_union_as_base_class) << SpecifierRange;
-    return nullptr;
-  }
-
-  // For the MS ABI, propagate DLL attributes to base class templates.
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-      Context.getTargetInfo().getTriple().isPS()) {
-    if (Attr *ClassAttr = getDLLAttr(Class)) {
-      if (auto *BaseTemplate = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
-              BaseType->getAsCXXRecordDecl())) {
-        propagateDLLAttrToBaseClassTemplate(Class, ClassAttr, BaseTemplate,
-                                            BaseLoc);
-      }
-    }
-  }
-
-  // C++ [class.derived]p2:
-  //   The class-name in a base-specifier shall not be an incompletely
-  //   defined class.
-  if (RequireCompleteType(BaseLoc, BaseType,
-                          diag::err_incomplete_base_class, SpecifierRange)) {
-    Class->setInvalidDecl();
-    return nullptr;
-  }
-
-  // If the base class is polymorphic or isn't empty, the new one is/isn't, too.
-  RecordDecl *BaseDecl = BaseType->castAs<RecordType>()->getDecl();
-  assert(BaseDecl && "Record type has no declaration");
-  BaseDecl = BaseDecl->getDefinition();
-  assert(BaseDecl && "Base type is not incomplete, but has no definition");
-  CXXRecordDecl *CXXBaseDecl = cast<CXXRecordDecl>(BaseDecl);
-  assert(CXXBaseDecl && "Base type is not a C++ type");
-
-  // Microsoft docs say:
-  // "If a base-class has a code_seg attribute, derived classes must have the
-  // same attribute."
-  const auto *BaseCSA = CXXBaseDecl->getAttr<CodeSegAttr>();
-  const auto *DerivedCSA = Class->getAttr<CodeSegAttr>();
-  if ((DerivedCSA || BaseCSA) &&
-      (!BaseCSA || !DerivedCSA || BaseCSA->getName() != DerivedCSA->getName())) {
-    Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
-    Diag(CXXBaseDecl->getLocation(), diag::note_base_class_specified_here)
-      << CXXBaseDecl;
-    return nullptr;
-  }
-
-  // A class which contains a flexible array member is not suitable for use as a
-  // base class:
-  //   - If the layout determines that a base comes before another base,
-  //     the flexible array member would index into the subsequent base.
-  //   - If the layout determines that base comes before the derived class,
-  //     the flexible array member would index into the derived class.
-  if (CXXBaseDecl->hasFlexibleArrayMember()) {
-    Diag(BaseLoc, diag::err_base_class_has_flexible_array_member)
-      << CXXBaseDecl->getDeclName();
-    return nullptr;
-  }
-
-  // C++ [class]p3:
-  //   If a class is marked final and it appears as a base-type-specifier in
-  //   base-clause, the program is ill-formed.
-  if (FinalAttr *FA = CXXBaseDecl->getAttr<FinalAttr>()) {
-    Diag(BaseLoc, diag::err_class_marked_final_used_as_base)
-      << CXXBaseDecl->getDeclName()
-      << FA->isSpelledAsSealed();
-    Diag(CXXBaseDecl->getLocation(), diag::note_entity_declared_at)
-        << CXXBaseDecl->getDeclName() << FA->getRange();
-    return nullptr;
-  }
-
-  if (BaseDecl->isInvalidDecl())
-    Class->setInvalidDecl();
+  // In HLSL, unspecified class access is public rather than private.
+  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
+      Access == AS_none)
+    Access = AS_public;
 
   // Create the base specifier.
   return new (Context) CXXBaseSpecifier(
@@ -2886,13 +2821,20 @@ BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
                                       UPPC_BaseType))
     return true;
 
+  // C++ [class.union.general]p4:
+  //   [...] A union shall not have base classes.
+  if (Class->isUnion()) {
+    Diag(Class->getLocation(), diag::err_base_clause_on_union)
+        << SpecifierRange;
+    return true;
+  }
+
   if (CXXBaseSpecifier *BaseSpec = CheckBaseSpecifier(Class, SpecifierRange,
                                                       Virtual, Access, TInfo,
                                                       EllipsisLoc))
     return BaseSpec;
-  else
-    Class->setInvalidDecl();
 
+  Class->setInvalidDecl();
   return true;
 }
 
@@ -17054,7 +16996,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   ExDecl->setExceptionVariable(true);
 
   // In ARC, infer 'retaining' for variables of retainable type.
-  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(ExDecl))
+  if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(ExDecl))
     Invalid = true;
 
   if (!Invalid && !ExDeclType->isDependentType()) {
@@ -18850,61 +18792,6 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
     if (Base->getNumVBases() == 0)
       continue;
     MarkVirtualMembersReferenced(Loc, Base);
-  }
-}
-
-/// SetIvarInitializers - This routine builds initialization ASTs for the
-/// Objective-C implementation whose ivars need be initialized.
-void Sema::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-  if (ObjCInterfaceDecl *OID = ObjCImplementation->getClassInterface()) {
-    SmallVector<ObjCIvarDecl*, 8> ivars;
-    CollectIvarsToConstructOrDestruct(OID, ivars);
-    if (ivars.empty())
-      return;
-    SmallVector<CXXCtorInitializer*, 32> AllToInit;
-    for (unsigned i = 0; i < ivars.size(); i++) {
-      FieldDecl *Field = ivars[i];
-      if (Field->isInvalidDecl())
-        continue;
-
-      CXXCtorInitializer *Member;
-      InitializedEntity InitEntity = InitializedEntity::InitializeMember(Field);
-      InitializationKind InitKind =
-        InitializationKind::CreateDefault(ObjCImplementation->getLocation());
-
-      InitializationSequence InitSeq(*this, InitEntity, InitKind, std::nullopt);
-      ExprResult MemberInit =
-          InitSeq.Perform(*this, InitEntity, InitKind, std::nullopt);
-      MemberInit = MaybeCreateExprWithCleanups(MemberInit);
-      // Note, MemberInit could actually come back empty if no initialization
-      // is required (e.g., because it would call a trivial default constructor)
-      if (!MemberInit.get() || MemberInit.isInvalid())
-        continue;
-
-      Member =
-        new (Context) CXXCtorInitializer(Context, Field, SourceLocation(),
-                                         SourceLocation(),
-                                         MemberInit.getAs<Expr>(),
-                                         SourceLocation());
-      AllToInit.push_back(Member);
-
-      // Be sure that the destructor is accessible and is marked as referenced.
-      if (const RecordType *RecordTy =
-              Context.getBaseElementType(Field->getType())
-                  ->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
-        if (CXXDestructorDecl *Destructor = LookupDestructor(RD)) {
-          MarkFunctionReferenced(Field->getLocation(), Destructor);
-          CheckDestructorAccess(Field->getLocation(), Destructor,
-                            PDiag(diag::err_access_dtor_ivar)
-                              << Context.getBaseElementType(Field->getType()));
-        }
-      }
-    }
-    ObjCImplementation->setIvarInitializers(Context,
-                                            AllToInit.data(), AllToInit.size());
   }
 }
 

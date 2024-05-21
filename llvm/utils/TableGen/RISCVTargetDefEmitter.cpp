@@ -122,6 +122,28 @@ static void printMArch(raw_ostream &OS, const std::vector<Record *> &Features) {
     OS << LS << Ext.first << Ext.second.Major << 'p' << Ext.second.Minor;
 }
 
+static void printProfileTable(raw_ostream &OS,
+                              const std::vector<Record *> &Profiles,
+                              bool Experimental) {
+  OS << "static constexpr RISCVProfile Supported";
+  if (Experimental)
+    OS << "Experimental";
+  OS << "Profiles[] = {\n";
+
+  for (const Record *Rec : Profiles) {
+    if (Rec->getValueAsBit("Experimental") != Experimental)
+      continue;
+
+    StringRef Name = Rec->getValueAsString("Name");
+    Name.consume_front("experimental-");
+    OS.indent(4) << "{\"" << Name << "\",\"";
+    printMArch(OS, Rec->getValueAsListOfDefs("Implies"));
+    OS << "\"},\n";
+  }
+
+  OS << "};\n\n";
+}
+
 static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_PROFILES\n";
   OS << "#undef GET_SUPPORTED_PROFILES\n\n";
@@ -129,15 +151,12 @@ static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
   auto Profiles = Records.getAllDerivedDefinitionsIfDefined("RISCVProfile");
 
   if (!Profiles.empty()) {
-    llvm::sort(Profiles, LessRecordFieldName());
-    OS << "static constexpr RISCVProfile SupportedProfiles[] = {\n";
-    for (const Record *Rec : Profiles) {
-      OS.indent(4) << "{\"" << Rec->getValueAsString("Name") << "\",\"";
-      printMArch(OS, Rec->getValueAsListOfDefs("Implies"));
-      OS << "\"},\n";
-    }
-
-    OS << "};\n\n";
+    printProfileTable(OS, Profiles, /*Experimental=*/false);
+    bool HasExperimentalProfiles = any_of(Profiles, [&](auto &Rec) {
+      return Rec->getValueAsBit("Experimental");
+    });
+    if (HasExperimentalProfiles)
+      printProfileTable(OS, Profiles, /*Experimental=*/true);
   }
 
   OS << "#endif // GET_SUPPORTED_PROFILES\n\n";

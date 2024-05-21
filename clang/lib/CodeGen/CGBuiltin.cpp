@@ -1141,90 +1141,7 @@ struct BitTest {
   static BitTest decodeBitTestBuiltin(unsigned BuiltinID);
 };
 
-// Returns the first convergence entry/loop/anchor instruction found in |BB|.
-// std::nullptr otherwise.
-llvm::IntrinsicInst *getConvergenceToken(llvm::BasicBlock *BB) {
-  for (auto &I : *BB) {
-    auto *II = dyn_cast<llvm::IntrinsicInst>(&I);
-    if (II && isConvergenceControlIntrinsic(II->getIntrinsicID()))
-      return II;
-  }
-  return nullptr;
-}
-
 } // namespace
-
-llvm::CallBase *
-CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
-                                            llvm::Value *ParentToken) {
-  llvm::Value *bundleArgs[] = {ParentToken};
-  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
-  auto Output = llvm::CallBase::addOperandBundle(
-      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input);
-  Input->replaceAllUsesWith(Output);
-  Input->eraseFromParent();
-  return Output;
-}
-
-llvm::IntrinsicInst *
-CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
-                                          llvm::Value *ParentToken) {
-  CGBuilderTy::InsertPoint IP = Builder.saveIP();
-  Builder.SetInsertPoint(&BB->front());
-  auto CB = Builder.CreateIntrinsic(
-      llvm::Intrinsic::experimental_convergence_loop, {}, {});
-  Builder.restoreIP(IP);
-
-  auto I = addConvergenceControlToken(CB, ParentToken);
-  return cast<llvm::IntrinsicInst>(I);
-}
-
-llvm::IntrinsicInst *
-CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
-  auto *BB = &F->getEntryBlock();
-  auto *token = getConvergenceToken(BB);
-  if (token)
-    return token;
-
-  // Adding a convergence token requires the function to be marked as
-  // convergent.
-  F->setConvergent();
-
-  CGBuilderTy::InsertPoint IP = Builder.saveIP();
-  Builder.SetInsertPoint(&BB->front());
-  auto I = Builder.CreateIntrinsic(
-      llvm::Intrinsic::experimental_convergence_entry, {}, {});
-  assert(isa<llvm::IntrinsicInst>(I));
-  Builder.restoreIP(IP);
-
-  return cast<llvm::IntrinsicInst>(I);
-}
-
-llvm::IntrinsicInst *
-CodeGenFunction::getOrEmitConvergenceLoopToken(const LoopInfo *LI) {
-  assert(LI != nullptr);
-
-  auto *token = getConvergenceToken(LI->getHeader());
-  if (token)
-    return token;
-
-  llvm::IntrinsicInst *PII =
-      LI->getParent()
-          ? emitConvergenceLoopToken(
-                LI->getHeader(), getOrEmitConvergenceLoopToken(LI->getParent()))
-          : getOrEmitConvergenceEntryToken(LI->getHeader()->getParent());
-
-  return emitConvergenceLoopToken(LI->getHeader(), PII);
-}
-
-llvm::CallBase *
-CodeGenFunction::addControlledConvergenceToken(llvm::CallBase *Input) {
-  llvm::Value *ParentToken =
-      LoopStack.hasInfo()
-          ? getOrEmitConvergenceLoopToken(&LoopStack.getInfo())
-          : getOrEmitConvergenceEntryToken(Input->getFunction());
-  return addConvergenceControlToken(Input, ParentToken);
-}
 
 BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
   switch (BuiltinID) {
@@ -5692,8 +5609,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Queue = EmitScalarExpr(E->getArg(0));
     llvm::Value *Flags = EmitScalarExpr(E->getArg(1));
     LValue NDRangeL = EmitAggExprToLValue(E->getArg(2));
-    llvm::Value *Range = NDRangeL.getAddress(*this).emitRawPointer(*this);
-    llvm::Type *RangeTy = NDRangeL.getAddress(*this).getType();
+    llvm::Value *Range = NDRangeL.getAddress().emitRawPointer(*this);
+    llvm::Type *RangeTy = NDRangeL.getAddress().getType();
 
     if (NumArgs == 4) {
       // The most basic form of the call with parameters:
@@ -5712,7 +5629,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Builder.CreatePointerCast(Info.BlockArg, GenericVoidPtrTy);
 
       AttrBuilder B(Builder.getContext());
-      B.addByValAttr(NDRangeL.getAddress(*this).getElementType());
+      B.addByValAttr(NDRangeL.getAddress().getElementType());
       llvm::AttributeList ByValAttrSet =
           llvm::AttributeList::get(CGM.getModule().getContext(), 3U, B);
 
@@ -5900,7 +5817,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *GenericVoidPtrTy = Builder.getPtrTy(
         getContext().getTargetAddressSpace(LangAS::opencl_generic));
     LValue NDRangeL = EmitAggExprToLValue(E->getArg(0));
-    llvm::Value *NDRange = NDRangeL.getAddress(*this).emitRawPointer(*this);
+    llvm::Value *NDRange = NDRangeL.getAddress().emitRawPointer(*this);
     auto Info =
         CGM.getOpenCLRuntime().emitOpenCLEnqueuedBlock(*this, E->getArg(1));
     Value *Kernel =
@@ -18402,12 +18319,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef<Value *>{Op0}, nullptr, "dx.rsqrt");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
-    auto *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
         {}, false, true));
-    if (getTarget().getTriple().isSPIRVLogical())
-      CI = dyn_cast<CallInst>(addControlledConvergenceToken(CI));
-    return CI;
   }
   }
   return nullptr;
@@ -21678,7 +21592,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     // Handle aggregate argument, namely RVV tuple types in segment load/store
     if (hasAggregateEvaluationKind(E->getArg(i)->getType())) {
       LValue L = EmitAggExprToLValue(E->getArg(i));
-      llvm::Value *AggValue = Builder.CreateLoad(L.getAddress(*this));
+      llvm::Value *AggValue = Builder.CreateLoad(L.getAddress());
       Ops.push_back(AggValue);
       continue;
     }

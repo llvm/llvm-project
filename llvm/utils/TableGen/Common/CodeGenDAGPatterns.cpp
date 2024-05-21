@@ -903,7 +903,7 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
 }
 
 bool TreePredicateFn::hasPredCode() const {
-  return isLoad() || isStore() || isAtomic() || hasNoUse() ||
+  return isLoad() || isStore() || isAtomic() || hasNoUse() || hasOneUse() ||
          !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
@@ -1140,6 +1140,8 @@ std::string TreePredicateFn::getPredCode() const {
 
   if (hasNoUse())
     Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+  if (hasOneUse())
+    Code += "if (!SDValue(N, 0).hasOneUse()) return false;\n";
 
   std::string PredicateCode =
       std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));
@@ -1186,6 +1188,9 @@ bool TreePredicateFn::usesOperands() const {
 }
 bool TreePredicateFn::hasNoUse() const {
   return isPredefinedPredicateEqualTo("HasNoUse", true);
+}
+bool TreePredicateFn::hasOneUse() const {
+  return isPredefinedPredicateEqualTo("HasOneUse", true);
 }
 bool TreePredicateFn::isLoad() const {
   return isPredefinedPredicateEqualTo("IsLoad", true);

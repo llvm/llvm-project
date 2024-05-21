@@ -523,12 +523,11 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
 
   if (hasPrefix(Name, ".llvm.offloading"))
     return ELF::SHT_LLVM_OFFLOADING;
+  if (Name == ".llvm.lto")
+    return ELF::SHT_LLVM_LTO;
 
   if (K.isBSS() || K.isThreadBSS())
     return ELF::SHT_NOBITS;
-
-  if(hasPrefix(Name, ".llvm.lto"))
-    return ELF::SHT_LLVM_LTO;
 
   return ELF::SHT_PROGBITS;
 }
