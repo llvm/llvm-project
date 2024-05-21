@@ -2232,6 +2232,54 @@ LogicalResult cir::VTableAddrPointOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// VTTAddrPointOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+VTTAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // VTT ptr is not coming from a symbol.
+  if (!getName())
+    return success();
+  auto name = *getName();
+
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  auto op = dyn_cast_or_null<GlobalOp>(
+      symbolTable.lookupNearestSymbolFrom(*this, getNameAttr()));
+  if (!op)
+    return emitOpError("'")
+           << name << "' does not reference a valid cir.global";
+  auto init = op.getInitialValue();
+  if (!init)
+    return success();
+  if (!isa<mlir::cir::ConstArrayAttr>(*init))
+    return emitOpError("Expected array in initializer for global VTT'")
+           << name << "'";
+  return success();
+}
+
+LogicalResult cir::VTTAddrPointOp::verify() {
+  // The operation uses either a symbol or a value to operate, but not both
+  if (getName() && getSymAddr())
+    return emitOpError("should use either a symbol or value, but not both");
+
+  // If not a symbol, stick with the concrete type used for getSymAddr.
+  if (getSymAddr())
+    return success();
+
+  auto resultType = getAddr().getType();
+
+  auto resTy = mlir::cir::PointerType::get(
+      getContext(), mlir::cir::PointerType::get(
+                        getContext(), mlir::cir::VoidType::get(getContext())));
+
+  if (resultType != resTy)
+    return emitOpError("result type must be '")
+           << resTy << "', but provided result type is '" << resultType << "'";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 

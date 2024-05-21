@@ -31,6 +31,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -693,6 +694,18 @@ public:
     auto baseAddr = create<mlir::cir::BaseClassAddrOp>(
         loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
     return Address(baseAddr, ptrTy, addr.getAlignment());
+  }
+
+  mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
+                                 mlir::Value addr, uint64_t offset) {
+    return create<mlir::cir::VTTAddrPointOp>(
+        loc, retTy, mlir::FlatSymbolRefAttr{}, addr, offset);
+  }
+
+  mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
+                                 mlir::FlatSymbolRefAttr sym, uint64_t offset) {
+    return create<mlir::cir::VTTAddrPointOp>(loc, retTy, sym, mlir::Value{},
+                                             offset);
   }
 
   // FIXME(cir): CIRGenBuilder class should have an attribute with a reference

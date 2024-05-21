@@ -689,9 +689,8 @@ static Address ApplyNonVirtualAndVirtualOffset(
   CharUnits alignment;
   if (virtualOffset) {
     assert(nearestVBase && "virtual offset without vbase?");
-    llvm_unreachable("NYI");
-    // alignment = CGF.CGM.getVBaseAlignment(addr.getAlignment(),
-    //                                       derivedClass, nearestVBase);
+    alignment = CGF.CGM.getVBaseAlignment(addr.getAlignment(), derivedClass,
+                                          nearestVBase);
   } else {
     alignment = addr.getAlignment();
   }
@@ -714,7 +713,11 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   CharUnits NonVirtualOffset = CharUnits::Zero();
 
   if (CGM.getCXXABI().isVirtualOffsetNeededForVTableField(*this, Vptr)) {
-    llvm_unreachable("NYI");
+    // We need to use the virtual base offset offset because the virtual base
+    // might have a different offset in the most derived class.
+    VirtualOffset = CGM.getCXXABI().getVirtualBaseClassOffset(
+        loc, *this, LoadCXXThisAddress(), Vptr.VTableClass, Vptr.NearestVBase);
+    NonVirtualOffset = Vptr.OffsetFromNearestVBase;
   } else {
     // We can just use the base offset in the complete class.
     NonVirtualOffset = Vptr.Base.getBaseOffset();
@@ -797,7 +800,16 @@ void CIRGenFunction::getVTablePointers(BaseSubobject Base,
     bool BaseDeclIsNonVirtualPrimaryBase;
 
     if (I.isVirtual()) {
-      llvm_unreachable("NYI");
+      // Check if we've visited this virtual base before.
+      if (!VBases.insert(BaseDecl).second)
+        continue;
+
+      const ASTRecordLayout &Layout =
+          getContext().getASTRecordLayout(VTableClass);
+
+      BaseOffset = Layout.getVBaseClassOffset(BaseDecl);
+      BaseOffsetFromNearestVBase = CharUnits::Zero();
+      BaseDeclIsNonVirtualPrimaryBase = false;
     } else {
       const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
 
@@ -1449,18 +1461,34 @@ mlir::Value CIRGenFunction::GetVTTParameter(GlobalDecl GD, bool ForVirtualBase,
   const CXXRecordDecl *RD = cast<CXXMethodDecl>(CurCodeDecl)->getParent();
   const CXXRecordDecl *Base = cast<CXXMethodDecl>(GD.getDecl())->getParent();
 
+  uint64_t SubVTTIndex;
+
   if (Delegating) {
     llvm_unreachable("NYI");
   } else if (RD == Base) {
     llvm_unreachable("NYI");
   } else {
-    llvm_unreachable("NYI");
+    const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
+    CharUnits BaseOffset = ForVirtualBase ? Layout.getVBaseClassOffset(Base)
+                                          : Layout.getBaseClassOffset(Base);
+
+    SubVTTIndex =
+        CGM.getVTables().getSubVTTIndex(RD, BaseSubobject(Base, BaseOffset));
+    assert(SubVTTIndex != 0 && "Sub-VTT index must be greater than zero!");
   }
 
+  auto Loc = CGM.getLoc(RD->getBeginLoc());
   if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
-    llvm_unreachable("NYI");
+    // A VTT parameter was passed to the constructor, use it.
+    auto VTT = LoadCXXVTT();
+    return CGM.getBuilder().createVTTAddrPoint(Loc, VTT.getType(), VTT,
+                                               SubVTTIndex);
   } else {
-    llvm_unreachable("NYI");
+    // We're the complete constructor, so get the VTT by name.
+    auto VTT = CGM.getVTables().getAddrOfVTT(RD);
+    return CGM.getBuilder().createVTTAddrPoint(
+        Loc, CGM.getBuilder().getPointerTo(CGM.VoidPtrTy),
+        mlir::FlatSymbolRefAttr::get(VTT.getSymNameAttr()), SubVTTIndex);
   }
 }
 
@@ -1645,8 +1673,25 @@ CIRGenModule::getDynamicOffsetAlignment(clang::CharUnits actualBaseAlign,
   return std::min(actualBaseAlign, expectedTargetAlign);
 }
 
-/// Emit a loop to call a particular constructor for each of several members of
-/// an array.
+/// Return the best known alignment for a pointer to a virtual base,
+/// given the alignment of a pointer to the derived class.
+clang::CharUnits
+CIRGenModule::getVBaseAlignment(CharUnits actualDerivedAlign,
+                                const CXXRecordDecl *derivedClass,
+                                const CXXRecordDecl *vbaseClass) {
+  // The basic idea here is that an underaligned derived pointer might
+  // indicate an underaligned base pointer.
+
+  assert(vbaseClass->isCompleteDefinition());
+  auto &baseLayout = getASTContext().getASTRecordLayout(vbaseClass);
+  CharUnits expectedVBaseAlign = baseLayout.getNonVirtualAlignment();
+
+  return getDynamicOffsetAlignment(actualDerivedAlign, derivedClass,
+                                   expectedVBaseAlign);
+}
+
+/// Emit a loop to call a particular constructor for each of several members
+/// of an array.
 ///
 /// \param ctor the constructor to call for each element
 /// \param arrayType the type of the array to initialize
@@ -1663,8 +1708,8 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
                               NewPointerIsChecked, zeroInitialize);
 }
 
-/// Emit a loop to call a particular constructor for each of several members of
-/// an array.
+/// Emit a loop to call a particular constructor for each of several members
+/// of an array.
 ///
 /// \param ctor the constructor to call for each element
 /// \param numElements the number of elements in the array;
@@ -1749,7 +1794,8 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
               AggValueSlot::DoesNotOverlap, AggValueSlot::IsNotZeroed,
               NewPointerIsChecked ? AggValueSlot::IsSanitizerChecked
                                   : AggValueSlot::IsNotSanitizerChecked);
-          buildCXXConstructorCall(ctor, Ctor_Complete, /*ForVirtualBase=*/false,
+          buildCXXConstructorCall(ctor, Ctor_Complete,
+                                  /*ForVirtualBase=*/false,
                                   /*Delegating=*/false, currAVS, E);
           builder.create<mlir::cir::YieldOp>(loc);
         });

@@ -318,6 +318,75 @@ void CIRGenVTables::createVTableInitializer(ConstantStructBuilder &builder,
   }
 }
 
+mlir::cir::GlobalOp CIRGenVTables::generateConstructionVTable(
+    const CXXRecordDecl *RD, const BaseSubobject &Base, bool BaseIsVirtual,
+    mlir::cir::GlobalLinkageKind Linkage,
+    VTableAddressPointsMapTy &AddressPoints) {
+  if (CGM.getModuleDebugInfo())
+    llvm_unreachable("NYI");
+
+  std::unique_ptr<VTableLayout> VTLayout(
+      getItaniumVTableContext().createConstructionVTableLayout(
+          Base.getBase(), Base.getBaseOffset(), BaseIsVirtual, RD));
+
+  // Add the address points.
+  AddressPoints = VTLayout->getAddressPoints();
+
+  // Get the mangled construction vtable name.
+  SmallString<256> OutName;
+  llvm::raw_svector_ostream Out(OutName);
+  cast<ItaniumMangleContext>(CGM.getCXXABI().getMangleContext())
+      .mangleCXXCtorVTable(RD, Base.getBaseOffset().getQuantity(),
+                           Base.getBase(), Out);
+  SmallString<256> Name(OutName);
+
+  bool UsingRelativeLayout = getItaniumVTableContext().isRelativeLayout();
+  assert(!UsingRelativeLayout && "NYI");
+
+  auto VTType = getVTableType(*VTLayout);
+
+  // Construction vtable symbols are not part of the Itanium ABI, so we cannot
+  // guarantee that they actually will be available externally. Instead, when
+  // emitting an available_externally VTT, we provide references to an internal
+  // linkage construction vtable. The ABI only requires complete-object vtables
+  // to be the same for all instances of a type, not construction vtables.
+  if (Linkage == mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage)
+    Linkage = mlir::cir::GlobalLinkageKind::InternalLinkage;
+
+  auto Align = CGM.getDataLayout().getABITypeAlign(VTType);
+  auto Loc = CGM.getLoc(RD->getSourceRange());
+
+  // Create the variable that will hold the construction vtable.
+  auto VTable = CGM.createOrReplaceCXXRuntimeVariable(
+      Loc, Name, VTType, Linkage, CharUnits::fromQuantity(Align));
+
+  // V-tables are always unnamed_addr.
+  assert(!MissingFeatures::unnamedAddr() && "NYI");
+
+  auto RTTI = CGM.getAddrOfRTTIDescriptor(
+      Loc, CGM.getASTContext().getTagDeclType(Base.getBase()));
+
+  // Create and set the initializer.
+  ConstantInitBuilder builder(CGM);
+  auto components = builder.beginStruct();
+  createVTableInitializer(components, *VTLayout, RTTI,
+                          mlir::cir::isLocalLinkage(VTable.getLinkage()));
+  components.finishAndSetAsInitializer(VTable);
+
+  // Set properties only after the initializer has been set to ensure that the
+  // GV is treated as definition and not declaration.
+  assert(!VTable.isDeclaration() && "Shouldn't set properties on declaration");
+  CGM.setGVProperties(VTable, RD);
+
+  CGM.buildVTableTypeMetadata(RD, VTable, *VTLayout.get());
+
+  if (UsingRelativeLayout) {
+    llvm_unreachable("NYI");
+  }
+
+  return VTable;
+}
+
 /// Compute the required linkage of the vtable for the given class.
 ///
 /// Note that we only call this at the end of the translation unit.
@@ -425,8 +494,9 @@ getAddrOfVTTVTable(CIRGenVTables &CGVT, CIRGenModule &CGM,
     // This is a regular vtable.
     return CGM.getCXXABI().getAddrOfVTable(MostDerivedClass, CharUnits());
   }
-
-  llvm_unreachable("generateConstructionVTable NYI");
+  return CGVT.generateConstructionVTable(
+      MostDerivedClass, vtable.getBaseSubobject(), vtable.isVirtual(), linkage,
+      addressPoints);
 }
 
 mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD) {
@@ -454,6 +524,59 @@ mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD) {
       CharUnits::fromQuantity(Align));
   CGM.setGVProperties(VTT, RD);
   return VTT;
+}
+
+uint64_t CIRGenVTables::getSubVTTIndex(const CXXRecordDecl *RD,
+                                       BaseSubobject Base) {
+  BaseSubobjectPairTy ClassSubobjectPair(RD, Base);
+
+  SubVTTIndiciesMapTy::iterator I = SubVTTIndicies.find(ClassSubobjectPair);
+  if (I != SubVTTIndicies.end())
+    return I->second;
+
+  VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/false);
+
+  for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator
+           I = Builder.getSubVTTIndices().begin(),
+           E = Builder.getSubVTTIndices().end();
+       I != E; ++I) {
+    // Insert all indices.
+    BaseSubobjectPairTy ClassSubobjectPair(RD, I->first);
+
+    SubVTTIndicies.insert(std::make_pair(ClassSubobjectPair, I->second));
+  }
+
+  I = SubVTTIndicies.find(ClassSubobjectPair);
+  assert(I != SubVTTIndicies.end() && "Did not find index!");
+
+  return I->second;
+}
+
+uint64_t CIRGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
+                                                        BaseSubobject Base) {
+  SecondaryVirtualPointerIndicesMapTy::iterator I =
+      SecondaryVirtualPointerIndices.find(std::make_pair(RD, Base));
+
+  if (I != SecondaryVirtualPointerIndices.end())
+    return I->second;
+
+  VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/false);
+
+  // Insert all secondary vpointer indices.
+  for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator
+           I = Builder.getSecondaryVirtualPointerIndices().begin(),
+           E = Builder.getSecondaryVirtualPointerIndices().end();
+       I != E; ++I) {
+    std::pair<const CXXRecordDecl *, BaseSubobject> Pair =
+        std::make_pair(RD, I->first);
+
+    SecondaryVirtualPointerIndices.insert(std::make_pair(Pair, I->second));
+  }
+
+  I = SecondaryVirtualPointerIndices.find(std::make_pair(RD, Base));
+  assert(I != SecondaryVirtualPointerIndices.end() && "Did not find index!");
+
+  return I->second;
 }
 
 /// Emit the definition of the given vtable.

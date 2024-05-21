@@ -155,7 +155,8 @@ public:
     return false;
   }
 
-  void buildInstanceFunctionProlog(CIRGenFunction &CGF) override;
+  void buildInstanceFunctionProlog(SourceLocation Loc,
+                                   CIRGenFunction &CGF) override;
 
   void addImplicitStructorParams(CIRGenFunction &CGF, QualType &ResTy,
                                  FunctionArgList &Params) override;
@@ -195,6 +196,9 @@ public:
                                          SourceLocation Loc) override;
   mlir::Value getVTableAddressPoint(BaseSubobject Base,
                                     const CXXRecordDecl *VTableClass) override;
+  mlir::Value getVTableAddressPointInStructorWithVTT(
+      CIRGenFunction &CGF, const CXXRecordDecl *VTableClass, BaseSubobject Base,
+      const CXXRecordDecl *NearestVBase);
   bool isVirtualOffsetNeededForVTableField(CIRGenFunction &CGF,
                                            CIRGenFunction::VPtr Vptr) override;
   bool canSpeculativelyEmitVTableAsBaseClass(const CXXRecordDecl *RD) const;
@@ -291,12 +295,16 @@ public:
 
   void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) override;
 
+  mlir::Value
+  getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &CGF,
+                            Address This, const CXXRecordDecl *ClassDecl,
+                            const CXXRecordDecl *BaseClassDecl) override;
+
   // The traditional clang CodeGen emits calls to `__dynamic_cast` directly into
   // LLVM in the `emitDynamicCastCall` function. In CIR, `dynamic_cast`
   // expressions are lowered to `cir.dyn_cast` ops instead of calls to runtime
   // functions. So during CIRGen we don't need the `emitDynamicCastCall`
   // function that clang CodeGen has.
-
   mlir::Value buildDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
                                QualType SrcRecordTy, QualType DestRecordTy,
                                mlir::cir::PointerType DestCIRTy, bool isRefCast,
@@ -341,9 +349,19 @@ public:
 CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
     CIRGenFunction &CGF, const CXXConstructorDecl *D, CXXCtorType Type,
     bool ForVirtualBase, bool Delegating) {
-  assert(!NeedsVTTParameter(GlobalDecl(D, Type)) && "VTT NYI");
+  if (!NeedsVTTParameter(GlobalDecl(D, Type)))
+    return AddedStructorArgs{};
 
-  return {};
+  // Insert the implicit 'vtt' argument as the second argument. Make sure to
+  // correctly reflect its address space, which can differ from generic on
+  // some targets.
+  mlir::Value VTT =
+      CGF.GetVTTParameter(GlobalDecl(D, Type), ForVirtualBase, Delegating);
+  // LangAS AS = CGM.getGlobalConstantAddressSpace(nullptr);
+  LangAS AS = LangAS::Default;
+  QualType Q = getContext().getAddrSpaceQualType(getContext().VoidPtrTy, AS);
+  QualType VTTTy = getContext().getPointerType(Q);
+  return AddedStructorArgs::prefix({{VTT, VTTTy}});
 }
 
 /// Return whether the given global decl needs a VTT parameter, which it does if
@@ -399,8 +417,11 @@ CIRGenItaniumCXXABI::buildStructorSignature(
   if ((isa<CXXConstructorDecl>(GD.getDecl()) ? GD.getCtorType() == Ctor_Base
                                              : GD.getDtorType() == Dtor_Base) &&
       cast<CXXMethodDecl>(GD.getDecl())->getParent()->getNumVBases() != 0) {
-    llvm_unreachable("NYI");
-    (void)Context;
+    LangAS AS = CGM.getGlobalVarAddressSpace(nullptr);
+    QualType Q = Context.getAddrSpaceQualType(Context.VoidPtrTy, AS);
+    ArgTys.insert(ArgTys.begin() + 1,
+                  Context.getPointerType(CanQualType::CreateUnsafe(Q)));
+    return AddedStructorArgCounts::prefix(1);
   }
 
   return AddedStructorArgCounts{};
@@ -541,7 +562,17 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &CGF,
 
   // Check if we need a VTT parameter as well.
   if (NeedsVTTParameter(CGF.CurGD)) {
-    llvm_unreachable("NYI");
+    ASTContext &Context = getContext();
+
+    // FIXME: avoid the fake decl
+    LangAS AS = CGM.getGlobalVarAddressSpace(nullptr);
+    QualType Q = Context.getAddrSpaceQualType(Context.VoidPtrTy, AS);
+    QualType T = Context.getPointerType(Q);
+    auto *VTTDecl = ImplicitParamDecl::Create(
+        Context, /*DC=*/nullptr, MD->getLocation(), &Context.Idents.get("vtt"),
+        T, ImplicitParamKind::CXXVTT);
+    Params.insert(Params.begin() + 1, VTTDecl);
+    getStructorImplicitParamDecl(CGF) = VTTDecl;
   }
 }
 
@@ -556,7 +587,8 @@ void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &CGF,
   CGF.CXXABIThisValue = ThisPtr;
 }
 
-void CIRGenItaniumCXXABI::buildInstanceFunctionProlog(CIRGenFunction &CGF) {
+void CIRGenItaniumCXXABI::buildInstanceFunctionProlog(SourceLocation Loc,
+                                                      CIRGenFunction &CGF) {
   // Naked functions have no prolog.
   if (CGF.CurFuncDecl && CGF.CurFuncDecl->hasAttr<NakedAttr>())
     llvm_unreachable("NYI");
@@ -567,7 +599,10 @@ void CIRGenItaniumCXXABI::buildInstanceFunctionProlog(CIRGenFunction &CGF) {
 
   /// Initialize the 'vtt' slot if needed.
   if (getStructorImplicitParamDecl(CGF)) {
-    llvm_unreachable("NYI");
+    auto Val = CGF.getBuilder().createLoad(
+        CGF.getLoc(Loc),
+        CGF.GetAddrOfLocalVar(getStructorImplicitParamDecl(CGF)));
+    setStructorImplicitParamValue(CGF, Val);
   }
 
   /// If this is a function that the ABI specifies returns 'this', initialize
@@ -899,6 +934,27 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   return Callee;
 }
 
+mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
+    CIRGenFunction &CGF, const CXXRecordDecl *VTableClass, BaseSubobject Base,
+    const CXXRecordDecl *NearestVBase) {
+  assert((Base.getBase()->getNumVBases() || NearestVBase != nullptr) &&
+         NeedsVTTParameter(CGF.CurGD) && "This class doesn't have VTT");
+
+  // Get the secondary vpointer index.
+  uint64_t VirtualPointerIndex =
+      CGM.getVTables().getSecondaryVirtualPointerIndex(VTableClass, Base);
+
+  /// Load the VTT.
+  auto VTTPtr = CGF.LoadCXXVTT();
+  auto Loc = CGF.getLoc(VTableClass->getSourceRange());
+  // Calculate the address point from the VTT, and the offset may be zero.
+  VTTPtr = CGF.getBuilder().createVTTAddrPoint(Loc, VTTPtr.getType(), VTTPtr,
+                                               VirtualPointerIndex);
+  // And load the address point from the VTT.
+  return CGF.getBuilder().createAlignedLoad(Loc, CGF.VoidPtrTy, VTTPtr,
+                                            CGF.getPointerAlign());
+}
+
 mlir::Value
 CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
                                            const CXXRecordDecl *VTableClass) {
@@ -926,7 +982,8 @@ mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
 
   if ((Base.getBase()->getNumVBases() || NearestVBase != nullptr) &&
       NeedsVTTParameter(CGF.CurGD)) {
-    llvm_unreachable("NYI");
+    return getVTableAddressPointInStructorWithVTT(CGF, VTableClass, Base,
+                                                  NearestVBase);
   }
   return getVTableAddressPoint(Base, VTableClass);
 }
@@ -2233,6 +2290,32 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
   builder.create<mlir::cir::ThrowOp>(loc, exceptionPtr, typeInfo.getSymbol(),
                                      dtor);
   builder.create<mlir::cir::UnreachableOp>(loc);
+}
+
+mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
+    mlir::Location loc, CIRGenFunction &CGF, Address This,
+    const CXXRecordDecl *ClassDecl, const CXXRecordDecl *BaseClassDecl) {
+  auto VTablePtr = CGF.getVTablePtr(loc, This, CGM.UInt8PtrTy, ClassDecl);
+  CharUnits VBaseOffsetOffset =
+      CGM.getItaniumVTableContext().getVirtualBaseOffsetOffset(ClassDecl,
+                                                               BaseClassDecl);
+  mlir::Value OffsetVal =
+      CGF.getBuilder().getSInt64(VBaseOffsetOffset.getQuantity(), loc);
+  auto VBaseOffsetPtr = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+      loc, VTablePtr.getType(), VTablePtr,
+      OffsetVal); // vbase.offset.ptr
+
+  mlir::Value VBaseOffset;
+  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+    VBaseOffset = CGF.getBuilder().createLoad(
+        loc, Address(VBaseOffsetPtr, CGM.SInt32Ty,
+                     CharUnits::fromQuantity(4))); // vbase.offset
+  } else {
+    VBaseOffset = CGF.getBuilder().createLoad(
+        loc, Address(VBaseOffsetPtr, CGM.PtrDiffTy,
+                     CGF.getPointerAlign())); // vbase.offset
+  }
+  return VBaseOffset;
 }
 
 static mlir::cir::FuncOp getBadCastFn(CIRGenFunction &CGF) {

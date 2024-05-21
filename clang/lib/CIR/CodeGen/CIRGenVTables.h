@@ -28,28 +28,26 @@ class CXXRecordDecl;
 
 namespace cir {
 class CIRGenModule;
-// class ConstantArrayBuilder;
-// class ConstantStructBuilder;
 
 class CIRGenVTables {
   CIRGenModule &CGM;
 
   clang::VTableContextBase *VTContext;
 
-  /// VTableAddressPointsMapTy - Address points for a single vtable.
+  /// Address points for a single vtable.
   typedef clang::VTableLayout::AddressPointsMapTy VTableAddressPointsMapTy;
 
   typedef std::pair<const clang::CXXRecordDecl *, clang::BaseSubobject>
       BaseSubobjectPairTy;
   typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t> SubVTTIndiciesMapTy;
 
-  /// SubVTTIndicies - Contains indices into the various sub-VTTs.
+  /// Contains indices into the various sub-VTTs.
   SubVTTIndiciesMapTy SubVTTIndicies;
 
   typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t>
       SecondaryVirtualPointerIndicesMapTy;
 
-  /// SecondaryVirtualPointerIndices - Contains the secondary virtual pointer
+  /// Contains the secondary virtual pointer
   /// indices.
   SecondaryVirtualPointerIndicesMapTy SecondaryVirtualPointerIndices;
 
@@ -59,42 +57,13 @@ class CIRGenVTables {
   /// Cache for the deleted virtual member call function.
   mlir::cir::FuncOp DeletedVirtualFn = nullptr;
 
-  //   /// Get the address of a thunk and emit it if necessary.
-  //   llvm::Constant *maybeEmitThunk(GlobalDecl GD,
-  //                                  const ThunkInfo &ThunkAdjustments,
-  //                                  bool ForVTable);
-
   void addVTableComponent(ConstantArrayBuilder &builder,
                           const VTableLayout &layout, unsigned componentIndex,
                           mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
                           unsigned vtableAddressPoint,
                           bool vtableHasLocalLinkage);
 
-  //   /// Add a 32-bit offset to a component relative to the vtable when using
-  //   the
-  //   /// relative vtables ABI. The array builder points to the start of the
-  //   vtable. void addRelativeComponent(ConstantArrayBuilder &builder,
-  //                             llvm::Constant *component,
-  //                             unsigned vtableAddressPoint,
-  //                             bool vtableHasLocalLinkage,
-  //                             bool isCompleteDtor) const;
-
-  //   /// Create a dso_local stub that will be used for a relative reference in
-  //   the
-  //   /// relative vtable layout. This stub will just be a tail call to the
-  //   original
-  //   /// function and propagate any function attributes from the original. If
-  //   the
-  //   /// original function is already dso_local, the original is returned
-  //   instead
-  //   /// and a stub is not created.
-  //   llvm::Function *
-  //   getOrCreateRelativeStub(llvm::Function *func,
-  //                           llvm::GlobalValue::LinkageTypes stubLinkage,
-  //                           bool isCompleteDtor) const;
-
   bool useRelativeLayout() const;
-
   mlir::Type getVTableComponentType();
 
 public:
@@ -114,30 +83,21 @@ public:
     return *llvm::cast<clang::ItaniumVTableContext>(VTContext);
   }
 
-  //   MicrosoftVTableContext &getMicrosoftVTableContext() {
-  //     return *cast<MicrosoftVTableContext>(VTContext);
-  //   }
+  /// Return the index of the sub-VTT for the base class of the given record
+  /// decl.
+  uint64_t getSubVTTIndex(const CXXRecordDecl *RD, BaseSubobject Base);
 
-  //   /// getSubVTTIndex - Return the index of the sub-VTT for the base class
-  //   of the
-  //   /// given record decl.
-  //   uint64_t getSubVTTIndex(const CXXRecordDecl *RD, BaseSubobject Base);
+  /// Return the index in the VTT where the virtual pointer for the given
+  /// subobject is located.
+  uint64_t getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
+                                           BaseSubobject Base);
 
-  //   /// getSecondaryVirtualPointerIndex - Return the index in the VTT where
-  //   the
-  //   /// virtual pointer for the given subobject is located.
-  //   uint64_t getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
-  //                                            BaseSubobject Base);
-
-  //   /// GenerateConstructionVTable - Generate a construction vtable for the
-  //   given
-  //   /// base subobject.
-  //   llvm::GlobalVariable *
-  //   GenerateConstructionVTable(const CXXRecordDecl *RD, const BaseSubobject
-  //   &Base,
-  //                              bool BaseIsVirtual,
-  //                              llvm::GlobalVariable::LinkageTypes Linkage,
-  //                              VTableAddressPointsMapTy &AddressPoints);
+  /// Generate a construction vtable for the given base subobject.
+  mlir::cir::GlobalOp
+  generateConstructionVTable(const CXXRecordDecl *RD, const BaseSubobject &Base,
+                             bool BaseIsVirtual,
+                             mlir::cir::GlobalLinkageKind Linkage,
+                             VTableAddressPointsMapTy &AddressPoints);
 
   /// Get the address of the VTT for the given record decl.
   mlir::cir::GlobalOp getAddrOfVTT(const CXXRecordDecl *RD);
@@ -161,18 +121,6 @@ public:
   /// arrays of pointers, with one struct element for each vtable in the vtable
   /// group.
   mlir::Type getVTableType(const clang::VTableLayout &layout);
-
-  //   /// Generate a public facing alias for the vtable and make the vtable
-  //   either
-  //   /// hidden or private. The alias will have the original linkage and
-  //   visibility
-  //   /// of the vtable. This is used for cases under the relative vtables ABI
-  //   /// when a vtable may not be dso_local.
-  //   void GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
-  //                                    llvm::StringRef AliasNameRef);
-
-  //   /// Specify a global should not be instrumented with hwasan.
-  //   void RemoveHwasanMetadata(llvm::GlobalValue *GV) const;
 };
 
 } // end namespace cir

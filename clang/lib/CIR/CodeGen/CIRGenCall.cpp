@@ -1186,7 +1186,8 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
     // A base class inheriting constructor doesn't get forwarded arguments
     // needed to construct a virtual base (or base class thereof)
-    assert(!CD->getInheritedConstructor() && "Inheritance NYI");
+    if (auto Inherited = CD->getInheritedConstructor())
+      PassParams = inheritingCtorHasParams(Inherited, GD.getCtorType());
   }
 
   CanQual<FunctionProtoType> FTP = GetFormalType(MD);
@@ -1194,6 +1195,9 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   if (PassParams)
     appendParameterTypes(*this, argTypes, paramInfos, FTP);
 
+  CIRGenCXXABI::AddedStructorArgCounts AddedArgs =
+      TheCXXABI.buildStructorSignature(GD, argTypes);
+  (void)AddedArgs;
   assert(paramInfos.empty() && "NYI");
 
   assert(!MD->isVariadic() && "Variadic fns NYI");

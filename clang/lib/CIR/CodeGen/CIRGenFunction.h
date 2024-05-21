@@ -1585,6 +1585,14 @@ public:
   }
   Address LoadCXXThisAddress();
 
+  /// Load the VTT parameter to base constructors/destructors have virtual
+  /// bases. FIXME: Every place that calls LoadCXXVTT is something that needs to
+  /// be abstracted properly.
+  mlir::Value LoadCXXVTT() {
+    assert(CXXStructorImplicitParamValue && "no VTT value for this function");
+    return CXXStructorImplicitParamValue;
+  }
+
   /// Convert the given pointer to a complete class to the given direct base.
   Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
                                                 Address Value,

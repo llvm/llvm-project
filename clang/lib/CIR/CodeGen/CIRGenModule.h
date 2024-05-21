@@ -463,6 +463,11 @@ public:
                             const clang::CXXRecordDecl *baseDecl,
                             clang::CharUnits expectedTargetAlign);
 
+  /// Returns the assumed alignment of a virtual base of a class.
+  clang::CharUnits getVBaseAlignment(CharUnits DerivedAlign,
+                                     const CXXRecordDecl *Derived,
+                                     const CXXRecordDecl *VBase);
+
   mlir::cir::FuncOp getAddrOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
       mlir::cir::FuncType FnType = nullptr, bool DontDefer = false,

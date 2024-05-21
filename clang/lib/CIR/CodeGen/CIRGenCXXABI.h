@@ -95,7 +95,8 @@ public:
       clang::CXXCtorType Type, bool ForVirtualBase, bool Delegating) = 0;
 
   /// Emit the ABI-specific prolog for the function
-  virtual void buildInstanceFunctionProlog(CIRGenFunction &CGF) = 0;
+  virtual void buildInstanceFunctionProlog(SourceLocation Loc,
+                                           CIRGenFunction &CGF) = 0;
 
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
@@ -118,6 +119,14 @@ public:
 
   clang::ImplicitParamDecl *&getStructorImplicitParamDecl(CIRGenFunction &CGF) {
     return CGF.CXXStructorImplicitParamDecl;
+  }
+
+  mlir::Value getStructorImplicitParamValue(CIRGenFunction &CGF) {
+    return CGF.CXXStructorImplicitParamValue;
+  }
+
+  void setStructorImplicitParamValue(CIRGenFunction &CGF, mlir::Value val) {
+    CGF.CXXStructorImplicitParamValue = val;
   }
 
   /// Perform ABI-specific "this" argument adjustment required prior to
@@ -318,6 +327,11 @@ public:
   virtual void buildThrow(CIRGenFunction &CGF, const CXXThrowExpr *E) = 0;
 
   virtual void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) = 0;
+
+  virtual mlir::Value
+  getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &CGF,
+                            Address This, const CXXRecordDecl *ClassDecl,
+                            const CXXRecordDecl *BaseClassDecl) = 0;
 
   virtual mlir::Value buildDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
                                        QualType SrcRecordTy,

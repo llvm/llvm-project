@@ -66,7 +66,7 @@ void CIRGenCXXABI::buildThisParam(CIRGenFunction &CGF,
       isThisCompleteObject(CGF.CurGD)) {
     CGF.CXXABIThisAlignment = Layout.getAlignment();
   } else {
-    llvm_unreachable("NYI");
+    CGF.CXXABIThisAlignment = Layout.getNonVirtualAlignment();
   }
 }
 
