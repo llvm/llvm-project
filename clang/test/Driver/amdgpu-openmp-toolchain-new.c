@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
+// DESIRES: amdgpu-registered-target
+// REQUIRES: working-afar-ubuntu
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 // RUN:          -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --no-opaque-offload-linker --libomptarget-amdgpu-bc-path=%S/Inputs/hip_dev_lib %s 2>&1 \
 // RUN:   | FileCheck %s
