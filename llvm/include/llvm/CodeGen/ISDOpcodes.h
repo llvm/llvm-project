@@ -1294,7 +1294,8 @@ enum NodeType {
   MLOAD,
   MSTORE,
 
-  // Masked compress - consecutively place vector elements based on mask
+  // Masked compress - MCOMPRESS(Vec, Mask)
+  // consecutively place vector elements based on mask
   // e.g., vec = {A, B, C, D} and mask = 1010
   //         --> {A, C, ?, ?} where ? is undefined
   MCOMPRESS,
