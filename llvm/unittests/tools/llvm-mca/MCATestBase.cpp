@@ -71,8 +71,8 @@ Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
   const SmallVector<mca::Instrument *> Instruments;
   SmallVector<std::unique_ptr<mca::Instruction>> LoweredInsts;
   for (const auto &MCI : Insts) {
-    Expected<std::unique_ptr<mca::Instruction>> Inst =
-        IB.createInstruction(MCI, Instruments);
+    Expected<std::unique_ptr<mca::Instruction>> Inst = IB.createInstruction(
+        MCI, Instruments, reinterpret_cast<uint64_t>(&MCI));
     if (!Inst) {
       if (auto NewE =
               handleErrors(Inst.takeError(),

@@ -72,7 +72,7 @@ class InstrBuilder {
       Descriptors;
 
   // Key is the MCIInst and SchedClassID the describe the value InstrDesc
-  DenseMap<std::pair<const MCInst *, unsigned>,
+  DenseMap<std::pair<uint64_t, unsigned>,
            std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
@@ -83,10 +83,11 @@ class InstrBuilder {
   InstRecycleCallback InstRecycleCB;
 
   Expected<const InstrDesc &>
-  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
+  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
+                      uint64_t InstructionAddress);
   Expected<const InstrDesc &>
-  getOrCreateInstrDesc(const MCInst &MCI,
-                       const SmallVector<Instrument *> &IVec);
+  getOrCreateInstrDesc(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
+                       uint64_t InstructionAddress);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
@@ -111,8 +112,15 @@ public:
   /// or null if there isn't any.
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
+  /// Create an MCA Instruction from a MC Instruction that contains all the
+  /// relevant state MCA needs for modeling. Variant instructions (e.g.,
+  /// register zeroing idioms) each need their own instruction description
+  /// which is uniqued based on InstructionAddress. This can be an actual
+  /// address or something unique per instruction like a loop iteration
+  /// variable, but it must uniquely identify the instruction being passed in.
   Expected<std::unique_ptr<Instruction>>
-  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
+  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
+                    uint64_t InstructionAddress);
 };
 } // namespace mca
 } // namespace llvm

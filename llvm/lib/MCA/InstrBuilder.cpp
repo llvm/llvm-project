@@ -521,7 +521,8 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
 
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
-                                  const SmallVector<Instrument *> &IVec) {
+                                  const SmallVector<Instrument *> &IVec,
+                                  uint64_t InstructionAddress) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -603,14 +604,15 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     return *Descriptors[DKey];
   }
 
-  auto VDKey = std::make_pair(&MCI, SchedClassID);
+  auto VDKey = std::make_pair(InstructionAddress, SchedClassID);
   VariantDescriptors[VDKey] = std::move(ID);
   return *VariantDescriptors[VDKey];
 }
 
 Expected<const InstrDesc &>
 InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
-                                   const SmallVector<Instrument *> &IVec) {
+                                   const SmallVector<Instrument *> &IVec,
+                                   uint64_t InstructionAddress) {
   // Cache lookup using SchedClassID from Instrumentation
   unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
@@ -620,19 +622,21 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
 
   unsigned CPUID = STI.getSchedModel().getProcessorID();
   SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
-  auto VDKey = std::make_pair(&MCI, SchedClassID);
+  auto VDKey = std::make_pair(InstructionAddress, SchedClassID);
   if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
 
-  return createInstrDescImpl(MCI, IVec);
+  return createInstrDescImpl(MCI, IVec, InstructionAddress);
 }
 
 STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
-                                const SmallVector<Instrument *> &IVec) {
-  Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
+                                const SmallVector<Instrument *> &IVec,
+                                uint64_t InstructionAddress) {
+  Expected<const InstrDesc &> DescOrErr =
+      getOrCreateInstrDesc(MCI, IVec, InstructionAddress);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;

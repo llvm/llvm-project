@@ -40,7 +40,7 @@ TEST_F(X86TestBase, TestResumablePipeline) {
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
     for (unsigned TE = i + 7; i < TE && i < E; ++i) {
       Expected<std::unique_ptr<mca::Instruction>> InstOrErr =
-          IB.createInstruction(MCIs[i], Instruments);
+          IB.createInstruction(MCIs[i], Instruments, i);
       ASSERT_TRUE(bool(InstOrErr));
       ISM.addInst(std::move(InstOrErr.get()));
     }
@@ -132,7 +132,7 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
     for (unsigned TE = i + 7; i < TE && i < E; ++i) {
       Expected<std::unique_ptr<mca::Instruction>> InstOrErr =
-          IB.createInstruction(MCIs[i], Instruments);
+          IB.createInstruction(MCIs[i], Instruments, i);
 
       if (!InstOrErr) {
         mca::Instruction *RecycledInst = nullptr;
