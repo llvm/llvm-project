@@ -5621,10 +5621,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_MCOMPRESS(SDNode *N) {
                                     Mask.getValueType().getVectorElementType(),
                                     WideVecVT.getVectorNumElements());
 
-  // In the default expanded case, adding UNDEF values for the new widened lanes
-  // allows us to remove their access later, which reduces the number os stores.
-  SDValue WideVec = ModifyToType(Vec, WideVecVT, /*FillWithZeroes=*/true);
-  SDValue WideMask = ModifyToType(Mask, WideMaskVT, /*FillWithZeroes=*/true);
+  SDValue WideVec = ModifyToType(Vec, WideVecVT);
+  SDValue WideMask = ModifyToType(Mask, WideMaskVT);
   return DAG.getNode(ISD::MCOMPRESS, SDLoc(N), WideVecVT, WideVec, WideMask);
 }
 
