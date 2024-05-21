@@ -523,7 +523,7 @@ run(testComplexUnrankedMemrefAdd)
 
 
 # Test bf16 memrefs
-# CHECK-LABEL: TEST: testBF16MemrefAdd
+# CHECK-LABEL: TEST: testBF16Memref
 def testBF16Memref():
     with Context():
         module = Module.parse(
