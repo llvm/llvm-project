@@ -66,9 +66,14 @@ public:
     struct DeviceTypeDetails {
       SmallVector<DeviceTypeArgument> Archs;
     };
+    struct ReductionDetails {
+      OpenACCReductionOperator Op;
+      SmallVector<Expr *> VarList;
+    };
 
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
-                 IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails>
+                 IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
+                 ReductionDetails>
         Details = std::monostate{};
 
   public:
@@ -170,6 +175,10 @@ public:
       return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
     }
 
+    OpenACCReductionOperator getReductionOp() const {
+      return std::get<ReductionDetails>(Details).Op;
+    }
+
     ArrayRef<Expr *> getVarList() {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
@@ -188,8 +197,13 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Reduction ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
+
+      if (ClauseKind == OpenACCClauseKind::Reduction)
+        return std::get<ReductionDetails>(Details).VarList;
+
       return std::get<VarListDetails>(Details).VarList;
     }
 
@@ -334,6 +348,13 @@ public:
       Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
     }
 
+    void setReductionDetails(OpenACCReductionOperator Op,
+                             llvm::SmallVector<Expr *> &&VarList) {
+      assert(ClauseKind == OpenACCClauseKind::Reduction &&
+             "reduction details only valid on reduction");
+      Details = ReductionDetails{Op, std::move(VarList)};
+    }
+
     void setWaitDetails(Expr *DevNum, SourceLocation QueuesLoc,
                         llvm::SmallVector<Expr *> &&IntExprs) {
       assert(ClauseKind == OpenACCClauseKind::Wait &&
@@ -394,7 +415,11 @@ public:
 
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
-  ExprResult ActOnVar(Expr *VarExpr);
+  ExprResult ActOnVar(OpenACCClauseKind CK, Expr *VarExpr);
+
+  /// Called while semantically analyzing the reduction clause, ensuring the var
+  /// is the correct kind of reference.
+  ExprResult CheckReductionVar(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
