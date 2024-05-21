@@ -1079,7 +1079,6 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
   if !and(op.HAS_GFX12, !not(!empty(renamed))) then
     def : AMDGPUMnemonicAlias<asm, renamed> {
       let AssemblerPredicate = isGFX12Plus;
-      let OtherPredicates = [HasImageInsts];
       bit IsAtomicRet; // Unused
       MIMGBaseOpcode BaseOpcode; // Unused
       int VDataDwords; // Unused

@@ -1143,7 +1143,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
       return;
 
     if (auto const *Callee = Call.getCalleeIdentifier();
-        !Callee || !Callee->getName().equals("vfscanf")) {
+        !Callee || Callee->getName() != "vfscanf") {
       SmallVector<unsigned int> EscArgs;
       for (auto EscArg : llvm::seq(2u, Call.getNumArgs()))
         EscArgs.push_back(EscArg);

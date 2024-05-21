@@ -126,25 +126,23 @@ public:
   }
 
   bool isPtrOriginSafe(const Expr *Arg) const {
-    std::pair<const clang::Expr *, bool> ArgOrigin =
-        tryToFindPtrOrigin(Arg, true);
-
-    // Temporary ref-counted object created as part of the call argument
-    // would outlive the call.
-    if (ArgOrigin.second)
-      return true;
-
-    if (isa<CXXNullPtrLiteralExpr>(ArgOrigin.first)) {
-      // foo(nullptr)
-      return true;
-    }
-    if (isa<IntegerLiteral>(ArgOrigin.first)) {
-      // FIXME: Check the value.
-      // foo(NULL)
-      return true;
-    }
-
-    return isASafeCallArg(ArgOrigin.first);
+    return tryToFindPtrOrigin(Arg, /*StopAtFirstRefCountedObj=*/true,
+                              [](const clang::Expr *ArgOrigin, bool IsSafe) {
+                                if (IsSafe)
+                                  return true;
+                                if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
+                                  // foo(nullptr)
+                                  return true;
+                                }
+                                if (isa<IntegerLiteral>(ArgOrigin)) {
+                                  // FIXME: Check the value.
+                                  // foo(NULL)
+                                  return true;
+                                }
+                                if (isASafeCallArg(ArgOrigin))
+                                  return true;
+                                return false;
+                              });
   }
 
   bool shouldSkipCall(const CallExpr *CE) const {
