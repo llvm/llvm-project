@@ -151,8 +151,8 @@ public:
 
   int getICmpCost(unsigned CC, const TargetSchedModel &SchedModel) const;
   void insertICmp(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                  const DebugLoc &DL, Register DstReg,
-                  ArrayRef<MachineOperand> Cond) const;
+                  const DebugLoc &DL, Register DstReg, unsigned CC,
+                  Register LHSReg, Register RHSReg) const;
 
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        Register, Register, Register, int &, int &,

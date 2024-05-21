@@ -1473,11 +1473,9 @@ int RISCVInstrInfo::getICmpCost(unsigned CC,
 void RISCVInstrInfo::insertICmp(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
                                 const DebugLoc &DL, Register DstReg,
-                                ArrayRef<MachineOperand> Cond) const {
+                                unsigned CC, Register LHSReg,
+                                Register RHSReg) const {
   MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
-  unsigned CC = Cond[0].getImm();
-  Register LHSReg = Cond[1].getReg();
-  Register RHSReg = Cond[2].getReg();
 
   switch (CC) {
   default:
@@ -1525,9 +1523,17 @@ void RISCVInstrInfo::insertSelect(MachineBasicBlock &MBB,
   MachineFunction &MF = *MI->getParent()->getParent();
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-
   Register CCReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  insertICmp(MBB, MI, DL, CCReg, Cond);
+
+  unsigned CC = Cond[0].getImm();
+  Register LHSReg = Cond[1].getReg();
+  Register RHSReg = Cond[2].getReg();
+  if (CC == RISCVCC::COND_GE || CC == RISCVCC::COND_GEU) {
+    CC = (CC == RISCVCC::COND_GE) ? RISCV::SLT : RISCV::SLTU;
+    std::swap(TrueReg, FalseReg);
+  }
+
+  insertICmp(MBB, MI, DL, CCReg, CC, LHSReg, RHSReg);
   unsigned CondZeroEqzOpc =
       ST.hasVendorXVentanaCondOps() ? RISCV::VT_MASKC : RISCV::CZERO_EQZ;
   unsigned CondZeroNezOpc =
