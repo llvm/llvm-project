@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping  -fcoverage-mcdc -mllvm -system-headers-coverage -emit-llvm-only -o - %s | FileCheck %s --check-prefixes=CHECK,W_SYS
-// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fcoverage-mcdc -emit-llvm-only -o - %s | FileCheck %s --check-prefixes=CHECK,X_SYS
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fcoverage-mcdc -mllvm -system-headers-coverage -emit-llvm-only -o - %s | FileCheck %s --check-prefixes=CHECK,W_SYS
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fcoverage-mcdc -emit-llvm-only -o - %s | FileCheck %s --check-prefixes=CHECK,X_SYS
 
 #ifdef IS_SYSHEADER
 
