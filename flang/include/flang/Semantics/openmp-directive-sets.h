@@ -205,9 +205,11 @@ static const OmpDirectiveSet compositeConstructSet{
 };
 
 static const OmpDirectiveSet blockConstructSet{
+    Directive::OMPD_masked,
     Directive::OMPD_master,
     Directive::OMPD_ordered,
     Directive::OMPD_parallel,
+    Directive::OMPD_parallel_masked,
     Directive::OMPD_parallel_workshare,
     Directive::OMPD_single,
     Directive::OMPD_target,

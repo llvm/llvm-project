@@ -231,7 +231,7 @@ MachineMemOperand *createCheckMemOperand(MachineFunction &MF,
 
 } // namespace
 
-MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
+void llvm::AArch64PAuth::checkAuthenticatedRegister(
     MachineBasicBlock::iterator MBBI, AuthCheckMethod Method,
     Register AuthenticatedReg, Register TmpReg, bool UseIKey, unsigned BrkImm) {
 
@@ -246,13 +246,13 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
   default:
     break;
   case AuthCheckMethod::None:
-    return MBB;
+    return;
   case AuthCheckMethod::DummyLoad:
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui), getWRegFromXReg(TmpReg))
         .addReg(AuthenticatedReg)
         .addImm(0)
         .addMemOperand(createCheckMemOperand(MF, Subtarget));
-    return MBB;
+    return;
   }
 
   // Control flow has to be changed, so arrange new MBBs.
@@ -287,7 +287,7 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
         .addReg(TmpReg)
         .addImm(62)
         .addMBB(BreakBlock);
-    return *SuccessBlock;
+    return;
   case AuthCheckMethod::XPACHint:
     assert(AuthenticatedReg == AArch64::LR &&
            "XPACHint mode is only compatible with checking the LR register");
@@ -304,7 +304,7 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
     BuildMI(CheckBlock, DL, TII->get(AArch64::Bcc))
         .addImm(AArch64CC::NE)
         .addMBB(BreakBlock);
-    return *SuccessBlock;
+    return;
   }
   llvm_unreachable("Unknown AuthCheckMethod enum");
 }

@@ -436,6 +436,9 @@ def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;
 def warn_drv_deprecated_arg : Warning<
   "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
+def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
+  "argument '-fno-relaxed-template-template-args' is deprecated">,
+  InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
 def warn_drv_assuming_mfloat_abi_is : Warning<
@@ -596,9 +599,6 @@ def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
   " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
-def warn_drv_unsupported_tocdata: Warning<
-  "ignoring '-mtocdata' as it is only supported for -mcmodel=small">,
-  InGroup<OptionIgnored>;
 def warn_drv_unsupported_sdata : Warning<
   "ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64">,
   InGroup<OptionIgnored>;

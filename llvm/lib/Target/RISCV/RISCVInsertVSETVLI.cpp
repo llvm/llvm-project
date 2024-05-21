@@ -215,7 +215,11 @@ struct DemandedFields {
                 // than 64.
     SEWNone = 0 // We don't need to preserve SEW at all.
   } SEW = SEWNone;
-  bool LMUL = false;
+  enum : uint8_t {
+    LMULEqual = 2, // The exact value of LMUL needs to be preserved.
+    LMULLessThanOrEqualToM1 = 1, // We can use any LMUL <= M1.
+    LMULNone = 0                 // We don't need to preserve LMUL at all.
+  } LMUL = LMULNone;
   bool SEWLMULRatio = false;
   bool TailPolicy = false;
   bool MaskPolicy = false;
@@ -233,7 +237,7 @@ struct DemandedFields {
   // Mark all VTYPE subfields and properties as demanded
   void demandVTYPE() {
     SEW = SEWEqual;
-    LMUL = true;
+    LMUL = LMULEqual;
     SEWLMULRatio = true;
     TailPolicy = true;
     MaskPolicy = true;
@@ -250,7 +254,7 @@ struct DemandedFields {
     VLAny |= B.VLAny;
     VLZeroness |= B.VLZeroness;
     SEW = std::max(SEW, B.SEW);
-    LMUL |= B.LMUL;
+    LMUL = std::max(LMUL, B.LMUL);
     SEWLMULRatio |= B.SEWLMULRatio;
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
@@ -284,7 +288,19 @@ struct DemandedFields {
       break;
     };
     OS << ", ";
-    OS << "LMUL=" << LMUL << ", ";
+    OS << "LMUL=";
+    switch (LMUL) {
+    case LMULEqual:
+      OS << "LMULEqual";
+      break;
+    case LMULLessThanOrEqualToM1:
+      OS << "LMULLessThanOrEqualToM1";
+      break;
+    case LMULNone:
+      OS << "LMULNone";
+      break;
+    };
+    OS << ", ";
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
     OS << "MaskPolicy=" << MaskPolicy;
@@ -300,6 +316,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
   return OS;
 }
 #endif
+
+static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
+  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(LMUL);
+  return Fractional || LMul == 1;
+}
 
 /// Return true if moving from CurVType to NewVType is
 /// indistinguishable from the perspective of an instruction (or set
@@ -324,9 +345,18 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
     break;
   }
 
-  if (Used.LMUL &&
-      RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
-    return false;
+  switch (Used.LMUL) {
+  case DemandedFields::LMULNone:
+    break;
+  case DemandedFields::LMULEqual:
+    if (RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
+      return false;
+    break;
+  case DemandedFields::LMULLessThanOrEqualToM1:
+    if (!isLMUL1OrSmaller(RISCVVType::getVLMUL(NewVType)))
+      return false;
+    break;
+  }
 
   if (Used.SEWLMULRatio) {
     auto Ratio1 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(CurVType),
@@ -348,10 +378,10 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
 /// Return the fields and properties demanded by the provided instruction.
 DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
-  // Warning: This function has to work on both the lowered (i.e. post
-  // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
-  // that it can't use the value of a SEW, VL, or Policy operand as they might
-  // be stale after lowering.
+  // This function works in RISCVCoalesceVSETVLI too. We can still use the value
+  // of a SEW, VL, or Policy operand even though it might not be the exact value
+  // in the VL or VTYPE, since we only care about what the instruction
+  // originally demanded.
 
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
@@ -382,7 +412,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // in the opcode.  This is asserted when constructing the VSETVLIInfo.
   if (getEEWForLoadStore(MI)) {
     Res.SEW = DemandedFields::SEWNone;
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
   }
 
   // Store instructions don't use the policy fields.
@@ -397,12 +427,12 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // * The policy bits can probably be ignored..
   if (isMaskRegOp(MI)) {
     Res.SEW = DemandedFields::SEWNone;
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
   }
 
   // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and VL > 0.
   if (isScalarInsertInstr(MI)) {
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
     // For vmv.s.x and vfmv.s.f, if the merge operand is *undefined*, we don't
@@ -423,10 +453,47 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   // vmv.x.s, and vmv.f.s are unconditional and ignore everything except SEW.
   if (isScalarExtractInstr(MI)) {
     assert(!RISCVII::hasVLOp(TSFlags));
-    Res.LMUL = false;
+    Res.LMUL = DemandedFields::LMULNone;
     Res.SEWLMULRatio = false;
     Res.TailPolicy = false;
     Res.MaskPolicy = false;
+  }
+
+  if (RISCVII::hasVLOp(MI.getDesc().TSFlags)) {
+    const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+    // A slidedown/slideup with an *undefined* merge op can freely clobber
+    // elements not copied from the source vector (e.g. masked off, tail, or
+    // slideup's prefix). Notes:
+    // * We can't modify SEW here since the slide amount is in units of SEW.
+    // * VL=1 is special only because we have existing support for zero vs
+    //   non-zero VL.  We could generalize this if we had a VL > C predicate.
+    // * The LMUL1 restriction is for machines whose latency may depend on VL.
+    // * As above, this is only legal for tail "undefined" not "agnostic".
+    if (isVSlideInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
+        hasUndefinedMergeOp(MI)) {
+      Res.VLAny = false;
+      Res.VLZeroness = true;
+      Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
+      Res.TailPolicy = false;
+    }
+
+    // A tail undefined vmv.v.i/x or vfmv.v.f with VL=1 can be treated in the
+    // same semantically as vmv.s.x.  This is particularly useful since we don't
+    // have an immediate form of vmv.s.x, and thus frequently use vmv.v.i in
+    // it's place. Since a splat is non-constant time in LMUL, we do need to be
+    // careful to not increase the number of active vector registers (unlike for
+    // vmv.s.x.)
+    if (isScalarSplatInstr(MI) && VLOp.isImm() && VLOp.getImm() == 1 &&
+        hasUndefinedMergeOp(MI)) {
+      Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
+      Res.SEWLMULRatio = false;
+      Res.VLAny = false;
+      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
+        Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
+      else
+        Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
+      Res.TailPolicy = false;
+    }
   }
 
   return Res;
@@ -868,6 +935,7 @@ private:
 } // end anonymous namespace
 
 char RISCVInsertVSETVLI::ID = 0;
+char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
@@ -1106,11 +1174,6 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       LIS->getMBBStartIdx(&MBB), LIS->getInstructionIndex(*MI).getRegSlot());
 }
 
-static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
-  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(LMUL);
-  return Fractional || LMul == 1;
-}
-
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
 /// before MI.
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
@@ -1122,40 +1185,6 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     return true;
 
   DemandedFields Used = getDemanded(MI, ST);
-
-  // A slidedown/slideup with an *undefined* merge op can freely clobber
-  // elements not copied from the source vector (e.g. masked off, tail, or
-  // slideup's prefix). Notes:
-  // * We can't modify SEW here since the slide amount is in units of SEW.
-  // * VL=1 is special only because we have existing support for zero vs
-  //   non-zero VL.  We could generalize this if we had a VL > C predicate.
-  // * The LMUL1 restriction is for machines whose latency may depend on VL.
-  // * As above, this is only legal for tail "undefined" not "agnostic".
-  if (isVSlideInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
-      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI)) {
-    Used.VLAny = false;
-    Used.VLZeroness = true;
-    Used.LMUL = false;
-    Used.TailPolicy = false;
-  }
-
-  // A tail undefined vmv.v.i/x or vfmv.v.f with VL=1 can be treated in the same
-  // semantically as vmv.s.x.  This is particularly useful since we don't have an
-  // immediate form of vmv.s.x, and thus frequently use vmv.v.i in it's place.
-  // Since a splat is non-constant time in LMUL, we do need to be careful to not
-  // increase the number of active vector registers (unlike for vmv.s.x.)
-  if (isScalarSplatInstr(MI) && Require.hasAVLImm() &&
-      Require.getAVLImm() == 1 && isLMUL1OrSmaller(CurInfo.getVLMUL()) &&
-      hasUndefinedMergeOp(MI)) {
-    Used.LMUL = false;
-    Used.SEWLMULRatio = false;
-    Used.VLAny = false;
-    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
-      Used.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
-    else
-      Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
-    Used.TailPolicy = false;
-  }
 
   if (CurInfo.isCompatible(Used, Require, LIS))
     return false;
@@ -1188,7 +1217,7 @@ static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
       Info.setVLMul(*NewVLMul);
-    Demanded.LMUL = true;
+    Demanded.LMUL = DemandedFields::LMULEqual;
   }
 
   return Info;

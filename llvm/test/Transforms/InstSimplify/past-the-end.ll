@@ -21,7 +21,7 @@ define zeroext i1 @no_offsets() {
 
 define zeroext i1 @both_past_the_end() {
 ; CHECK-LABEL: @both_past_the_end(
-; CHECK-NEXT:    ret i1 icmp eq (ptr getelementptr inbounds (i32, ptr @opte_a, i32 1), ptr getelementptr inbounds (i32, ptr @opte_b, i32 1))
+; CHECK-NEXT:    ret i1 icmp eq (ptr getelementptr inbounds (i8, ptr @opte_a, i32 4), ptr getelementptr inbounds (i8, ptr @opte_b, i32 4))
 ;
   %x = getelementptr i32, ptr @opte_a, i32 1
   %y = getelementptr i32, ptr @opte_b, i32 1
@@ -35,7 +35,7 @@ define zeroext i1 @both_past_the_end() {
 
 define zeroext i1 @just_one_past_the_end() {
 ; CHECK-LABEL: @just_one_past_the_end(
-; CHECK-NEXT:    ret i1 icmp eq (ptr getelementptr inbounds (i32, ptr @opte_a, i32 1), ptr @opte_b)
+; CHECK-NEXT:    ret i1 icmp eq (ptr getelementptr inbounds (i8, ptr @opte_a, i32 4), ptr @opte_b)
 ;
   %x = getelementptr i32, ptr @opte_a, i32 1
   %t = icmp eq ptr %x, @opte_b

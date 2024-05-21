@@ -54,7 +54,7 @@
 func.func @use_too_many_tiles() {
   %0 = arm_sme.zero : vector<[4]x[4]xi32>
   %1 = arm_sme.zero : vector<[4]x[4]xi32>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %2 = arm_sme.zero : vector<[8]x[8]xi16>
   "test.some_use"(%0) : (vector<[4]x[4]xi32>) -> ()
   "test.some_use"(%1) : (vector<[4]x[4]xi32>) -> ()
@@ -138,10 +138,10 @@ func.func @very_excessive_spills(%useAllTiles : vector<[16]x[16]xi8>, %memref: m
   %c0 = arith.constant 0 : index
   %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
   %mask = vector.constant_mask [4] : vector<[4]xi1>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %loadSlice = arm_sme.load_tile_slice %memref[%c0, %c0], %mask, %tile, %c0 : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
   "test.some_use"(%useAllTiles) : (vector<[16]x[16]xi8>) -> ()
-  return %loadSlice : vector<[4]x[4]xf32>
+  "test.some_use"(%loadSlice) : (vector<[4]x[4]xf32>) -> ()
 }
 // AFTER-TILE-ALLOC-LABEL: @very_excessive_spills
 //      AFTER-TILE-ALLOC: arm_sme.load_tile_slice
