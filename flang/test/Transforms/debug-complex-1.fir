@@ -1,4 +1,4 @@
-// RUN: fir-opt --cg-rewrite="preserve-declare=true" --mlir-print-debuginfo %s | fir-opt --add-debug-info --mlir-print-debuginfo | FileCheck %s
+// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
 // check conversion of complex type of different size. Both fir and mlir
 // variants are checked.

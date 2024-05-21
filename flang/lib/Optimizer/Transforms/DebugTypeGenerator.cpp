@@ -64,6 +64,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
       bitWidth = floatTy.getWidth();
     } else if (auto cplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(Ty)) {
       bitWidth = kindMapping.getRealBitsize(cplxTy.getFKind());
+    } else {
+      llvm_unreachable("Unhandled complex type");
     }
     return genBasicType(context, mlir::StringAttr::get(context, "complex"),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
