@@ -1453,6 +1453,9 @@ public:
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
   bool hasCvtPkF16Inst() const { return GFX12_10Insts; }
 
+  // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
+  bool hasSGetShaderCyclesInst() const { return GFX12_10Insts; }
+
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also
   // extended VA to 57 bits.

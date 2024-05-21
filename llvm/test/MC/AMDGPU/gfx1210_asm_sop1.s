@@ -24,3 +24,7 @@ s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
 s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
 // GFX1210: s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE) ; encoding: [0x88,0x4d,0x82,0xbe]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
+
+s_get_shader_cycles_u64 s[2:3]
+// GFX1210: s_get_shader_cycles_u64 s[2:3]          ; encoding: [0x00,0x06,0x82,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
