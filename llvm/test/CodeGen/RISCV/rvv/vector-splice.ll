@@ -278,8 +278,8 @@ define <vscale x 32 x i1> @splice_nxv32i1_offset_max(<vscale x 32 x i1> %a, <vsc
 ; CHECK-NEXT:    li a1, 63
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v16, a1
-; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
 ; CHECK-NEXT:    vslideup.vx v16, v8, a0
 ; CHECK-NEXT:    vand.vi v8, v16, 1
@@ -325,8 +325,8 @@ define <vscale x 64 x i1> @splice_nxv64i1_offset_max(<vscale x 64 x i1> %a, <vsc
 ; CHECK-NEXT:    li a1, 127
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v24, a1
-; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
 ; CHECK-NEXT:    vslideup.vx v24, v8, a0
 ; CHECK-NEXT:    vand.vi v8, v24, 1

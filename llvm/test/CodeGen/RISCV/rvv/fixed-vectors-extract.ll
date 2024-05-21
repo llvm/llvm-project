@@ -710,9 +710,9 @@ define i32 @extractelt_v64i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32-NEXT:    andi a1, a1, 63
 ; RV32-NEXT:    slli a1, a1, 2
 ; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    addi a3, a0, 128
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    addi a2, a0, 128
-; RV32-NEXT:    vle32.v v8, (a2)
+; RV32-NEXT:    vle32.v v8, (a3)
 ; RV32-NEXT:    vle32.v v16, (a0)
 ; RV32-NEXT:    mv a0, sp
 ; RV32-NEXT:    add a1, a0, a1
@@ -738,9 +738,9 @@ define i32 @extractelt_v64i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    andi a1, a1, 63
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    addi a3, a0, 128
 ; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV64-NEXT:    addi a2, a0, 128
-; RV64-NEXT:    vle32.v v8, (a2)
+; RV64-NEXT:    vle32.v v8, (a3)
 ; RV64-NEXT:    vle32.v v16, (a0)
 ; RV64-NEXT:    mv a0, sp
 ; RV64-NEXT:    add a1, a0, a1
