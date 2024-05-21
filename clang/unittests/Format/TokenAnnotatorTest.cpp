@@ -2579,15 +2579,28 @@ TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
   auto Tokens = annotate("{ x: break; }");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_GotoLabelColon);
+
   Tokens = annotate("{ case x: break; }");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
+
   Tokens = annotate("{ x: { break; } }");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_GotoLabelColon);
+
   Tokens = annotate("{ case x: { break; } }");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
+
+  Tokens = annotate("#define FOO label:");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_GotoLabelColon);
+
+  Tokens = annotate("#define FOO \\\n"
+                    "label: \\\n"
+                    "  break;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_GotoLabelColon);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsNestedBlocks) {
