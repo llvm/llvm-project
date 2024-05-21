@@ -24,9 +24,9 @@ static bool operator==(const FormatToken &LHS,
 
 namespace {
 
-class TokenAnnotatorTest : public ::testing::Test {
+class TokenAnnotatorTest : public testing::Test {
 protected:
-  TokenList annotate(llvm::StringRef Code,
+  TokenList annotate(StringRef Code,
                      const FormatStyle &Style = getLLVMStyle()) {
     return TestLexer(Allocator, Buffers, Style).annotate(Code);
   }
@@ -2097,7 +2097,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCProperty) {
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
-  auto Annotate = [this](llvm::StringRef Code) {
+  auto Annotate = [this](StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
   };
   // Test that unary operators get labeled as such and that operators like '++'
@@ -2279,9 +2279,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
 
   TestLexer Lexer(Allocator, Buffers, Style);
   AdditionalKeywords Keywords(Lexer.IdentTable);
-  auto Annotate = [&Lexer](llvm::StringRef Code) {
-    return Lexer.annotate(Code);
-  };
+  auto Annotate = [&Lexer](StringRef Code) { return Lexer.annotate(Code); };
 
   // Additional keywords representation test.
   auto Tokens = Annotate("def foo : Bar<1>;");
@@ -2357,7 +2355,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = Annotate("!cond");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
 
-  auto AnnotateValue = [this, &Style](llvm::StringRef Code) {
+  auto AnnotateValue = [this, &Style](StringRef Code) {
     // Values are annotated only in specific context.
     auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);
     return decltype(Result){Result.begin() + 6, Result.end() - 3};
@@ -2649,7 +2647,7 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
-  auto Annotate = [this](llvm::StringRef Code) {
+  auto Annotate = [this](StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_JavaScript));
   };
 
