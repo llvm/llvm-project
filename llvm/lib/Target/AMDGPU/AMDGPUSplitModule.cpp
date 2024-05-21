@@ -30,8 +30,6 @@
 /// names, in order to not leak information about the source file.
 /// Such logs are very helpful to understand and fix potential issues with
 /// module splitting.
-//
-//===----------------------------------------------------------------------===//
 
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetMachine.h"
@@ -53,6 +51,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA256.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
@@ -105,17 +104,19 @@ static bool isEntryPoint(const Function *F) {
 }
 
 static std::string getName(const Value &V) {
-  static std::optional<bool> HideNames;
-  if (!HideNames) {
+  static bool HideNames;
+
+  static llvm::once_flag HideNameInitFlag;
+  llvm::call_once(HideNameInitFlag, [&]() {
     if (LogPrivate.getNumOccurrences())
       HideNames = LogPrivate;
     else {
       const auto EV = sys::Process::GetEnv("AMD_SPLIT_MODULE_LOG_PRIVATE");
       HideNames = (EV.value_or("0") != "0");
     }
-  }
+  });
 
-  if (!*HideNames)
+  if (!HideNames)
     return V.getName().str();
   return toHex(SHA256::hash(arrayRefFromStringRef(V.getName())),
                /*LowerCase=*/true);
@@ -231,8 +232,8 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
     CostType FnCost = 0;
     TargetTransformInfo TTI = TM.getTargetTransformInfo(Fn);
 
-    for (auto &BB : Fn) {
-      for (auto &I : BB) {
+    for (const auto &BB : Fn) {
+      for (const auto &I : BB) {
         auto Cost =
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
         assert(Cost != InstructionCost::getMax());
