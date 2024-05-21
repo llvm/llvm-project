@@ -90,7 +90,7 @@ end program
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]](%[[VAL_10]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[VAL_11]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_12:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
+! CHECK:             %[[VAL_12:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 10 : i32

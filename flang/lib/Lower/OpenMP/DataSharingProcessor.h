@@ -37,12 +37,9 @@ private:
   mlir::OpBuilder::InsertPoint insPt;
   mlir::Value loopIV;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
-  llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
+  llvm::SetVector<const semantics::Symbol *> privatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const semantics::Symbol *> implicitSymbols;
-  llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
-  llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
-
   llvm::DenseMap<const semantics::Symbol *, mlir::omp::PrivateClauseOp>
       symToPrivatizer;
   lower::AbstractConverter &converter;
@@ -50,7 +47,6 @@ private:
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
   lower::pft::Evaluation &eval;
-  bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
   lower::SymMap *symTable;
 
@@ -67,7 +63,6 @@ private:
   void insertBarrier();
   void collectDefaultSymbols();
   void collectImplicitSymbols();
-  void collectPreDeterminedSymbols();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps,
                  llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void defaultPrivatize(
@@ -95,12 +90,10 @@ public:
                        semantics::SemanticsContext &semaCtx,
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
-                       bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization = false,
                        lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter), semaCtx(semaCtx),
         firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
-        shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.
