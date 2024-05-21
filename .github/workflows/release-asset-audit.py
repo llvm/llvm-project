@@ -1,8 +1,8 @@
 import github
 import sys
 
-def main():
 
+def main():
     token = sys.argv[1]
 
     gh = github.Github(login_or_token=token)
@@ -36,7 +36,9 @@ def main():
         print("Release:", release.title)
         for asset in release.get_assets():
             created_at = asset.created_at
-            updated_at = "" if asset.created_at == asset.updated_at else asset.updated_at
+            updated_at = (
+                "" if asset.created_at == asset.updated_at else asset.updated_at
+            )
             print(
                 f"{asset.name} : {asset.uploader.login} [{created_at} {updated_at}] ( {asset.download_count} )"
             )
@@ -45,5 +47,5 @@ def main():
                 sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
