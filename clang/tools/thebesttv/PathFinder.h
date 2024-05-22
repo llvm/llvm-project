@@ -291,7 +291,6 @@ struct DfsPathFinder : public ICFGPathFinder {
             dfs(source, 0);
         } catch (const PathFoundException &e) {
             // path found
-            // TODO: 把 this->path 扩展成完整的路径
             std::vector<int> fullPath;
             fullPath.push_back(source);
             for (auto it = path.begin() + 1; it != path.end(); it++) {
