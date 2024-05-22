@@ -14,8 +14,8 @@ Macros
 
   * - Function
     - Implemented
-    - C Standard
-    - POSIX Standard
+    - C23 Standard Section
+    - POSIX.1-2017 Standard Section
   * - SIGABRT
     - |check|
     - 7.14.3
@@ -163,8 +163,8 @@ Functions
 
   * - Function
     - Implemented
-    - C Standard
-    - POSIX Standard
+    - C23 Standard Section
+    - POSIX.1-2017 Standard Section
   * - kill
     - |check|
     -
