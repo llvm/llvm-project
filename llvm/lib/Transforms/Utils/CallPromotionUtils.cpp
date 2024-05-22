@@ -187,24 +187,6 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
     U->replaceUsesOfWith(&CB, Cast);
 }
 
-// Returns the or result of all icmp instructions.
-static Value *getOrResult(const SmallVector<Value *, 2> &ICmps,
-                          IRBuilder<> &Builder) {
-  assert(!ICmps.empty() && "Must have at least one icmp instructions");
-  if (ICmps.size() == 1)
-    return ICmps[0];
-
-  SmallVector<Value *, 2> OrResults;
-  int i = 0, NumICmp = ICmps.size();
-  for (i = 0; i + 1 < NumICmp; i += 2)
-    OrResults.push_back(Builder.CreateOr(ICmps[i], ICmps[i + 1], "icmp-or"));
-
-  if (i < NumICmp)
-    OrResults.push_back(ICmps[i]);
-
-  return getOrResult(OrResults, Builder);
-}
-
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
@@ -393,7 +375,7 @@ static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
   return *NewInst;
 }
 
-// Predicate and clone the given call site usingc condition `CB.callee ==
+// Predicate and clone the given call site using condition `CB.callee ==
 // Callee`. See the comment `versionCallSiteWithCond` for the transformation.
 CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
                                 MDNode *BranchWeights) {

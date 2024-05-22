@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
@@ -30,8 +31,8 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -55,6 +56,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1967,11 +1969,23 @@ void llvm::updateProfileCallee(
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
     for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
-        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
+        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
+
+          Instruction *VPtr =
+              PGOIndirectCallVisitor::tryGetVTableInstruction(CI);
+          if (VPtr)
+            scaleProfData(*VPtr, CloneEntryCount, PriorEntryCount);
+        }
       if (isa<InvokeInst>(Entry.first))
-        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second))
+        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
           II->updateProfWeight(CloneEntryCount, PriorEntryCount);
+
+          Instruction *VPtr =
+              PGOIndirectCallVisitor::tryGetVTableInstruction(II);
+          if (VPtr)
+            scaleProfData(*VPtr, CloneEntryCount, PriorEntryCount);
+        }
     }
   }
 
@@ -1982,10 +1996,22 @@ void llvm::updateProfileCallee(
       // No need to update the callsite if it is pruned during inlining.
       if (!VMap || VMap->count(&BB))
         for (Instruction &I : BB) {
-          if (CallInst *CI = dyn_cast<CallInst>(&I))
+          if (CallInst *CI = dyn_cast<CallInst>(&I)) {
             CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-          if (InvokeInst *II = dyn_cast<InvokeInst>(&I))
+
+            Instruction *VPtr =
+                PGOIndirectCallVisitor::tryGetVTableInstruction(CI);
+            if (VPtr)
+              scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+          }
+          if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
             II->updateProfWeight(NewEntryCount, PriorEntryCount);
+
+            Instruction *VPtr =
+                PGOIndirectCallVisitor::tryGetVTableInstruction(II);
+            if (VPtr)
+              scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+          }
         }
   }
 }
