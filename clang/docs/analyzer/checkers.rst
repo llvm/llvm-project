@@ -1216,7 +1216,7 @@ In the code above the problem is that ``setuid(getuid())`` removes superuser
 privileges before ``setgid(getgid())`` is called. To fix the problem the
 ``setgid(getgid())`` should be called first. Further attention is needed to
 avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
-this).
+this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
