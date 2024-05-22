@@ -203,6 +203,11 @@ sections with improvements to Clang's support for those languages.
 C++ Language Changes
 --------------------
 
+C++14 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Sized deallocation is enabled by default in C++14 onwards. The user may specify
+  ``-fno-sized-deallocation`` to disable it if there are some regressions.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Implemented `P1907R1 <https://wg21.link/P1907R1>`_ which extends allowed non-type template argument
