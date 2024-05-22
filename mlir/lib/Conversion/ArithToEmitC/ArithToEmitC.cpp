@@ -136,8 +136,9 @@ public:
       return rewriter.notifyMatchFailure(op, "expected integer operand type");
 
     // Signed (sign-extending) casts from i1 are not supported.
-    if(operandType.isInteger(1) && !castToUnsigned)
-      return rewriter.notifyMatchFailure(op, "operation not supported on i1 type");
+    if (operandType.isInteger(1) && !castToUnsigned)
+      return rewriter.notifyMatchFailure(op,
+                                         "operation not supported on i1 type");
 
     // to-i1 conversions: arith semantics want truncation, whereas (bool)(v) is
     // equivalent to (v != 0). Implementing as (bool)(v & 0x01) gives
