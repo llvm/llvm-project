@@ -72,14 +72,14 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       CheckAndCopyCharsToDescriptor(cmdmsg, "Execution error");
     }
   }
+
 #ifdef _WIN32
   // On WIN32 API std::system returns exit status directly
   int exitStatusVal{status};
-  if (exitStatusVal == 1) {
 #else
   int exitStatusVal{WEXITSTATUS(status)};
-  if (exitStatusVal == 127 || exitStatusVal == 126) {
 #endif
+  if (exitStatusVal != 0) {
     if (!cmdstat) {
       terminator.Crash(
           "Invalid command quit with exit status code: %d", exitStatusVal);
@@ -88,23 +88,25 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
+
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
   if (WIFSIGNALED(status)) {
     if (!cmdstat) {
-      terminator.Crash("killed by signal: %d", WTERMSIG(status));
+      terminator.Crash("Killed by signal: %d", WTERMSIG(status));
     } else {
       StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "killed by signal");
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Killed by signal");
     }
   }
 #endif
+
 #if defined(WIFSTOPPED) && defined(WSTOPSIG)
   if (WIFSTOPPED(status)) {
     if (!cmdstat) {
-      terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
+      terminator.Crash("Stopped by signal: %d", WSTOPSIG(status));
     } else {
       StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "stopped by signal");
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Stopped by signal");
     }
   }
 #endif

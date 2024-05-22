@@ -899,8 +899,6 @@ used in constant expressions have currently no folding support at all.
     - 1: Fork Error (occurs only on POSIX-compatible systems).
     - 2: Execution Error (command exits with status -1).
     - 3: Invalid Command Error (determined by the exit code depending on the system).
-      - On Windows: exit code is 1.
-      - On POSIX-compatible systems: exit code is 127 or 126.
     - 4: Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
   - 0: Otherwise.
 - Asynchronous execution:
