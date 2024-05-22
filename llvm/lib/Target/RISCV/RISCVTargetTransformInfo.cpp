@@ -119,7 +119,7 @@ static InstructionCost getSiFiveX280RVVCost(ArrayRef<unsigned> OpCodes, MVT VT,
       unsigned LookUpSiFive7ReduceLatency[] = {0,  20, 27, 32, 34,
                                                38, 40, 41, 42};
       if (VL <= 32) {
-        Cost += LookUpSiFive7ReduceLatency[(VL + 3) >> 2];
+        Cost += LookUpSiFive7ReduceLatency[divideCeil(VL, 4)];
         break;
       }
       Cost += 6 + 7 * Log2_32_Ceil(VL);
