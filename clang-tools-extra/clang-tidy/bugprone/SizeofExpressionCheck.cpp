@@ -163,9 +163,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
         ignoringParenImpCasts(arraySubscriptExpr(
             hasBase(ArrayOfSamePointersExpr), hasIndex(ZeroLiteral)));
     const auto ArrayLengthExprDenom =
-        expr(hasParent(expr(ignoringParenImpCasts(binaryOperator(
-                 hasOperatorName("/"), hasLHS(ignoringParenImpCasts(sizeOfExpr(
-                                           has(ArrayOfPointersExpr)))))))),
+        expr(hasParent(binaryOperator(hasOperatorName("/"),
+                                      hasLHS(ignoringParenImpCasts(sizeOfExpr(
+                                          has(ArrayOfPointersExpr)))))),
              sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
 
     Finder->addMatcher(
