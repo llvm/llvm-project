@@ -1970,6 +1970,8 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      *reserved*                                 0x055      Reserved.
+     *reserved*                                 0x056      Reserved.
+     *reserved*                                 0x057      Reserved.
      ========================================== ========== =============================
 
 Sections
