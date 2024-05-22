@@ -640,6 +640,11 @@ int main(int argc, const char **argv) {
         "AST Pool size (max number of ASTs in memory), default 10", {'p'});
     args::ValueFlag<int> argCallDepth(
         argParser, "N", "Max call depth in path-finding, default 4", {'d'});
+    args::ValueFlag<int> argDfsTick(
+        argParser, "N",
+        "DFS tick (timeout checking frequency), default 1'000'000", {"tick"});
+    args::ValueFlag<int> argDfsTimeout(
+        argParser, "N", "DFS timeout in seconds, default 30", {'t'});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -663,6 +668,8 @@ int main(int argc, const char **argv) {
 
     Global.ASTPoolSize = getArgValue(argPoolSize, 10, "AST pool size");
     Global.callDepth = getArgValue(argCallDepth, 4, "Max call depth");
+    Global.dfsTick = getArgValue(argDfsTick, 1'000'000, "DFS tick");
+    Global.dfsTimeout = getArgValue(argDfsTimeout, 30, "DFS timeout");
 
     setClangPath(argv[0]);
 

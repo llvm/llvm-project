@@ -2,7 +2,10 @@
 
 #include "utils.h"
 
+#include <chrono>
 #include <exception>
+
+using time_point = std::chrono::steady_clock::time_point;
 
 struct ICFGPathFinder {
     const ICFG &icfg;
@@ -233,9 +236,19 @@ struct DfsPathFinder : public ICFGPathFinder {
     std::vector<int> path;
     std::stack<int> callStack; // 部分平衡的括号匹配
 
+    time_point dfsStartTime;
+    int dfsCounter;
+
     class PathFoundException : public std::exception {
       public:
         const char *what() const noexcept override { return "Path found"; }
+    };
+
+    class TimeLimitExceededException : public std::exception {
+      public:
+        const char *what() const noexcept override {
+            return "Time limit exceeded";
+        }
     };
 
     // {fid, u} -> bfs
@@ -260,6 +273,28 @@ struct DfsPathFinder : public ICFGPathFinder {
                      .first;
         }
         return it->second;
+    }
+
+    void dfsUpdate() {
+        /**
+         * 1e6 tick 大约对应 1s
+         * 10'000'000:
+         * [2024-05-22 10:58:08.854] [info]  tick!
+         * [2024-05-22 10:58:20.508] [info]  tick!
+         * [2024-05-22 10:58:32.554] [info]  tick!
+         * [2024-05-22 10:58:44.367] [info]  tick!
+         */
+        dfsCounter++;
+        if (dfsCounter >= Global.dfsTick) {
+            time_point currentTime = std::chrono::steady_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+                                currentTime - dfsStartTime)
+                                .count();
+            logger.info("  DFS taking {}s ...", duration);
+            if (duration > Global.dfsTimeout)
+                throw TimeLimitExceededException();
+            dfsCounter = 0;
+        }
     }
 
   private:
@@ -288,7 +323,11 @@ struct DfsPathFinder : public ICFGPathFinder {
         std::reverse(this->targets.begin(), this->targets.end());
 
         try {
+            dfsStartTime = std::chrono::steady_clock::now();
+            dfsCounter = 0;
             dfs(source, 0);
+        } catch (const TimeLimitExceededException &e) {
+            logger.warn("Time limit exceeded, DFS took too long");
         } catch (const PathFoundException &e) {
             // path found
             std::vector<int> fullPath;
@@ -323,6 +362,8 @@ struct DfsPathFinder : public ICFGPathFinder {
     }
 
     void dfs(const int u, int callDepth) {
+        dfsUpdate();
+
         path.push_back(u);
 
         bool foundOneTarget = (u == targets.back());
