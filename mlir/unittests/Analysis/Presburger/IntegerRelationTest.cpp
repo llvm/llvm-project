@@ -127,7 +127,7 @@ TEST(IntegerRelationTest, symbolicLexmin) {
       {"(a)[b] : (a - b >= 0)", "(a)[b] -> (a)"},     // a
       {"(a)[b] : (b - a - 1 >= 0)", "(a)[b] -> (b)"}, // b
   });
-  EXPECT_TRUE(lexmin.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
+  EXPECT_TRUE(lexmin.unboundedDomain.isEmpty(SolverKind::IntegerSimplex));
   EXPECT_TRUE(lexmin.lexopt.isEqual(expectedLexmin));
 }
 
@@ -161,11 +161,11 @@ TEST(IntegerRelationTest, symbolicLexmax) {
                   {"(x)[N] : (x >= 0, 2 * N - x >= 0, -x + N >= 0)",
                    "(x)[N] -> (x + 2 * N)"}});
 
-  EXPECT_TRUE(lexmax1.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
+  EXPECT_TRUE(lexmax1.unboundedDomain.isEmpty(SolverKind::IntegerSimplex));
   EXPECT_TRUE(lexmax1.lexopt.isEqual(expectedLexmax1));
-  EXPECT_TRUE(lexmax2.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
+  EXPECT_TRUE(lexmax2.unboundedDomain.isEmpty(SolverKind::IntegerSimplex));
   EXPECT_TRUE(lexmax2.lexopt.isEqual(expectedLexmax2));
-  EXPECT_TRUE(lexmax3.unboundedDomain.isEmpty(SolverKind::IntegerExactSimplex));
+  EXPECT_TRUE(lexmax3.unboundedDomain.isEmpty(SolverKind::IntegerSimplex));
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexmax3));
 }
 

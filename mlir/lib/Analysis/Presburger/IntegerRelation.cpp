@@ -819,11 +819,11 @@ IntMatrix IntegerRelation::getBoundedDirections() const {
 
 bool IntegerRelation::isEmpty(SolverKind kind) const {
   switch (kind) {
-  case SolverKind::IntegerExactSimplex:
+  case SolverKind::IntegerSimplex:
     return isIntegerEmpty();
-  case SolverKind::RationalExactSimplex:
+  case SolverKind::RationalSimplex:
     return isRationalEmpty();
-  case SolverKind::RationalExactFourierMotzkin:
+  case SolverKind::FourierMotzkin:
     return isEmptyByFMTest();
   case SolverKind::FastHeuristics:
     return isObviouslyEmpty();
@@ -1199,7 +1199,7 @@ void IntegerRelation::removeRedundantInequalities() {
     // Change the inequality to its complement.
     tmpCst.inequalities.negateRow(r);
     --tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
-    if (tmpCst.isEmpty(SolverKind::RationalExactFourierMotzkin)) {
+    if (tmpCst.isEmpty(SolverKind::FourierMotzkin)) {
       redun[r] = true;
       // Zero fill the redundant inequality.
       inequalities.fillRow(r, /*value=*/0);
@@ -2525,7 +2525,7 @@ void IntegerRelation::removeTrivialEqualities() {
 bool IntegerRelation::isFullDim() {
   if (getNumVars() == 0)
     return true;
-  if (isEmpty(SolverKind::RationalExactFourierMotzkin))
+  if (isEmpty(SolverKind::FourierMotzkin))
     return false;
 
   // If there is a non-trivial equality, the space cannot be full-dimensional.

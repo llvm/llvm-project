@@ -162,7 +162,7 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
   for (const IntegerRelation &csA : disjuncts) {
     for (const IntegerRelation &csB : set.disjuncts) {
       IntegerRelation intersection = csA.intersect(csB);
-      if (!intersection.isEmpty(SolverKind::IntegerExactSimplex))
+      if (!intersection.isEmpty(SolverKind::IntegerSimplex))
         result.unionInPlace(intersection);
     }
   }
@@ -224,7 +224,7 @@ void PresburgerRelation::compose(const PresburgerRelation &rel) {
     for (const IntegerRelation &csB : rel.disjuncts) {
       IntegerRelation composition = csA;
       composition.compose(csB);
-      if (!composition.isEmpty(SolverKind::IntegerExactSimplex))
+      if (!composition.isEmpty(SolverKind::IntegerSimplex))
         result.unionInPlace(composition);
     }
   }
@@ -617,7 +617,7 @@ PresburgerRelation::subtract(const PresburgerRelation &set) const {
 /// point then this is a point that is contained in T but not S, and
 /// if T contains a point that is not in S, this also lies in T \ S.
 bool PresburgerRelation::isSubsetOf(const PresburgerRelation &set) const {
-  return this->subtract(set).isEmpty(SolverKind::IntegerExactSimplex);
+  return this->subtract(set).isEmpty(SolverKind::IntegerSimplex);
 }
 
 /// Two sets are equal iff they are subsets of each other.

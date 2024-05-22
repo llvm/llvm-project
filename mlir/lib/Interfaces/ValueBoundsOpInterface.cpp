@@ -692,7 +692,7 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
   // lhs > rhs must be incorrect and we can deduce that lhs <= rhs holds.
 
   // We cannot prove anything if the constraint set is already empty.
-  if (cstr.isEmpty(presburger::SolverKind::RationalExactFourierMotzkin)) {
+  if (cstr.isEmpty(presburger::SolverKind::FourierMotzkin)) {
     LLVM_DEBUG(
         llvm::dbgs()
         << "cannot compare value/dims: constraint system is already empty");
@@ -723,7 +723,7 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
   int64_t ineqPos = cstr.getNumInequalities();
   cstr.addInequality(eq);
   bool isEmpty =
-      cstr.isEmpty(presburger::SolverKind::RationalExactFourierMotzkin);
+      cstr.isEmpty(presburger::SolverKind::FourierMotzkin);
   cstr.removeInequality(ineqPos);
   return isEmpty;
 }
