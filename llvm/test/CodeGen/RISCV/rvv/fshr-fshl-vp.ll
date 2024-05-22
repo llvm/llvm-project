@@ -1318,10 +1318,8 @@ define <vscale x 1 x i8> @fshr_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, 
 ; CHECK-NEXT:    li a1, 4
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vremu.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vand.vi v9, v9, 15, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vand.vi v9, v9, 15
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsrl.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
@@ -1343,10 +1341,8 @@ define <vscale x 1 x i8> @fshl_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, 
 ; CHECK-NEXT:    li a1, 4
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vremu.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vand.vi v9, v9, 15, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vand.vi v9, v9, 15
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
