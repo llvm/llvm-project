@@ -123,7 +123,7 @@ option(BOLT_BUILD_TOOLS
   "Build the BOLT tools. If OFF, just generate build targets." ON)
 
 add_custom_target(bolt)
-set_target_properties(bolt PROPERTIES FOLDER "BOLT/Meta")
+set_target_properties(bolt PROPERTIES FOLDER "BOLT/Metatargets")
 add_llvm_install_targets(install-bolt DEPENDS bolt COMPONENT bolt)
 
 include_directories(
