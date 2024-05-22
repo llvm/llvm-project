@@ -155,12 +155,12 @@ static Value createDestinationPassingStyleInitOperand(
         tensor::getMixedSizes(builder, builder.getLoc(), spmdizedOperand);
     PartialReductionOpInterface partialReductionIface =
         llvm::cast<PartialReductionOpInterface>(op.getOperation());
-    FailureOr<Operation *> reductionNeutralTensorOp =
+    assert(op->getNumResults() == 1 && "Multiple results not supported.");
+    FailureOr<SmallVector<Value>> reductionNeutralTensor =
         partialReductionIface.generateInitialTensorForPartialReduction(
             builder, builder.getLoc(), shape, {});
-    assert(succeeded(reductionNeutralTensorOp));
-    builder.create<scf::YieldOp>(
-        reductionNeutralTensorOp.value()->getResult(0));
+    assert(succeeded(reductionNeutralTensor));
+    builder.create<scf::YieldOp>(reductionNeutralTensor.value());
   }
   return ifOp.getResult(0);
 }
@@ -173,8 +173,7 @@ static SmallVector<Value> createDestinationPassingStyleInitOperands(
     ImplicitLocOpBuilder &builder) {
   // TODO: add support for multiple destination passing style initial value
   // operands.
-  // PartialReductionOpInterface::generateInitialTensorForPartialReduction
-  // needs to also support multiple DPS initial operands.
+  assert(op.getNumDpsInits() == 1 && "Multiple initial values not supported.");
   SmallVector<Value> newOperands = llvm::to_vector(spmdizedOperands);
   auto operandIdx = op.getDpsInitOperand(0)->getOperandNumber();
   Value spmdizedInitOperand =
