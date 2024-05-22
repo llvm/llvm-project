@@ -34,7 +34,7 @@ end subroutine
 ! CFGConv-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi ne, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 ! CFGConv-NEXT:   cf.cond_br %[[ALLOC_COND]], ^[[ALLOC_MEM_BB:.*]], ^[[ZERO_MEM_BB:.*]]
 ! CFGConv-NEXT: ^[[ALLOC_MEM_BB]]:
-! CFGConv-NEXT:   fir.allocmem
+! CFGConv:        fir.allocmem
 ! CFGConv:        cf.br ^[[DECL_BB:.*]]
 ! CFGConv:      ^[[ZERO_MEM_BB]]:
 ! CFGConv-NEXT:   fir.zero_bits

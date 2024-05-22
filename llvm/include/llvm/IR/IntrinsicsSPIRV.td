@@ -14,6 +14,7 @@ let TargetPrefix = "spv" in {
   def int_spv_assign_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
   def int_spv_assign_ptr_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
   def int_spv_assign_name : Intrinsic<[], [llvm_any_ty, llvm_vararg_ty]>;
+  def int_spv_assign_decoration : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
 
   def int_spv_track_constant : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_metadata_ty]>;
   def int_spv_init_global : Intrinsic<[], [llvm_any_ty, llvm_any_ty]>;
@@ -26,7 +27,7 @@ let TargetPrefix = "spv" in {
   def int_spv_insertv : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_extractelt : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_anyint_ty]>;
   def int_spv_insertelt : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_any_ty, llvm_anyint_ty]>;
-  def int_spv_const_composite : Intrinsic<[llvm_i32_ty], [llvm_vararg_ty]>;
+  def int_spv_const_composite : Intrinsic<[llvm_any_ty], [llvm_vararg_ty]>;
   def int_spv_bitcast : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
   def int_spv_ptrcast : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_metadata_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
   def int_spv_switch : Intrinsic<[], [llvm_any_ty, llvm_vararg_ty]>;

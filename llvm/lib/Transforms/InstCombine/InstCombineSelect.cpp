@@ -1365,7 +1365,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 // Also ULT predicate can also be UGT iff C0 != -1 (+invert result)
 //      SLT predicate can also be SGT iff C2 != INT_MAX (+invert res.)
 static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
-                                    InstCombiner::BuilderTy &Builder) {
+                                    InstCombiner::BuilderTy &Builder,
+                                    InstCombiner &IC) {
   Value *X = Sel0.getTrueValue();
   Value *Sel1 = Sel0.getFalseValue();
 
@@ -1493,14 +1494,14 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     std::swap(ThresholdLowIncl, ThresholdHighExcl);
 
   // The fold has a precondition 1: C2 s>= ThresholdLow
-  auto *Precond1 = ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_SGE, C2,
-                                         ThresholdLowIncl);
-  if (!match(Precond1, m_One()))
+  auto *Precond1 = ConstantFoldCompareInstOperands(
+      ICmpInst::Predicate::ICMP_SGE, C2, ThresholdLowIncl, IC.getDataLayout());
+  if (!Precond1 || !match(Precond1, m_One()))
     return nullptr;
   // The fold has a precondition 2: C2 s<= ThresholdHigh
-  auto *Precond2 = ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_SLE, C2,
-                                         ThresholdHighExcl);
-  if (!match(Precond2, m_One()))
+  auto *Precond2 = ConstantFoldCompareInstOperands(
+      ICmpInst::Predicate::ICMP_SLE, C2, ThresholdHighExcl, IC.getDataLayout());
+  if (!Precond2 || !match(Precond2, m_One()))
     return nullptr;
 
   // If we are matching from a truncated input, we need to sext the
@@ -1803,7 +1804,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
     return replaceInstUsesWith(SI, V);
 
-  if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
+  if (Value *V = canonicalizeClampLike(SI, *ICI, Builder, *this))
     return replaceInstUsesWith(SI, V);
 
   if (Instruction *NewSel =
@@ -3342,7 +3343,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
 // pattern.
 static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
                                         const APInt *Cond1, Value *CtlzOp,
-                                        unsigned BitWidth) {
+                                        unsigned BitWidth,
+                                        bool &ShouldDropNUW) {
   // The challenge in recognizing std::bit_ceil(X) is that the operand is used
   // for the CTLZ proper and select condition, each possibly with some
   // operation like add and sub.
@@ -3365,6 +3367,8 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
   ConstantRange CR = ConstantRange::makeExactICmpRegion(
       CmpInst::getInversePredicate(Pred), *Cond1);
 
+  ShouldDropNUW = false;
+
   // Match the operation that's used to compute CtlzOp from CommonAncestor.  If
   // CtlzOp == CommonAncestor, return true as no operation is needed.  If a
   // match is found, execute the operation on CR, update CR, and return true.
@@ -3378,6 +3382,7 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
       return true;
     }
     if (match(CtlzOp, m_Sub(m_APInt(C), m_Specific(CommonAncestor)))) {
+      ShouldDropNUW = true;
       CR = ConstantRange(*C).sub(CR);
       return true;
     }
@@ -3447,13 +3452,19 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
     Pred = CmpInst::getInversePredicate(Pred);
   }
 
+  bool ShouldDropNUW;
+
   if (!match(FalseVal, m_One()) ||
       !match(TrueVal,
              m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
                                                     m_Value(Ctlz)))))) ||
       !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Zero())) ||
-      !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth))
+      !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth,
+                                   ShouldDropNUW))
     return nullptr;
+
+  if (ShouldDropNUW)
+    cast<Instruction>(CtlzOp)->setHasNoUnsignedWrap(false);
 
   // Build 1 << (-CTLZ & (BitWidth-1)).  The negation likely corresponds to a
   // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth

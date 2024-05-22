@@ -372,15 +372,6 @@ RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
-/// See RecurrenceDescriptor::isAnyOfPattern for a description of the pattern we
-/// are trying to match. In this pattern, we are only ever selecting between two
-/// values: 1) an initial start value \p StartVal of the reduction PHI, and 2) a
-/// loop invariant value. If any of lane value in \p Left, \p Right is not equal
-/// to \p StartVal, select the loop invariant value. This is done by selecting
-/// \p Right iff \p Left is equal to \p StartVal.
-Value *createAnyOfOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
-                     Value *Left, Value *Right);
-
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
 Value *createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
@@ -476,6 +467,12 @@ int rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                           SCEVExpander &Rewriter, DominatorTree *DT,
                           ReplaceExitVal ReplaceExitValue,
                           SmallVector<WeakTrackingVH, 16> &DeadInsts);
+
+/// Assign exit values to variables that use this loop variable during the loop.
+void addDebugValuesToIncomingValue(BasicBlock *Successor, Value *IndVar,
+                                   PHINode *PN);
+void addDebugValuesToLoopVariable(BasicBlock *Successor, Value *ExitValue,
+                                  PHINode *PN);
 
 /// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
 /// \p OrigLoop and the following distribution of \p OrigLoop iteration among \p

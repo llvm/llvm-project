@@ -23,6 +23,15 @@ TEST(Composition, GetLeafConstructs) {
   ASSERT_EQ(L3, (ArrayRef<Directive>{OMPD_parallel, OMPD_for, OMPD_simd}));
 }
 
+TEST(Composition, GetLeafConstructsOrSelf) {
+  ArrayRef<Directive> L1 = getLeafConstructsOrSelf(OMPD_loop);
+  ASSERT_EQ(L1, (ArrayRef<Directive>{OMPD_loop}));
+  ArrayRef<Directive> L2 = getLeafConstructsOrSelf(OMPD_parallel_for);
+  ASSERT_EQ(L2, (ArrayRef<Directive>{OMPD_parallel, OMPD_for}));
+  ArrayRef<Directive> L3 = getLeafConstructsOrSelf(OMPD_parallel_for_simd);
+  ASSERT_EQ(L3, (ArrayRef<Directive>{OMPD_parallel, OMPD_for, OMPD_simd}));
+}
+
 TEST(Composition, GetCompoundConstruct) {
   Directive C1 =
       getCompoundConstruct({OMPD_target, OMPD_teams, OMPD_distribute});

@@ -17,7 +17,17 @@ func.func @_QQmain() {
 // PASSES: Pass statistics report
 
 // PASSES:        Canonicalizer
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+// PASSES-NEXT: 'fir.global' Pipeline
+// PASSES-NEXT:   SimplifyHLFIRIntrinsics
+// PASSES-NEXT:   InlineElementals
 // PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   SimplifyHLFIRIntrinsics
+// PASSES-NEXT:   InlineElementals
+// PASSES-NEXT: 'omp.declare_reduction' Pipeline
+// PASSES-NEXT:   SimplifyHLFIRIntrinsics
+// PASSES-NEXT:   InlineElementals
+// PASSES-NEXT: 'omp.private' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
 // PASSES-NEXT:   Canonicalizer
@@ -62,9 +72,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-// PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   PolymorphicOpConversion
-
+// PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']

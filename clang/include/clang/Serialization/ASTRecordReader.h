@@ -269,6 +269,12 @@ public:
   /// Read an OpenMP children, advancing Idx.
   void readOMPChildren(OMPChildren *Data);
 
+  /// Read a list of Exprs used for a var-list.
+  llvm::SmallVector<Expr *> readOpenACCVarList();
+
+  /// Read a list of Exprs used for a int-expr-list.
+  llvm::SmallVector<Expr *> readOpenACCIntExprList();
+
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
 

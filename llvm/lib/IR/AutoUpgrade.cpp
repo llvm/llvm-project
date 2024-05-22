@@ -1059,7 +1059,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name.equals("coro.end")) {
+    if (F->arg_size() == 2 && Name == "coro.end") {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
@@ -5403,6 +5403,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 
+    return Res;
+  }
+
+  // AArch64 data layout upgrades.
+  if (T.isAArch64()) {
+    // Add "-Fn32"
+    if (!DL.empty() && !DL.contains("-Fn32"))
+      Res.append("-Fn32");
     return Res;
   }
 

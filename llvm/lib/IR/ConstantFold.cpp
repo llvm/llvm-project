@@ -542,6 +542,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     } else if (!MaskEltCount.isScalable())
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
+
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
   if (isa<ScalableVectorType>(V1VTy))
@@ -1281,9 +1282,9 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     // Fast path for splatted constants.
     if (Constant *C1Splat = C1->getSplatValue())
       if (Constant *C2Splat = C2->getSplatValue())
-        return ConstantVector::getSplat(
-            C1VTy->getElementCount(),
-            ConstantExpr::getCompare(Predicate, C1Splat, C2Splat));
+        if (Constant *Elt =
+                ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat))
+          return ConstantVector::getSplat(C1VTy->getElementCount(), Elt);
 
     // Do not iterate on scalable vector. The number of elements is unknown at
     // compile-time.
@@ -1301,8 +1302,11 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
           ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, I));
       Constant *C2E =
           ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
+      Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1E, C2E);
+      if (!Elt)
+        return nullptr;
 
-      ResElts.push_back(ConstantExpr::getCompare(Predicate, C1E, C2E));
+      ResElts.push_back(Elt);
     }
 
     return ConstantVector::get(ResElts);
@@ -1410,7 +1414,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
       Predicate = ICmpInst::getSwappedPredicate(Predicate);
-      return ConstantExpr::getICmp(Predicate, C2, C1);
+      return ConstantFoldCompareInstruction(Predicate, C2, C1);
     }
   }
   return nullptr;

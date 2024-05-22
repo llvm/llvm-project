@@ -1128,7 +1128,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
 
   return PackIndexingExpr::Create(getASTContext(), EllipsisLoc, RSquareLoc,
                                   PackExpression, IndexExpr, Index,
-                                  ExpandedExprs);
+                                  ExpandedExprs, EmptyPack);
 }
 
 TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
