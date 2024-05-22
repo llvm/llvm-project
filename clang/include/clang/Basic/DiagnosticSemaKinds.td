@@ -8853,7 +8853,7 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to"
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
-  "Atomic memory operand must have a power-of-two size">;
+  "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<
   "argument to atomic builtin of type '_BitInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
@@ -12343,7 +12343,8 @@ def err_acc_num_gangs_num_args
             "provided}0">;
 def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
-            "element, or composite variable member">;
+            "element,%select{| member of a composite variable,}0 or composite "
+            "variable member">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -12374,5 +12375,18 @@ def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 def err_acc_clause_after_device_type
     : Error<"OpenACC clause '%0' may not follow a '%1' clause in a "
             "compute construct">;
-
+def err_acc_reduction_num_gangs_conflict
+    : Error<
+          "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
+          "with a 'num_gangs' clause with more than 1 argument, have %0">;
+def err_acc_reduction_type
+    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
+            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+def err_acc_reduction_composite_type
+    : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
+            "%1 %select{is not a class or struct|is incomplete|is not an "
+            "aggregate}0">;
+def err_acc_reduction_composite_member_type :Error<
+    "OpenACC 'reduction' composite variable must not have non-scalar field">;
+def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 } // end of sema component.
