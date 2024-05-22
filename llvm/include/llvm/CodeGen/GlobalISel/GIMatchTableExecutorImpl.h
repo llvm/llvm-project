@@ -468,7 +468,24 @@ bool GIMatchTableExecutor::executeMatchTable(
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
+      break;
+    }
+    case GIM_CheckHasOneUse: {
+      uint64_t InsnID = readULEB();
 
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckHasOneUse(MIs["
+                             << InsnID << "]\n");
+
+      const MachineInstr *MI = State.MIs[InsnID];
+      assert(MI && "Used insn before defined");
+      assert(MI->getNumDefs() > 0 && "No defs");
+      const Register Res = MI->getOperand(0).getReg();
+
+      if (!MRI.hasOneNonDBGUse(Res)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
       break;
     }
     case GIM_CheckAtomicOrdering: {
