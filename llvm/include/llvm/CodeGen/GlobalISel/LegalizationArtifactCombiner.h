@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
@@ -99,6 +100,11 @@ public:
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
+        auto *MergedLocation = DILocation::getMergedLocation(
+            MI.getDebugLoc().get(), SrcMI->getDebugLoc().get());
+        // Set the debug location to the merged location of the SrcMI and the MI
+        // if the aext fold is successful.
+        Builder.setDebugLoc(MergedLocation);
         Builder.buildConstant(
             DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);

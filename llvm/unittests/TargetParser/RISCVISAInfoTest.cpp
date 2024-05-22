@@ -21,8 +21,8 @@ bool operator==(const RISCVISAUtils::ExtensionVersion &A,
 }
 
 TEST(ParseNormalizedArchString, RejectsInvalidChars) {
-  for (StringRef Input :
-       {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0", "rv32e2.0"}) {
+  for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0",
+                          "rv32e2.0", "rva20u64+zbc"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "string may only contain [a-z0-9_]");
@@ -38,11 +38,16 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
 }
 
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
-  for (StringRef Input :
-       {"rv64i2p0_", "rv32i2p0__a2p0", "rv64e2p", "rv32i", "rv64ip1"}) {
+  for (StringRef Input : {"rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
+  }
+
+  for (StringRef Input : {"rv64i2p0_", "rv32i2p0__a2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "extension name missing after separator '_'");
   }
 }
 
@@ -59,6 +64,30 @@ TEST(ParseNormalizedArchString, RejectsBadZ) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "'z' must be followed by a letter");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadS) {
+  for (StringRef Input : {"rv64i2p0_s1p0", "rv32i2p0_s2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'s' must be followed by a letter");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadX) {
+  for (StringRef Input : {"rv64i2p0_x1p0", "rv32i2p0_x2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'x' must be followed by a letter");
+  }
+}
+
+TEST(ParseNormalizedArchString, DuplicateExtension) {
+  for (StringRef Input : {"rv64i2p0_a2p0_a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "duplicate extension 'a'");
   }
 }
 
@@ -123,6 +152,15 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getFLen(), 64U);
   EXPECT_EQ(Info.getMinVLen(), 64U);
   EXPECT_EQ(Info.getMaxELen(), 64U);
+  EXPECT_EQ(Info.getMaxELenFp(), 64U);
+}
+
+TEST(ParseNormalizedArchString, AcceptsUnknownMultiletter) {
+  auto MaybeISAInfo = RISCVISAInfo::parseNormalizedArchString(
+      "rv64i2p0_f2p0_d2p0_zicsr2p0_ykk1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo &Info = **MaybeISAInfo;
+  EXPECT_EQ(Info.toString(), "rv64i2p0_f2p0_d2p0_zicsr2p0_ykk1p0");
 }
 
 TEST(ParseArchString, RejectsInvalidChars) {
@@ -165,6 +203,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV32I.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_EQ(InfoRV32I.getXLen(), 32U);
   EXPECT_EQ(InfoRV32I.getFLen(), 0U);
+  EXPECT_EQ(InfoRV32I.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV32I.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV32I.getMaxELenFp(), 0U);
 
   auto MaybeRV32E = RISCVISAInfo::parseArchString("rv32e", true);
   ASSERT_THAT_EXPECTED(MaybeRV32E, Succeeded());
@@ -174,6 +215,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
   EXPECT_EQ(InfoRV32E.getFLen(), 0U);
+  EXPECT_EQ(InfoRV32E.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV32E.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV32E.getMaxELenFp(), 0U);
 
   auto MaybeRV32G = RISCVISAInfo::parseArchString("rv32g", true);
   ASSERT_THAT_EXPECTED(MaybeRV32G, Succeeded());
@@ -190,6 +234,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32G.getXLen(), 32U);
   EXPECT_EQ(InfoRV32G.getFLen(), 64U);
+  EXPECT_EQ(InfoRV32G.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV32G.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV32G.getMaxELenFp(), 0U);
 
   auto MaybeRV64I = RISCVISAInfo::parseArchString("rv64i", true);
   ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
@@ -199,6 +246,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64I.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_EQ(InfoRV64I.getXLen(), 64U);
   EXPECT_EQ(InfoRV64I.getFLen(), 0U);
+  EXPECT_EQ(InfoRV64I.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV64I.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV64I.getMaxELenFp(), 0U);
 
   auto MaybeRV64E = RISCVISAInfo::parseArchString("rv64e", true);
   ASSERT_THAT_EXPECTED(MaybeRV64E, Succeeded());
@@ -208,6 +258,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64E.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64E.getXLen(), 64U);
   EXPECT_EQ(InfoRV64E.getFLen(), 0U);
+  EXPECT_EQ(InfoRV64E.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV64E.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV64E.getMaxELenFp(), 0U);
 
   auto MaybeRV64G = RISCVISAInfo::parseArchString("rv64g", true);
   ASSERT_THAT_EXPECTED(MaybeRV64G, Succeeded());
@@ -224,6 +277,38 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64G.getXLen(), 64U);
   EXPECT_EQ(InfoRV64G.getFLen(), 64U);
+  EXPECT_EQ(InfoRV64G.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV64G.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV64G.getMaxELenFp(), 0U);
+
+  auto MaybeRV64GCV = RISCVISAInfo::parseArchString("rv64gcv", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64GCV, Succeeded());
+  RISCVISAInfo &InfoRV64GCV = **MaybeRV64GCV;
+  const auto &ExtsRV64GCV = InfoRV64GCV.getExtensions();
+  EXPECT_EQ(ExtsRV64GCV.size(), 17UL);
+  EXPECT_TRUE(ExtsRV64GCV.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64GCV.at("m") == (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("a") == (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64GCV.at("f") == (RISCVISAUtils::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV64GCV.at("d") == (RISCVISAUtils::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV64GCV.at("c") == (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zicsr") == (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zifencei") ==
+              (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("v") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve32x") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve32f") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve64x") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve64f") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve64d") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zvl32b") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zvl64b") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zvl128b") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_EQ(InfoRV64GCV.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64GCV.getFLen(), 64U);
+  EXPECT_EQ(InfoRV64GCV.getMinVLen(), 128U);
+  EXPECT_EQ(InfoRV64GCV.getMaxELen(), 64U);
+  EXPECT_EQ(InfoRV64GCV.getMaxELenFp(), 64U);
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
@@ -582,6 +667,72 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 }
 
+TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
+  for (StringRef Input : {"rvi23u99", "rvz23u64", "rva99u32"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+              "profile name");
+  }
+}
+
+TEST(ParseArchString, RejectsProfilesWithUnseparatedExtraExtensions) {
+  for (StringRef Input : {"rvi20u32m", "rvi20u64c"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "additional extensions must be after separator '_'");
+  }
+}
+
+TEST(ParseArchString, AcceptsBareProfileNames) {
+  auto MaybeRVA20U64 = RISCVISAInfo::parseArchString("rva20u64", true);
+  ASSERT_THAT_EXPECTED(MaybeRVA20U64, Succeeded());
+  const auto &Exts = (*MaybeRVA20U64)->getExtensions();
+  EXPECT_EQ(Exts.size(), 13UL);
+  EXPECT_EQ(Exts.count("i"), 1U);
+  EXPECT_EQ(Exts.count("m"), 1U);
+  EXPECT_EQ(Exts.count("f"), 1U);
+  EXPECT_EQ(Exts.count("a"), 1U);
+  EXPECT_EQ(Exts.count("d"), 1U);
+  EXPECT_EQ(Exts.count("c"), 1U);
+  EXPECT_EQ(Exts.count("za128rs"), 1U);
+  EXPECT_EQ(Exts.count("zicntr"), 1U);
+  EXPECT_EQ(Exts.count("ziccif"), 1U);
+  EXPECT_EQ(Exts.count("zicsr"), 1U);
+  EXPECT_EQ(Exts.count("ziccrse"), 1U);
+  EXPECT_EQ(Exts.count("ziccamoa"), 1U);
+  EXPECT_EQ(Exts.count("zicclsm"), 1U);
+
+  auto MaybeRVA23U64 = RISCVISAInfo::parseArchString("rva23u64", true);
+  ASSERT_THAT_EXPECTED(MaybeRVA23U64, Succeeded());
+  EXPECT_GT((*MaybeRVA23U64)->getExtensions().size(), 13UL);
+}
+
+TEST(ParseArchSTring, AcceptsProfileNamesWithSeparatedAdditionalExtensions) {
+  auto MaybeRVI20U64 = RISCVISAInfo::parseArchString("rvi20u64_m_zba", true);
+  ASSERT_THAT_EXPECTED(MaybeRVI20U64, Succeeded());
+  const auto &Exts = (*MaybeRVI20U64)->getExtensions();
+  EXPECT_EQ(Exts.size(), 3UL);
+  EXPECT_EQ(Exts.count("i"), 1U);
+  EXPECT_EQ(Exts.count("m"), 1U);
+  EXPECT_EQ(Exts.count("zba"), 1U);
+}
+
+TEST(ParseArchString,
+     RejectsProfilesWithAdditionalExtensionsGivenAlreadyInProfile) {
+  // This test was added to document the current behaviour. Discussion isn't
+  // believed to have taken place about if this is desirable or not.
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rva20u64_zicntr", true).takeError()),
+      "duplicated standard user-level extension 'zicntr'");
+}
+
+TEST(ParseArchString,
+     RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rva23u64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rva23u64'");
+}
+
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   auto MaybeISAInfo1 =
       RISCVISAInfo::parseArchString("rv64im_ztso", true, false);
@@ -783,7 +934,9 @@ R"(All available -march extensions for RISC-V
     zmmul                1.0
     za128rs              1.0
     za64rs               1.0
+    zaamo                1.0
     zacas                1.0
+    zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
     zfa                  1.0
@@ -909,10 +1062,8 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp              0.4       This is a long dummy description
     zicfiss              0.4
-    zaamo                0.2
     zabha                1.0
     zalasr               0.1
-    zalrsc               0.2
     zfbfmin              1.0
     ztso                 0.1
     zvfbfmin             1.0
@@ -929,12 +1080,14 @@ Supported Profiles
     rva20u64
     rva22s64
     rva22u64
+    rvi20u32
+    rvi20u64
+
+Experimental Profiles
     rva23s64
     rva23u64
     rvb23s64
     rvb23u64
-    rvi20u32
-    rvi20u64
     rvm23u32
 
 Use -march to specify the target's extension.

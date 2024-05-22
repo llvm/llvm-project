@@ -15,6 +15,13 @@
 # PREAGG: B X:0 #chain.cold.0# 1 0
 # RUN: perf2bolt %t.bolt -p %t.preagg --pa -o %t.bat.fdata -w %t.bat.yaml -v=1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-REGISTER
+# RUN: FileCheck --input-file %t.bat.fdata --check-prefix=CHECK-FDATA %s
+# RUN: FileCheck --input-file %t.bat.yaml --check-prefix=CHECK-YAML %s
+
+# RUN: link_fdata --no-redefine %s %t.bolt %t.preagg2 PREAGG2
+# PREAGG2: B X:0 #chain# 1 0
+# RUN: perf2bolt %t.bolt -p %t.preagg2 --pa -o %t.bat2.fdata -w %t.bat2.yaml
+# RUN: FileCheck %s --input-file %t.bat2.yaml --check-prefix=CHECK-YAML2
 
 # CHECK-SYMS: l df *ABS*          [[#]] chain.s
 # CHECK-SYMS: l  F .bolt.org.text [[#]] chain
@@ -23,6 +30,12 @@
 # CHECK-SYMS: l df *ABS*          [[#]] bolt-pseudo.o
 
 # CHECK-REGISTER: BOLT-INFO: marking chain.cold.0/1(*2) as a fragment of chain/2(*2)
+
+# CHECK-FDATA: 0 [unknown] 0 1 chain/chain.s/2 10 0 1
+# CHECK-YAML: - name: 'chain/chain.s/2'
+# CHECK-YAML2: - name: 'chain/chain.s/1'
+## non-BAT function has non-zero insns:
+# CHECK-YAML2: insns: 1
 
 .file "chain.s"
         .text
