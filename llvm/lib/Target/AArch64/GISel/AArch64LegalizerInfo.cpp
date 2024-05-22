@@ -339,16 +339,23 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   auto &StoreActions = getActionDefinitionsBuilder(G_STORE);
 
   if (ST.hasSVE()) {
-    for (auto *Actions : {&LoadActions, &StoreActions}) {
-      Actions->legalForTypesWithMemDesc({
-          // 128 bit base sizes
-          {nxv16s8, p0, nxv16s8, 128},
-          {nxv8s16, p0, nxv8s16, 128},
-          {nxv4s32, p0, nxv4s32, 128},
-          {nxv2s64, p0, nxv2s64, 128},
-          {nxv2p0, p0, nxv2p0, 128},
-      });
-    }
+    LoadActions.legalForTypesWithMemDesc({
+        // 128 bit base sizes
+        {nxv16s8, p0, nxv16s8, 128},
+        {nxv8s16, p0, nxv8s16, 128},
+        {nxv4s32, p0, nxv4s32, 128},
+        {nxv2s64, p0, nxv2s64, 128},
+        {nxv2p0, p0, nxv2p0, 128},
+    });
+
+    StoreActions.legalForTypesWithMemDesc({
+        // 128 bit base sizes
+        {nxv16s8, p0, nxv16s8, 128},
+        {nxv8s16, p0, nxv8s16, 128},
+        {nxv4s32, p0, nxv4s32, 128},
+        {nxv2s64, p0, nxv2s64, 128},
+        {nxv2p0, p0, nxv2p0, 128},
+    });
   }
 
   LoadActions
