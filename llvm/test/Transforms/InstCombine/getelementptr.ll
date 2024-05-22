@@ -267,8 +267,8 @@ define <2 x i1> @test13_fixed_scalable(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <2 x i64> [[DOTSPLAT2]], [[Y:%.*]]
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B_IDX:%.*]] = mul nsw <2 x i64> [[DOTSPLAT]], [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
