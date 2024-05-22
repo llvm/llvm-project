@@ -871,7 +871,7 @@ void TargetPassConfig::addIRPasses() {
   // passes since it emits those kinds of intrinsics.
   addPass(createExpandVectorPredicationPass());
 
-  // TODO: comment
+  // Instrument function entry after all inlining.
   addPass(createPostInlineEntryExitInstrumenterPass());
 
   // Add scalarization of target's unsupported masked memory intrinsics pass.

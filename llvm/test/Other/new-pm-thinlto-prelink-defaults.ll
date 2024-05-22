@@ -61,13 +61,14 @@
 ; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
 ; CHECK-NOEXT: {{^}}
 
-; CHECK-O: Running pass: Annotation2Metadata
+; CHECK-O: Running pass: Annotation2MetadataPass
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
 ; CHECK-DIS-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
-; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NODIS-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O-NEXT: Running pass: EntryExitInstrumenterPass
+; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O-NEXT: Running pass: LowerExpectIntrinsicPass
