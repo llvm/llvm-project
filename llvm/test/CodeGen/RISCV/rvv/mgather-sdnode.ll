@@ -1200,13 +1200,13 @@ define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptr
 ; RV32-LABEL: mgather_nxv16i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vl8re64.v v24, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a2, a0, 3
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a2
+; RV32-NEXT:    vslidedown.vx v7, v0, a2
 ; RV32-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
+; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
+; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    vluxei32.v v24, (zero), v12, v0.t
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add a0, a1, a0
@@ -1216,20 +1216,35 @@ define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptr
 ;
 ; RV64-LABEL: mgather_nxv16i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    csrr a3, vlenb
+; RV64-NEXT:    slli a3, a3, 3
+; RV64-NEXT:    sub sp, sp, a3
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; RV64-NEXT:    addi a3, sp, 16
+; RV64-NEXT:    vs8r.v v16, (a3) # Unknown-size Folded Spill
+; RV64-NEXT:    vmv8r.v v16, v8
 ; RV64-NEXT:    vl8re64.v v24, (a0)
-; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV64-NEXT:    vluxei64.v v24, (zero), v8, v0.t
-; RV64-NEXT:    vl8re64.v v8, (a1)
 ; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    vl8re64.v v8, (a1)
 ; RV64-NEXT:    srli a1, a0, 3
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a1
+; RV64-NEXT:    vslidedown.vx v7, v0, a1
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV64-NEXT:    vluxei64.v v24, (zero), v16, v0.t
+; RV64-NEXT:    vmv1r.v v0, v7
+; RV64-NEXT:    addi a1, sp, 16
+; RV64-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; RV64-NEXT:    vluxei64.v v8, (zero), v16, v0.t
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add a0, a2, a0
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    vs8r.v v24, (a2)
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %p0 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> undef, <vscale x 8 x ptr> %ptrs0, i64 0)
   %p1 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> %p0, <vscale x 8 x ptr> %ptrs1, i64 8)
@@ -2116,8 +2131,8 @@ define <vscale x 32 x i8> @mgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8>
 ; RV64-NEXT:    vluxei64.v v15, (a0), v16, v0.t
 ; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v10
-; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; RV64-NEXT:    vluxei64.v v14, (a0), v16, v0.t
 ; RV64-NEXT:    vmv4r.v v8, v12
 ; RV64-NEXT:    ret
