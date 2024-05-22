@@ -67,7 +67,8 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
       WarnOnSizeOfCompareToConstant(
           Options.get("WarnOnSizeOfCompareToConstant", true)),
       WarnOnSizeOfPointerToAggregate(
-          Options.get("WarnOnSizeOfPointerToAggregate", true)) {}
+          Options.get("WarnOnSizeOfPointerToAggregate", true)),
+      WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -78,6 +79,7 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 WarnOnSizeOfCompareToConstant);
   Options.store(Opts, "WarnOnSizeOfPointerToAggregate",
                 WarnOnSizeOfPointerToAggregate);
+  Options.store(Opts, "WarnOnSizeOfPointer", WarnOnSizeOfPointer);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
@@ -127,17 +129,30 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstStrLiteralDecl =
       varDecl(isDefinition(), hasType(hasCanonicalType(CharPtrType)),
               hasInitializer(ignoringParenImpCasts(stringLiteral())));
+  const auto VarWithConstStrLiteralDecl = expr(
+      hasType(hasCanonicalType(CharPtrType)),
+      ignoringParenImpCasts(declRefExpr(hasDeclaration(ConstStrLiteralDecl))));
   Finder->addMatcher(
-      sizeOfExpr(has(ignoringParenImpCasts(
-                     expr(hasType(hasCanonicalType(CharPtrType)),
-                          ignoringParenImpCasts(declRefExpr(
-                              hasDeclaration(ConstStrLiteralDecl)))))))
+      sizeOfExpr(has(ignoringParenImpCasts(VarWithConstStrLiteralDecl)))
           .bind("sizeof-charp"),
       this);
 
-  // Detect sizeof(ptr) where ptr points to an aggregate (i.e. sizeof(&S)).
-  // Do not find it if RHS of a 'sizeof(arr) / sizeof(arr[0])' expression.
-  if (WarnOnSizeOfPointerToAggregate) {
+  // Detect sizeof(ptr) where ptr is a pointer (CWE-467).
+  //
+  // In WarnOnSizeOfPointerToAggregate mode only report cases when ptr points
+  // to an aggregate type or ptr is an expression that (implicitly or
+  // explicitly) casts an array to a pointer type. (These are more suspicious
+  // than other sizeof(ptr) expressions because they can appear as distorted
+  // forms of the common sizeof(aggregate) expressions.)
+  //
+  // To avoid false positives, some idiomatic constructs are accepted:
+  //  + the RHS of a 'sizeof(arr) / sizeof(arr[0])' expression;
+  //  + 'sizeof(*pp)' where 'pp' a pointer-to-pointer value, because this is
+  //    a natural solution when dynamical typing is emulated by passing
+  //    arguments as `generic_function(..., (void *)pp, sizeof(*pp))`.
+  // Moreover this generic message is suppressed in cases that are also matched
+  // by the more concrete matchers 'sizeof-this' and 'sizeof-charp'.
+  if (WarnOnSizeOfPointerToAggregate || WarnOnSizeOfPointer) {
     const auto ArrayExpr =
         ignoringParenImpCasts(hasType(hasCanonicalType(arrayType())));
     const auto ArrayCastExpr = expr(anyOf(
@@ -149,8 +164,16 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
     const auto PointerToStructType =
         hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
-    const auto PointerToStructExpr = expr(
-        hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr()));
+    const auto PointerToStructTypeWithBinding =
+        type(PointerToStructType).bind("struct-type");
+    const auto PointerToStructExpr =
+        expr(hasType(hasCanonicalType(PointerToStructType)));
+
+    const auto PointerToDetectedExpr =
+        WarnOnSizeOfPointer
+            ? expr(hasType(hasUnqualifiedDesugaredType(pointerType())))
+            : expr(anyOf(ArrayCastExpr, PointerToArrayExpr,
+                         PointerToStructExpr));
 
     const auto ArrayOfPointersExpr = ignoringParenImpCasts(
         hasType(hasCanonicalType(arrayType(hasElementType(pointerType()))
@@ -167,14 +190,17 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                       hasLHS(ignoringParenImpCasts(sizeOfExpr(
                                           has(ArrayOfPointersExpr)))))),
              sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
+    const auto DerefExpr =
+        ignoringParenImpCasts(unaryOperator(hasOperatorName("*")));
 
     Finder->addMatcher(
-        expr(sizeOfExpr(anyOf(
-                 has(ignoringParenImpCasts(anyOf(
-                     ArrayCastExpr, PointerToArrayExpr, PointerToStructExpr))),
-                 has(PointerToStructType))),
+        expr(sizeOfExpr(anyOf(has(ignoringParenImpCasts(
+                                  expr(PointerToDetectedExpr, unless(DerefExpr),
+                                       unless(VarWithConstStrLiteralDecl),
+                                       unless(cxxThisExpr())))),
+                              has(PointerToStructTypeWithBinding))),
              unless(ArrayLengthExprDenom))
-            .bind("sizeof-pointer-to-aggregate"),
+            .bind("sizeof-pointer"),
         this);
   }
 
@@ -292,11 +318,17 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     diag(E->getBeginLoc(),
          "suspicious usage of 'sizeof(char*)'; do you mean 'strlen'?")
         << E->getSourceRange();
-  } else if (const auto *E =
-                 Result.Nodes.getNodeAs<Expr>("sizeof-pointer-to-aggregate")) {
-    diag(E->getBeginLoc(),
-         "suspicious usage of 'sizeof(A*)'; pointer to aggregate")
-        << E->getSourceRange();
+  } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {
+    if (Result.Nodes.getNodeAs<Type>("struct-type")) {
+      diag(E->getBeginLoc(),
+           "suspicious usage of 'sizeof(A*)' on pointer-to-aggregate type; did "
+           "you mean 'sizeof(A)'?")
+          << E->getSourceRange();
+    } else {
+      diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
+                             "that results in a pointer")
+          << E->getSourceRange();
+    }
   } else if (const auto *E = Result.Nodes.getNodeAs<BinaryOperator>(
                  "sizeof-compare-constant")) {
     diag(E->getOperatorLoc(),
@@ -332,18 +364,23 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
                                 " numerator is not a multiple of denominator")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (NumTy && DenomTy && NumTy == DenomTy) {
+      // FIXME: This message is wrong, it should not refer to sizeof "pointer"
+      // usage (and by the way, it would be to clarify all the messages).
       diag(E->getOperatorLoc(),
            "suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-    } else if (PointedTy && DenomTy && PointedTy == DenomTy) {
-      diag(E->getOperatorLoc(),
-           "suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'")
-          << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-    } else if (NumTy && DenomTy && NumTy->isPointerType() &&
-               DenomTy->isPointerType()) {
-      diag(E->getOperatorLoc(),
-           "suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'")
-          << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+    } else if (!WarnOnSizeOfPointer) {
+      // When 'WarnOnSizeOfPointer' is enabled, these messages become redundant:
+      if (PointedTy && DenomTy && PointedTy == DenomTy) {
+        diag(E->getOperatorLoc(),
+             "suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'")
+            << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+      } else if (NumTy && DenomTy && NumTy->isPointerType() &&
+                 DenomTy->isPointerType()) {
+        diag(E->getOperatorLoc(),
+             "suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'")
+            << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+      }
     }
   } else if (const auto *E =
                  Result.Nodes.getNodeAs<Expr>("sizeof-sizeof-expr")) {

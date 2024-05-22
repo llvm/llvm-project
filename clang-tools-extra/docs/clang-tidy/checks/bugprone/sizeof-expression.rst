@@ -193,3 +193,8 @@ Options
    When `true`, the check will warn on an expression like
    ``sizeof(expr)`` where the expression is a pointer
    to aggregate. Default is `true`.
+
+.. option:: WarnOnSizeOfPointer
+
+   When `true`, the check will warn on an expression like ``sizeof(expr)``
+   where the expression is a pointer. Default is `false`.
