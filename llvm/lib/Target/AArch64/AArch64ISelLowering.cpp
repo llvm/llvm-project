@@ -19866,7 +19866,8 @@ performSVEMulAddSubCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 // help, for example, to produce ssra from sshr+add.
 static SDValue performAddSubIntoVectorOp(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::i64)
+  if (VT != MVT::i64 ||
+      DAG.getTargetLoweringInfo().isOperationExpand(N->getOpcode(), MVT::v1i64))
     return SDValue();
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);

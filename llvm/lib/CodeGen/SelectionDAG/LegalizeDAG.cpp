@@ -3740,10 +3740,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::SUB: {
     EVT VT = Node->getValueType(0);
-    assert((VT.isFixedLengthVector() || // fixed length ADD can be expanded to
-                                        // scalar ADD
-            (TLI.isOperationLegalOrCustom(ISD::ADD, VT) &&
-             TLI.isOperationLegalOrCustom(ISD::XOR, VT))) &&
+    assert(TLI.isOperationLegalOrCustom(ISD::ADD, VT) &&
+           TLI.isOperationLegalOrCustom(ISD::XOR, VT) &&
            "Don't know how to expand this subtraction!");
     Tmp1 = DAG.getNOT(dl, Node->getOperand(1), VT);
     Tmp1 = DAG.getNode(ISD::ADD, dl, VT, Tmp1, DAG.getConstant(1, dl, VT));
