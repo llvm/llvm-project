@@ -609,6 +609,10 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 
 FunctionCallee
 OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
+  LLVM_DEBUG(dbgs() << "getOrCreateRuntimeFunction:Builder.GetInsertBlock() = "
+                    << *Builder.GetInsertBlock() << "\n");
+  LLVM_DEBUG(dbgs() << "Builder.GetInsertBlock() = " << Builder.GetInsertBlock()
+                    << "\n");
   FunctionType *FnTy = nullptr;
   Function *Fn = nullptr;
 
@@ -655,6 +659,10 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
     addAttributes(FnID, *Fn);
 
   } else {
+    LLVM_DEBUG(dbgs() << "{else}Builder.GetInsertBlock() = "
+                      << *Builder.GetInsertBlock() << "\n");
+    LLVM_DEBUG(dbgs() << "Builder.GetInsertBlock() = "
+                      << Builder.GetInsertBlock() << "\n");
     LLVM_DEBUG(dbgs() << "Found OpenMP runtime function " << Fn->getName()
                       << " with type " << *Fn->getFunctionType() << "\n");
   }
@@ -958,6 +966,11 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(const LocationDescription &Loc,
 }
 
 Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
+  LLVM_DEBUG(dbgs() << "&Builder = " << &Builder << "\n");
+  LLVM_DEBUG(dbgs() << "getORCreateThreadID:Builder.GetInsertBlock() = "
+                    << *Builder.GetInsertBlock() << "\n");
+  LLVM_DEBUG(dbgs() << "Builder.GetInsertBlock() = " << Builder.GetInsertBlock()
+                    << "\n");
   return Builder.CreateCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num), Ident,
       "omp_global_thread_num");
@@ -1799,9 +1812,6 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     LLVM_DEBUG(dbgs() << "StateCI->getParent()->getParent() = "
                       << *(StaleCI->getParent()->getParent()) << "\n");
 
-    // llvm::errs() << "LLVMDEBUG::StaleCI is \n";
-    // StaleCI->dump();
-    // StaleCI->getParent()->getParent()->dump();
     // HasShareds is true if any variables are captured in the outlined region,
     // false otherwise.
     bool HasShareds = StaleCI->arg_size() > 1;
@@ -5263,11 +5273,71 @@ static Function *createOutlinedFunction(
 
 // define internal i32 @.omp_task_entry..3(i32 noundef %0, ptr noalias noundef
 // %1) #3 {
-static void
-emitProxyTaskFunction(OpenMPIRBuilder::InsertPointTy ProxyFnCallSiteIP) {
+static Function *emitProxyTaskFunction(OpenMPIRBuilder &OMPBuilder,
+                                       IRBuilderBase &Builder,
+                                       CallInst *StaleCI) {
   // Create a function with the following signature
-  LLVMContext &Ctx = ProxyFnCallSiteIP.getBlock()->getContext();
+  // define internal i32 @.omp_task_entry..3(i32 noundef %0, ptr noalias noundef
+  // %1) #3 {
+  Module &M = OMPBuilder.M;
+  Function *CalledFunction = StaleCI->getCalledFunction();
+  OpenMPIRBuilder::InsertPointTy IP(StaleCI->getParent(),
+                                    StaleCI->getIterator());
+  LLVMContext &Ctx = StaleCI->getParent()->getContext();
   Type *ThreadIDTy = Type::getInt32Ty(Ctx);
+  Type *TaskPtrTy = OMPBuilder.TaskPtr;
+  Type *TaskTy = OMPBuilder.Task;
+  auto ProxyFnTy =
+      FunctionType::get(Builder.getVoidTy(), {ThreadIDTy, TaskPtrTy},
+                        /* isVarArg */ false);
+  auto ProxyFn = Function::Create(ProxyFnTy, GlobalValue::InternalLinkage,
+                                  ".omp_target_task_proxy_func",
+                                  Builder.GetInsertBlock()->getModule());
+  auto OldInsertPoint = Builder.saveIP();
+
+  BasicBlock *EntryBB =
+      BasicBlock::Create(Builder.getContext(), "entry", ProxyFn);
+  Builder.SetInsertPoint(EntryBB);
+
+  bool HasShareds = StaleCI->arg_size() > 1;
+  // PDB: Temporary assert.
+  assert((!HasShareds || (StaleCI->arg_size() == 2)) &&
+         "StaleCI with shareds should have exactly two arguments.");
+  if (HasShareds) {
+    AllocaInst *ArgStructAlloca =
+        dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+    assert(ArgStructAlloca &&
+           "Unable to find the alloca instruction corresponding to arguments "
+           "for extracted function");
+    StructType *ArgStructType =
+        dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
+    LLVM_DEBUG(dbgs() << "ArgStructType = " << *ArgStructType << "\n");
+
+    AllocaInst *NewArgStructAlloca =
+        Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
+    Value *TaskT = ProxyFn->getArg(1);
+    Value *ThreadId = ProxyFn->getArg(0);
+    LLVM_DEBUG(dbgs() << "TaskT = " << *TaskT << "\n");
+    Value *SharedsSize =
+        Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+
+    Value *Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
+    LoadInst *LoadShared =
+        Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+
+    // TODO: Are these alignment values correct?
+    Builder.CreateMemCpy(
+        NewArgStructAlloca,
+        NewArgStructAlloca->getPointerAlignment(M.getDataLayout()), Shareds,
+        LoadShared->getPointerAlignment(M.getDataLayout()), SharedsSize);
+
+    Builder.CreateCall(CalledFunction, {ThreadId, NewArgStructAlloca});
+  }
+  CalledFunction->removeFnAttr(llvm::Attribute::NoInline);
+  CalledFunction->addFnAttr(llvm::Attribute::AlwaysInline);
+  Builder.CreateRetVoid();
+  Builder.restoreIP(OldInsertPoint);
+  return ProxyFn;
 }
 static void emitTargetOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
@@ -5287,10 +5357,12 @@ static void emitTargetOutlinedFunction(
                                       OutlinedFn, OutlinedFnID);
 }
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
-    IRBuilderBase &Builder, Function *OutlinedFn, Value *OutlinedFnID,
+    Function *OutlinedFn, Value *OutlinedFnID,
     EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
     Value *DeviceID, Value *RTLoc, OpenMPIRBuilder::InsertPointTy AllocaIP) {
 
+  LLVM_DEBUG(dbgs() << "emitTargetTask:OMPBuilder.Builder = " << &this->Builder
+                    << ", Builder = " << &Builder << "\n");
   // BasicBlock *TargetTaskExitBB = splitBB(Builder, /*CreateBranch=*/true,
   // "target.task.exit");
   BasicBlock *TargetTaskBodyBB =
@@ -5322,29 +5394,111 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetTask(
       Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
   Builder.restoreIP(TargetTaskBodyIP);
 
+  // emitKernelLaunch makes the necessary runtime call to offload the kernel.
+  // We then outline all that code into a separate function that is called
+  // by the task wrapper function (aka Proxy task function - see
+  // emitProxyTaskFunction)
   Builder.restoreIP(emitKernelLaunch(Builder, OutlinedFn, OutlinedFnID,
                                      EmitTargetCallFallbackCB, Args, DeviceID,
                                      RTLoc, TargetTaskAllocaIP));
   OI.ExitBB = Builder.saveIP().getBlock();
-  // OI.PostOutlineCB = [this,
-  //                     TargetTaskAllocaBB, ToBeDeleted](Function &OutlinedFn)
-  //                     mutable {
+  OI.PostOutlineCB = [this, ToBeDeleted](Function &OutlinedFn) mutable {
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    bool HasShareds = StaleCI->arg_size() > 1;
 
-  //   assert(OutlinedFn.getNumUses() == 1 &&
-  //          "there must be a single user for the outlined function");
-  //   CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
-  //   llvm::errs() << "LLVMDEBUG::StaleCI in postline for targettask\n";
-  //   StaleCI->dump();
-  //   StaleCI->getParent()->getParent()->getParent()->dump();
+    LLVM_DEBUG(dbgs() << "StaleCI in PostOutlineCB in emitTargetTask = "
+                      << *StaleCI << "\n");
+    LLVM_DEBUG(dbgs() << "Module in PostOutlineCB in emitTargetTask = "
+                      << *(StaleCI->getParent()->getParent()->getParent())
+                      << "\n");
 
-  //   emitProxyTaskFunction(InsertPointTy(StaleCI->getParent(),
-  //   StaleCI->getIterator()));
+    Function *ProxyFn = emitProxyTaskFunction(*this, Builder, StaleCI);
+    LLVM_DEBUG(dbgs() << "Proxy task entry function created: " << *ProxyFn
+                      << "\n");
 
-  //   // while (!ToBeDeleted.empty()) {
-  //   //   ToBeDeleted.top()->eraseFromParent();
-  //   //   ToBeDeleted.pop();
-  //   // }
-  // };
+    Builder.SetInsertPoint(StaleCI);
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr =
+        getOrCreateSrcLocStr(LocationDescription(Builder), SrcLocStrSize);
+    Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    // Gather the arguments for emitting the runtime call for
+    // @__kmpc_omp_task_alloc
+    Function *TaskAllocFn =
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc);
+
+    // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
+    // call.
+    LLVM_DEBUG(dbgs() << "Builder.GetInsertBlock() = "
+                      << *(Builder.GetInsertBlock()) << "\n");
+    LLVM_DEBUG(dbgs() << "Builder.GetInsertPoint() = "
+                      << *(Builder.GetInsertPoint()) << "\n");
+    LLVM_DEBUG(dbgs() << "Builder.GetInsertPoint()->getParent() = "
+                      << Builder.GetInsertPoint()->getParent() << "\n");
+    LLVM_DEBUG(dbgs() << "Builder.GetInsertBlock() = "
+                      << Builder.GetInsertBlock() << "\n");
+    LLVM_DEBUG(dbgs() << "In the Callback: OMPBuilder.Builder = "
+                      << &this->Builder << ", Builder = " << &Builder << "\n");
+    LLVM_DEBUG(dbgs() << "&Builder = " << &Builder << "\n");
+    Value *ThreadID = getOrCreateThreadID(Ident);
+
+    // TODO : Task tied or not? See what clang does.
+
+    // Argument - `sizeof_kmp_task_t` (TaskSize)
+    // Tasksize refers to the size in bytes of kmp_task_t data structure
+    // including private vars accessed in task.
+    // TODO: add kmp_task_t_with_privates (privates)
+    Value *TaskSize = Builder.getInt64(
+        divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
+
+    // Argument - `sizeof_shareds` (SharedsSize)
+    // SharedsSize refers to the shareds array size in the kmp_task_t data
+    // structure.
+    Value *SharedsSize = Builder.getInt64(0);
+    if (HasShareds) {
+      AllocaInst *ArgStructAlloca =
+          dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+      assert(ArgStructAlloca &&
+             "Unable to find the alloca instruction corresponding to arguments "
+             "for extracted function");
+      StructType *ArgStructType =
+          dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
+      assert(ArgStructType && "Unable to find struct type corresponding to "
+                              "arguments for extracted function");
+      SharedsSize =
+          Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+    }
+
+    // Argument - `flags`
+    // Task is tied iff (Flags & 1) == 1.
+    // Task is untied iff (Flags & 1) == 0.
+    // Task is final iff (Flags & 2) == 2.
+    // Task is not final iff (Flags & 2) == 0.
+    // A target task is not final and is untied.
+    Value *Flags = Builder.getInt32(0);
+
+    // Emit the @__kmpc_omp_task_alloc runtime call
+    // The runtime call returns a pointer to an area where the task captured
+    // variables must be copied before the task is run (TaskData)
+    CallInst *TaskData = Builder.CreateCall(
+        TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
+                      /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
+                      /*task_func=*/ProxyFn});
+
+    if (HasShareds) {
+      Value *Shareds = StaleCI->getArgOperand(1);
+      Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
+      Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
+      Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
+                           SharedsSize);
+    }
+
+    // while (!ToBeDeleted.empty()) {
+    //   ToBeDeleted.top()->eraseFromParent();
+    //   ToBeDeleted.pop();
+    // }
+  };
   addOutlineInfo(std::move(OI));
 #if 1
   {
@@ -5374,6 +5528,8 @@ static void emitTargetCall(
   OMPBuilder.emitOffloadingArrays(AllocaIP, Builder.saveIP(), MapInfo, Info,
                                   /*IsNonContiguous=*/true);
 
+  LLVM_DEBUG(dbgs() << "OMPBuilder.Builder = " << &OMPBuilder.Builder
+                    << ", Builder = " << &Builder << "\n");
   OpenMPIRBuilder::TargetDataRTArgs RTArgs;
   OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info,
                                           !MapInfo.Names.empty());
@@ -5381,6 +5537,8 @@ static void emitTargetCall(
   //  emitKernelLaunch
   auto &&EmitTargetCallFallbackCB =
       [&](OpenMPIRBuilder::InsertPointTy IP) -> OpenMPIRBuilder::InsertPointTy {
+    LLVM_DEBUG(dbgs() << "EmitTargetCallFallbackCB::Builder = " << &Builder
+                      << "\n");
     Builder.restoreIP(IP);
     Builder.CreateCall(OutlinedFn, Args);
     return Builder.saveIP();
@@ -5444,7 +5602,7 @@ static void emitTargetCall(
   }
 #endif
   if (NewOMPIRBuilderTargetCodegen) {
-    OMPBuilder.emitTargetTask(Builder, OutlinedFn, OutlinedFnID,
+    OMPBuilder.emitTargetTask(OutlinedFn, OutlinedFnID,
                               EmitTargetCallFallbackCB, KArgs, DeviceID, RTLoc,
                               AllocaIP);
   } else {

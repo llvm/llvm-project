@@ -592,7 +592,11 @@ public:
   /// (filename, line, column, ...).
   struct LocationDescription {
     LocationDescription(const IRBuilderBase &IRB)
-        : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {}
+        : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {
+      llvm::errs() << "In LocationDescription(const IRBuilderBase &), "
+                      "IRB.GetInsertBlock() = "
+                   << *IRB.GetInsertBlock() << "\n";
+    }
     LocationDescription(const InsertPointTy &IP) : IP(IP) {}
     LocationDescription(const InsertPointTy &IP, const DebugLoc &DL)
         : IP(IP), DL(DL) {}
@@ -1766,8 +1770,7 @@ public:
       const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
-  InsertPointTy emitTargetTask(IRBuilderBase &Builder, Function *OutlinedFn,
-                               Value *OutlinedFnID,
+  InsertPointTy emitTargetTask(Function *OutlinedFn, Value *OutlinedFnID,
                                EmitFallbackCallbackTy EmitTargetCallFallbackCB,
                                TargetKernelArgs &Args, Value *DeviceID,
                                Value *RTLoc, InsertPointTy AllocaIP);
