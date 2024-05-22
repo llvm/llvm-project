@@ -5922,6 +5922,10 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
                                              const ParsedAttr &AL) {
+  if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    S.Diag(AL.getLoc(), diag::err_aix_attr_unsupported) << AL;
+    return;
+  }
   uint32_t Count = 0, Offset = 0;
   if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), Count, 0, true))
     return;

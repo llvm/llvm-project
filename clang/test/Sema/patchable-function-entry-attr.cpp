@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -triple loongarch64 -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple riscv32 -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple riscv64 -fsyntax-only -verify=silence %s
+// RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu -fsyntax-only -verify=silence %s
+// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple ppc64le -fsyntax-only -verify %s
 
 // silence-no-diagnostics
