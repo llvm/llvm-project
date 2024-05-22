@@ -130,6 +130,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
+  // TODO: Use Vector Single-Width Saturating Instructions for vector types.
+  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+      .lower();
+
   auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
   if (ST.is64Bit())
     ShiftActions.customFor({{s32, s32}});
@@ -360,10 +364,6 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
-
-  // TODO: Use Vector Single-Width Saturating Instructions for vector types.
-  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
-      .lower();
 
   // FP Operations
 
