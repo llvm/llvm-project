@@ -100,9 +100,11 @@ easier to reason about the high-level semantics of a hardening mode.
 - ``valid-element-access`` -- checks that any attempts to access a container
   element, whether through the container object or through an iterator, are
   valid and do not attempt to go out of bounds or otherwise access
-  a non-existent element. For iterator checks to work, bounded iterators must be
-  enabled in the ABI. Types like ``std::optional`` and ``std::function`` are
-  considered one-element containers for the purposes of this check.
+  a non-existent element. This also includes operations that set up an imminent
+  invalid access (e.g. incrementing an end iterator). For iterator checks to
+  work, bounded iterators must be enabled in the ABI. Types like
+  ``std::optional`` and ``std::function`` are considered containers (with at
+  most one element) for the purposes of this check.
 
 - ``valid-input-range`` -- checks that ranges (whether expressed as an iterator
   pair, an iterator and a sentinel, an iterator and a count, or
@@ -263,6 +265,8 @@ these steps:
 - when configuring the library, provide the path to custom header (relative to
   the root of the repository) via the CMake variable
   ``LIBCXX_ASSERTION_HANDLER_FILE``.
+
+There is no existing mechanism for users to override the termination handler.
 
 ABI
 ===
