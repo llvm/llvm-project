@@ -263,7 +263,8 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
-                                       TuneAUIPCADDIFusion]>;
+                                       TuneAUIPCADDIFusion,
+                                       FeaturePostRAScheduler]>;
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       [Feature64Bit,
@@ -303,7 +304,8 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion,
-                                       TuneNoSinkSplatOperands]>;
+                                       TuneNoSinkSplatOperands,
+                                       FeaturePostRAScheduler]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
