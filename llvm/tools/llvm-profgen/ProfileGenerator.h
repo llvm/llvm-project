@@ -116,9 +116,9 @@ protected:
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
-  void calculateDensity(const FunctionSamples &FSamples,
-                        std::vector<std::pair<double, uint64_t>> &DensityList,
-                        uint64_t &TotalProfileSamples);
+  void calculateBodySamplesAndSize(const FunctionSamples &FSamples,
+                                   uint64_t &TotalBodySamples,
+                                   uint64_t &FuncBodySize);
 
   double calculateDensity(const SampleProfileMap &Profiles);
 

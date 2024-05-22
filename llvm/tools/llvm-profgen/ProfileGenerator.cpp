@@ -75,9 +75,11 @@ static cl::opt<int, true> CSProfMaxContextDepth(
              "depth limit."),
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth));
 
-static cl::opt<double> HotFunctionDensityThreshold(
-    "hot-function-density-threshold", llvm::cl::init(20),
-    llvm::cl::desc("specify density threshold for hot functions (default: 20)"),
+static cl::opt<double> ProfileDensityThreshold(
+    "profile-density-threshold", llvm::cl::init(20),
+    llvm::cl::desc(
+        "Set the profile density threshold(default: 20), which is used to "
+        "provide suggestions for user to increase the sampling rate.\n"),
     llvm::cl::Optional);
 static cl::opt<bool> ShowDensity("show-density", llvm::cl::init(false),
                                  llvm::cl::desc("show profile density details"),
@@ -182,12 +184,13 @@ void ProfileGeneratorBase::write() {
 
 void ProfileGeneratorBase::showDensitySuggestion(double Density) {
   if (Density == 0.0)
-    WithColor::warning() << "The --profile-density-cutoff-hot option may be "
+    WithColor::warning() << "The output profile is empty or the "
+                            "--profile-density-cutoff-hot option is "
                             "set too low. Please check your command.\n";
-  else if (Density < HotFunctionDensityThreshold)
+  else if (Density < ProfileDensityThreshold)
     WithColor::warning()
         << "Sample PGO is estimated to optimize better with "
-        << format("%.1f", HotFunctionDensityThreshold / Density)
+        << format("%.1f", ProfileDensityThreshold / Density)
         << "x more samples. Please consider increasing sampling rate or "
            "profiling for longer duration to get more samples.\n";
 
@@ -745,12 +748,15 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
   }
 }
 
-void ProfileGeneratorBase::calculateDensity(
-    const FunctionSamples &FSamples,
-    std::vector<std::pair<double, uint64_t>> &DensityList,
-    uint64_t &TotalProfileSamples) {
-  uint64_t TotalBodySamples = 0;
-  uint64_t FuncBodySize = 0;
+// Note taht ideally the size should be the number of function's instruction.
+// However, for probe-based profile, we don't have the accurate instruction
+// count for each probe, Instead, the probe sample is the samples count for the
+// block, which is equivelant to total_instruction_samples/num_instruction in
+// one block. Hence, we use the number of probe as a proxy for the function's
+// size.
+void ProfileGeneratorBase::calculateBodySamplesAndSize(
+    const FunctionSamples &FSamples, uint64_t &TotalBodySamples,
+    uint64_t &FuncBodySize) {
   for (const auto &I : FSamples.getBodySamples()) {
     TotalBodySamples += I.second.getSamples();
     FuncBodySize++;
@@ -758,27 +764,21 @@ void ProfileGeneratorBase::calculateDensity(
 
   // The whole function could be inlined and optimized out, use the callsite
   // head samples instead to estimate the body count.
-  if (FuncBodySize == 0) {
-    for (const auto &CallsiteSamples : FSamples.getCallsiteSamples()) {
-      FuncBodySize++;
-      for (const auto &Callee : CallsiteSamples.second) {
-        calculateDensity(Callee.second, DensityList, TotalProfileSamples);
-        TotalBodySamples += Callee.second.getHeadSamplesEstimate();
-      }
+  for (const auto &CallsiteSamples : FSamples.getCallsiteSamples()) {
+    FuncBodySize++;
+    for (const auto &Callee : CallsiteSamples.second) {
+      // This is used for caluculating the binary-level density, so the
+      // inlinees' samples and size should be included in the calculation.
+      calculateBodySamplesAndSize(Callee.second, TotalBodySamples,
+                                  FuncBodySize);
+      TotalBodySamples += Callee.second.getHeadSamplesEstimate();
     }
   }
-
-  if (FuncBodySize == 0)
-    return;
-
-  double FuncDensity = static_cast<double>(TotalBodySamples) / FuncBodySize;
-  TotalProfileSamples += TotalBodySamples;
-  DensityList.emplace_back(FuncDensity, TotalBodySamples);
 }
 
 // Calculate Profile-density:
 // Calculate the density for each function and sort them in descending order,
-// iterate them once their accumulated total samples exceeds the
+// keep accumulating their total samples unitl it exceeds the
 // percentage_threshold(cut-off) of total profile samples, the profile-density
 // is the last(minimum) function-density of the processed functions, which means
 // all the functions hot to perf are on good density if the profile-density is
@@ -791,8 +791,18 @@ ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles) {
   uint64_t TotalProfileSamples = 0;
   // A list of the function profile density and its total samples.
   std::vector<std::pair<double, uint64_t>> FuncDensityList;
-  for (const auto &I : Profiles)
-    calculateDensity(I.second, FuncDensityList, TotalProfileSamples);
+  for (const auto &I : Profiles) {
+    uint64_t TotalBodySamples = 0;
+    uint64_t FuncBodySize = 0;
+    calculateBodySamplesAndSize(I.second, TotalBodySamples, FuncBodySize);
+
+    if (FuncBodySize == 0)
+      continue;
+
+    double FuncDensity = static_cast<double>(TotalBodySamples) / FuncBodySize;
+    TotalProfileSamples += TotalBodySamples;
+    FuncDensityList.emplace_back(FuncDensity, TotalBodySamples);
+  }
 
   // Sorted by the density in descending order.
   llvm::stable_sort(FuncDensityList, [&](const std::pair<double, uint64_t> &A,
@@ -803,13 +813,16 @@ ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles) {
   });
 
   uint64_t AccumulatedSamples = 0;
-  for (const auto &P : FuncDensityList) {
-    AccumulatedSamples += P.second;
-    ProfileDensity = P.first;
-    if (AccumulatedSamples >= TotalProfileSamples *
+  uint32_t I = 0;
+  assert(ProfileDensityCutOffHot <= 1000000 &&
+         "The cutoff value is greater than 1000000(100%)");
+  while (AccumulatedSamples < TotalProfileSamples *
                                   static_cast<float>(ProfileDensityCutOffHot) /
-                                  1000000)
-      break;
+                                  1000000 &&
+         I < FuncDensityList.size()) {
+    AccumulatedSamples += FuncDensityList[I].second;
+    ProfileDensity = FuncDensityList[I].first;
+    I++;
   }
 
   return ProfileDensity;
