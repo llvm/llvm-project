@@ -695,7 +695,7 @@ public:
     if (const auto *TC = D->getTypeConstraint())
       Visit(TC->getImmediatelyDeclaredConstraint());
     if (D->hasDefaultArgument())
-      Visit(D->getDefaultArgument(), SourceRange(),
+      Visit(D->getDefaultArgument().getArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
             D->defaultArgumentWasInherited() ? "inherited from" : "previous");
   }

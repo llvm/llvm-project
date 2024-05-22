@@ -53,6 +53,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1587,6 +1588,14 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   assert(!ShadowBase);
+
+  // Remove memory attributes that are about to become invalid.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  F.removeFnAttr(llvm::Attribute::Memory);
+  for (auto &A : F.args())
+    A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);

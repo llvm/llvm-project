@@ -290,13 +290,17 @@ linkage:
     symbol is weak until linked, if not linked, the symbol becomes null
     instead of being an undefined reference.
 ``linkonce_odr``, ``weak_odr``
-    Some languages allow differing globals to be merged, such as two
-    functions with different semantics. Other languages, such as
-    ``C++``, ensure that only equivalent globals are ever merged (the
-    "one definition rule" --- "ODR"). Such languages can use the
-    ``linkonce_odr`` and ``weak_odr`` linkage types to indicate that the
-    global will only be merged with equivalent globals. These linkage
-    types are otherwise the same as their non-``odr`` versions.
+    The ``odr`` suffix indicates that all globals defined with the given name
+    are equivalent, along the lines of the C++ "one definition rule" ("ODR").
+    Informally, this means we can inline functions and fold loads of constants.
+
+    Formally, use the following definition: when an ``odr`` function is
+    called, one of the definitions is non-deterministically chosen to run. For
+    ``odr`` variables, if any byte in the value is not equal in all
+    initializers, that byte is a :ref:`poison value <poisonvalues>`. For
+    aliases and ifuncs, apply the rule for the underlying function or variable.
+
+    These linkage types are otherwise the same as their non-``odr`` versions.
 ``external``
     If none of the above identifiers are used, the global is externally
     visible, meaning that it participates in linkage and can be used to
@@ -19142,6 +19146,60 @@ will be on any later loop iteration.
 
 This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
+
+'``llvm.experimental.vector.histogram.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These intrinsics are overloaded.
+
+These intrinsics represent histogram-like operations; that is, updating values
+in memory that may not be contiguous, and where multiple elements within a
+single vector may be updating the same value in memory.
+
+The update operation must be specified as part of the intrinsic name. For a
+simple histogram like the following the ``add`` operation would be used.
+
+.. code-block:: c
+
+    void simple_histogram(int *restrict buckets, unsigned *indices, int N, int inc) {
+      for (int i = 0; i < N; ++i)
+        buckets[indices[i]] += inc;
+    }
+
+More update operation types may be added in the future.
+
+::
+
+    declare <8 x i32> @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare <vscale x 2 x i64> @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+
+Arguments:
+""""""""""
+
+The first argument is a vector of pointers to the memory locations to be
+updated. The second argument is a scalar used to update the value from
+memory; it must match the type of value to be updated. The final argument
+is a mask value to exclude locations from being modified.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.vector.histogram.*``' intrinsics are used to perform
+updates on potentially overlapping values in memory. The intrinsics represent
+the follow sequence of operations:
+
+1. Gather load from the ``ptrs`` operand, with element type matching that of
+   the ``inc`` operand.
+2. Update of the values loaded from memory. In the case of the ``add``
+   update operation, this means:
+
+   1. Perform a cross-vector histogram operation on the ``ptrs`` operand.
+   2. Multiply the result by the ``inc`` operand.
+   3. Add the result to the values loaded from memory
+3. Scatter the result of the update operation to the memory locations from
+   the ``ptrs`` operand.
+
+The ``mask`` operand will apply to at least the gather and scatter operations.
 
 Matrix Intrinsics
 -----------------

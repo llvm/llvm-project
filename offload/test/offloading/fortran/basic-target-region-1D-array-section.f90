@@ -1,4 +1,4 @@
-! Basic offloading test of arrays with provided lower 
+! Basic offloading test of arrays with provided lower
 ! and upper bounds as specified by OpenMP's sectioning
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
@@ -20,7 +20,7 @@ program main
             i = i + 1
         end do
     !$omp end target
-    
+
     print *, write_arr(:)
 end program
 

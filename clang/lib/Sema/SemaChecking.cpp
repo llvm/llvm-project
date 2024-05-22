@@ -62,6 +62,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -2488,7 +2489,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     assert(TheCall->getNumArgs() == 1 &&
            "Wrong # arguments to builtin CFStringMakeConstantString");
-    if (CheckObjCString(TheCall->getArg(0)))
+    if (ObjC().CheckObjCString(TheCall->getArg(0)))
       return ExprError();
     break;
   case Builtin::BI__builtin_ms_va_start:
@@ -8091,6 +8092,12 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
 }
 
+void Sema::CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc) {
+  if (ConceptDecl *Decl = AutoT->getTypeConstraintConcept()) {
+    DiagnoseUseOfDecl(Decl, Loc);
+  }
+}
+
 /// CheckConstructorCall - Check a constructor call for correctness and safety
 /// properties not enforced by the C type system.
 void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
@@ -8191,20 +8198,6 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   default:
     CheckMemaccessArguments(TheCall, CMId, FnInfo);
   }
-
-  return false;
-}
-
-bool Sema::CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation lbrac,
-                               ArrayRef<const Expr *> Args) {
-  VariadicCallType CallType =
-      Method->isVariadic() ? VariadicMethod : VariadicDoesNotApply;
-
-  checkCall(Method, nullptr, /*ThisArg=*/nullptr, Args,
-            /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),
-            CallType);
-
-  CheckTCBEnforcement(lbrac, Method);
 
   return false;
 }
@@ -9360,38 +9353,6 @@ ExprResult Sema::BuiltinNontemporalOverloaded(ExprResult TheCallResult) {
   TheCall->setArg(0, ValArg.get());
   TheCall->setType(Context.VoidTy);
   return TheCallResult;
-}
-
-/// CheckObjCString - Checks that the argument to the builtin
-/// CFString constructor is correct
-/// Note: It might also make sense to do the UTF-16 conversion here (would
-/// simplify the backend).
-bool Sema::CheckObjCString(Expr *Arg) {
-  Arg = Arg->IgnoreParenCasts();
-  StringLiteral *Literal = dyn_cast<StringLiteral>(Arg);
-
-  if (!Literal || !Literal->isOrdinary()) {
-    Diag(Arg->getBeginLoc(), diag::err_cfstring_literal_not_string_constant)
-        << Arg->getSourceRange();
-    return true;
-  }
-
-  if (Literal->containsNonAsciiOrNull()) {
-    StringRef String = Literal->getString();
-    unsigned NumBytes = String.size();
-    SmallVector<llvm::UTF16, 128> ToBuf(NumBytes);
-    const llvm::UTF8 *FromPtr = (const llvm::UTF8 *)String.data();
-    llvm::UTF16 *ToPtr = &ToBuf[0];
-
-    llvm::ConversionResult Result =
-        llvm::ConvertUTF8toUTF16(&FromPtr, FromPtr + NumBytes, &ToPtr,
-                                 ToPtr + NumBytes, llvm::strictConversion);
-    // Check for conversion failure.
-    if (Result != llvm::conversionOK)
-      Diag(Arg->getBeginLoc(), diag::warn_cfstring_truncated)
-          << Arg->getSourceRange();
-  }
-  return false;
 }
 
 /// CheckObjCString - Checks that the format string argument to the os_log()
@@ -15279,7 +15240,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   // Special case for ObjC BOOL on targets where its a typedef for a signed char
   // (Namely, macOS). FIXME: IntRange::forValueOfType should do this.
   bool IsObjCSignedCharBool = S.getLangOpts().ObjC &&
-                              S.NSAPIObj->isObjCBOOLType(OtherT) &&
+                              S.ObjC().NSAPIObj->isObjCBOOLType(OtherT) &&
                               OtherT->isSpecificBuiltinType(BuiltinType::SChar);
 
   // Whether we're treating Other as being a bool because of the form of
@@ -15709,7 +15670,7 @@ static void DiagnoseImpCast(Sema &S, Expr *E, QualType T,
 
 static bool isObjCSignedCharBool(Sema &S, QualType Ty) {
   return Ty->isSpecificBuiltinType(BuiltinType::SChar) &&
-      S.getLangOpts().ObjC && S.NSAPIObj->isObjCBOOLType(Ty);
+         S.getLangOpts().ObjC && S.ObjC().NSAPIObj->isObjCBOOLType(Ty);
 }
 
 static void adornObjCBoolConversionDiagWithTernaryFixit(
@@ -16021,7 +15982,7 @@ static void checkObjCCollectionLiteralElement(Sema &S,
 /// target type.
 static void checkObjCArrayLiteral(Sema &S, QualType TargetType,
                                   ObjCArrayLiteral *ArrayLiteral) {
-  if (!S.NSArrayDecl)
+  if (!S.ObjC().NSArrayDecl)
     return;
 
   const auto *TargetObjCPtr = TargetType->getAs<ObjCObjectPointerType>();
@@ -16029,8 +15990,8 @@ static void checkObjCArrayLiteral(Sema &S, QualType TargetType,
     return;
 
   if (TargetObjCPtr->isUnspecialized() ||
-      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl()
-        != S.NSArrayDecl->getCanonicalDecl())
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          S.ObjC().NSArrayDecl->getCanonicalDecl())
     return;
 
   auto TypeArgs = TargetObjCPtr->getTypeArgs();
@@ -16050,7 +16011,7 @@ static void checkObjCArrayLiteral(Sema &S, QualType TargetType,
 static void
 checkObjCDictionaryLiteral(Sema &S, QualType TargetType,
                            ObjCDictionaryLiteral *DictionaryLiteral) {
-  if (!S.NSDictionaryDecl)
+  if (!S.ObjC().NSDictionaryDecl)
     return;
 
   const auto *TargetObjCPtr = TargetType->getAs<ObjCObjectPointerType>();
@@ -16058,8 +16019,8 @@ checkObjCDictionaryLiteral(Sema &S, QualType TargetType,
     return;
 
   if (TargetObjCPtr->isUnspecialized() ||
-      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl()
-        != S.NSDictionaryDecl->getCanonicalDecl())
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          S.ObjC().NSDictionaryDecl->getCanonicalDecl())
     return;
 
   auto TypeArgs = TargetObjCPtr->getTypeArgs();
@@ -18794,465 +18755,6 @@ void Sema::CheckArrayAccess(const Expr *expr) {
   }
 }
 
-//===--- CHECK: Objective-C retain cycles ----------------------------------//
-
-namespace {
-
-struct RetainCycleOwner {
-  VarDecl *Variable = nullptr;
-  SourceRange Range;
-  SourceLocation Loc;
-  bool Indirect = false;
-
-  RetainCycleOwner() = default;
-
-  void setLocsFrom(Expr *e) {
-    Loc = e->getExprLoc();
-    Range = e->getSourceRange();
-  }
-};
-
-} // namespace
-
-/// Consider whether capturing the given variable can possibly lead to
-/// a retain cycle.
-static bool considerVariable(VarDecl *var, Expr *ref, RetainCycleOwner &owner) {
-  // In ARC, it's captured strongly iff the variable has __strong
-  // lifetime.  In MRR, it's captured strongly if the variable is
-  // __block and has an appropriate type.
-  if (var->getType().getObjCLifetime() != Qualifiers::OCL_Strong)
-    return false;
-
-  owner.Variable = var;
-  if (ref)
-    owner.setLocsFrom(ref);
-  return true;
-}
-
-static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
-  while (true) {
-    e = e->IgnoreParens();
-    if (CastExpr *cast = dyn_cast<CastExpr>(e)) {
-      switch (cast->getCastKind()) {
-      case CK_BitCast:
-      case CK_LValueBitCast:
-      case CK_LValueToRValue:
-      case CK_ARCReclaimReturnedObject:
-        e = cast->getSubExpr();
-        continue;
-
-      default:
-        return false;
-      }
-    }
-
-    if (ObjCIvarRefExpr *ref = dyn_cast<ObjCIvarRefExpr>(e)) {
-      ObjCIvarDecl *ivar = ref->getDecl();
-      if (ivar->getType().getObjCLifetime() != Qualifiers::OCL_Strong)
-        return false;
-
-      // Try to find a retain cycle in the base.
-      if (!findRetainCycleOwner(S, ref->getBase(), owner))
-        return false;
-
-      if (ref->isFreeIvar()) owner.setLocsFrom(ref);
-      owner.Indirect = true;
-      return true;
-    }
-
-    if (DeclRefExpr *ref = dyn_cast<DeclRefExpr>(e)) {
-      VarDecl *var = dyn_cast<VarDecl>(ref->getDecl());
-      if (!var) return false;
-      return considerVariable(var, ref, owner);
-    }
-
-    if (MemberExpr *member = dyn_cast<MemberExpr>(e)) {
-      if (member->isArrow()) return false;
-
-      // Don't count this as an indirect ownership.
-      e = member->getBase();
-      continue;
-    }
-
-    if (PseudoObjectExpr *pseudo = dyn_cast<PseudoObjectExpr>(e)) {
-      // Only pay attention to pseudo-objects on property references.
-      ObjCPropertyRefExpr *pre
-        = dyn_cast<ObjCPropertyRefExpr>(pseudo->getSyntacticForm()
-                                              ->IgnoreParens());
-      if (!pre) return false;
-      if (pre->isImplicitProperty()) return false;
-      ObjCPropertyDecl *property = pre->getExplicitProperty();
-      if (!property->isRetaining() &&
-          !(property->getPropertyIvarDecl() &&
-            property->getPropertyIvarDecl()->getType()
-              .getObjCLifetime() == Qualifiers::OCL_Strong))
-          return false;
-
-      owner.Indirect = true;
-      if (pre->isSuperReceiver()) {
-        owner.Variable = S.getCurMethodDecl()->getSelfDecl();
-        if (!owner.Variable)
-          return false;
-        owner.Loc = pre->getLocation();
-        owner.Range = pre->getSourceRange();
-        return true;
-      }
-      e = const_cast<Expr*>(cast<OpaqueValueExpr>(pre->getBase())
-                              ->getSourceExpr());
-      continue;
-    }
-
-    // Array ivars?
-
-    return false;
-  }
-}
-
-namespace {
-
-  struct FindCaptureVisitor : EvaluatedExprVisitor<FindCaptureVisitor> {
-    VarDecl *Variable;
-    Expr *Capturer = nullptr;
-    bool VarWillBeReased = false;
-
-    FindCaptureVisitor(ASTContext &Context, VarDecl *variable)
-        : EvaluatedExprVisitor<FindCaptureVisitor>(Context),
-          Variable(variable) {}
-
-    void VisitDeclRefExpr(DeclRefExpr *ref) {
-      if (ref->getDecl() == Variable && !Capturer)
-        Capturer = ref;
-    }
-
-    void VisitObjCIvarRefExpr(ObjCIvarRefExpr *ref) {
-      if (Capturer) return;
-      Visit(ref->getBase());
-      if (Capturer && ref->isFreeIvar())
-        Capturer = ref;
-    }
-
-    void VisitBlockExpr(BlockExpr *block) {
-      // Look inside nested blocks
-      if (block->getBlockDecl()->capturesVariable(Variable))
-        Visit(block->getBlockDecl()->getBody());
-    }
-
-    void VisitOpaqueValueExpr(OpaqueValueExpr *OVE) {
-      if (Capturer) return;
-      if (OVE->getSourceExpr())
-        Visit(OVE->getSourceExpr());
-    }
-
-    void VisitBinaryOperator(BinaryOperator *BinOp) {
-      if (!Variable || VarWillBeReased || BinOp->getOpcode() != BO_Assign)
-        return;
-      Expr *LHS = BinOp->getLHS();
-      if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(LHS)) {
-        if (DRE->getDecl() != Variable)
-          return;
-        if (Expr *RHS = BinOp->getRHS()) {
-          RHS = RHS->IgnoreParenCasts();
-          std::optional<llvm::APSInt> Value;
-          VarWillBeReased =
-              (RHS && (Value = RHS->getIntegerConstantExpr(Context)) &&
-               *Value == 0);
-        }
-      }
-    }
-  };
-
-} // namespace
-
-/// Check whether the given argument is a block which captures a
-/// variable.
-static Expr *findCapturingExpr(Sema &S, Expr *e, RetainCycleOwner &owner) {
-  assert(owner.Variable && owner.Loc.isValid());
-
-  e = e->IgnoreParenCasts();
-
-  // Look through [^{...} copy] and Block_copy(^{...}).
-  if (ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(e)) {
-    Selector Cmd = ME->getSelector();
-    if (Cmd.isUnarySelector() && Cmd.getNameForSlot(0) == "copy") {
-      e = ME->getInstanceReceiver();
-      if (!e)
-        return nullptr;
-      e = e->IgnoreParenCasts();
-    }
-  } else if (CallExpr *CE = dyn_cast<CallExpr>(e)) {
-    if (CE->getNumArgs() == 1) {
-      FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
-      if (Fn) {
-        const IdentifierInfo *FnI = Fn->getIdentifier();
-        if (FnI && FnI->isStr("_Block_copy")) {
-          e = CE->getArg(0)->IgnoreParenCasts();
-        }
-      }
-    }
-  }
-
-  BlockExpr *block = dyn_cast<BlockExpr>(e);
-  if (!block || !block->getBlockDecl()->capturesVariable(owner.Variable))
-    return nullptr;
-
-  FindCaptureVisitor visitor(S.Context, owner.Variable);
-  visitor.Visit(block->getBlockDecl()->getBody());
-  return visitor.VarWillBeReased ? nullptr : visitor.Capturer;
-}
-
-static void diagnoseRetainCycle(Sema &S, Expr *capturer,
-                                RetainCycleOwner &owner) {
-  assert(capturer);
-  assert(owner.Variable && owner.Loc.isValid());
-
-  S.Diag(capturer->getExprLoc(), diag::warn_arc_retain_cycle)
-    << owner.Variable << capturer->getSourceRange();
-  S.Diag(owner.Loc, diag::note_arc_retain_cycle_owner)
-    << owner.Indirect << owner.Range;
-}
-
-/// Check for a keyword selector that starts with the word 'add' or
-/// 'set'.
-static bool isSetterLikeSelector(Selector sel) {
-  if (sel.isUnarySelector()) return false;
-
-  StringRef str = sel.getNameForSlot(0);
-  str = str.ltrim('_');
-  if (str.starts_with("set"))
-    str = str.substr(3);
-  else if (str.starts_with("add")) {
-    // Specially allow 'addOperationWithBlock:'.
-    if (sel.getNumArgs() == 1 && str.starts_with("addOperationWithBlock"))
-      return false;
-    str = str.substr(3);
-  } else
-    return false;
-
-  if (str.empty()) return true;
-  return !isLowercase(str.front());
-}
-
-static std::optional<int>
-GetNSMutableArrayArgumentIndex(Sema &S, ObjCMessageExpr *Message) {
-  bool IsMutableArray = S.NSAPIObj->isSubclassOfNSClass(
-                                                Message->getReceiverInterface(),
-                                                NSAPI::ClassId_NSMutableArray);
-  if (!IsMutableArray) {
-    return std::nullopt;
-  }
-
-  Selector Sel = Message->getSelector();
-
-  std::optional<NSAPI::NSArrayMethodKind> MKOpt =
-      S.NSAPIObj->getNSArrayMethodKind(Sel);
-  if (!MKOpt) {
-    return std::nullopt;
-  }
-
-  NSAPI::NSArrayMethodKind MK = *MKOpt;
-
-  switch (MK) {
-    case NSAPI::NSMutableArr_addObject:
-    case NSAPI::NSMutableArr_insertObjectAtIndex:
-    case NSAPI::NSMutableArr_setObjectAtIndexedSubscript:
-      return 0;
-    case NSAPI::NSMutableArr_replaceObjectAtIndex:
-      return 1;
-
-    default:
-      return std::nullopt;
-  }
-
-  return std::nullopt;
-}
-
-static std::optional<int>
-GetNSMutableDictionaryArgumentIndex(Sema &S, ObjCMessageExpr *Message) {
-  bool IsMutableDictionary = S.NSAPIObj->isSubclassOfNSClass(
-                                            Message->getReceiverInterface(),
-                                            NSAPI::ClassId_NSMutableDictionary);
-  if (!IsMutableDictionary) {
-    return std::nullopt;
-  }
-
-  Selector Sel = Message->getSelector();
-
-  std::optional<NSAPI::NSDictionaryMethodKind> MKOpt =
-      S.NSAPIObj->getNSDictionaryMethodKind(Sel);
-  if (!MKOpt) {
-    return std::nullopt;
-  }
-
-  NSAPI::NSDictionaryMethodKind MK = *MKOpt;
-
-  switch (MK) {
-    case NSAPI::NSMutableDict_setObjectForKey:
-    case NSAPI::NSMutableDict_setValueForKey:
-    case NSAPI::NSMutableDict_setObjectForKeyedSubscript:
-      return 0;
-
-    default:
-      return std::nullopt;
-  }
-
-  return std::nullopt;
-}
-
-static std::optional<int> GetNSSetArgumentIndex(Sema &S,
-                                                ObjCMessageExpr *Message) {
-  bool IsMutableSet = S.NSAPIObj->isSubclassOfNSClass(
-                                                Message->getReceiverInterface(),
-                                                NSAPI::ClassId_NSMutableSet);
-
-  bool IsMutableOrderedSet = S.NSAPIObj->isSubclassOfNSClass(
-                                            Message->getReceiverInterface(),
-                                            NSAPI::ClassId_NSMutableOrderedSet);
-  if (!IsMutableSet && !IsMutableOrderedSet) {
-    return std::nullopt;
-  }
-
-  Selector Sel = Message->getSelector();
-
-  std::optional<NSAPI::NSSetMethodKind> MKOpt =
-      S.NSAPIObj->getNSSetMethodKind(Sel);
-  if (!MKOpt) {
-    return std::nullopt;
-  }
-
-  NSAPI::NSSetMethodKind MK = *MKOpt;
-
-  switch (MK) {
-    case NSAPI::NSMutableSet_addObject:
-    case NSAPI::NSOrderedSet_setObjectAtIndex:
-    case NSAPI::NSOrderedSet_setObjectAtIndexedSubscript:
-    case NSAPI::NSOrderedSet_insertObjectAtIndex:
-      return 0;
-    case NSAPI::NSOrderedSet_replaceObjectAtIndexWithObject:
-      return 1;
-  }
-
-  return std::nullopt;
-}
-
-void Sema::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
-  if (!Message->isInstanceMessage()) {
-    return;
-  }
-
-  std::optional<int> ArgOpt;
-
-  if (!(ArgOpt = GetNSMutableArrayArgumentIndex(*this, Message)) &&
-      !(ArgOpt = GetNSMutableDictionaryArgumentIndex(*this, Message)) &&
-      !(ArgOpt = GetNSSetArgumentIndex(*this, Message))) {
-    return;
-  }
-
-  int ArgIndex = *ArgOpt;
-
-  Expr *Arg = Message->getArg(ArgIndex)->IgnoreImpCasts();
-  if (OpaqueValueExpr *OE = dyn_cast<OpaqueValueExpr>(Arg)) {
-    Arg = OE->getSourceExpr()->IgnoreImpCasts();
-  }
-
-  if (Message->getReceiverKind() == ObjCMessageExpr::SuperInstance) {
-    if (DeclRefExpr *ArgRE = dyn_cast<DeclRefExpr>(Arg)) {
-      if (ArgRE->isObjCSelfExpr()) {
-        Diag(Message->getSourceRange().getBegin(),
-             diag::warn_objc_circular_container)
-          << ArgRE->getDecl() << StringRef("'super'");
-      }
-    }
-  } else {
-    Expr *Receiver = Message->getInstanceReceiver()->IgnoreImpCasts();
-
-    if (OpaqueValueExpr *OE = dyn_cast<OpaqueValueExpr>(Receiver)) {
-      Receiver = OE->getSourceExpr()->IgnoreImpCasts();
-    }
-
-    if (DeclRefExpr *ReceiverRE = dyn_cast<DeclRefExpr>(Receiver)) {
-      if (DeclRefExpr *ArgRE = dyn_cast<DeclRefExpr>(Arg)) {
-        if (ReceiverRE->getDecl() == ArgRE->getDecl()) {
-          ValueDecl *Decl = ReceiverRE->getDecl();
-          Diag(Message->getSourceRange().getBegin(),
-               diag::warn_objc_circular_container)
-            << Decl << Decl;
-          if (!ArgRE->isObjCSelfExpr()) {
-            Diag(Decl->getLocation(),
-                 diag::note_objc_circular_container_declared_here)
-              << Decl;
-          }
-        }
-      }
-    } else if (ObjCIvarRefExpr *IvarRE = dyn_cast<ObjCIvarRefExpr>(Receiver)) {
-      if (ObjCIvarRefExpr *IvarArgRE = dyn_cast<ObjCIvarRefExpr>(Arg)) {
-        if (IvarRE->getDecl() == IvarArgRE->getDecl()) {
-          ObjCIvarDecl *Decl = IvarRE->getDecl();
-          Diag(Message->getSourceRange().getBegin(),
-               diag::warn_objc_circular_container)
-            << Decl << Decl;
-          Diag(Decl->getLocation(),
-               diag::note_objc_circular_container_declared_here)
-            << Decl;
-        }
-      }
-    }
-  }
-}
-
-/// Check a message send to see if it's likely to cause a retain cycle.
-void Sema::checkRetainCycles(ObjCMessageExpr *msg) {
-  // Only check instance methods whose selector looks like a setter.
-  if (!msg->isInstanceMessage() || !isSetterLikeSelector(msg->getSelector()))
-    return;
-
-  // Try to find a variable that the receiver is strongly owned by.
-  RetainCycleOwner owner;
-  if (msg->getReceiverKind() == ObjCMessageExpr::Instance) {
-    if (!findRetainCycleOwner(*this, msg->getInstanceReceiver(), owner))
-      return;
-  } else {
-    assert(msg->getReceiverKind() == ObjCMessageExpr::SuperInstance);
-    owner.Variable = getCurMethodDecl()->getSelfDecl();
-    owner.Loc = msg->getSuperLoc();
-    owner.Range = msg->getSuperLoc();
-  }
-
-  // Check whether the receiver is captured by any of the arguments.
-  const ObjCMethodDecl *MD = msg->getMethodDecl();
-  for (unsigned i = 0, e = msg->getNumArgs(); i != e; ++i) {
-    if (Expr *capturer = findCapturingExpr(*this, msg->getArg(i), owner)) {
-      // noescape blocks should not be retained by the method.
-      if (MD && MD->parameters()[i]->hasAttr<NoEscapeAttr>())
-        continue;
-      return diagnoseRetainCycle(*this, capturer, owner);
-    }
-  }
-}
-
-/// Check a property assign to see if it's likely to cause a retain cycle.
-void Sema::checkRetainCycles(Expr *receiver, Expr *argument) {
-  RetainCycleOwner owner;
-  if (!findRetainCycleOwner(*this, receiver, owner))
-    return;
-
-  if (Expr *capturer = findCapturingExpr(*this, argument, owner))
-    diagnoseRetainCycle(*this, capturer, owner);
-}
-
-void Sema::checkRetainCycles(VarDecl *Var, Expr *Init) {
-  RetainCycleOwner Owner;
-  if (!considerVariable(Var, /*DeclRefExpr=*/nullptr, Owner))
-    return;
-
-  // Because we don't have an expression for the variable, we have to set the
-  // location explicitly here.
-  Owner.Loc = Var->getLocation();
-  Owner.Range = Var->getSourceRange();
-
-  if (Expr *Capturer = findCapturingExpr(*this, Init, Owner))
-    diagnoseRetainCycle(*this, Capturer, Owner);
-}
-
 static bool checkUnsafeAssignLiteral(Sema &S, SourceLocation Loc,
                                      Expr *RHS, bool isProperty) {
   // Check if RHS is an Objective-C object literal, which also can get
@@ -19262,8 +18764,8 @@ static bool checkUnsafeAssignLiteral(Sema &S, SourceLocation Loc,
 
   // This enum needs to match with the 'select' in
   // warn_objc_arc_literal_assign (off-by-1).
-  Sema::ObjCLiteralKind Kind = S.CheckLiteralKind(RHS);
-  if (Kind == Sema::LK_String || Kind == Sema::LK_None)
+  SemaObjC::ObjCLiteralKind Kind = S.ObjC().CheckLiteralKind(RHS);
+  if (Kind == SemaObjC::LK_String || Kind == SemaObjC::LK_None)
     return false;
 
   S.Diag(Loc, diag::warn_arc_literal_assign)

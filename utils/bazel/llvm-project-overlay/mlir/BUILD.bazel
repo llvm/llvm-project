@@ -2092,6 +2092,21 @@ gentbl_cc_library(
     deps = [":ArmSMETdFiles"],
 )
 
+cc_library(
+    name = "ArmSMEOpInterfaces",
+    hdrs = [
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArmSMEOpInterfacesIncGen",
+        ":IR",
+        ":Support",
+        ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "ArmSMEIntrinsicOpsIncGen",
     tbl_outs = [
@@ -2137,9 +2152,11 @@ cc_library(
         ":ArmSMEEnums",
         ":ArmSMEIncGen",
         ":ArmSMEIntrinsicOpsIncGen",
+        ":ArmSMEOpInterfaces",
         ":ArmSMEOpInterfacesIncGen",
         ":ArmSMEOpsIncGen",
         ":BytecodeOpInterface",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -2156,6 +2173,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithUtils",
         ":ArmSMEDialect",
         ":ArmSMETransformsPassIncGen",
@@ -2163,6 +2181,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":FuncTransforms",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -2198,8 +2217,10 @@ cc_library(
         ":ArithDialect",
         ":ArmSMEDialect",
         ":ArmSMETransforms",
+        ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -5877,6 +5898,7 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -6706,6 +6728,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":PolynomialAttributesIncGen",
+        ":PolynomialCanonicalizationIncGen",
         ":PolynomialIncGen",
         ":Support",
         "//llvm:Support",
@@ -6714,7 +6737,7 @@ cc_library(
 
 td_library(
     name = "PolynomialTdFiles",
-    srcs = ["include/mlir/Dialect/Polynomial/IR/Polynomial.td"],
+    srcs = glob(["include/mlir/Dialect/Polynomial/IR/*.td"]),
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
@@ -6794,6 +6817,23 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
     deps = [":PolynomialTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PolynomialCanonicalizationIncGen",
+    strip_include_prefix = "include/mlir/Dialect/Polynomial/IR",
+    tbl_outs = [
+        (
+            ["-gen-rewriters"],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialCanonicalization.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "lib/Dialect/Polynomial/IR/PolynomialCanonicalization.td",
+    deps = [
+        ":ArithOpsTdFiles",
+        ":PolynomialTdFiles",
+    ],
 )
 
 td_library(
@@ -7465,6 +7505,7 @@ cc_library(
         ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
+        ":VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -10104,6 +10145,10 @@ td_library(
     srcs = [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
+        "include/mlir/Dialect/OpenMP/OpenMPAttrDefs.td",
+        "include/mlir/Dialect/OpenMP/OpenMPDialect.td",
+        "include/mlir/Dialect/OpenMP/OpenMPEnums.td",
+        "include/mlir/Dialect/OpenMP/OpenMPOpBase.td",
         "include/mlir/Dialect/OpenMP/OpenMPOps.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
@@ -11116,6 +11161,7 @@ cc_library(
         ":LinalgStructuredOpsIncGen",
         ":LinalgUtils",
         ":MaskableOpInterface",
+        ":MathDialect",
         ":MemRefDialect",
         ":MemRefTransforms",
         ":MeshDialect",
