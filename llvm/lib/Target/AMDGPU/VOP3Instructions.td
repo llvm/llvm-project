@@ -1926,6 +1926,9 @@ defm V_CVT_PK_BF16_F32: VOP3OpSel_Real_gfx9 <0x268>;
 defm V_CVT_SR_FP8_F32 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x2a4>;
 defm V_CVT_SR_BF8_F32 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x2a5>;
 
+defm V_MINIMUM3_F32 : VOP3_Real_vi <0x2a8>;
+defm V_MAXIMUM3_F32 : VOP3_Real_vi <0x2a9>;
+
 defm V_BITOP3_B16         : VOP3_Real_BITOP3_gfx9<0x233, "v_bitop3_b16">;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx9<0x234, "v_bitop3_b32">;
 let OtherPredicates = [HasFP8ConversionScaleInsts] in {
