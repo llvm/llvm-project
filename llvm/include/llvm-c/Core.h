@@ -2354,10 +2354,6 @@ LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices);
