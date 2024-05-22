@@ -48,11 +48,9 @@ struct TestConvertFuncOp
     registry.insert<LLVM::LLVMDialect>();
   }
 
-  [[nodiscard]] StringRef getArgument() const final {
-    return "test-convert-func-op";
-  }
+  StringRef getArgument() const final { return "test-convert-func-op"; }
 
-  [[nodiscard]] StringRef getDescription() const final {
+  StringRef getDescription() const final {
     return "Tests conversion of `func.func` to `llvm.func` for different "
            "attributes";
   }
