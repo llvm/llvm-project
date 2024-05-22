@@ -359,7 +359,7 @@ public:
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
-  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = true; }
+  void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
   /// Return true if relocations against symbol with a given name
   /// must be created.
