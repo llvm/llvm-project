@@ -61,7 +61,7 @@ TEST(BitstreamWriterTest, emitBlob4ByteAligned) {
   EXPECT_EQ(StringRef("str0"), Buffer);
 }
 
-class BitstreamWriterFlushTest :public ::testing::TestWithParam<int> {
+class BitstreamWriterFlushTest : public ::testing::TestWithParam<int> {
 protected:
   const unsigned BlkID = bitc::FIRST_APPLICATION_BLOCKID + 17;
 
