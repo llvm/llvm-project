@@ -296,18 +296,23 @@ def MetadataVT : ValueType<0, 249> { // Metadata
 def iPTRAny    : VTAny<250>;
 
 // Pseudo valuetype to represent "vector of any size"
+// Should only be used in TableGen.
 def vAny       : VTAny<251>;
 
 // Pseudo valuetype to represent "float of any format"
+// Should only be used in TableGen.
 def fAny       : VTAny<252>;
 
 // Pseudo valuetype to represent "integer of any bit width"
+// Should only be used in TableGen.
 def iAny       : VTAny<253>;
 
 // Pseudo valuetype mapped to the current pointer size.
+// Should only be used in TableGen.
 def iPTR       : ValueType<0, 254>;
 
 // Pseudo valuetype to represent "any type of any size".
+// Should only be used in TableGen.
 def Any        : VTAny<255>;
 
 } // end defset ValueTypes
