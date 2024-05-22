@@ -21,7 +21,7 @@
 
 # OUTPUT-SEC:      .debug_str    PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 01 MSC 0 0  1
 # OUTPUT-SEC-NEXT: .debug_frame  PROGBITS [[#%x,]] [[#%x,]] 000000   00     0 0  1
-# OUTPUT-SEC-NEXT: .debug_loc    PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00   C 0 0  1
+# OUTPUT-SEC-NEXT: .debug_loc    PROGBITS [[#%x,]] [[#%x,]] 000010   00     0 0  1
 
 .section .debug_str,"MS",@progbits,1
 .LASF2:
