@@ -13,7 +13,7 @@
 #include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include <fs.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
