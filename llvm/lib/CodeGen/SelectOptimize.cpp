@@ -159,7 +159,7 @@ public:
 
     /// Invert the select by inverting the condition and switching the operands.
     void setInverted() {
-      assert(!Inverted && "Trying to invert and inverted SelectLike");
+      assert(!Inverted && "Trying to invert an inverted SelectLike");
       assert(isa<Instruction>(getCondition()) &&
              cast<Instruction>(getCondition())->getOpcode() ==
                  Instruction::Xor);
@@ -193,6 +193,8 @@ public:
     /// condition of a select or c in `or(zext(c), x)`
     Value *getCondition() const {
       Value *CC = getNonInvertedCondition();
+      // For inverted conditions the CC is checked when created to be a not
+      // (xor) instruction.
       if (Inverted)
         return cast<Instruction>(CC)->getOperand(0);
       return CC;
