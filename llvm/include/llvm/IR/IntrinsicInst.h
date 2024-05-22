@@ -707,8 +707,7 @@ public:
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:
-  bool isUnaryOp() const;
-  bool isTernaryOp() const;
+  unsigned getNonMetadataArgCount() const;
   std::optional<RoundingMode> getRoundingMode() const;
   std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
   bool isDefaultFPEnvironment() const;

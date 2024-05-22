@@ -673,9 +673,12 @@ public:
     IndexCtx.indexTagDecl(
         D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
                           SpecializationOf));
-    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
-      IndexCtx.indexTypeSourceInfo(TSI, /*Parent=*/nullptr,
-                                   D->getLexicalDeclContext());
+    // Template specialization arguments.
+    if (const ASTTemplateArgumentListInfo *TemplateArgInfo =
+            D->getTemplateArgsAsWritten()) {
+      for (const auto &Arg : TemplateArgInfo->arguments())
+        handleTemplateArgumentLoc(Arg, D, D->getLexicalDeclContext());
+    }
     return true;
   }
 
@@ -700,7 +703,8 @@ public:
         IndexCtx.handleDecl(TP);
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
         if (TTP->hasDefaultArgument())
-          IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
+          handleTemplateArgumentLoc(TTP->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
         if (auto *C = TTP->getTypeConstraint())
           IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
                                    Parent, TTP->getLexicalDeclContext());

@@ -642,10 +642,7 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"std::strong_ordering operator<=>(const Foo &) const = default",
-                Rel::TemplatePattern},
-               {"bool operator==(const Foo &) const noexcept = default",
-                Rel::TemplateInstantiation});
+               {"bool operator==(const Foo &) const noexcept = default"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -856,7 +853,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but base expression involves a function call.
   Code = R"cpp(
@@ -874,7 +871,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but uses a function pointer.
   Code = R"cpp(
@@ -893,7 +890,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Base expression involves a member access into this.
   Code = R"cpp(
@@ -964,7 +961,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           void Foo() { this->[[find]](); }
         };
   )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void find()");
+  EXPECT_DECLS("MemberExpr", "void find()");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {

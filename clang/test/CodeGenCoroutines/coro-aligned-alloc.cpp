@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
-// RUN:   -fcoro-aligned-allocation -S -emit-llvm %s -o - -disable-llvm-passes \
+// RUN:   -fcoro-aligned-allocation -emit-llvm %s -o - -disable-llvm-passes \
 // RUN:   | FileCheck %s
 
 #include "Inputs/coroutine.h"

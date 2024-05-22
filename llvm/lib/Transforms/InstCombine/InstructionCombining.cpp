@@ -808,9 +808,12 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
   Constant *BitWidthC = ConstantInt::get(Ty, Ty->getScalarSizeInBits());
   // Need extra check for icmp. Note if this check is true, it generally means
   // the icmp will simplify to true/false.
-  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality() &&
-      !ConstantExpr::getICmp(ICmpInst::ICMP_UGT, C, BitWidthC)->isZeroValue())
-    return nullptr;
+  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality()) {
+    Constant *Cmp =
+        ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, C, BitWidthC, DL);
+    if (!Cmp || !Cmp->isZeroValue())
+      return nullptr;
+  }
 
   // Check we can invert `(not x)` for free.
   bool Consumes = false;
@@ -2043,8 +2046,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_reverse, V->getType());
+    Function *F =
+        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 
@@ -2711,7 +2714,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value *, 8> Indices(GEP.indices());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
-  bool IsGEPSrcEleScalable = GEPEltType->isScalableTy();
   if (Value *V = simplifyGEPInst(GEPEltType, PtrOp, Indices, GEP.isInBounds(),
                                  SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
@@ -2785,6 +2787,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       return replaceInstUsesWith(
           GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
                                     GEP.isInBounds()));
+  }
+
+  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
+  // intrinsic. This has better support in BasicAA.
+  if (GEPEltType->isScalableTy()) {
+    Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
+    return replaceInstUsesWith(
+        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -2896,9 +2906,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (Instruction *I = visitGEPOfGEP(GEP, Src))
       return I;
 
-  // Skip if GEP source element type is scalable. The type alloc size is unknown
-  // at compile-time.
-  if (GEP.getNumIndices() == 1 && !IsGEPSrcEleScalable) {
+  if (GEP.getNumIndices() == 1) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
@@ -2948,6 +2956,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return nullptr;
 
   if (GEP.getNumIndices() == 1) {
+    // We can only preserve inbounds if the original gep is inbounds, the add
+    // is nsw, and the add operands are non-negative.
+    auto CanPreserveInBounds = [&](bool AddIsNSW, Value *Idx1, Value *Idx2) {
+      SimplifyQuery Q = SQ.getWithInstruction(&GEP);
+      return GEP.isInBounds() && AddIsNSW && isKnownNonNegative(Idx1, Q) &&
+             isKnownNonNegative(Idx2, Q);
+    };
+
     // Try to replace ADD + GEP with GEP + GEP.
     Value *Idx1, *Idx2;
     if (match(GEP.getOperand(1),
@@ -2957,10 +2973,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
       //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
-      auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
-                                       GEP.getPointerOperand(), Idx1);
-      return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
-                                       Idx2);
+      bool IsInBounds = CanPreserveInBounds(
+          cast<OverflowingBinaryOperator>(GEP.getOperand(1))->hasNoSignedWrap(),
+          Idx1, Idx2);
+      auto *NewPtr =
+          Builder.CreateGEP(GEP.getResultElementType(), GEP.getPointerOperand(),
+                            Idx1, "", IsInBounds);
+      return replaceInstUsesWith(
+          GEP, Builder.CreateGEP(GEP.getResultElementType(), NewPtr, Idx2, "",
+                                 IsInBounds));
     }
     ConstantInt *C;
     if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
@@ -2971,12 +2992,17 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
       // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      bool IsInBounds = CanPreserveInBounds(
+          /*IsNSW=*/true, Idx1, C);
       auto *NewPtr = Builder.CreateGEP(
           GEP.getResultElementType(), GEP.getPointerOperand(),
-          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
-      return GetElementPtrInst::Create(
-          GEP.getResultElementType(), NewPtr,
-          Builder.CreateSExt(C, GEP.getOperand(1)->getType()));
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "",
+          IsInBounds);
+      return replaceInstUsesWith(
+          GEP,
+          Builder.CreateGEP(GEP.getResultElementType(), NewPtr,
+                            Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
+                            "", IsInBounds));
     }
   }
 

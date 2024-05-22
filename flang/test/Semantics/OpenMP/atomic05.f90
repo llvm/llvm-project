@@ -1,6 +1,8 @@
+! UNSUPPORTED: system-windows
+! Marking as unsupported due to suspected long runtime on Windows
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 
 ! This tests the various semantics related to the clauses of various OpenMP atomic constructs
 

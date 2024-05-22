@@ -236,6 +236,7 @@ public:
   NODE(parser, CUFKernelDoConstruct)
   NODE(CUFKernelDoConstruct, StarOrExpr)
   NODE(CUFKernelDoConstruct, Directive)
+  NODE(parser, CUFReduction)
   NODE(parser, CycleStmt)
   NODE(parser, DataComponentDefStmt)
   NODE(parser, DataIDoObject)

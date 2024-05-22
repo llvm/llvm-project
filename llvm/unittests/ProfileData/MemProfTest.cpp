@@ -1,6 +1,15 @@
+//===- unittests/Support/MemProfTest.cpp ----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/IR/Value.h"
@@ -241,7 +250,7 @@ TEST(MemProf, PortableWrapper) {
                     /*dealloc_cpu=*/4);
 
   const auto Schema = llvm::memprof::getFullSchema();
-  PortableMemInfoBlock WriteBlock(Info);
+  PortableMemInfoBlock WriteBlock(Info, Schema);
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
@@ -322,6 +331,65 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
       llvm::memprof::Version2);
+
+  EXPECT_EQ(Record, GotRecord);
+}
+
+TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
+  const auto Schema = llvm::memprof::getHotColdSchema();
+
+  MemInfoBlock Info;
+  Info.AllocCount = 11;
+  Info.TotalSize = 22;
+  Info.TotalLifetime = 33;
+  Info.TotalLifetimeAccessDensity = 44;
+
+  llvm::SmallVector<llvm::memprof::CallStackId> CallStackIds = {0x123, 0x456};
+
+  llvm::SmallVector<llvm::memprof::CallStackId> CallSiteIds = {0x333, 0x444};
+
+  IndexedMemProfRecord Record;
+  for (const auto &CSId : CallStackIds) {
+    // Use the same info block for both allocation sites.
+    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info,
+                                   Schema);
+  }
+  Record.CallSiteIds.assign(CallSiteIds);
+
+  std::bitset<llvm::to_underlying(Meta::Size)> SchemaBitSet;
+  for (auto Id : Schema)
+    SchemaBitSet.set(llvm::to_underlying(Id));
+
+  // Verify that SchemaBitSet has the fields we expect and nothing else, which
+  // we check with count().
+  EXPECT_EQ(SchemaBitSet.count(), 4U);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::AllocCount)]);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalSize)]);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalLifetime)]);
+  EXPECT_TRUE(
+      SchemaBitSet[llvm::to_underlying(Meta::TotalLifetimeAccessDensity)]);
+
+  // Verify that Schema has propagated all the way to the Info field in each
+  // IndexedAllocationInfo.
+  ASSERT_THAT(Record.AllocSites, ::SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[0].Info.getSchema(), SchemaBitSet);
+  EXPECT_EQ(Record.AllocSites[1].Info.getSchema(), SchemaBitSet);
+
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  Record.serialize(Schema, OS, llvm::memprof::Version2);
+  OS.flush();
+
+  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
+      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
+      llvm::memprof::Version2);
+
+  // Verify that Schema comes back correctly after deserialization. Technically,
+  // the comparison between Record and GotRecord below includes the comparison
+  // of their Schemas, but we'll verify the Schemas on our own.
+  ASSERT_THAT(GotRecord.AllocSites, ::SizeIs(2));
+  EXPECT_EQ(GotRecord.AllocSites[0].Info.getSchema(), SchemaBitSet);
+  EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
 
   EXPECT_EQ(Record, GotRecord);
 }
@@ -502,37 +570,15 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS3));
   IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS4));
 
-  bool CSIdMissing = false;
-  bool FrameIdMissing = false;
+  llvm::memprof::FrameIdConverter<decltype(FrameIdMap)> FrameIdConv(FrameIdMap);
+  llvm::memprof::CallStackIdConverter<decltype(CallStackIdMap)> CSIdConv(
+      CallStackIdMap, FrameIdConv);
 
-  auto Callback = [&](CallStackId CSId) -> llvm::SmallVector<Frame> {
-    llvm::SmallVector<Frame> CallStack;
-    llvm::SmallVector<FrameId> FrameIds;
-
-    auto Iter = CallStackIdMap.find(CSId);
-    if (Iter == CallStackIdMap.end())
-      CSIdMissing = true;
-    else
-      FrameIds = Iter->second;
-
-    for (FrameId Id : FrameIds) {
-      Frame F(0, 0, 0, false);
-      auto Iter = FrameIdMap.find(Id);
-      if (Iter == FrameIdMap.end())
-        FrameIdMissing = true;
-      else
-        F = Iter->second;
-      CallStack.push_back(F);
-    }
-
-    return CallStack;
-  };
-
-  MemProfRecord Record = IndexedRecord.toMemProfRecord(Callback);
+  MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   // Make sure that all lookups are successful.
-  ASSERT_FALSE(CSIdMissing);
-  ASSERT_FALSE(FrameIdMissing);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
 
   // Verify the contents of Record.
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
@@ -549,5 +595,71 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   ASSERT_THAT(Record.CallSites[1], SizeIs(2));
   EXPECT_EQ(Record.CallSites[1][0].hash(), F2.hash());
   EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
+}
+
+using FrameIdMapTy =
+    llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
+using CallStackIdMapTy =
+    llvm::DenseMap<::llvm::memprof::CallStackId,
+                   ::llvm::SmallVector<::llvm::memprof::FrameId>>;
+
+// Populate those fields returned by getHotColdSchema.
+MemInfoBlock makePartialMIB() {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 1;
+  MIB.TotalSize = 5;
+  MIB.TotalLifetime = 10;
+  MIB.TotalLifetimeAccessDensity = 23;
+  return MIB;
+}
+
+TEST(MemProf, MissingCallStackId) {
+  // Use a non-existent CallStackId to trigger a mapping error in
+  // toMemProfRecord.
+  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
+                                          llvm::memprof::getHotColdSchema());
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.push_back(AI);
+
+  // Create empty maps.
+  const FrameIdMapTy IdToFrameMap;
+  const CallStackIdMapTy CSIdToCallStackMap;
+  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
+      IdToFrameMap);
+  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  // We are only interested in errors, not the return value.
+  (void)IndexedMR.toMemProfRecord(CSIdConv);
+
+  ASSERT_TRUE(CSIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*CSIdConv.LastUnmappedId, 0xdeadbeefU);
+  EXPECT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+}
+
+TEST(MemProf, MissingFrameId) {
+  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
+                                          llvm::memprof::getHotColdSchema());
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.push_back(AI);
+
+  // An empty map to trigger a mapping error.
+  const FrameIdMapTy IdToFrameMap;
+  CallStackIdMapTy CSIdToCallStackMap;
+  CSIdToCallStackMap.insert({0x222, {2, 3}});
+
+  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
+      IdToFrameMap);
+  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  // We are only interested in errors, not the return value.
+  (void)IndexedMR.toMemProfRecord(CSIdConv);
+
+  EXPECT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_TRUE(FrameIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*FrameIdConv.LastUnmappedId, 3U);
 }
 } // namespace

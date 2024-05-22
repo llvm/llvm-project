@@ -213,15 +213,13 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
       // Check if there is a FromCycle that contains SgprDef's basic block but
       // does not contain SuccToSinkTo and also has divergent exit condition.
       while (FromCycle && !FromCycle->contains(ToCycle)) {
-        // After structurize-cfg, there should be exactly one cycle exit.
-        SmallVector<MachineBasicBlock *, 1> ExitBlocks;
-        FromCycle->getExitBlocks(ExitBlocks);
-        assert(ExitBlocks.size() == 1);
-        assert(ExitBlocks[0]->getSinglePredecessor());
+        SmallVector<MachineBasicBlock *, 1> ExitingBlocks;
+        FromCycle->getExitingBlocks(ExitingBlocks);
 
         // FromCycle has divergent exit condition.
-        if (hasDivergentBranch(ExitBlocks[0]->getSinglePredecessor())) {
-          return false;
+        for (MachineBasicBlock *ExitingBlock : ExitingBlocks) {
+          if (hasDivergentBranch(ExitingBlock))
+            return false;
         }
 
         FromCycle = FromCycle->getParentCycle();
@@ -461,8 +459,10 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
-  if (isMIMG(LdSt)) {
-    int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
+  if (isImage(LdSt)) {
+    auto RsrcOpName =
+        isMIMG(LdSt) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
+    int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcOpName);
     BaseOps.push_back(&LdSt.getOperand(SRsrcIdx));
     int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
     if (VAddr0Idx >= 0) {
@@ -4457,7 +4457,8 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
 
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
-         !hasModifiersSet(MI, AMDGPU::OpName::clamp);
+         !hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
+         !hasModifiersSet(MI, AMDGPU::OpName::byte_sel);
 }
 
 // Set VCC operand with all flags from \p Orig, except for setting it as

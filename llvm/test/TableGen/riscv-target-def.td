@@ -51,6 +51,22 @@ def Feature64Bit
 def FeatureDummy
     : SubtargetFeature<"dummy", "Dummy", "true", "Dummy">;
 
+class RISCVProfile<string name, list<SubtargetFeature> features>
+    : SubtargetFeature<name, "Is" # NAME, "true",
+                       "RISC-V " # name # " profile", features> {
+  bit Experimental = false;
+}
+class RISCVExperimentalProfile<string name, list<SubtargetFeature> features>
+    : RISCVProfile<"experimental-"#name, features> {
+  let Experimental = true;
+}
+
+def RVI20U32 : RISCVProfile<"rvi20u32", [Feature32Bit, FeatureStdExtI]>;
+def RVI20U64 : RISCVProfile<"rvi20u64", [Feature64Bit, FeatureStdExtI]>;
+def ProfileDummy : RISCVProfile<"dummy", [Feature64Bit, FeatureStdExtI,
+                                          FeatureStdExtF, FeatureStdExtZidummy]>;
+def RVI99U64 : RISCVExperimentalProfile<"rvi99u64", [Feature64Bit, FeatureStdExtI]>;
+
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
                           list<SubtargetFeature> f,
@@ -83,6 +99,7 @@ def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtZicsr,
+                                       FeatureStdExtZidummy,
                                        FeatureDummy]>;
 def ROCKET_RV64 : RISCVProcessorModel<"rocket-rv64",
                                       NoSchedModel,
@@ -90,6 +107,7 @@ def ROCKET_RV64 : RISCVProcessorModel<"rocket-rv64",
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtZicsr,
+                                       FeatureStdExtZidummy,
                                        FeatureDummy]>;
 def ROCKET : RISCVTuneProcessorModel<"rocket",
                                      NoSchedModel>;
@@ -113,13 +131,26 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK:      #ifdef GET_IMPLIED_EXTENSIONS
 // CHECK-NEXT: #undef GET_IMPLIED_EXTENSIONS
 
-// CHECK:      static const char *ImpliedExtsF[] = {"zicsr"};
-
 // CHECK:      static constexpr ImpliedExtsEntry ImpliedExts[] = {
-// CHECK-NEXT:     { {"f"}, {ImpliedExtsF} },
+// CHECK-NEXT:       { {"f"}, "zicsr"},
 // CHECK-NEXT: };
 
 // CHECK:      #endif // GET_IMPLIED_EXTENSIONS
+
+// CHECK:      #ifdef GET_SUPPORTED_PROFILES
+// CHECK-NEXT: #undef GET_SUPPORTED_PROFILES
+
+// CHECK:      static constexpr RISCVProfile SupportedProfiles[] = {
+// CHECK-NEXT:     {"dummy","rv64i2p1_f2p2_zidummy0p1"},
+// CHECK-NEXT:     {"rvi20u32","rv32i2p1"},
+// CHECK-NEXT:     {"rvi20u64","rv64i2p1"},
+// CHECK-NEXT: };
+
+// CHECK:      static constexpr RISCVProfile SupportedExperimentalProfiles[] = {
+// CHECK-NEXT:     {"rvi99u64","rv64i2p1"},
+// CHECK-NEXT: };
+
+// CHECK:      #endif // GET_SUPPORTED_PROFILES
 
 // CHECK:      #ifndef PROC
 // CHECK-NEXT: #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)
@@ -127,8 +158,8 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 
 // CHECK:      PROC(GENERIC_RV32, {"generic-rv32"}, {"rv32i2p1"}, 0)
 // CHECK-NEXT: PROC(GENERIC_RV64, {"generic-rv64"}, {"rv64i2p1"}, 0)
-// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zifencei2p0"}, 0)
-// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zifencei2p0"}, 0)
+// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0)
+// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0)
 
 // CHECK: #undef PROC
 

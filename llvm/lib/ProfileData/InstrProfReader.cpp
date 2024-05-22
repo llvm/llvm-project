@@ -1311,43 +1311,33 @@ Error IndexedInstrProfReader::readHeader() {
   const IndexedInstrProf::Header *Header = &HeaderOr.get();
   Cur += Header->size();
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
+  Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
                     /* UseCS */ false);
-  if (Header->formatVersion() & VARIANT_MASK_CSIR_PROF)
-    Cur =
-        readSummary((IndexedInstrProf::ProfVersion)Header->formatVersion(), Cur,
-                    /* UseCS */ true);
+  if (Header->Version & VARIANT_MASK_CSIR_PROF)
+    Cur = readSummary((IndexedInstrProf::ProfVersion)Header->Version, Cur,
+                      /* UseCS */ true);
   // Read the hash type and start offset.
-  IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(
-      endian::byte_swap<uint64_t, llvm::endianness::little>(Header->HashType));
+  IndexedInstrProf::HashT HashType =
+      static_cast<IndexedInstrProf::HashT>(Header->HashType);
   if (HashType > IndexedInstrProf::HashT::Last)
     return error(instrprof_error::unsupported_hash_type);
 
-  uint64_t HashOffset =
-      endian::byte_swap<uint64_t, llvm::endianness::little>(Header->HashOffset);
-
   // The hash table with profile counts comes next.
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
-      Start + HashOffset, Cur, Start, HashType, Header->formatVersion());
+      Start + Header->HashOffset, Cur, Start, HashType, Header->Version);
 
   // The MemProfOffset field in the header is only valid when the format
   // version is higher than 8 (when it was introduced).
-  if (GET_VERSION(Header->formatVersion()) >= 8 &&
-      Header->formatVersion() & VARIANT_MASK_MEMPROF) {
-    uint64_t MemProfOffset =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            Header->MemProfOffset);
-    if (Error E = MemProfReader.deserialize(Start, MemProfOffset))
+  if (GET_VERSION(Header->Version) >= 8 &&
+      Header->Version & VARIANT_MASK_MEMPROF) {
+    if (Error E = MemProfReader.deserialize(Start, Header->MemProfOffset))
       return E;
   }
 
   // BinaryIdOffset field in the header is only valid when the format version
   // is higher than 9 (when it was introduced).
-  if (GET_VERSION(Header->formatVersion()) >= 9) {
-    uint64_t BinaryIdOffset =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            Header->BinaryIdOffset);
-    const unsigned char *Ptr = Start + BinaryIdOffset;
+  if (GET_VERSION(Header->Version) >= 9) {
+    const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
     BinaryIdsSize =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
@@ -1360,11 +1350,8 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
-  if (GET_VERSION(Header->formatVersion()) >= 12) {
-    uint64_t VTableNamesOffset =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            Header->VTableNamesOffset);
-    const unsigned char *Ptr = Start + VTableNamesOffset;
+  if (GET_VERSION(Header->Version) >= 12) {
+    const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
     CompressedVTableNamesLen =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
@@ -1376,12 +1363,9 @@ Error IndexedInstrProfReader::readHeader() {
       return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
-  if (GET_VERSION(Header->formatVersion()) >= 10 &&
-      Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
-    uint64_t TemporalProfTracesOffset =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(
-            Header->TemporalProfTracesOffset);
-    const unsigned char *Ptr = Start + TemporalProfTracesOffset;
+  if (GET_VERSION(Header->Version) >= 10 &&
+      Header->Version & VARIANT_MASK_TEMPORAL_PROF) {
+    const unsigned char *Ptr = Start + Header->TemporalProfTracesOffset;
     const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
     // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
     if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
@@ -1520,54 +1504,38 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   // Setup a callback to convert from frame ids to frame using the on-disk
   // FrameData hash table.
-  std::optional<memprof::FrameId> LastUnmappedFrameId;
-  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto FrIter = MemProfFrameTable->find(Id);
-    if (FrIter == MemProfFrameTable->end()) {
-      LastUnmappedFrameId = Id;
-      return memprof::Frame(0, 0, 0, false);
-    }
-    return *FrIter;
-  };
-
-  // Setup a callback to convert call stack ids to call stacks using the on-disk
-  // hash table.
-  std::optional<memprof::CallStackId> LastUnmappedCSId;
-  auto CSIdToCallStackCallback = [&](memprof::CallStackId CSId) {
-    llvm::SmallVector<memprof::Frame> Frames;
-    auto CSIter = MemProfCallStackTable->find(CSId);
-    if (CSIter == MemProfCallStackTable->end()) {
-      LastUnmappedCSId = CSId;
-    } else {
-      const llvm::SmallVector<memprof::FrameId> &CS = *CSIter;
-      Frames.reserve(CS.size());
-      for (memprof::FrameId Id : CS)
-        Frames.push_back(IdToFrameCallback(Id));
-    }
-    return Frames;
-  };
+  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
+      *MemProfFrameTable.get());
 
   const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
   memprof::MemProfRecord Record;
-  if (MemProfCallStackTable)
-    Record = IndexedRecord.toMemProfRecord(CSIdToCallStackCallback);
-  else
-    Record = memprof::MemProfRecord(IndexedRecord, IdToFrameCallback);
+  if (MemProfCallStackTable) {
+    // Setup a callback to convert call stack ids to call stacks using the
+    // on-disk hash table.
+    memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
+        *MemProfCallStackTable.get(), FrameIdConv);
+
+    Record = IndexedRecord.toMemProfRecord(CSIdConv);
+
+    // Check that all call stack ids were successfully converted to call stacks.
+    if (CSIdConv.LastUnmappedId) {
+      return make_error<InstrProfError>(
+          instrprof_error::hash_mismatch,
+          "memprof call stack not found for call stack id " +
+              Twine(*CSIdConv.LastUnmappedId));
+    }
+  } else {
+    Record = memprof::MemProfRecord(IndexedRecord, FrameIdConv);
+  }
 
   // Check that all frame ids were successfully converted to frames.
-  if (LastUnmappedFrameId) {
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof frame not found for frame id " +
-                                          Twine(*LastUnmappedFrameId));
-  }
-
-  // Check that all call stack ids were successfully converted to call stacks.
-  if (LastUnmappedCSId) {
+  if (FrameIdConv.LastUnmappedId) {
     return make_error<InstrProfError>(
         instrprof_error::hash_mismatch,
-        "memprof call stack not found for call stack id " +
-            Twine(*LastUnmappedCSId));
+        "memprof frame not found for frame id " +
+            Twine(*FrameIdConv.LastUnmappedId));
   }
+
   return Record;
 }
 
