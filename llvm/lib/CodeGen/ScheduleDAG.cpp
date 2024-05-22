@@ -331,10 +331,8 @@ void SUnit::biasCriticalPath() {
   unsigned MaxDepth = BestI->getSUnit()->getDepth();
   for (SUnit::pred_iterator I = std::next(BestI), E = Preds.end(); I != E;
        ++I) {
-    if (I->getKind() == SDep::Data && I->getSUnit()->getDepth() > MaxDepth) {
-      MaxDepth = I->getSUnit()->getDepth();
+    if (I->getKind() == SDep::Data && I->getSUnit()->getDepth() > MaxDepth)
       BestI = I;
-    }
   }
   if (BestI != Preds.begin())
     std::swap(*Preds.begin(), *BestI);
