@@ -386,3 +386,9 @@ v_minimum3_f32 v0, s1, s2, v3
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: literal operands are not supported
 v_minimum3_f32 v0, v1, v2, 0xdeadbeef
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_pk_minimum3_f16 v0, s1, s2, v3
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+v_pk_maximum3_f16 v0, s1, s2, v3
