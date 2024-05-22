@@ -2244,17 +2244,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
-#if 0 // TODO: implement resource type check controlled by options with ub = LB.
-    // If this instruction generates a S_SETVSKIP because it is an
-    // indexed resource, and we are on Tahiti, then it will also force
-    // an S_WAITCNT vmcnt(0)
-    if (RequireCheckResourceType(Inst, context)) {
-      // Force the score to as if an S_WAITCNT vmcnt(0) is emitted.
-      ScoreBrackets->setScoreLB(LOAD_CNT,
-      ScoreBrackets->getScoreUB(LOAD_CNT));
-    }
-#endif
-
     if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
       AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
           Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst));
